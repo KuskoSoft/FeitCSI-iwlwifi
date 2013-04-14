@@ -360,6 +360,10 @@ static void iwl_dbgfs_update_pm(struct iwl_mvm *mvm,
 		IWL_DEBUG_POWER(mvm, "snooze_enable=%d\n", val);
 		dbgfs_pm->snooze_ena = val;
 		break;
+	case MVM_DEBUGFS_PM_UAPSD_MISBEHAVING:
+		IWL_DEBUG_POWER(mvm, "uapsd_misbehaving_enable=%d\n", val);
+		dbgfs_pm->uapsd_misbehaving = val;
+		break;
 	}
 }
 
@@ -420,6 +424,10 @@ static ssize_t iwl_dbgfs_pm_params_write(struct file *file,
 		if (sscanf(buf + 14, "%d", &val) != 1)
 			return -EINVAL;
 		param = MVM_DEBUGFS_PM_SNOOZE_ENABLE;
+	} else if (!strncmp("uapsd_misbehaving=", buf, 18)) {
+		if (sscanf(buf + 18, "%d", &val) != 1)
+			return -EINVAL;
+		param = MVM_DEBUGFS_PM_UAPSD_MISBEHAVING;
 	} else {
 		return -EINVAL;
 	}
