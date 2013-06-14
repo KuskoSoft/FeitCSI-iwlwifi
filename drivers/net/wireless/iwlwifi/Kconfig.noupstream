@@ -7,3 +7,4 @@ config IWLWIFI_NUM_CHANNELS
 config IWLWIFI_DEVICE_TESTMODE
 	bool "enable generic netlink testmode support"
 	default y if IWLMVM
+
