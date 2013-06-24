@@ -1119,7 +1119,7 @@ bool reg_last_request_cell_base(void)
 	return reg_request_cell_base(get_last_request());
 }
 
-#ifdef CPTCFG_CFG80211_CERTIFICATION_ONUS
+#ifdef CPTCFG_CFG80211_REG_CELLULAR_HINTS
 /* Core specific check */
 static enum reg_request_treatment
 reg_ignore_cell_hint(struct regulatory_request *pending_request)
