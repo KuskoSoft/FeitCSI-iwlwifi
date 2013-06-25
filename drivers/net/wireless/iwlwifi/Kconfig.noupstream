@@ -1,0 +1,9 @@
+config IWLWIFI_NUM_CHANNELS
+	int "number of supported concurrent channels"
+	range 1 2
+	default 1
+	depends on IWLMVM
+
+config IWLWIFI_DEVICE_TESTMODE
+	bool "enable generic netlink testmode support"
+	default y if IWLMVM
