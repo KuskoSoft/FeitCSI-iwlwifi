@@ -15,6 +15,7 @@
 #include <asm/mtrr.h>
 #include <asm/cpufeature.h>
 #include <linux/io.h>
+#include <linux/printk.h>
 
 /* arch_phys_wc_add returns an MTRR register index plus this offset. */
 #define MTRR_TO_PHYS_WC_OFFSET 1000
