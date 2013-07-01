@@ -543,7 +543,6 @@ static void iwl_trans_pcie_stop_device(struct iwl_trans *trans)
 	 */
 	if (test_bit(STATUS_DEVICE_ENABLED, &trans_pcie->status)) {
 		iwl_pcie_tx_stop(trans);
-
 		iwl_pcie_rx_stop(trans);
 
 		/* Power-down device's busmaster DMA clocks */
@@ -796,7 +795,6 @@ void iwl_trans_pcie_free(struct iwl_trans *trans)
 #endif
 
 	iwl_pcie_tx_free(trans);
-
 	iwl_pcie_rx_free(trans);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
@@ -1521,16 +1519,15 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 		goto out_free_cmd_pool;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	err = compat_request_threaded_irq(&trans_pcie->irq_compat,
-					  pdev->irq, iwl_pcie_isr_ict,
-					  iwl_pcie_irq_handler,
-					  IRQF_SHARED, DRV_NAME, trans);
+	if (compat_request_threaded_irq(&trans_pcie->irq_compat,
+					pdev->irq, iwl_pcie_isr_ict,
+					iwl_pcie_irq_handler,
+					IRQF_SHARED, DRV_NAME, trans)) {
 #else
-	err = request_threaded_irq(pdev->irq, iwl_pcie_isr_ict,
-				   iwl_pcie_irq_handler,
-				   IRQF_SHARED, DRV_NAME, trans);
+	if (request_threaded_irq(pdev->irq, iwl_pcie_isr_ict,
+				 iwl_pcie_irq_handler,
+				 IRQF_SHARED, DRV_NAME, trans)) {
 #endif
-	if (err) {
 		IWL_ERR(trans, "Error allocating IRQ %d\n", pdev->irq);
 		goto out_free_ict;
 	}
