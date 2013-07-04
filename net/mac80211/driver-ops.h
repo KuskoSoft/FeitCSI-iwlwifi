@@ -1092,6 +1092,26 @@ drv_set_default_unicast_key(struct ieee80211_local *local,
 	trace_drv_return_void(local);
 }
 
+static inline int
+drv_beacon_measurement(struct ieee80211_local *local,
+		       struct ieee80211_sub_if_data *sdata, bool state)
+{
+	int ret = -EOPNOTSUPP;
+	check_sdata_in_driver(sdata);
+
+	trace_drv_beacon_measurement(local, sdata, state);
+
+	if (local->ops->beacon_measurement)
+		ret = local->ops->beacon_measurement(&local->hw, &sdata->vif,
+						     state);
+	else
+		/* Driver advertises caps but doesn't implement the callback? */
+		WARN_ON_ONCE(1);
+	trace_drv_return_int(local, ret);
+
+	return ret;
+}
+
 #if IS_ENABLED(CONFIG_IPV6)
 static inline void drv_ipv6_addr_change(struct ieee80211_local *local,
 					struct ieee80211_sub_if_data *sdata,
