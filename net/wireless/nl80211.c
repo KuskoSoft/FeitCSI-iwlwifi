@@ -356,6 +356,7 @@ static const struct nla_policy nl80211_policy[NL80211_ATTR_MAX+1] = {
 	[NL80211_ATTR_IE_RIC] = { .type = NLA_BINARY,
 				  .len = IEEE80211_MAX_DATA_LEN },
 	[NL80211_ATTR_PEER_AID] = { .type = NLA_U16 },
+	[NL80211_ATTR_BCON_MEAS_STATE] = { .type = NLA_FLAG, },
 };
 
 /* policy for the key attributes */
@@ -8374,6 +8375,27 @@ static int nl80211_crit_protocol_stop(struct sk_buff *skb,
 	return 0;
 }
 
+static int nl80211_beacon_measurement(struct sk_buff *skb,
+				      struct genl_info *info)
+{
+	struct cfg80211_registered_device *rdev = info->user_ptr[0];
+	struct wireless_dev *wdev = info->user_ptr[1];
+	bool state;
+
+
+	if (!rdev->ops->beacon_measurement ||
+	    !(rdev->wiphy.flags & WIPHY_FLAG_SUPPORTS_BEACON_MEAS))
+		return -EOPNOTSUPP;
+
+	/* Relevant for associated mgd interfaces only */
+	if (wdev->iftype != NL80211_IFTYPE_STATION || !wdev->current_bss)
+		return -EOPNOTSUPP;
+
+	state = info->attrs[NL80211_ATTR_BCON_MEAS_STATE];
+
+	return rdev_beacon_measurement(rdev, wdev, state);
+}
+
 #define NL80211_FLAG_NEED_WIPHY		0x01
 #define NL80211_FLAG_NEED_NETDEV	0x02
 #define NL80211_FLAG_NEED_RTNL		0x04
@@ -9080,7 +9102,15 @@ static struct genl_ops nl80211_ops[] = {
 		.flags = GENL_ADMIN_PERM,
 		.internal_flags = NL80211_FLAG_NEED_WDEV_UP |
 				  NL80211_FLAG_NEED_RTNL,
-	}
+	},
+	{
+		.cmd = NL80211_CMD_BEACON_MEASUREMENT,
+		.doit = nl80211_beacon_measurement,
+		.policy = nl80211_policy,
+		.flags = GENL_ADMIN_PERM,
+		.internal_flags = NL80211_FLAG_NEED_WDEV_UP |
+				  NL80211_FLAG_NEED_RTNL,
+	},
 };
 
 static struct genl_multicast_group nl80211_mlme_mcgrp = {

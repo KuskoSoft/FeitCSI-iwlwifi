@@ -648,6 +648,9 @@
  * @NL80211_CMD_CRIT_PROTOCOL_STOP: Indicates the connection reliability can
  *	return back to normal.
  *
+ * @NL80211_CMD_BEACON_MEASUREMENT: Indicates the beacon measurement is
+ *	started / stopped. Disassociation should stop the measurements.
+ *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
  */
@@ -809,6 +812,8 @@ enum nl80211_commands {
 
 	NL80211_CMD_CRIT_PROTOCOL_START,
 	NL80211_CMD_CRIT_PROTOCOL_STOP,
+
+	NL80211_CMD_BEACON_MEASUREMENT,
 
 	/* add new commands above here */
 
@@ -1436,6 +1441,9 @@ enum nl80211_commands {
  *	allowed to be used with the first @NL80211_CMD_SET_STATION command to
  *	update a TDLS peer STA entry.
  *
+ * @NL80211_ATTR_BCON_MEAS_STATE: The state of the beacon measurements. This is
+ *	a flag attribute.
+ *
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
  */
@@ -1735,6 +1743,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_MAX_CRIT_PROT_DURATION,
 
 	NL80211_ATTR_PEER_AID,
+
+	NL80211_ATTR_BCON_MEAS_STATE,
 
 	/* add attributes here, update the policy in nl80211.c */
 

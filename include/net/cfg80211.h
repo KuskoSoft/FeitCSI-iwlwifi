@@ -2071,6 +2071,9 @@ struct cfg80211_update_ft_ies_params {
  *	driver can take the most appropriate actions.
  * @crit_proto_stop: Indicates critical protocol no longer needs increased link
  *	reliability. This operation can not fail.
+ * @beacon_measurement: Start / stops the beacon measurement. When enabled,
+ *	beacons should be let through cfg80211 to proceed to measurements (e.g.
+ *	RSSI analysis).
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -2306,6 +2309,9 @@ struct cfg80211_ops {
 				    u16 duration);
 	void	(*crit_proto_stop)(struct wiphy *wiphy,
 				   struct wireless_dev *wdev);
+	int	(*beacon_measurement)(struct wiphy *wiphy,
+				      struct wireless_dev *wdev,
+				      bool state);
 };
 
 /*
@@ -2371,6 +2377,9 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_OFFCHAN_TX: Device supports direct off-channel TX.
  * @WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL: Device supports remain-on-channel call.
  * @WIPHY_FLAG_SUPPORTS_5_10_MHZ: Device supports 5 MHz and 10 MHz channels.
+ * @WIPHY_FLAG_SUPPORTS_BEACON_MEAS: Device supports beacon measurements. Should
+ *	be set when the device can let all the beacon through up to cfg80211
+ *	to proceed to measurements (i.e. RSSI measurements).
  */
 enum wiphy_flags {
 	WIPHY_FLAG_CUSTOM_REGULATORY		= BIT(0),
@@ -2395,6 +2404,7 @@ enum wiphy_flags {
 	WIPHY_FLAG_OFFCHAN_TX			= BIT(20),
 	WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL	= BIT(21),
 	WIPHY_FLAG_SUPPORTS_5_10_MHZ		= BIT(22),
+	WIPHY_FLAG_SUPPORTS_BEACON_MEAS		= BIT(23),
 };
 
 /**
