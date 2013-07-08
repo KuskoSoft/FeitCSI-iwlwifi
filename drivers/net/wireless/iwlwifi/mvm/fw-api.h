@@ -768,6 +768,14 @@ struct iwl_phy_context_cmd {
 } __packed; /* PHY_CONTEXT_CMD_API_VER_1 */
 
 #define IWL_RX_INFO_PHY_CNT 8
+#define IWL_RX_INFO_ENERGY_ANT_ABC_IDX 1
+#define IWL_RX_INFO_ENERGY_ANT_A_MSK 0x000000ff
+#define IWL_RX_INFO_ENERGY_ANT_B_MSK 0x0000ff00
+#define IWL_RX_INFO_ENERGY_ANT_C_MSK 0x00ff0000
+#define IWL_RX_INFO_ENERGY_ANT_A_POS 0
+#define IWL_RX_INFO_ENERGY_ANT_B_POS 8
+#define IWL_RX_INFO_ENERGY_ANT_C_POS 16
+
 #define IWL_RX_INFO_AGC_IDX 1
 #define IWL_RX_INFO_RSSI_AB_IDX 2
 #define IWL_OFDM_AGC_A_MSK 0x0000007f
@@ -840,6 +848,8 @@ struct iwl_rx_mpdu_res_start {
  * @RX_RES_PHY_FLAGS_OFDM_HT: The frame was an HT frame
  * @RX_RES_PHY_FLAGS_OFDM_GF: The frame used GF preamble
  * @RX_RES_PHY_FLAGS_OFDM_VHT: The frame was a VHT frame
+ * @RX_RES_PHY_FLAGS_SIGNAL_API: future use - redundant to
+ *				IWL_UCODE_TLV_FLAGS_RX_ENERGY_API
  */
 enum iwl_rx_phy_flags {
 	RX_RES_PHY_FLAGS_BAND_24	= BIT(0),
@@ -852,6 +862,7 @@ enum iwl_rx_phy_flags {
 	RX_RES_PHY_FLAGS_OFDM_HT	= BIT(8),
 	RX_RES_PHY_FLAGS_OFDM_GF	= BIT(9),
 	RX_RES_PHY_FLAGS_OFDM_VHT	= BIT(10),
+	RX_RES_PHY_FLAGS_SIGNAL_API	= BIT(11),
 };
 
 /**
