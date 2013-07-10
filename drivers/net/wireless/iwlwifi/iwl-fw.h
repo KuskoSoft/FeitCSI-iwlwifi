@@ -87,7 +87,7 @@ enum iwl_ucode_tlv_flag {
 	IWL_UCODE_TLV_FLAGS_DW_BC_TABLE		= BIT(4),
 	IWL_UCODE_TLV_FLAGS_UAPSD		= BIT(6),
 	IWL_UCODE_TLV_FLAGS_RX_ENERGY_API	= BIT(8),
-	IWL_UCODE_TLV_FLAGS_D3_6_IPV6_ADDRS	= BIT(4), /* FIXME */
+	IWL_UCODE_TLV_FLAGS_D3_6_IPV6_ADDRS	= BIT(10),
 };
 
 /* The default calibrate table size if not specified by firmware file */
