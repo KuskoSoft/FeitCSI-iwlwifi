@@ -848,8 +848,6 @@ struct iwl_rx_mpdu_res_start {
  * @RX_RES_PHY_FLAGS_OFDM_HT: The frame was an HT frame
  * @RX_RES_PHY_FLAGS_OFDM_GF: The frame used GF preamble
  * @RX_RES_PHY_FLAGS_OFDM_VHT: The frame was a VHT frame
- * @RX_RES_PHY_FLAGS_SIGNAL_API: future use - redundant to
- *				IWL_UCODE_TLV_FLAGS_RX_ENERGY_API
  */
 enum iwl_rx_phy_flags {
 	RX_RES_PHY_FLAGS_BAND_24	= BIT(0),
@@ -862,7 +860,6 @@ enum iwl_rx_phy_flags {
 	RX_RES_PHY_FLAGS_OFDM_HT	= BIT(8),
 	RX_RES_PHY_FLAGS_OFDM_GF	= BIT(9),
 	RX_RES_PHY_FLAGS_OFDM_VHT	= BIT(10),
-	RX_RES_PHY_FLAGS_SIGNAL_API	= BIT(11),
 };
 
 /**
