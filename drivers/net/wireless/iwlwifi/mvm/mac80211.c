@@ -1551,8 +1551,6 @@ static int iwl_mvm_mac_beacon_measurement(struct ieee80211_hw *hw,
 	else
 		ret = iwl_mvm_enable_beacon_filter(mvm, vif);
 
-	/* FIXME: BEACON ABORT? */
-
 	mutex_unlock(&mvm->mutex);
 
 	return ret;
