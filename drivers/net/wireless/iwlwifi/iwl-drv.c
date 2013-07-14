@@ -72,9 +72,7 @@
 #include "iwl-op-mode.h"
 #include "iwl-agn-hw.h"
 #include "iwl-fw.h"
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "iwl-tm-gnl.h"
-#endif
 #include "iwl-config.h"
 #include "iwl-modparams.h"
 
