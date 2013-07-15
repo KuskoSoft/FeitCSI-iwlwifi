@@ -910,6 +910,9 @@ int ieee80211_register_hw(struct ieee80211_hw *hw)
 	if (local->ops->sched_scan_start)
 		local->hw.wiphy->flags |= WIPHY_FLAG_SUPPORTS_SCHED_SCAN;
 
+	if (local->ops->crit_proto)
+		local->hw.wiphy->flags |= WIPHY_FLAG_SUPPORTS_CRIT_PROT;
+
 	/* mac80211 based drivers don't support internal TDLS setup */
 	if (local->hw.wiphy->flags & WIPHY_FLAG_SUPPORTS_TDLS)
 		local->hw.wiphy->flags |= WIPHY_FLAG_TDLS_EXTERNAL_SETUP;

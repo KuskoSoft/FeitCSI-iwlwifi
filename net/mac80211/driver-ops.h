@@ -1092,6 +1092,24 @@ drv_set_default_unicast_key(struct ieee80211_local *local,
 	trace_drv_return_void(local);
 }
 
+static inline int drv_crit_proto(struct ieee80211_local *local,
+				 struct ieee80211_sub_if_data *sdata,
+				 enum nl80211_crit_proto_id protocol,
+				 bool start)
+{
+	int ret = -EOPNOTSUPP;
+	check_sdata_in_driver(sdata);
+
+	trace_drv_crit_proto(local, sdata, protocol, start);
+
+	if (local->ops->crit_proto)
+		ret = local->ops->crit_proto(&local->hw, &sdata->vif, protocol,
+					     start);
+	trace_drv_return_int(local, ret);
+
+	return ret;
+}
+
 static inline int
 drv_beacon_measurement(struct ieee80211_local *local,
 		       struct ieee80211_sub_if_data *sdata, bool state)

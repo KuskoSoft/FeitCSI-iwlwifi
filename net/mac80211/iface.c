@@ -811,6 +811,8 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 	cancel_work_sync(&sdata->recalc_smps);
 
 	cancel_delayed_work_sync(&sdata->dfs_cac_timer_work);
+	/* this will end the critical protocol right away */
+	flush_delayed_work(&sdata->crit_prot_end_wk);
 
 	if (sdata->wdev.cac_started) {
 		WARN_ON(local->suspended);
@@ -1583,6 +1585,16 @@ static void ieee80211_cleanup_sdata_stas_wk(struct work_struct *wk)
 	ieee80211_cleanup_sdata_stas(sdata);
 }
 
+static void ieee80211_crit_prot_timeout(struct work_struct *wk)
+{
+	struct ieee80211_sub_if_data *sdata;
+
+	sdata = container_of(wk, struct ieee80211_sub_if_data,
+			     crit_prot_end_wk.work);
+
+	drv_crit_proto(sdata->local, sdata, NL80211_CRIT_PROTO_UNSPEC, false);
+}
+
 int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 		     struct wireless_dev **new_wdev, enum nl80211_iftype type,
 		     struct vif_params *params)
@@ -1664,6 +1676,8 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 			  ieee80211_dfs_cac_timer_work);
 	INIT_DELAYED_WORK(&sdata->dec_tailroom_needed_wk,
 			  ieee80211_delayed_tailroom_dec);
+	INIT_DELAYED_WORK(&sdata->crit_prot_end_wk,
+			  ieee80211_crit_prot_timeout);
 
 	for (i = 0; i < IEEE80211_NUM_BANDS; i++) {
 		struct ieee80211_supported_band *sband;

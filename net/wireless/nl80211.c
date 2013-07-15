@@ -1399,8 +1399,10 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *dev,
 		CMD(start_p2p_device, START_P2P_DEVICE);
 		CMD(set_mcast_rate, SET_MCAST_RATE);
 		if (state->split) {
-			CMD(crit_proto_start, CRIT_PROTOCOL_START);
-			CMD(crit_proto_stop, CRIT_PROTOCOL_STOP);
+			if (dev->wiphy.flags & WIPHY_FLAG_SUPPORTS_CRIT_PROT) {
+				CMD(crit_proto_start, CRIT_PROTOCOL_START);
+				CMD(crit_proto_stop, CRIT_PROTOCOL_STOP);
+			}
 		}
 
 #ifdef CPTCFG_NL80211_TESTMODE
