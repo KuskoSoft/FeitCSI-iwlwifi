@@ -243,6 +243,7 @@ enum iwl_mvm_smps_type_request {
  * @beacon_skb: the skb used to hold the AP/GO beacon template
  * @smps_requests: the requests of of differents parts of the driver, regard
 	the desired smps mode.
+ * @crit_proto: critical protocol is active
  */
 struct iwl_mvm_vif {
 	u16 id;
@@ -254,6 +255,7 @@ struct iwl_mvm_vif {
 	bool monitor_active;
 	/* indicate whether beacon filtering is enabled */
 	bool bf_enabled;
+	bool crit_proto;
 
 	u32 ap_beacon_time;
 
