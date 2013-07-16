@@ -45,7 +45,7 @@ int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 
 	return ret;
 }
-EXPORT_SYMBOL(__i2c_transfer);
+EXPORT_SYMBOL_GPL(__i2c_transfer);
 #endif
 
 /**

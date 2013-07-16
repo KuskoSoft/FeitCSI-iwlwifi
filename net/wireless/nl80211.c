@@ -1576,8 +1576,10 @@ static int nl80211_dump_wiphy(struct sk_buff *skb, struct netlink_callback *cb)
 	rtnl_lock();
 	if (!state) {
 		state = kzalloc(sizeof(*state), GFP_KERNEL);
-		if (!state)
+		if (!state) {
+			rtnl_unlock();
 			return -ENOMEM;
+		}
 		state->filter_wiphy = -1;
 		ret = nl80211_dump_wiphy_parse(skb, cb, state);
 		if (ret) {

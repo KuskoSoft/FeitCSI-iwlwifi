@@ -112,6 +112,53 @@ mrproper:
 	echo "$(CONFIG_MD5)" > .kernel_config_md5
 	@$(MAKE) -f Makefile.real "$@"
 
+.PHONY: defconfig-help
+defconfig-help:
+	@echo "Driver or subsystem configuration targets:"
+	@set -e						;\
+		bk_configs="$$(ls defconfigs/*)" 	;\
+		for cfg in $$bk_configs; do		\
+			echo "  defconfig-$${cfg##defconfigs/}"	;\
+		done
+	@echo ""
+
+.PHONY: help
+help: defconfig-help
+	@echo "Cleaning targets:"
+	@echo "  clean           - Remove most generated files but keep the config and"
+	@echo "                    enough build support to build external modules"
+	@echo "  mrproper        - Remove all generated files + config + various backup files"
+	@echo ""
+	@echo "Driver configuration help:"
+	@echo "  defconfig-help  - List all prearranged defconfig-targets we have"
+	@echo "                    designed for you. You can use this to find"
+	@echo "                    driver specific configs in case all you really"
+	@echo "                    need is to just compile one or a small group "
+	@echo "                    of drivers."
+	@echo ""
+	@echo "Configuration targets:"
+	@echo "  menuconfig      - Update current config utilising a menu based program"
+	@echo "  allyesconfig    - New config where all options are accepted with yes"
+	@echo "  oldconfig       - Update current config utilising a provided .config as base"
+	@echo "  oldaskconfig    - ??"
+	@echo "  silentoldconfig - Same as oldconfig, but quietly, additionally update deps"
+	@echo "  allnoconfig     - New config where all options are answered with no"
+	@echo "  allyesconfig    - New config where all options are accepted with yes"
+	@echo "  allmodconfig    - New config selecting modules when possible"
+	@echo "  alldefconfig    - New config with all symbols set to default"
+	@echo "  randconfig      - New config with random answer to all options"
+	@echo "  listnewconfig   - List new options"
+	@echo "  olddefconfig    - Same as silentoldconfig but sets new symbols to their default value"
+	@echo ""
+	@echo "Other generic targets:"
+	@echo "  all             - Build all targets marked with [*]"
+	@echo "* modules         - Build all modules"
+	@echo ""
+	@echo "Architecture specific targets:"
+	@echo "  install         - Install modules"
+	@echo "  uninstall       - Uninstall modules"
+	@echo ""
+	@echo "Execute "make" or "make all" to build all targets marked with [*]"
 else
 include $(BACKPORT_PWD)/Makefile.kernel
 endif

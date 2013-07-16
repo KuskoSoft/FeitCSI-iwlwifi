@@ -138,8 +138,8 @@ struct iwl_ssid_ie {
  *@SCAN_FLAGS_DELAYED_SCAN_LOWBAND:
  *@SCAN_FLAGS_DELAYED_SCAN_HIGHBAND:
  *@SCAN_FLAGS_FRAGMENTED_SCAN:
- *@SCAN_FLAGS_PASSIVE2ACTIVE: use active scan on channels that was active in the
- *			      past hour, even if they are marked as passive.
+ *@SCAN_FLAGS_PASSIVE2ACTIVE: use active scan on channels that was active
+ *	in the past hour, even if they are marked as passive.
  */
 enum iwl_scan_flags {
 	SCAN_FLAGS_PERIODIC_SCAN		= BIT(0),

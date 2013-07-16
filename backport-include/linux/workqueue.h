@@ -14,16 +14,47 @@ bool mod_delayed_work(struct workqueue_struct *wq, struct delayed_work *dwork,
 #define create_freezable_workqueue create_freezeable_workqueue
 #endif
 
-#ifndef alloc_ordered_workqueue
-#define alloc_ordered_workqueue(name, flags) create_singlethread_workqueue(name)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
+#define WQ_UNBOUND	0
 #endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
-#define alloc_workqueue(name, flags, max_active) __create_workqueue(name, flags, max_active)
+#define __WQ_ORDERED	0
+/*
+ * commit b196be89cdc14a88cc637cdad845a75c5886c82d
+ * Author: Tejun Heo <tj@kernel.org>
+ * Date:   Tue Jan 10 15:11:35 2012 -0800
+ *
+ *     workqueue: make alloc_workqueue() take printf fmt and args for name
+ */
+struct workqueue_struct *
+backport_alloc_workqueue(const char *fmt, unsigned int flags,
+			 int max_active, struct lock_class_key *key,
+			 const char *lock_name, ...);
+#undef alloc_workqueue
+#ifdef CONFIG_LOCKDEP
+#define alloc_workqueue(fmt, flags, max_active, args...)		\
+({									\
+	static struct lock_class_key __key;				\
+	const char *__lock_name;					\
+									\
+	if (__builtin_constant_p(fmt))					\
+		__lock_name = (fmt);					\
+	else								\
+		__lock_name = #fmt;					\
+									\
+	backport_alloc_workqueue((fmt), (flags), (max_active),		\
+				 &__key, __lock_name, ##args);		\
+})
+#else
+#define alloc_workqueue(fmt, flags, max_active, args...)		\
+	backport_alloc_workqueue((fmt), (flags), (max_active),		\
+				 NULL, NULL, ##args)
 #endif
-
-#ifndef alloc_workqueue
-#define alloc_workqueue(name, flags, max_active) __create_workqueue(name, flags, max_active, 0)
+#undef alloc_ordered_workqueue
+#define alloc_ordered_workqueue(fmt, flags, args...) \
+	alloc_workqueue(fmt, WQ_UNBOUND | __WQ_ORDERED | (flags), 1, ##args)
+#define destroy_workqueue backport_destroy_workqueue
+void backport_destroy_workqueue(struct workqueue_struct *wq);
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)

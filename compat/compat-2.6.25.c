@@ -79,7 +79,7 @@ void __sg_free_table(struct sg_table *table, unsigned int max_ents,
 
 	table->sgl = NULL;
 }
-EXPORT_SYMBOL(__sg_free_table);
+EXPORT_SYMBOL_GPL(__sg_free_table);
 
 /**
  * sg_free_table - Free a previously allocated sg table
@@ -90,7 +90,7 @@ void sg_free_table(struct sg_table *table)
 {
 	__sg_free_table(table, SG_MAX_SINGLE_ALLOC, sg_kfree);
 }
-EXPORT_SYMBOL(sg_free_table);
+EXPORT_SYMBOL_GPL(sg_free_table);
 
 /**
  * __sg_alloc_table - Allocate and initialize an sg table with given allocator
@@ -175,7 +175,7 @@ int __sg_alloc_table(struct sg_table *table, unsigned int nents,
 
 	return 0;
 }
-EXPORT_SYMBOL(__sg_alloc_table);
+EXPORT_SYMBOL_GPL(__sg_alloc_table);
 
 /**
  * sg_alloc_table - Allocate and initialize an sg table
@@ -199,7 +199,7 @@ int sg_alloc_table(struct sg_table *table, unsigned int nents, gfp_t gfp_mask)
 
 	return ret;
 }
-EXPORT_SYMBOL(sg_alloc_table);
+EXPORT_SYMBOL_GPL(sg_alloc_table);
 
 
 /*

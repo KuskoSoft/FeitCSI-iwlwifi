@@ -49,7 +49,7 @@ int arch_phys_wc_add(unsigned long base, unsigned long size)
 	}
 	return ret + MTRR_TO_PHYS_WC_OFFSET;
 }
-EXPORT_SYMBOL(arch_phys_wc_add);
+EXPORT_SYMBOL_GPL(arch_phys_wc_add);
 
 /*
  * arch_phys_wc_del - undoes arch_phys_wc_add
@@ -67,7 +67,7 @@ void arch_phys_wc_del(int handle)
 		mtrr_del(handle - MTRR_TO_PHYS_WC_OFFSET, 0, 0);
 	}
 }
-EXPORT_SYMBOL(arch_phys_wc_del);
+EXPORT_SYMBOL_GPL(arch_phys_wc_del);
 
 /*
  * phys_wc_to_mtrr_index - translates arch_phys_wc_add's return value

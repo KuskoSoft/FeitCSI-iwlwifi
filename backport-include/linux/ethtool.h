@@ -3,6 +3,14 @@
 #include_next <linux/ethtool.h>
 #include <linux/version.h>
 
+#ifndef SPEED_UNKNOWN
+#define SPEED_UNKNOWN  -1
+#endif /* SPEED_UNKNOWN */
+
+#ifndef DUPLEX_UNKNOWN
+#define DUPLEX_UNKNOWN 0xff
+#endif /* DUPLEX_UNKNOWN */
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 #define ethtool_rxfh_indir_default LINUX_BACKPORT(ethtool_rxfh_indir_default)
 static inline u32 ethtool_rxfh_indir_default(u32 index, u32 n_rx_rings)

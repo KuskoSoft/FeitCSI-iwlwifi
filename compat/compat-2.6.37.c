@@ -381,6 +381,6 @@ int netif_set_real_num_rx_queues(struct net_device *dev, unsigned int rxq)
 	dev->num_rx_queues = rxq;
 	return 0;
 }
-EXPORT_SYMBOL(netif_set_real_num_rx_queues);
+EXPORT_SYMBOL_GPL(netif_set_real_num_rx_queues);
 #endif
 #endif

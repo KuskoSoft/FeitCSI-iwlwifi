@@ -18,7 +18,7 @@
 #include <net/compat.h>
 
 const char hex_asc[] = "0123456789abcdef";
-EXPORT_SYMBOL(hex_asc);
+EXPORT_SYMBOL_GPL(hex_asc);
 
 /* 2.6.24 does not have the struct kobject with a name */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25))

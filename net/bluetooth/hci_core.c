@@ -2170,8 +2170,8 @@ int hci_register_dev(struct hci_dev *hdev)
 	write_unlock(&hci_dev_list_lock);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
-	hdev->workqueue = alloc_workqueue(hdev->name, WQ_HIGHPRI | WQ_UNBOUND |
-					  WQ_MEM_RECLAIM, 1);
+	hdev->workqueue = alloc_workqueue("%s", WQ_HIGHPRI | WQ_UNBOUND |
+					  WQ_MEM_RECLAIM, 1, hdev->name);
 #else
 	hdev->workqueue = create_singlethread_workqueue(hdev->name);
 #endif
@@ -2181,9 +2181,8 @@ int hci_register_dev(struct hci_dev *hdev)
 	}
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
-	hdev->req_workqueue = alloc_workqueue(hdev->name,
-					      WQ_HIGHPRI | WQ_UNBOUND |
-					      WQ_MEM_RECLAIM, 1);
+	hdev->req_workqueue = alloc_workqueue("%s", WQ_HIGHPRI | WQ_UNBOUND |
+					      WQ_MEM_RECLAIM, 1, hdev->name);
 #else
 	hdev->req_workqueue = create_singlethread_workqueue(hdev->name);
 #endif

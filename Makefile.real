@@ -101,6 +101,16 @@ install: modules
 .PHONY: modules_install
 modules_install: install
 
+.PHONY: uninstall
+uninstall:
+	@./scripts/uninstall.sh
+	@/sbin/depmod -a
+	@./scripts/update-initramfs.sh $(KLIB)
+	@echo
+	@echo Your backported driver modules should be uninstalled now.
+	@echo Reboot.
+	@echo
+
 .PHONY: clean
 clean:
 	@$(MAKE) -f Makefile.build clean

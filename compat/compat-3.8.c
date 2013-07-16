@@ -417,4 +417,4 @@ int vm_iomap_memory(struct vm_area_struct *vma, phys_addr_t start, unsigned long
 	/* Ok, let it rip */
 	return io_remap_pfn_range(vma, vma->vm_start, pfn, vm_len, vma->vm_page_prot);
 }
-EXPORT_SYMBOL(vm_iomap_memory);
+EXPORT_SYMBOL_GPL(vm_iomap_memory);
