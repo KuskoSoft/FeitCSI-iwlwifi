@@ -222,9 +222,6 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 
 	hw->wiphy->hw_version = mvm->trans->hw_id;
 
-	/* workaround! */
-	iwlmvm_mod_params.power_scheme = IWL_POWER_SCHEME_CAM;
-
 	if (iwlmvm_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
 		hw->wiphy->flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
 	else
