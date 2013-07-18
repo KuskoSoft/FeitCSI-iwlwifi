@@ -174,7 +174,7 @@ out:
 EXPORT_SYMBOL_GPL(__pskb_copy);
 
 static DEFINE_SPINLOCK(wq_name_lock);
-static struct list_head wq_name_list;
+static LIST_HEAD(wq_name_list);
 
 struct wq_name {
 	struct list_head list;
