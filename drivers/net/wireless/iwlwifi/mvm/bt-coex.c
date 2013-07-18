@@ -843,6 +843,28 @@ void iwl_mvm_bt_rssi_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		IWL_ERR(mvm, "Failed to update the ctrl_kill_msk\n");
 }
 
+#define LINK_QUAL_AGG_TIME_LIMIT_DEF	(4000)
+#define LINK_QUAL_AGG_TIME_LIMIT_BT_ACT	(1200)
+
+u16 iwl_mvm_bt_coex_agg_time_limit(struct iwl_mvm *mvm,
+				   struct ieee80211_sta *sta)
+{
+	struct iwl_mvm_sta *mvmsta = (void *)sta->drv_priv;
+	enum iwl_bt_coex_lut_type lut_type;
+
+	if (le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) <
+	    BT_LOW_TRAFFIC)
+		return LINK_QUAL_AGG_TIME_LIMIT_DEF;
+
+	lut_type = iwl_get_coex_type(mvm, mvmsta->vif);
+
+	if (lut_type == BT_COEX_LOOSE_LUT)
+		return LINK_QUAL_AGG_TIME_LIMIT_DEF;
+
+	/* tight coex, high bt traffic, reduce AGG time limit */
+	return LINK_QUAL_AGG_TIME_LIMIT_BT_ACT;
+}
+
 void iwl_mvm_bt_coex_vif_change(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 {
 	if (!(mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_NEWBT_COEX))
