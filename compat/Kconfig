@@ -135,6 +135,7 @@ config BACKPORT_MII
 	bool
 
 config BACKPORT_BUILD_DMA_SHARED_BUFFER
+	depends on n
 	bool
 	depends on ANON_INODES
 	depends on !BACKPORT_KERNEL_3_0
@@ -148,6 +149,7 @@ config BACKPORT_DMA_SHARED_BUFFER
 	bool
 
 config BACKPORT_BUILD_HDMI
+	depends on n
 	bool
 	# not possible on kernel < 3.0
 	depends on !BACKPORT_KERNEL_3_0
