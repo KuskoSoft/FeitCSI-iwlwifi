@@ -681,7 +681,6 @@ iwl_mvm_vif_dbgfs_clean(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 #endif /* CPTCFG_IWLWIFI_DEBUGFS */
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-
 int iwl_mvm_tm_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd_idx,
 			   struct iwl_tm_data *data_in,
 			   struct iwl_tm_data *data_out);
@@ -698,23 +697,6 @@ int iwl_mvm_testmode_reply(struct iwl_op_mode *op_mode, struct sk_buff *skb);
 struct sk_buff *iwl_mvm_testmode_alloc_event(struct iwl_op_mode *op_mode,
 					     int len);
 void iwl_mvm_testmode_event(struct iwl_op_mode *op_mode, struct sk_buff *skb);
-
-#else
-
-static inline int iwl_mvm_testmode_cmd(struct ieee80211_hw *hw, void *data,
-				       int len)
-{
-	return -ENOSYS;
-}
-
-static inline int iwl_mvm_testmode_dump(struct ieee80211_hw *hw,
-					struct sk_buff *skb,
-					struct netlink_callback *cb,
-					void *data, int len)
-{
-	return -ENOSYS;
-}
-
 #endif
 
 /* rate scaling */
