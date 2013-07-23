@@ -187,7 +187,7 @@ static void iwl_mvm_get_signal_strength(struct iwl_mvm *mvm,
 	max_energy = max(max_energy, energy_c);
 
 	IWL_DEBUG_STATS(mvm, "energy In A %d B %d C %d , and max %d\n",
-			energy_a, energy_a, energy_a, max_energy);
+			energy_a, energy_b, energy_c, max_energy);
 
 	rx_status->signal = max_energy;
 	rx_status->chains = (le16_to_cpu(phy_info->phy_flags) &
