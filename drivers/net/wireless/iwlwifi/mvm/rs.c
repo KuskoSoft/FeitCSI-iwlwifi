@@ -162,10 +162,10 @@ static void rs_stay_in_table(struct iwl_lq_sta *lq_sta, bool force_search);
 
 #ifdef CPTCFG_MAC80211_DEBUGFS
 static void rs_dbgfs_set_mcs(struct iwl_lq_sta *lq_sta,
-			     u32 *rate_n_flags, int index);
+			     u32 *rate_n_flags);
 #else
 static void rs_dbgfs_set_mcs(struct iwl_lq_sta *lq_sta,
-			     u32 *rate_n_flags, int index)
+			     u32 *rate_n_flags)
 {}
 #endif
 
@@ -2371,7 +2371,7 @@ static void rs_fill_link_cmd(struct iwl_mvm *mvm,
 	struct iwl_lq_cmd *lq_cmd = &lq_sta->lq;
 
 	/* Override starting rate (index 0) if needed for debug purposes */
-	rs_dbgfs_set_mcs(lq_sta, &new_rate, index);
+	rs_dbgfs_set_mcs(lq_sta, &new_rate);
 
 	/* Interpret new_rate (rate_n_flags) */
 	rs_get_tbl_info_from_mcs(new_rate, lq_sta->band,
@@ -2418,7 +2418,7 @@ static void rs_fill_link_cmd(struct iwl_mvm *mvm,
 			}
 
 			/* Override next rate if needed for debug purposes */
-			rs_dbgfs_set_mcs(lq_sta, &new_rate, index);
+			rs_dbgfs_set_mcs(lq_sta, &new_rate);
 
 			/* Fill next table entry */
 			lq_cmd->rs_table[index] =
@@ -2460,7 +2460,7 @@ static void rs_fill_link_cmd(struct iwl_mvm *mvm,
 		use_ht_possible = 0;
 
 		/* Override next rate if needed for debug purposes */
-		rs_dbgfs_set_mcs(lq_sta, &new_rate, index);
+		rs_dbgfs_set_mcs(lq_sta, &new_rate);
 
 		/* Fill next table entry */
 		lq_cmd->rs_table[index] = cpu_to_le32(new_rate);
@@ -2505,7 +2505,7 @@ static void rs_free_sta(void *mvm_r, struct ieee80211_sta *sta,
 
 #ifdef CPTCFG_MAC80211_DEBUGFS
 static void rs_dbgfs_set_mcs(struct iwl_lq_sta *lq_sta,
-			     u32 *rate_n_flags, int index)
+			     u32 *rate_n_flags)
 {
 	struct iwl_mvm *mvm;
 	u8 valid_tx_ant;
