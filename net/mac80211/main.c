@@ -323,6 +323,12 @@ static int ieee80211_ifa_changed(struct notifier_block *nb,
 	if (wdev->wiphy != local->hw.wiphy)
 		return NOTIFY_DONE;
 
+#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
+	/* P2P Device has no netdev assigned to it */
+	if (wdev->iftype == NL80211_IFTYPE_P2P_DEVICE)
+		return NOTIFY_DONE;
+#endif
+
 	sdata = IEEE80211_DEV_TO_SUB_IF(ndev);
 	bss_conf = &sdata->vif.bss_conf;
 
