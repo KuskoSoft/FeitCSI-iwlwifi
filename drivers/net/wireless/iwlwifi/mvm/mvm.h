@@ -778,6 +778,10 @@ static inline int iwl_mvm_power_disable(struct iwl_mvm *mvm,
 	return mvm->pm_ops->power_disable(mvm, vif);
 }
 
+int iwl_mvm_rx_ap_uapsd_malfunction_notif(struct iwl_mvm *mvm,
+					  struct iwl_rx_cmd_buffer *rxb,
+					  struct iwl_device_cmd *cmd);
+
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 static inline int iwl_mvm_power_dbgfs_read(struct iwl_mvm *mvm,
 					    struct ieee80211_vif *vif,

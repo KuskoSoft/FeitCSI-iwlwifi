@@ -1127,3 +1127,33 @@ int iwl_mvm_rx_missed_beacons_notif(struct iwl_mvm *mvm,
 						   &id);
 	return 0;
 }
+
+struct iwl_mvm_ap_uapsd_malfunction_iterator_data {
+	u8 ap_sta_id;
+	u8 *bssid;
+};
+
+static void iwl_mvm_ap_uapsd_malfunction_iterator(void *_data, u8 *mac,
+						  struct ieee80211_vif *vif)
+{
+	u8 *ap_sta_id = _data;
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+	if (mvmvif->ap_sta_id == *ap_sta_id)
+		ieee80211_notify_ap_uapsd_malfunction(vif);
+}
+
+int iwl_mvm_rx_ap_uapsd_malfunction_notif(struct iwl_mvm *mvm,
+					  struct iwl_rx_cmd_buffer *rxb,
+					  struct iwl_device_cmd *cmd)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_ap_uapsd_malfunction_notif *notif = (void *)pkt->data;
+	u8 ap_sta_id = le32_to_cpu(notif->sta_id);
+
+	ieee80211_iterate_active_interfaces_atomic(
+		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+		iwl_mvm_ap_uapsd_malfunction_iterator, &ap_sta_id);
+
+	return 0;
+}

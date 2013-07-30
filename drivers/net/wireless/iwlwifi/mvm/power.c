@@ -340,6 +340,8 @@ static void iwl_mvm_power_build_cmd(struct iwl_mvm *mvm,
 			IWL_MVM_PS_HEAVY_TX_THLD_PERCENT;
 		cmd->heavy_rx_thld_percentage =
 			IWL_MVM_PS_HEAVY_RX_THLD_PERCENT;
+		cmd->flags |=
+			cpu_to_le16(POWER_FLAGS_AP_UAPSD_MALFUNCTION_ENA_MSK);
 	}
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
