@@ -233,7 +233,7 @@ struct iwl_tx_ant_cfg_cmd {
  * REDUCE_TX_POWER_CMD = 0x9f
  * @flags: (reserved for future implementation)
  * @mac_context_id: id of the mac ctx for which we are reducing TX power.
- * @pwr_restriction: TX power restriction in half dBms.
+ * @pwr_restriction: TX power restriction in dBms.
  */
 struct iwl_reduce_tx_power_cmd {
 	u8 flags;

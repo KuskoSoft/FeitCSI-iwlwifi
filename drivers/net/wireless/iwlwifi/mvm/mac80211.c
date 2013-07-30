@@ -730,8 +730,7 @@ static int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	/* FW is in charge of regulatory enforcement */
 	struct iwl_reduce_tx_power_cmd reduce_txpwr_cmd = {
 		.mac_context_id = iwl_mvm_vif_from_mac80211(vif)->id,
-		/* half dBm need to multiply */
-		.pwr_restriction = cpu_to_le16(2 * tx_power),
+		.pwr_restriction = cpu_to_le16(tx_power),
 	};
 
 	return iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, CMD_SYNC,
