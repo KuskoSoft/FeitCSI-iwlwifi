@@ -177,12 +177,12 @@ static void iwl_mvm_get_signal_strength(struct iwl_mvm *mvm,
 
 	val =
 	    le32_to_cpu(phy_info->non_cfg_phy[IWL_RX_INFO_ENERGY_ANT_ABC_IDX]);
-	energy_a = (val & IWL_RX_INFO_ENERGY_ANT_A_MSK) >>
-						IWL_RX_INFO_ENERGY_ANT_A_POS;
-	energy_b = (val & IWL_RX_INFO_ENERGY_ANT_B_MSK) >>
-						IWL_RX_INFO_ENERGY_ANT_B_POS;
-	energy_c = (val & IWL_RX_INFO_ENERGY_ANT_C_MSK) >>
-						IWL_RX_INFO_ENERGY_ANT_C_POS;
+	energy_a = -((val & IWL_RX_INFO_ENERGY_ANT_A_MSK) >>
+						IWL_RX_INFO_ENERGY_ANT_A_POS);
+	energy_b = -((val & IWL_RX_INFO_ENERGY_ANT_B_MSK) >>
+						IWL_RX_INFO_ENERGY_ANT_B_POS);
+	energy_c = -((val & IWL_RX_INFO_ENERGY_ANT_C_MSK) >>
+						IWL_RX_INFO_ENERGY_ANT_C_POS);
 	max_energy = max(energy_a, energy_b);
 	max_energy = max(max_energy, energy_c);
 
