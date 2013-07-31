@@ -706,8 +706,10 @@ static void iwl_mvm_nic_restart(struct iwl_mvm *mvm)
 		}
 
 		reprobe = kzalloc(sizeof(*reprobe), GFP_ATOMIC);
-		if (!reprobe)
+		if (!reprobe) {
+			module_put(THIS_MODULE);
 			return;
+		}
 		reprobe->dev = mvm->trans->dev;
 		INIT_WORK(&reprobe->work, iwl_mvm_reprobe_wk);
 		schedule_work(&reprobe->work);
