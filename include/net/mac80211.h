@@ -2634,10 +2634,6 @@ enum ieee80211_roc_type {
  *	beacons must be let through and data for measurement should be set in
  *	&ieee80211_rx_status (rssi etc...).
  *
- * @crit_proto: Start or stop a critical protocol session. This can be DHCP, EAP
- *	or any other protocol that gates the connection. Look at
- *	%crit_prot_start in %cfg80211_ops.
- *
  * @ipv6_addr_change: IPv6 address assignment on the given interface changed.
  *	Currently, this is only called for managed or P2P client interfaces.
  *	This callback is optional; it must not sleep.
@@ -2835,9 +2831,6 @@ struct ieee80211_ops {
 
 	int (*beacon_measurement)(struct ieee80211_hw *hw,
 				  struct ieee80211_vif *vif, bool state);
-
-	int (*crit_proto)(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
-			  enum nl80211_crit_proto_id protocol, bool start);
 
 #if IS_ENABLED(CONFIG_IPV6)
 	void (*ipv6_addr_change)(struct ieee80211_hw *hw,

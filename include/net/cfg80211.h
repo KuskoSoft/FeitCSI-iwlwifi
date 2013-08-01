@@ -2380,7 +2380,6 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_SUPPORTS_BEACON_MEAS: Device supports beacon measurements. Should
  *	be set when the device can let all the beacon through up to cfg80211
  *	to proceed to measurements (i.e. RSSI measurements).
- * @WIPHY_FLAG_SUPPORTS_CRIT_PROT: Device supports critical protocol protection.
  */
 enum wiphy_flags {
 	WIPHY_FLAG_CUSTOM_REGULATORY		= BIT(0),
@@ -2406,7 +2405,6 @@ enum wiphy_flags {
 	WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL	= BIT(21),
 	WIPHY_FLAG_SUPPORTS_5_10_MHZ		= BIT(22),
 	WIPHY_FLAG_SUPPORTS_BEACON_MEAS		= BIT(23),
-	WIPHY_FLAG_SUPPORTS_CRIT_PROT		= BIT(24),
 };
 
 /**

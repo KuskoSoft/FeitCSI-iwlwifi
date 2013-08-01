@@ -3418,33 +3418,6 @@ static int ieee80211_cfg_get_channel(struct wiphy *wiphy,
 	return ret;
 }
 
-static int ieee80211_crit_proto_start(struct wiphy *wiphy,
-				      struct wireless_dev *wdev,
-				      enum nl80211_crit_proto_id protocol,
-				      u16 duration)
-{
-	struct ieee80211_sub_if_data *sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-	int ret;
-
-	ret = drv_crit_proto(local, sdata, protocol, true);
-	if (!ret)
-		return ret;
-
-	ieee80211_queue_delayed_work(&sdata->local->hw,
-				     &sdata->crit_prot_end_wk,
-				     msecs_to_jiffies(duration));
-	return 0;
-}
-
-static void ieee80211_crit_proto_stop(struct wiphy *wiphy,
-				      struct wireless_dev *wdev)
-{
-	struct ieee80211_sub_if_data *sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
-
-	flush_delayed_work(&sdata->crit_prot_end_wk);
-}
-
 static int ieee80211_beacon_measurement(struct wiphy *wiphy,
 					struct wireless_dev *wdev,
 					bool state)
@@ -3543,7 +3516,5 @@ struct cfg80211_ops mac80211_config_ops = {
 	.get_et_strings = ieee80211_get_et_strings,
 	.get_channel = ieee80211_cfg_get_channel,
 	.start_radar_detection = ieee80211_start_radar_detection,
-	.crit_proto_start = ieee80211_crit_proto_start,
-	.crit_proto_stop = ieee80211_crit_proto_stop,
 	.beacon_measurement = ieee80211_beacon_measurement,
 };

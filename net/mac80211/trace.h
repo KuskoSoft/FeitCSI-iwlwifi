@@ -1887,32 +1887,6 @@ TRACE_EVENT(drv_set_default_unicast_key,
 		  LOCAL_PR_ARG, VIF_PR_ARG, __entry->key_idx)
 );
 
-TRACE_EVENT(drv_crit_proto,
-	TP_PROTO(struct ieee80211_local *local,
-		 struct ieee80211_sub_if_data *sdata,
-		 enum nl80211_crit_proto_id protocol,
-		 bool start),
-
-	TP_ARGS(local, sdata, protocol, start),
-
-	TP_STRUCT__entry(
-		LOCAL_ENTRY
-		VIF_ENTRY
-		__field(unsigned int, protocol)
-		__field(bool, start)
-	),
-
-	TP_fast_assign(
-		LOCAL_ASSIGN;
-		VIF_ASSIGN;
-		__entry->protocol = protocol;
-		__entry->start = start;
-	),
-
-	TP_printk(LOCAL_PR_FMT VIF_PR_FMT " protocol:%d start:%d",
-		  LOCAL_PR_ARG, VIF_PR_ARG, __entry->protocol, __entry->start)
-);
-
 TRACE_EVENT(drv_beacon_measurement,
 	TP_PROTO(struct ieee80211_local *local,
 		 struct ieee80211_sub_if_data *sdata,
