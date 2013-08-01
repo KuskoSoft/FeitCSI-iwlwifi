@@ -182,8 +182,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 
 	hw->wiphy->flags |= WIPHY_FLAG_CUSTOM_REGULATORY |
 			    WIPHY_FLAG_DISABLE_BEACON_HINTS |
-			    WIPHY_FLAG_IBSS_RSN |
-			    WIPHY_FLAG_SUPPORTS_BEACON_MEAS;
+			    WIPHY_FLAG_IBSS_RSN;
 
 	hw->wiphy->iface_combinations = iwl_mvm_iface_combinations;
 	hw->wiphy->n_iface_combinations =
@@ -1536,25 +1535,6 @@ static void iwl_mvm_mac_rssi_callback(struct ieee80211_hw *hw,
 	iwl_mvm_bt_rssi_event(mvm, vif, rssi_event);
 }
 
-static int iwl_mvm_mac_beacon_measurement(struct ieee80211_hw *hw,
-					  struct ieee80211_vif *vif,
-					  bool state)
-{
-	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
-	int ret;
-
-	mutex_lock(&mvm->mutex);
-
-	if (state)
-		ret = iwl_mvm_disable_beacon_filter(mvm, vif);
-	else
-		ret = iwl_mvm_enable_beacon_filter(mvm, vif);
-
-	mutex_unlock(&mvm->mutex);
-
-	return ret;
-}
-
 struct ieee80211_ops iwl_mvm_hw_ops = {
 	.tx = iwl_mvm_mac_tx,
 	.ampdu_action = iwl_mvm_mac_ampdu_action,
@@ -1597,7 +1577,6 @@ struct ieee80211_ops iwl_mvm_hw_ops = {
 	.resume = iwl_mvm_resume,
 	.set_wakeup = iwl_mvm_set_wakeup,
 	.set_rekey_data = iwl_mvm_set_rekey_data,
-	.beacon_measurement = iwl_mvm_mac_beacon_measurement,
 #if IS_ENABLED(CONFIG_IPV6)
 	.ipv6_addr_change = iwl_mvm_ipv6_addr_change,
 #endif
