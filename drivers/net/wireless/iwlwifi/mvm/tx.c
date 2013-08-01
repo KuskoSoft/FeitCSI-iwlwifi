@@ -98,13 +98,6 @@ static void iwl_mvm_set_tx_cmd(struct iwl_mvm *mvm, struct sk_buff *skb,
 	     ieee80211_is_mgmt(fc)))
 		tx_flags |= TX_CMD_FLG_BT_DIS;
 
-	if (info->control.vif) {
-		struct iwl_mvm_vif *mvmvif =
-			iwl_mvm_vif_from_mac80211(info->control.vif);
-		if (mvmvif->crit_proto)
-			tx_flags |= TX_CMD_FLG_BT_DIS;
-	}
-
 	if (ieee80211_has_morefrags(fc))
 		tx_flags |= TX_CMD_FLG_MORE_FRAG;
 

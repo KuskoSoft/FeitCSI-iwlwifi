@@ -1555,18 +1555,6 @@ static int iwl_mvm_mac_beacon_measurement(struct ieee80211_hw *hw,
 	return ret;
 }
 
-static int iwl_mvm_mac_crit_proto(struct ieee80211_hw *hw,
-				  struct ieee80211_vif *vif,
-				  enum nl80211_crit_proto_id protocol,
-				  bool start)
-{
-	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
-
-	mvmvif->crit_proto = start;
-
-	return 0;
-}
-
 struct ieee80211_ops iwl_mvm_hw_ops = {
 	.tx = iwl_mvm_mac_tx,
 	.ampdu_action = iwl_mvm_mac_ampdu_action,
@@ -1610,7 +1598,6 @@ struct ieee80211_ops iwl_mvm_hw_ops = {
 	.set_wakeup = iwl_mvm_set_wakeup,
 	.set_rekey_data = iwl_mvm_set_rekey_data,
 	.beacon_measurement = iwl_mvm_mac_beacon_measurement,
-	.crit_proto = iwl_mvm_mac_crit_proto,
 #if IS_ENABLED(CONFIG_IPV6)
 	.ipv6_addr_change = iwl_mvm_ipv6_addr_change,
 #endif
