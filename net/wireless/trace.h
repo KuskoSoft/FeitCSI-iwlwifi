@@ -1841,23 +1841,6 @@ TRACE_EVENT(rdev_crit_proto_stop,
 		  WIPHY_PR_ARG, WDEV_PR_ARG)
 );
 
-TRACE_EVENT(rdev_beacon_measurement,
-	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev, bool state),
-	TP_ARGS(wiphy, wdev, state),
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		WDEV_ENTRY
-		__field(bool, state)
-	),
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		WDEV_ASSIGN;
-		__entry->state = state;
-	),
-	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT " %s",
-		  WIPHY_PR_ARG, WDEV_PR_ARG, BOOL_TO_STR(__entry->state))
-);
-
 /*************************************************************
  *	     cfg80211 exported functions traces		     *
  *************************************************************/

@@ -923,17 +923,4 @@ static inline void rdev_crit_proto_stop(struct cfg80211_registered_device *rdev,
 	trace_rdev_return_void(&rdev->wiphy);
 }
 
-static inline int
-rdev_beacon_measurement(struct cfg80211_registered_device *rdev,
-			struct wireless_dev *wdev, bool state)
-{
-	int ret;
-
-	trace_rdev_beacon_measurement(&rdev->wiphy, wdev, state);
-	ret = rdev->ops->beacon_measurement(&rdev->wiphy, wdev, state);
-	trace_rdev_return_int(&rdev->wiphy, ret);
-
-	return ret;
-}
-
 #endif /* __CFG80211_RDEV_OPS */
