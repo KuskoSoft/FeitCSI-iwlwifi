@@ -1887,29 +1887,6 @@ TRACE_EVENT(drv_set_default_unicast_key,
 		  LOCAL_PR_ARG, VIF_PR_ARG, __entry->key_idx)
 );
 
-TRACE_EVENT(drv_beacon_measurement,
-	TP_PROTO(struct ieee80211_local *local,
-		 struct ieee80211_sub_if_data *sdata,
-		 bool state),
-
-	TP_ARGS(local, sdata, state),
-
-	TP_STRUCT__entry(
-		LOCAL_ENTRY
-		VIF_ENTRY
-		__field(bool, state)
-	),
-
-	TP_fast_assign(
-		LOCAL_ASSIGN;
-		VIF_ASSIGN;
-		__entry->state = state;
-	),
-
-	TP_printk(LOCAL_PR_FMT VIF_PR_FMT " state:%d",
-		  LOCAL_PR_ARG, VIF_PR_ARG, __entry->state)
-);
-
 TRACE_EVENT(api_radar_detected,
 	TP_PROTO(struct ieee80211_local *local),
 

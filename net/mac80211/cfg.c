@@ -3418,19 +3418,6 @@ static int ieee80211_cfg_get_channel(struct wiphy *wiphy,
 	return ret;
 }
 
-static int ieee80211_beacon_measurement(struct wiphy *wiphy,
-					struct wireless_dev *wdev,
-					bool state)
-{
-	struct ieee80211_sub_if_data *sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-
-	if (WARN_ON_ONCE(sdata->vif.type != NL80211_IFTYPE_STATION))
-		return -EINVAL;
-
-	return drv_beacon_measurement(local, sdata, state);
-}
-
 #ifdef CONFIG_PM
 static void ieee80211_set_wakeup(struct wiphy *wiphy, bool enabled)
 {
@@ -3516,5 +3503,4 @@ struct cfg80211_ops mac80211_config_ops = {
 	.get_et_strings = ieee80211_get_et_strings,
 	.get_channel = ieee80211_cfg_get_channel,
 	.start_radar_detection = ieee80211_start_radar_detection,
-	.beacon_measurement = ieee80211_beacon_measurement,
 };

@@ -2630,10 +2630,6 @@ enum ieee80211_roc_type {
  *	driver's resume function returned 1, as this is just like an "inline"
  *	hardware restart. This callback may sleep.
  *
- * @beacon_measurement: Start or stop beacon measurement. When started, all the
- *	beacons must be let through and data for measurement should be set in
- *	&ieee80211_rx_status (rssi etc...).
- *
  * @ipv6_addr_change: IPv6 address assignment on the given interface changed.
  *	Currently, this is only called for managed or P2P client interfaces.
  *	This callback is optional; it must not sleep.
@@ -2828,9 +2824,6 @@ struct ieee80211_ops {
 				     struct ieee80211_chanctx_conf *ctx);
 
 	void (*restart_complete)(struct ieee80211_hw *hw);
-
-	int (*beacon_measurement)(struct ieee80211_hw *hw,
-				  struct ieee80211_vif *vif, bool state);
 
 #if IS_ENABLED(CONFIG_IPV6)
 	void (*ipv6_addr_change)(struct ieee80211_hw *hw,
