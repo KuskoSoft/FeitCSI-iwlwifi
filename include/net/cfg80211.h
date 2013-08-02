@@ -4429,4 +4429,9 @@ void cfg80211_crit_proto_stopped(struct wireless_dev *wdev, gfp_t gfp);
 #define wiphy_WARN(wiphy, format, args...)			\
 	WARN(1, "wiphy: %s\n" format, wiphy_name(wiphy), ##args);
 
+#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
+int __wiphy_suspend(struct wiphy *wiphy);
+int __wiphy_resume(struct wiphy *wiphy);
+#endif
+
 #endif /* __NET_CFG80211_H */

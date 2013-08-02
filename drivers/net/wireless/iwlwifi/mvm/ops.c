@@ -758,6 +758,22 @@ static void iwl_mvm_cmd_queue_full(struct iwl_op_mode *op_mode)
 	iwl_mvm_nic_restart(mvm);
 }
 
+#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
+static int iwl_mvm_op_suspend(struct iwl_op_mode *op_mode)
+{
+	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
+
+	return __wiphy_suspend(mvm->hw->wiphy);
+}
+
+static int iwl_mvm_op_resume(struct iwl_op_mode *op_mode)
+{
+	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
+
+	return __wiphy_resume(mvm->hw->wiphy);
+}
+#endif
+
 static const struct iwl_op_mode_ops iwl_mvm_ops = {
 	.start = iwl_op_mode_mvm_start,
 	.stop = iwl_op_mode_mvm_stop,
@@ -779,6 +795,10 @@ static const struct iwl_op_mode_ops iwl_mvm_ops = {
 		.reply = iwl_mvm_testmode_reply,
 		.alloc_event = iwl_mvm_testmode_alloc_event,
 		.event = iwl_mvm_testmode_event,
-	}
+	},
+#endif
+#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
+	.suspend = iwl_mvm_op_suspend,
+	.resume = iwl_mvm_op_resume,
 #endif
 };

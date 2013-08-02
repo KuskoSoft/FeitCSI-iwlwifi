@@ -18,3 +18,11 @@ config IWLWIFI_PCIE_SUSPEND_RESUME
 	  suspend/resume code and the driver has to work around it
 	  or if you need the driver to store and restore the PCIe
 	  configuration for other reasons.
+
+config IWLWIFI_INTEGRATE_SUSPEND_RESUME
+	bool "integrate suspend/resume into the driver"
+	depends on IWLMVM && PM_SLEEP
+	help
+	  Enable this option if for some reason you cannot rely on
+	  the kernel calling the wiphy's suspend/resume function at
+	  the right place. Don't enable this unless you need it.

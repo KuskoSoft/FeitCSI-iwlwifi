@@ -196,6 +196,10 @@ struct iwl_op_mode_ops {
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	struct iwl_test_ops test_ops;
 #endif
+#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
+	int (*suspend)(struct iwl_op_mode *op_mode);
+	int (*resume)(struct iwl_op_mode *op_mode);
+#endif
 };
 
 int iwl_opmode_register(const char *name, const struct iwl_op_mode_ops *ops);
@@ -307,6 +311,26 @@ static inline int iwl_op_mode_tm_execute_cmd(struct iwl_op_mode *op_mode,
 	return -EOPNOTSUPP;
 }
 
+#endif
+
+#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
+static inline int iwl_op_mode_suspend(struct iwl_op_mode *op_mode)
+{
+	might_sleep();
+
+	if (!op_mode->ops->suspend)
+		return 0;
+	return op_mode->ops->suspend(op_mode);
+}
+
+static inline int iwl_op_mode_resume(struct iwl_op_mode *op_mode)
+{
+	might_sleep();
+
+	if (!op_mode->ops->resume)
+		return 0;
+	return op_mode->ops->resume(op_mode);
+}
 #endif
 
 #endif /* __iwl_op_mode_h__ */
