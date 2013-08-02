@@ -14,6 +14,11 @@ bool mod_delayed_work(struct workqueue_struct *wq, struct delayed_work *dwork,
 #define create_freezable_workqueue create_freezeable_workqueue
 #endif
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
+#define WQ_HIGHPRI 0
+#define WQ_MEM_RECLAIM 0
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 #define WQ_UNBOUND	0

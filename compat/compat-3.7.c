@@ -251,3 +251,32 @@ int pcie_capability_clear_and_set_dword(struct pci_dev *dev, int pos,
 	return ret;
 }
 EXPORT_SYMBOL_GPL(pcie_capability_clear_and_set_dword);
+
+#ifdef KERNEL_HAS_OF_SUPPORT
+#ifdef CONFIG_OF
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
+/**
+ *	of_get_child_by_name - Find the child node by name for a given parent
+ *	@node:	parent node
+ *	@name:	child name to look for.
+ *
+ *      This function looks for child node for given matching name
+ *
+ *	Returns a node pointer if found, with refcount incremented, use
+ *	of_node_put() on it when done.
+ *	Returns NULL if node is not found.
+ */
+struct device_node *of_get_child_by_name(const struct device_node *node,
+				const char *name)
+{
+	struct device_node *child;
+
+	for_each_child_of_node(node, child)
+		if (child->name && (of_node_cmp(child->name, name) == 0))
+			break;
+	return child;
+}
+EXPORT_SYMBOL_GPL(of_get_child_by_name);
+#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)) */
+#endif /* CONFIG_OF */
+#endif /* KERNEL_HAS_OF_SUPPORT */

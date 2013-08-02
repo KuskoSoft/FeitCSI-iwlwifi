@@ -176,4 +176,23 @@ extern int dev_set_name(struct device *dev, const char *name, ...)
 			__attribute__((format(printf, 2, 3)));
 #endif
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,6,0)
+#define driver_probe_device(__drv, __dev)		\
+({							\
+ 	int ret;					\
+ 	ret = (driver_probe_device)(__drv, __dev);	\
+ 	if (ret)					\
+		dev_set_drvdata(__dev, NULL);		\
+ 	return ret;					\
+})
+
+#define device_release_driver(__dev)			\
+({							\
+ 	(device_release_driver)(__dev);			\
+ 	device_lock(__dev);				\
+ 	dev_set_drvdata(__dev, NULL);			\
+ 	device_unlock(__dev);				\
+})
+#endif /* LINUX_VERSION_CODE <= KERNEL_VERSION(3,6,0) */
+
 #endif /* __BACKPORT_DEVICE_H */

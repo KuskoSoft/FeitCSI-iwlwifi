@@ -513,7 +513,10 @@ static void hci_init2_req(struct hci_request *req, unsigned long opt)
 
 	hci_setup_event_mask(req);
 
-	if (hdev->hci_ver > BLUETOOTH_VER_1_1)
+	/* AVM Berlin (31), aka "BlueFRITZ!", doesn't support the read
+	 * local supported commands HCI command.
+	 */
+	if (hdev->manufacturer != 31 && hdev->hci_ver > BLUETOOTH_VER_1_1)
 		hci_req_add(req, HCI_OP_READ_LOCAL_COMMANDS, 0, NULL);
 
 	if (lmp_ssp_capable(hdev)) {
@@ -2165,27 +2168,15 @@ int hci_register_dev(struct hci_dev *hdev)
 
 	BT_DBG("%p name %s bus %d", hdev, hdev->name, hdev->bus);
 
-	write_lock(&hci_dev_list_lock);
-	list_add(&hdev->list, &hci_dev_list);
-	write_unlock(&hci_dev_list_lock);
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
 	hdev->workqueue = alloc_workqueue("%s", WQ_HIGHPRI | WQ_UNBOUND |
 					  WQ_MEM_RECLAIM, 1, hdev->name);
-#else
-	hdev->workqueue = create_singlethread_workqueue(hdev->name);
-#endif
 	if (!hdev->workqueue) {
 		error = -ENOMEM;
 		goto err;
 	}
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37))
 	hdev->req_workqueue = alloc_workqueue("%s", WQ_HIGHPRI | WQ_UNBOUND |
 					      WQ_MEM_RECLAIM, 1, hdev->name);
-#else
-	hdev->req_workqueue = create_singlethread_workqueue(hdev->name);
-#endif
 	if (!hdev->req_workqueue) {
 		destroy_workqueue(hdev->workqueue);
 		error = -ENOMEM;
@@ -2211,6 +2202,10 @@ int hci_register_dev(struct hci_dev *hdev)
 	if (hdev->dev_type != HCI_AMP)
 		set_bit(HCI_AUTO_OFF, &hdev->dev_flags);
 
+	write_lock(&hci_dev_list_lock);
+	list_add(&hdev->list, &hci_dev_list);
+	write_unlock(&hci_dev_list_lock);
+
 	hci_notify(hdev, HCI_DEV_REG);
 	hci_dev_hold(hdev);
 
@@ -2223,9 +2218,6 @@ err_wqueue:
 	destroy_workqueue(hdev->req_workqueue);
 err:
 	ida_simple_remove(&hci_index_ida, hdev->id);
-	write_lock(&hci_dev_list_lock);
-	list_del(&hdev->list);
-	write_unlock(&hci_dev_list_lock);
 
 	return error;
 }
@@ -3407,8 +3399,16 @@ void hci_req_cmd_complete(struct hci_dev *hdev, u16 opcode, u8 status)
 	 */
 	if (hdev->sent_cmd) {
 		req_complete = bt_cb(hdev->sent_cmd)->req.complete;
-		if (req_complete)
+
+		if (req_complete) {
+			/* We must set the complete callback to NULL to
+			 * avoid calling the callback more than once if
+			 * this function gets called again.
+			 */
+			bt_cb(hdev->sent_cmd)->req.complete = NULL;
+
 			goto call_complete;
+		}
 	}
 
 	/* Remove all pending commands belonging to this request */

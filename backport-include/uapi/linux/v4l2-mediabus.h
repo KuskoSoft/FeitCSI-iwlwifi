@@ -20,15 +20,19 @@
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
 #if defined(CPTCFG_VIDEO_DEV_MODULE)
 
+#include <media/v4l2-clk.h>
+
 struct soc_camera_subdev_desc;
 
 #define soc_camera_power_on LINUX_BACKPORT(soc_camera_power_on)
 int soc_camera_power_on(struct device *dev,
-			struct soc_camera_subdev_desc *ssdd);
+			struct soc_camera_subdev_desc *ssdd,
+			struct v4l2_clk *clk);
 
 #define soc_camera_power_off LINUX_BACKPORT(soc_camera_power_off)
 int soc_camera_power_off(struct device *dev,
-			struct soc_camera_subdev_desc *ssdd);
+			struct soc_camera_subdev_desc *ssdd,
+			struct v4l2_clk *clk);
 
 #endif /* defined(CPTCFG_VIDEO_DEV_MODULE) */
 #endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)) */

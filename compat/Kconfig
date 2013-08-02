@@ -145,6 +145,13 @@ config BACKPORT_BUILD_DMA_SHARED_BUFFER
 	#h-file linux/dma-buf.h
 	#c-file drivers/base/dma-buf.c
 
+config BACKPORT_BUILD_CROSS_RESERVATION
+	bool
+	# not possible on kernel < 3.2
+	depends on !BACKPORT_KERNEL_3_2
+	depends on BACKPORT_BUILD_DMA_SHARED_BUFFER || DMA_SHARED_BUFFER
+	default y if BACKPORT_USERSEL_BUILD_ALL
+
 config BACKPORT_DMA_SHARED_BUFFER
 	bool
 
@@ -191,6 +198,17 @@ config BACKPORT_LEDS_CLASS
 
 config BACKPORT_LEDS_TRIGGERS
 	bool
+
+config BACKPORT_BUILD_WW_MUTEX
+	bool
+	# Build only if on kernels < 3.11
+	# For now only DRM drivers use ww mutexes.
+	depends on DRM && BACKPORT_KERNEL_3_11
+	default y if BACKPORT_USERSEL_BUILD_ALL
+	# probably a bad idea if you have these options given we
+	# ripped those options out.
+	depends on !DEBUG_MUTEXES
+	depends on !DEBUG_LOCK_ALLOC
 
 config BACKPORT_BUILD_RADIX_HELPERS
 	bool

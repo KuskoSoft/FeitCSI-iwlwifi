@@ -38,14 +38,21 @@
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
 
 #if defined(CPTCFG_VIDEO_V4L2_MODULE)
+#include <media/v4l2-clk.h>
 int soc_camera_power_on(struct device *dev,
-			struct soc_camera_subdev_desc *ssdd)
+			struct soc_camera_subdev_desc *ssdd,
+			struct v4l2_clk *clk)
 {
-	int ret = regulator_bulk_enable(ssdd->num_regulators,
+	int ret = clk ? v4l2_clk_enable(clk) : 0;
+	if (ret < 0) {
+		dev_err(dev, "Cannot enable clock: %d\n", ret);
+		return ret;
+	}
+	ret = regulator_bulk_enable(ssdd->num_regulators,
 					ssdd->regulators);
 	if (ret < 0) {
 		dev_err(dev, "Cannot enable regulators\n");
-		return ret;
+		goto eregenable;
 	}
 
 	if (ssdd->power) {
@@ -53,17 +60,26 @@ int soc_camera_power_on(struct device *dev,
 		if (ret < 0) {
 			dev_err(dev,
 				"Platform failed to power-on the camera.\n");
-			regulator_bulk_disable(ssdd->num_regulators,
-					       ssdd->regulators);
+			goto epwron;
 		}
 	}
+
+	return 0;
+
+epwron:
+	regulator_bulk_disable(ssdd->num_regulators,
+			       ssdd->regulators);
+eregenable:
+	if (clk)
+		v4l2_clk_disable(clk);
 
 	return ret;
 }
 EXPORT_SYMBOL_GPL(soc_camera_power_on);
 
 int soc_camera_power_off(struct device *dev,
-			 struct soc_camera_subdev_desc *ssdd)
+			 struct soc_camera_subdev_desc *ssdd,
+			 struct v4l2_clk *clk)
 {
 	int ret = 0;
 	int err;
@@ -83,6 +99,9 @@ int soc_camera_power_off(struct device *dev,
 		dev_err(dev, "Cannot disable regulators\n");
 		ret = ret ? : err;
 	}
+
+	if (clk)
+		v4l2_clk_disable(clk);
 
 	return ret;
 }

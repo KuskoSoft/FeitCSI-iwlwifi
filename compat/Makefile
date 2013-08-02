@@ -41,4 +41,6 @@ compat-$(CPTCFG_BACKPORT_BUILD_KFIFO) += kfifo.o
 compat-$(CPTCFG_BACKPORT_BUILD_GENERIC_ATOMIC64) += compat_atomic.o
 compat-$(CPTCFG_BACKPORT_BUILD_DMA_SHARED_HELPERS) += dma-shared-helpers.o
 compat-$(CPTCFG_BACKPORT_BUILD_RADIX_HELPERS) += lib-radix-tree-helpers.o
+compat-$(CPTCFG_BACKPORT_BUILD_WW_MUTEX) += kernel/ww_mutex.o
+compat-$(CPTCFG_BACKPORT_BUILD_CROSS_RESERVATION) += drivers-base-reservation.o
 compat-$(CPTCFG_BACKPORT_BUILD_AVERAGE) += lib-average.o
