@@ -558,11 +558,17 @@ enum iwl_mvm_status {
 	IWL_MVM_STATUS_HW_CTKILL,
 	IWL_MVM_STATUS_ROC_RUNNING,
 	IWL_MVM_STATUS_IN_HW_RESTART,
+#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
+	IWL_MVM_STATUS_SUSP_RFKILL,
+#endif
 };
 
 static inline bool iwl_mvm_is_radio_killed(struct iwl_mvm *mvm)
 {
 	return test_bit(IWL_MVM_STATUS_HW_RFKILL, &mvm->status) ||
+#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
+	       test_bit(IWL_MVM_STATUS_SUSP_RFKILL, &mvm->status) ||
+#endif
 	       test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status);
 }
 

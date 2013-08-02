@@ -763,14 +763,31 @@ static int iwl_mvm_op_suspend(struct iwl_op_mode *op_mode)
 {
 	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
 
+#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
+	set_bit(IWL_MVM_STATUS_SUSP_RFKILL, &mvm->status);
+	wiphy_rfkill_set_hw_state(mvm->hw->wiphy, iwl_mvm_is_radio_killed(mvm));
+	wiphy_sync_rfkill(mvm->hw->wiphy);
+#endif
+
 	return __wiphy_suspend(mvm->hw->wiphy);
 }
 
 static int iwl_mvm_op_resume(struct iwl_op_mode *op_mode)
 {
 	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
+#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
+	int err;
 
+	err = __wiphy_resume(mvm->hw->wiphy);
+	if (err)
+		return err;
+
+	clear_bit(IWL_MVM_STATUS_SUSP_RFKILL, &mvm->status);
+	wiphy_rfkill_set_hw_state(mvm->hw->wiphy, iwl_mvm_is_radio_killed(mvm));
+	return 0;
+#else
 	return __wiphy_resume(mvm->hw->wiphy);
+#endif
 }
 #endif
 

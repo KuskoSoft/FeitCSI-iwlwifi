@@ -3801,6 +3801,10 @@ void cfg80211_notify_new_peer_candidate(struct net_device *dev,
  */
 void wiphy_rfkill_set_hw_state(struct wiphy *wiphy, bool blocked);
 
+#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
+void wiphy_sync_rfkill(struct wiphy *wiphy);
+#endif
+
 /**
  * wiphy_rfkill_start_polling - start polling rfkill
  * @wiphy: the wiphy

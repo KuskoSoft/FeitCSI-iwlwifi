@@ -722,6 +722,16 @@ void wiphy_rfkill_set_hw_state(struct wiphy *wiphy, bool blocked)
 }
 EXPORT_SYMBOL(wiphy_rfkill_set_hw_state);
 
+#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
+void wiphy_sync_rfkill(struct wiphy *wiphy)
+{
+	struct cfg80211_registered_device *rdev = wiphy_to_dev(wiphy);
+
+	flush_work(&rdev->rfkill_sync);
+}
+EXPORT_SYMBOL_GPL(wiphy_sync_rfkill);
+#endif
+
 void cfg80211_unregister_wdev(struct wireless_dev *wdev)
 {
 	struct cfg80211_registered_device *rdev = wiphy_to_dev(wdev->wiphy);

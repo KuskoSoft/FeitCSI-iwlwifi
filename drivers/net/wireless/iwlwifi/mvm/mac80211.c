@@ -238,6 +238,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	mvm->rts_threshold = IEEE80211_MAX_RTS_THRESHOLD;
 
 #ifdef CONFIG_PM_SLEEP
+#ifndef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
 	if (mvm->fw->img[IWL_UCODE_WOWLAN].sec[0].len &&
 	    mvm->trans->ops->d3_suspend &&
 	    mvm->trans->ops->d3_resume &&
@@ -257,6 +258,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		mvm->wowlan.tcp = &iwl_mvm_wowlan_tcp_support;
 		hw->wiphy->wowlan = &mvm->wowlan;
 	}
+#endif
 #endif
 
 	ret = iwl_mvm_leds_init(mvm);
