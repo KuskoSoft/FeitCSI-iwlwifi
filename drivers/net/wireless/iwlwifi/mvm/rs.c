@@ -86,7 +86,6 @@ static const u8 ant_toggle_lookup[] = {
 	[IWL_RATE_##r##M_INDEX] = { IWL_RATE_##r##M_PLCP,      \
 				    IWL_RATE_SISO_##s##M_PLCP, \
 				    IWL_RATE_MIMO2_##s##M_PLCP,\
-				    IWL_RATE_MIMO3_##s##M_PLCP,\
 				    IWL_RATE_##rp##M_INDEX,    \
 				    IWL_RATE_##rn##M_INDEX }
 

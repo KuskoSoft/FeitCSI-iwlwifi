@@ -38,7 +38,6 @@ struct iwl_rs_rate_info {
 	u8 plcp;	/* uCode API:  IWL_RATE_6M_PLCP, etc. */
 	u8 plcp_siso;	/* uCode API:  IWL_RATE_SISO_6M_PLCP, etc. */
 	u8 plcp_mimo2;	/* uCode API:  IWL_RATE_MIMO2_6M_PLCP, etc. */
-	u8 plcp_mimo3;  /* uCode API:  IWL_RATE_MIMO3_6M_PLCP, etc. */
 	u8 prev_rs;      /* previous rate used in rs algo */
 	u8 next_rs;      /* next rate used in rs algo */
 };
@@ -193,7 +192,6 @@ enum iwl_table_type {
 	LQ_A,
 	LQ_SISO,	/* high-throughput types */
 	LQ_MIMO2,
-	LQ_MIMO3,
 	LQ_MAX,
 };
 
