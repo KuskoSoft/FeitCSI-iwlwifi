@@ -78,6 +78,7 @@
  * @IWL_UCODE_TLV_FLAGS_SHORT_BL: 16 entries of black list instead of 64 in scan
  *	offload profile config command.
  * @IWL_UCODE_TLV_FLAGS_RX_ENERGY_API: supports rx signal strength api
+ * @IWL_UCODE_TLV_FLAGS_TIME_EVENT_API_V2: using the new time event API.
  * @IWL_UCODE_TLV_FLAGS_D3_6_IPV6_ADDRS: D3 image supports up to six
  *	(rather than two) IPv6 addresses
  * @IWL_UCODE_TLV_FLAGS_BF_UPDATED: new beacon filtering API
@@ -91,6 +92,7 @@ enum iwl_ucode_tlv_flag {
 	IWL_UCODE_TLV_FLAGS_UAPSD		= BIT(6),
 	IWL_UCODE_TLV_FLAGS_SHORT_BL		= BIT(7),
 	IWL_UCODE_TLV_FLAGS_RX_ENERGY_API	= BIT(8),
+	IWL_UCODE_TLV_FLAGS_TIME_EVENT_API_V2	= BIT(9),
 	IWL_UCODE_TLV_FLAGS_D3_6_IPV6_ADDRS	= BIT(10),
 	IWL_UCODE_TLV_FLAGS_BF_UPDATED		= BIT(11),
 };
