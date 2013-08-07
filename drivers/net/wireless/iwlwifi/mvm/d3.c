@@ -1362,6 +1362,13 @@ static void iwl_mvm_read_d3_sram(struct iwl_mvm *mvm)
 #endif
 }
 
+static void iwl_mvm_d3_disconnect_iter(void *data, u8 *mac,
+				       struct ieee80211_vif *vif)
+{
+	if (vif->type == NL80211_IFTYPE_STATION)
+		ieee80211_resume_disconnect(vif);
+}
+
 static int __iwl_mvm_resume(struct iwl_mvm *mvm, bool test)
 {
 	struct iwl_d3_iter_data resume_iter_data = {
@@ -1403,8 +1410,11 @@ static int __iwl_mvm_resume(struct iwl_mvm *mvm, bool test)
 	mutex_unlock(&mvm->mutex);
 
  out:
-	if (!test && vif)
-		ieee80211_resume_disconnect(vif);
+	if (!test)
+		ieee80211_iterate_active_interfaces(mvm->hw,
+						    IEEE80211_IFACE_ITER_NORMAL,
+						    iwl_mvm_d3_disconnect_iter,
+						    NULL);
 
 	/* return 1 to reconfigure the device */
 	set_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status);
