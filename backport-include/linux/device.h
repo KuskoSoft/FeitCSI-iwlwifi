@@ -177,22 +177,15 @@ extern int dev_set_name(struct device *dev, const char *name, ...)
 #endif
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(3,6,0)
-#define driver_probe_device(__drv, __dev)		\
-({							\
- 	int ret;					\
- 	ret = (driver_probe_device)(__drv, __dev);	\
- 	if (ret)					\
-		dev_set_drvdata(__dev, NULL);		\
- 	return ret;					\
-})
-
-#define device_release_driver(__dev)			\
-({							\
- 	(device_release_driver)(__dev);			\
- 	device_lock(__dev);				\
- 	dev_set_drvdata(__dev, NULL);			\
- 	device_unlock(__dev);				\
-})
+static inline void
+backport_device_release_driver(struct device *dev)
+{
+	device_release_driver(dev);
+	device_lock(dev);
+	dev_set_drvdata(dev, NULL);
+	device_unlock(dev);
+}
+#define device_release_driver LINUX_BACKPORT(device_release_driver)
 #endif /* LINUX_VERSION_CODE <= KERNEL_VERSION(3,6,0) */
 
 #endif /* __BACKPORT_DEVICE_H */
