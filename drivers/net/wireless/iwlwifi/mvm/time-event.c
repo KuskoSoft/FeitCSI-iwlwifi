@@ -284,7 +284,7 @@ static inline u16 te_v2_get_dep_policy(__le16 policy)
 		TE_V2_PLACEMENT_POS;
 }
 
-static inline u16 te_v2_get_absene(__le16 policy)
+static inline u16 te_v2_get_absence(__le16 policy)
 {
 	return (le16_to_cpu(policy) & TE_V2_ABSENCE) >> TE_V2_ABSENCE_POS;
 }
@@ -305,10 +305,10 @@ static void iwl_mvm_te_v2_to_v1(const struct iwl_time_event_cmd_v2 *cmd_v2,
 	else
 		cmd_v1->repeat = cpu_to_le32(cmd_v2->repeat);
 	cmd_v1->max_frags = cpu_to_le32(cmd_v2->max_frags);
-	cmd_v1->interval_reciprocal = 0; /*unused*/
+	cmd_v1->interval_reciprocal = 0; /* unused */
 
 	cmd_v1->dep_policy = cpu_to_le32(te_v2_get_dep_policy(cmd_v2->policy));
-	cmd_v1->is_present = cpu_to_le32(!te_v2_get_absene(cmd_v2->policy));
+	cmd_v1->is_present = cpu_to_le32(!te_v2_get_absence(cmd_v2->policy));
 	cmd_v1->notify = cpu_to_le32(te_v2_get_notify(cmd_v2->policy));
 }
 

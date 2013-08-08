@@ -502,7 +502,7 @@ enum iwl_time_event_type {
 
 
 
-/* Time event - defines for command API v1*/
+/* Time event - defines for command API v1 */
 
 /*
  * @TE_V1_FRAG_NONE: fragmentation of the time event is NOT allowed.
@@ -613,7 +613,7 @@ struct iwl_time_event_cmd_v1 {
 } __packed; /* MAC_TIME_EVENT_CMD_API_S_VER_1 */
 
 
-/* Time event - defines for command API v2*/
+/* Time event - defines for command API v2 */
 
 /*
  * @TE_V2_FRAG_NONE: fragmentation of the time event is NOT allowed.
