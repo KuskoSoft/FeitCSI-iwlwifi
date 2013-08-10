@@ -1395,9 +1395,10 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 
 	trans = kzalloc(sizeof(struct iwl_trans) +
 			sizeof(struct iwl_trans_pcie), GFP_KERNEL);
-
-	if (!trans)
-		return NULL;
+	if (!trans) {
+		err = -ENOMEM;
+		goto out;
+	}
 
 	trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -1409,10 +1410,9 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 	spin_lock_init(&trans_pcie->reg_lock);
 	init_waitqueue_head(&trans_pcie->ucode_write_waitq);
 
-	if (pci_enable_device(pdev)) {
-		err = -ENODEV;
+	err = pci_enable_device(pdev);
+	if (err)
 		goto out_no_pci;
-	}
 
 	if (!cfg->base_params->pcie_l1_allowed) {
 		/*
@@ -1492,8 +1492,10 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 				  SLAB_HWCACHE_ALIGN,
 				  NULL);
 
-	if (!trans->dev_cmd_pool)
+	if (!trans->dev_cmd_pool) {
+		err = -ENOMEM;
 		goto out_pci_disable_msi;
+	}
 
 	trans_pcie->inta_mask = CSR_INI_SET_MASK;
 
@@ -1501,15 +1503,16 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 		goto out_free_cmd_pool;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	if (compat_request_threaded_irq(&trans_pcie->irq_compat,
-					pdev->irq, iwl_pcie_isr_ict,
-					iwl_pcie_irq_handler,
-					IRQF_SHARED, DRV_NAME, trans)) {
+	err = compat_request_threaded_irq(&trans_pcie->irq_compat,
+					  pdev->irq, iwl_pcie_isr_ict,
+					  iwl_pcie_irq_handler,
+					  IRQF_SHARED, DRV_NAME, trans);
 #else
-	if (request_threaded_irq(pdev->irq, iwl_pcie_isr_ict,
-				 iwl_pcie_irq_handler,
-				 IRQF_SHARED, DRV_NAME, trans)) {
+	err = request_threaded_irq(pdev->irq, iwl_pcie_isr_ict,
+				   iwl_pcie_irq_handler,
+				   IRQF_SHARED, DRV_NAME, trans);
 #endif
+	if (err) {
 		IWL_ERR(trans, "Error allocating IRQ %d\n", pdev->irq);
 		goto out_free_ict;
 	}
@@ -1528,5 +1531,6 @@ out_pci_disable_device:
 	pci_disable_device(pdev);
 out_no_pci:
 	kfree(trans);
-	return NULL;
+out:
+	return ERR_PTR(err);
 }
