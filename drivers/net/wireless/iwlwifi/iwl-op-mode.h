@@ -209,16 +209,8 @@ struct iwl_test_trace {
 	bool enabled;
 };
 
-struct iwl_test_mem {
-	u32 size;
-	u32 nchunks; /* used only by old testmode */
-	u8 *addr;
-	bool in_read; /* only used by old testmode */
-};
-
 struct iwl_test {
 	struct iwl_test_trace trace;
-	struct iwl_test_mem mem;
 	bool notify;
 };
 
