@@ -515,8 +515,8 @@ const char *iwl_mvm_get_tx_fail_reason(u32 status)
 /**
  * translate ucode response to mac80211 tx status control values
  */
-static void iwl_mvm_hwrate_to_tx_control(u32 rate_n_flags,
-					 struct ieee80211_tx_info *info)
+void iwl_mvm_hwrate_to_tx_control(u32 rate_n_flags,
+				  struct ieee80211_tx_info *info)
 {
 	struct ieee80211_tx_rate *r = &info->status.rates[0];
 
