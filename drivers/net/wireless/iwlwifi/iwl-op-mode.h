@@ -203,7 +203,6 @@ void iwl_opmode_deregister(const char *name);
 
 struct iwl_test_trace {
 	u32 size;
-	u32 nchunks; /* used only by old testmode */
 	u8 *cpu_addr;
 	dma_addr_t dma_addr;
 	bool enabled;
