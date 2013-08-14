@@ -8,3 +8,13 @@ config IWLWIFI_DEVICE_TESTMODE
 	bool "enable generic netlink testmode support"
 	default y if IWLMVM
 
+config IWLWIFI_PCIE_SUSPEND_RESUME
+	bool "enable PCIe suspend/resume code workarounds"
+	depends on IWLWIFI_PCIE
+	# Intel Media requires this
+	default y if CONFIG_ARCH_GEN3
+	help
+	  Enable this option if your base kernel has broken PCI(e)
+	  suspend/resume code and the driver has to work around it
+	  or if you need the driver to store and restore the PCIe
+	  configuration for other reasons.

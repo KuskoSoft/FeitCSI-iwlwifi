@@ -27,7 +27,7 @@ const struct dev_pm_ops name = { \
 }
 #endif /* 2.6.32 */
 
-#if defined(CONFIG_ARCH_GEN3)
+#if defined(CPTCFG_IWLWIFI_PCIE_SUSPEND_RESUME)
 #undef SIMPLE_DEV_PM_OPS
 #define SIMPLE_DEV_PM_OPS(name, suspend_fn, resume_fn)		\
 struct dev_pm_ops name = {					\

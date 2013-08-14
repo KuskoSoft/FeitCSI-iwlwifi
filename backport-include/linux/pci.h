@@ -43,7 +43,7 @@ int __must_check pci_enable_device_mem(struct pci_dev *dev);
 		return fn(&pdev->dev);					\
 	}
 #elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,29) || \
-      defined(CONFIG_ARCH_GEN3)
+      defined(CPTCFG_IWLWIFI_PCIE_SUSPEND_RESUME)
 #define compat_pci_suspend(fn)						\
 	int fn##_compat(struct device *dev)			 	\
 	{								\
