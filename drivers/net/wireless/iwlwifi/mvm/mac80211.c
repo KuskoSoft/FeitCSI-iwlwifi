@@ -1572,11 +1572,10 @@ static const struct nla_policy iwl_mvm_tm_policy[IWL_MVM_TM_ATTR_MAX + 1] = {
 	[IWL_MVM_TM_ATTR_NOA_DURATION] = { .type = NLA_U32 },
 };
 
-static int iwl_mvm_mac_testmode_cmd(struct ieee80211_hw *hw,
-				    struct ieee80211_vif *vif,
-				    void *data, int len)
+static int __iwl_mvm_mac_testmode_cmd(struct iwl_mvm *mvm,
+				      struct ieee80211_vif *vif,
+				      void *data, int len)
 {
-	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	struct nlattr *tb[IWL_MVM_TM_ATTR_MAX + 1];
 	int err;
 	u32 noa_duration;
@@ -1599,18 +1598,25 @@ static int iwl_mvm_mac_testmode_cmd(struct ieee80211_hw *hw,
 		if (noa_duration >= vif->bss_conf.beacon_int)
 			return -EINVAL;
 
-		mutex_lock(&mvm->mutex);
-
 		mvm->noa_duration = noa_duration;
 		mvm->noa_vif = vif;
 
-		err = iwl_mvm_update_quotas(mvm, NULL);
-
-		mutex_unlock(&mvm->mutex);
-		break;
-	default:
-		return -EOPNOTSUPP;
+		return iwl_mvm_update_quotas(mvm, NULL);
 	}
+
+	return -EOPNOTSUPP;
+}
+
+static int iwl_mvm_mac_testmode_cmd(struct ieee80211_hw *hw,
+				    struct ieee80211_vif *vif,
+				    void *data, int len)
+{
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	int err;
+
+	mutex_lock(&mvm->mutex);
+	err = __iwl_mvm_mac_testmode_cmd(mvm, vif, data, len);
+	mutex_unlock(&mvm->mutex);
 
 	return err;
 }
