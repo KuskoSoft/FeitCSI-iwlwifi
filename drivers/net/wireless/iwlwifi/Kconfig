@@ -79,6 +79,11 @@ config IWLWIFI_PCIE
 
 	  If unsure, select Y.
 
+endmenu
+
+menu "Debugging Options"
+	depends on IWLWIFI
+
 config IWLWIFI_DEBUG
 	bool "Enable full debugging output in the iwlwifi driver"
 	depends on IWLWIFI
