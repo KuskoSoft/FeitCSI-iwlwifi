@@ -120,6 +120,7 @@ struct iwl_mvm_phy_ctxt {
 	 * scaling algorithm
 	 */
 	struct ieee80211_channel *channel;
+
 };
 
 struct iwl_mvm_time_event_data {
