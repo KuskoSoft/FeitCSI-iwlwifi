@@ -347,7 +347,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	op_mode = hw->priv;
 	op_mode->ops = &iwl_mvm_ops;
-	op_mode->trans = trans;
 
 	mvm = IWL_OP_MODE_GET_MVM(op_mode);
 	mvm->dev = trans->dev;
@@ -588,7 +587,7 @@ static int iwl_mvm_rx_dispatch(struct iwl_op_mode *op_mode,
 	 * In this case the iwl_test object will handle forwarding the rx
 	 * data to user space.
 	 */
-	iwl_tm_mvm_send_rx(op_mode, rxb);
+	iwl_tm_mvm_send_rx(mvm, rxb);
 #endif
 
 	for (i = 0; i < ARRAY_SIZE(iwl_mvm_rx_handlers); i++) {

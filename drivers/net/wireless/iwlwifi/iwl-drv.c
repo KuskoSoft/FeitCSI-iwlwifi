@@ -878,7 +878,7 @@ _iwl_op_mode_start(struct iwl_drv *drv, struct iwlwifi_opmode_table *op)
 #endif
 	}
 
-	iwl_tm_gnl_add(op_mode);
+	iwl_tm_gnl_add(drv->trans);
 
 	return op_mode;
 }
@@ -887,7 +887,7 @@ static void _iwl_op_mode_stop(struct iwl_drv *drv)
 {
 	/* op_mode can be NULL if its start failed */
 	if (drv->op_mode) {
-		iwl_tm_gnl_remove(drv->op_mode);
+		iwl_tm_gnl_remove(drv->trans);
 		iwl_op_mode_stop(drv->op_mode);
 		drv->op_mode = NULL;
 
