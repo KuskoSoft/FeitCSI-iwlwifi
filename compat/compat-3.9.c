@@ -12,6 +12,10 @@
 #include <linux/scatterlist.h>
 #include <linux/device.h>
 #include <linux/err.h>
+#include <linux/netdevice.h>
+#include <linux/if.h>
+#include <linux/if_ether.h>
+#include <linux/etherdevice.h>
 
 #ifdef __sg_page_iter_next
 
@@ -63,5 +67,35 @@ void __iomem *devm_ioremap_resource(struct device *dev, struct resource *res)
 	return dest_ptr;
 }
 EXPORT_SYMBOL_GPL(devm_ioremap_resource);
+
+/**
+ * eth_prepare_mac_addr_change - prepare for mac change
+ * @dev: network device
+ * @p: socket address
+ */
+int eth_prepare_mac_addr_change(struct net_device *dev, void *p)
+{
+	struct sockaddr *addr = p;
+
+	if (!(dev->priv_flags & IFF_LIVE_ADDR_CHANGE) && netif_running(dev))
+		return -EBUSY;
+	if (!is_valid_ether_addr(addr->sa_data))
+		return -EADDRNOTAVAIL;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(eth_prepare_mac_addr_change);
+
+/**
+ * eth_commit_mac_addr_change - commit mac change
+ * @dev: network device
+ * @p: socket address
+ */
+void eth_commit_mac_addr_change(struct net_device *dev, void *p)
+{
+	struct sockaddr *addr = p;
+
+	memcpy(dev->dev_addr, addr->sa_data, ETH_ALEN);
+}
+EXPORT_SYMBOL_GPL(eth_commit_mac_addr_change);
 
 #endif /* __sg_page_iter_next */

@@ -13,6 +13,9 @@
  * arch_phys_del_wc(0) or arch_phys_del_wc(any error code) is guaranteed
  * to have no effect.
  */
+#define arch_phys_wc_add LINUX_BACKPORT(arch_phys_wc_add)
+#define arch_phys_wc_del LINUX_BACKPORT(arch_phys_wc_del)
+
 #ifndef arch_phys_wc_add
 #ifdef CONFIG_MTRR
 extern int __must_check arch_phys_wc_add(unsigned long base,

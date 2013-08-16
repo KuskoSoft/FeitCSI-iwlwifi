@@ -114,6 +114,14 @@ static inline int is_unicast_ether_addr(const u8 *addr)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#define eth_prepare_mac_addr_change LINUX_BACKPORT(eth_prepare_mac_addr_change)
+extern int eth_prepare_mac_addr_change(struct net_device *dev, void *p);
+
+#define eth_commit_mac_addr_change LINUX_BACKPORT(eth_commit_mac_addr_change)
+extern void eth_commit_mac_addr_change(struct net_device *dev, void *p);
+#endif /* < 3.9 */
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
 #define eth_mac_addr LINUX_BACKPORT(eth_mac_addr)
 extern int eth_mac_addr(struct net_device *dev, void *p);

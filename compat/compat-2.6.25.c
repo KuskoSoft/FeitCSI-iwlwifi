@@ -210,6 +210,7 @@ EXPORT_SYMBOL_GPL(sg_alloc_table);
  * to it. We implement a sloppy work around for backporting
  * this.
  */
+#ifdef CONFIG_PCI
 int pci_enable_device_mem(struct pci_dev *dev)
 {
 	int bars = pci_select_bars(dev, IORESOURCE_MEM);
@@ -217,6 +218,7 @@ int pci_enable_device_mem(struct pci_dev *dev)
 	return pci_enable_device_bars(dev, bars);
 }
 EXPORT_SYMBOL_GPL(pci_enable_device_mem);
+#endif
 
 /**
  * The following things are out of ./lib/vsprintf.c

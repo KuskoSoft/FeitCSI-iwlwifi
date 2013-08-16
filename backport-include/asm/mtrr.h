@@ -7,6 +7,7 @@
  * The following functions are for use by other drivers that cannot use
  * arch_phys_wc_add and arch_phys_wc_del.
  */
+#define phys_wc_to_mtrr_index LINUX_BACKPORT(phys_wc_to_mtrr_index)
 #ifdef CONFIG_MTRR
 extern int phys_wc_to_mtrr_index(int handle);
 #else

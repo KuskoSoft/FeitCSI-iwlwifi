@@ -29,4 +29,8 @@
 #define IFF_TX_SKB_SHARING	0x10000
 #endif
 
+#ifndef IFF_LIVE_ADDR_CHANGE
+#define IFF_LIVE_ADDR_CHANGE 0x100000
+#endif
+
 #endif	/* _BACKPORT_LINUX_IF_H */

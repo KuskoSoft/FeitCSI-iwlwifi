@@ -48,3 +48,5 @@ source drivers/net/wireless/Kconfig
 #source net/ieee802154/Kconfig
 #source net/mac802154/Kconfig
 #source drivers/net/ieee802154/Kconfig
+
+#source drivers/usb/class/Kconfig

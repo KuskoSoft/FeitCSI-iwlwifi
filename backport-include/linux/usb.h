@@ -145,4 +145,19 @@ extern void usb_unpoison_urb(struct urb *urb);
 extern int usb_anchor_empty(struct usb_anchor *anchor);
 #endif /* 2.6.23-2.6.27 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39)
+static inline int usb_translate_errors(int error_code)
+{
+	switch (error_code) {
+	case 0:
+	case -ENOMEM:
+	case -ENODEV:
+	case -EOPNOTSUPP:
+		return error_code;
+	default:
+		return -EIO;
+	}
+}
+#endif /* < 2.6.39 */
+
 #endif /* __BACKPORT_USB_H */

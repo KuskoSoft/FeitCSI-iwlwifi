@@ -12,6 +12,7 @@
 #include <linux/usb.h>
 #include <linux/tty.h>
 #include <linux/skbuff.h>
+#include <linux/pci.h>
 #include <asm/poll.h>
 
 /* 2.6.28 compat code goes here */
