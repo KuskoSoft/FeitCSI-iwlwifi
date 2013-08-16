@@ -28,6 +28,16 @@ static inline struct device_node *of_get_child_by_name(
 #endif /* CONFIG_OF */
 #endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)) */
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
+#ifndef CONFIG_OF
+static inline struct device_node *of_find_node_by_name(struct device_node *from,
+	const char *name)
+{
+	return NULL;
+}
+#endif /* CONFIG_OF */
+#endif
+
 #endif /* KERNEL_HAS_OF_SUPPORT */
 
 #endif	/* _COMPAT_LINUX_OF_H */

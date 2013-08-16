@@ -23,4 +23,8 @@ static inline long __must_check IS_ERR_OR_NULL(const void *ptr)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
+#define PTR_ERR_OR_ZERO(p) PTR_RET(p)
+#endif
+
 #endif /* __BACKPORT_LINUX_ERR_H */
