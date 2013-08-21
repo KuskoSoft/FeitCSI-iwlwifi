@@ -1411,10 +1411,9 @@ static int __iwl_mvm_resume(struct iwl_mvm *mvm, bool test)
 
  out:
 	if (!test)
-		ieee80211_iterate_active_interfaces(mvm->hw,
-						    IEEE80211_IFACE_ITER_NORMAL,
-						    iwl_mvm_d3_disconnect_iter,
-						    NULL);
+		ieee80211_iterate_active_interfaces_rtnl(mvm->hw,
+			IEEE80211_IFACE_ITER_NORMAL,
+			iwl_mvm_d3_disconnect_iter, NULL);
 
 	/* return 1 to reconfigure the device */
 	set_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status);
