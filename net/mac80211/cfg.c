@@ -2366,7 +2366,7 @@ int __ieee80211_request_smps(struct ieee80211_sub_if_data *sdata,
 
 	if (smps_mode == IEEE80211_SMPS_AUTOMATIC) {
 		if (sdata->u.mgd.powersave)
-			smps_mode = IEEE80211_SMPS_DYNAMIC;
+			smps_mode = sdata->local->hw.smps_mode_in_ps;
 		else
 			smps_mode = IEEE80211_SMPS_OFF;
 	}
