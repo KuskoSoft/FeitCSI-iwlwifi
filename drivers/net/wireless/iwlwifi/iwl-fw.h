@@ -96,7 +96,7 @@ enum iwl_ucode_tlv_flag {
 	IWL_UCODE_TLV_FLAGS_TIME_EVENT_API_V2	= BIT(9),
 	IWL_UCODE_TLV_FLAGS_D3_6_IPV6_ADDRS	= BIT(10),
 	IWL_UCODE_TLV_FLAGS_BF_UPDATED		= BIT(11),
-	IWL_UCODE_TLV_FLAGS_STA_KEY_CMD		= BIT(12),
+	IWL_UCODE_TLV_FLAGS_STA_KEY_CMD		= BIT(19),
 };
 
 /* The default calibrate table size if not specified by firmware file */
