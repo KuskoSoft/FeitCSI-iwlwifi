@@ -257,6 +257,12 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 
 	mvm->rts_threshold = IEEE80211_MAX_RTS_THRESHOLD;
 
+	/* currently FW API supports only one optional cipher scheme */
+	if (mvm->fw->cs && mvm->fw->cs->cipher) {
+		mvm->hw->n_cipher_schemes = 1;
+		mvm->hw->cipher_schemes = mvm->fw->cs;
+	}
+
 #ifdef CONFIG_PM_SLEEP
 #ifndef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
 	if (mvm->fw->img[IWL_UCODE_WOWLAN].sec[0].len &&
@@ -1307,7 +1313,12 @@ static int iwl_mvm_mac_set_key(struct ieee80211_hw *hw,
 		 */
 		return 0;
 	default:
-		return -EOPNOTSUPP;
+		/* currently FW supports only one optional cipher scheme */
+		if (hw->n_cipher_schemes &&
+		    hw->cipher_schemes->cipher == key->cipher)
+			key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE;
+		else
+			return -EOPNOTSUPP;
 	}
 
 	mutex_lock(&mvm->mutex);
