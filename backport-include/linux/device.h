@@ -28,6 +28,16 @@ typedef int (backport_device_find_function_t)(struct device *, void *);
 	dev_printk(KERN_CRIT , dev , format , ## arg)
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
+static inline int
+backport_device_move(struct device *dev, struct device *new_parent,
+		     enum dpm_order dpm_order)
+{
+	return device_move(dev, new_parent);
+}
+#define device_move LINUX_BACKPORT(device_move)
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 /**
  * module_driver() - Helper macro for drivers that don't do anything

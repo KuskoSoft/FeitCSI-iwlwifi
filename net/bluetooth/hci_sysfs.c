@@ -145,11 +145,7 @@ void hci_conn_del_sysfs(struct hci_conn *conn)
 		dev = device_find_child(&conn->dev, NULL, __match_tty);
 		if (!dev)
 			break;
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,29))
 		device_move(dev, NULL, DPM_ORDER_DEV_LAST);
-#else
-		device_move(dev, NULL);
-#endif
 		put_device(dev);
 	}
 
