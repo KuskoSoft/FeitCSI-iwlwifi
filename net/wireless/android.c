@@ -117,6 +117,7 @@ void cfg80211_android_create_p2p_device(struct wireless_dev *wdev,
 	if (WARN(register_netdevice(wdev->p2pdev),
 		 "Failed to register P2P-Device netdev, things will fail!\n")) {
 		free_netdev(wdev->p2pdev);
+		wdev->p2pdev = NULL;
 		return;
 	}
 
