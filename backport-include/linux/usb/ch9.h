@@ -3,7 +3,7 @@
 
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 #define usb_device_speed old_usb_device_speed
 #define USB_SPEED_UNKNOWN OLD_USB_SPEED_UNKNOWN
 #define USB_SPEED_LOW OLD_USB_SPEED_LOW

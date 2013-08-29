@@ -12,6 +12,7 @@
 #include <linux/module.h>
 #include <linux/err.h>
 #include <linux/proc_fs.h>
+#include <linux/random.h>
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
 #include <linux/init.h>
@@ -77,3 +78,15 @@ void proc_set_user(struct proc_dir_entry *de, kuid_t uid, kgid_t gid)
 	de->gid = gid;
 }
 EXPORT_SYMBOL_GPL(proc_set_user);
+
+/* get_random_int() was not exported for module use until 3.10-rc.
+   Implement it here in terms of the more expensive get_random_bytes()
+ */
+unsigned int get_random_int(void)
+{
+	unsigned int r;
+	get_random_bytes(&r, sizeof(r));
+
+	return r;
+}
+EXPORT_SYMBOL_GPL(get_random_int);

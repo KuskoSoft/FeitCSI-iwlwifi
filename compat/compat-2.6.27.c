@@ -29,6 +29,7 @@
  * we have to call the PCI routines directly.
  */
 
+#ifdef CONFIG_PCI
 /**
  * pci_pme_capable - check the capability of PCI device to generate PME#
  * @dev: PCI device to handle.
@@ -65,6 +66,7 @@ bool pci_pme_capable(struct pci_dev *dev, pci_power_t state)
 	return !!(pme_support & (1 << state));
 }
 EXPORT_SYMBOL_GPL(pci_pme_capable);
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 /**

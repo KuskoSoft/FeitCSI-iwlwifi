@@ -54,7 +54,6 @@ EXPORT_SYMBOL_GPL(backport_dependency_symbol);
 
 static int __init backport_init(void)
 {
-	backport_pm_qos_power_init();
 	backport_system_workqueue_create();
 	backport_init_mmc_pm_flags();
 	dma_buf_init();
@@ -76,7 +75,6 @@ subsys_initcall(backport_init);
 
 static void __exit backport_exit(void)
 {
-	backport_pm_qos_power_deinit();
 	backport_system_workqueue_destroy();
 
         return;

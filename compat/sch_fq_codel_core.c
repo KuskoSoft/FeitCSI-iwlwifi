@@ -393,11 +393,7 @@ static void fq_codel_destroy(struct Qdisc *sch)
 {
 	struct fq_codel_sched_data *q = qdisc_priv(sch);
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,25))
 	tcf_destroy_chain(&q->filter_list);
-#else
-	tcf_destroy_chain(q->filter_list);
-#endif
 	fq_codel_free(q->backlogs);
 	fq_codel_free(q->flows);
 }

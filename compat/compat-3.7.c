@@ -22,6 +22,7 @@ bool mod_delayed_work(struct workqueue_struct *wq, struct delayed_work *dwork,
 }
 EXPORT_SYMBOL_GPL(mod_delayed_work);
 
+#ifdef CONFIG_PCI
 /*
  * Kernels >= 3.7 get their PCI-E Capabilities Register cached
  * via the pci_dev->pcie_flags_reg so for older kernels we have
@@ -251,6 +252,7 @@ int pcie_capability_clear_and_set_dword(struct pci_dev *dev, int pos,
 	return ret;
 }
 EXPORT_SYMBOL_GPL(pcie_capability_clear_and_set_dword);
+#endif
 
 #ifdef KERNEL_HAS_OF_SUPPORT
 #ifdef CONFIG_OF

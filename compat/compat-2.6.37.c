@@ -259,11 +259,9 @@ void led_blink_set(struct led_classdev *led_cdev,
 	struct led_timer *led;
 	int current_brightness;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25))
 	if (led_cdev->blink_set &&
 	    !led_cdev->blink_set(led_cdev, delay_on, delay_off))
 		return;
-#endif
 
 	led = led_get_timer(led_cdev);
 	if (!led) {

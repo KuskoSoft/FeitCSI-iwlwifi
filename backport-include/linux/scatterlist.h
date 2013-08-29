@@ -3,34 +3,6 @@
 #include_next <linux/scatterlist.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,25)
-struct sg_table {
-	struct scatterlist *sgl;        /* the list */
-	unsigned int nents;             /* number of mapped entries */
-	unsigned int orig_nents;        /* original size of list */
-};
-
-#define sg_alloc_fn LINUX_BACKPORT(sg_alloc_fn)
-typedef struct scatterlist *(sg_alloc_fn)(unsigned int, gfp_t);
-
-#define sg_free_fn LINUX_BACKPORT(sg_free_fn)
-typedef void (sg_free_fn)(struct scatterlist *, unsigned int);
-
-#define __sg_free_table LINUX_BACKPORT(__sg_free_table)
-void __sg_free_table(struct sg_table *table, unsigned int max_ents,
-		     sg_free_fn *free_fn);
-#define sg_free_table LINUX_BACKPORT(sg_free_table)
-void sg_free_table(struct sg_table *);
-#define __sg_alloc_table LINUX_BACKPORT(__sg_alloc_table)
-int __sg_alloc_table(struct sg_table *table, unsigned int nents,
-		     unsigned int max_ents, gfp_t gfp_mask,
-		     sg_alloc_fn *alloc_fn);
-#define sg_alloc_table LINUX_BACKPORT(sg_alloc_table)
-int sg_alloc_table(struct sg_table *table, unsigned int nents, gfp_t gfp_mask);
-
-#define SG_MAX_SINGLE_ALLOC            (PAGE_SIZE / sizeof(struct scatterlist))
-#endif
-
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0))
 /* backports efc42bc9 */
 #define sg_alloc_table_from_pages LINUX_BACKPORT(sg_alloc_table_from_pages)

@@ -8,10 +8,12 @@
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)) */
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0))
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6,4))
 static inline unsigned long swiotlb_nr_tbl(void)
 {
 	return 0;
 }
+#endif
 #endif
 
 #endif /* __BACKPORT_LINUX_SWIOTLB_H */

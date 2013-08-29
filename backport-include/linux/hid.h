@@ -79,4 +79,9 @@ extern bool hid_ignore(struct hid_device *);
 	dev_dbg(&(hid)->dev, fmt, ##arg)
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
+#define hid_alloc_report_buf LINUX_BACKPORT(hid_alloc_report_buf)
+u8 *hid_alloc_report_buf(struct hid_report *report, gfp_t flags);
+#endif
+
 #endif /* __BACKPORT_HID_H */

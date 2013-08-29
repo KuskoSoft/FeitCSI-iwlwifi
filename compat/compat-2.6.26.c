@@ -20,9 +20,6 @@
 const char hex_asc[] = "0123456789abcdef";
 EXPORT_SYMBOL_GPL(hex_asc);
 
-/* 2.6.24 does not have the struct kobject with a name */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25))
-
 /**
  * kobject_set_name_vargs - Set the name of an kobject
  * @kobj: struct kobject to set the name of
@@ -50,27 +47,6 @@ int kobject_set_name_vargs(struct kobject *kobj, const char *fmt,
 	kfree(old_name);
 	return 0;
 }
-#else
-static
-int kobject_set_name_vargs(struct kobject *kobj, const char *fmt,
-				  va_list vargs)
-{
-	struct device *dev;
-	unsigned int len;
-	va_list aq;
-
-	dev = container_of(kobj, struct device, kobj);
-
-	va_copy(aq, vargs);
-	len = vsnprintf(NULL, 0, fmt, aq);
-	va_end(aq);
-
-	len = len < BUS_ID_SIZE ? (len + 1) : BUS_ID_SIZE;
-
-	vsnprintf(dev->bus_id, len, fmt, vargs);
-	return 0;
-}
-#endif
 
 /**
  * dev_set_name - set a device name

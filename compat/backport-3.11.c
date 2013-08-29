@@ -32,7 +32,7 @@
  * Drivers must store the return value to pass to mtrr_del_wc_if_needed,
  * but drivers should not try to interpret that return value.
  */
-int arch_phys_wc_add(unsigned long base, unsigned long size)
+int backport_arch_phys_wc_add(unsigned long base, unsigned long size)
 {
 	int ret;
 
@@ -49,7 +49,7 @@ int arch_phys_wc_add(unsigned long base, unsigned long size)
 	}
 	return ret + MTRR_TO_PHYS_WC_OFFSET;
 }
-EXPORT_SYMBOL_GPL(arch_phys_wc_add);
+EXPORT_SYMBOL_GPL(backport_arch_phys_wc_add);
 
 /*
  * arch_phys_wc_del - undoes arch_phys_wc_add
@@ -60,14 +60,14 @@ EXPORT_SYMBOL_GPL(arch_phys_wc_add);
  * The API guarantees that mtrr_del_wc_if_needed(error code) and
  * mtrr_del_wc_if_needed(0) do nothing.
  */
-void arch_phys_wc_del(int handle)
+void backport_arch_phys_wc_del(int handle)
 {
 	if (handle >= 1) {
 		WARN_ON(handle < MTRR_TO_PHYS_WC_OFFSET);
 		mtrr_del(handle - MTRR_TO_PHYS_WC_OFFSET, 0, 0);
 	}
 }
-EXPORT_SYMBOL_GPL(arch_phys_wc_del);
+EXPORT_SYMBOL_GPL(backport_arch_phys_wc_del);
 
 /*
  * phys_wc_to_mtrr_index - translates arch_phys_wc_add's return value

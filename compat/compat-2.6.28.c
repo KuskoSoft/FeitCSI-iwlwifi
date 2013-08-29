@@ -239,6 +239,7 @@ EXPORT_SYMBOL_GPL(usb_anchor_empty);
 #endif /* CONFIG_USB */
 #endif
 
+#ifdef CONFIG_PCI
 void __iomem *pci_ioremap_bar(struct pci_dev *pdev, int bar)
 {
 	/*
@@ -252,6 +253,7 @@ void __iomem *pci_ioremap_bar(struct pci_dev *pdev, int bar)
 				     pci_resource_len(pdev, bar));
 }
 EXPORT_SYMBOL_GPL(pci_ioremap_bar);
+#endif
 
 static unsigned long round_jiffies_common(unsigned long j, int cpu,
 		bool force_up)
@@ -442,6 +444,7 @@ int n_tty_ioctl_helper(struct tty_struct *tty, struct file *file,
 }
 EXPORT_SYMBOL_GPL(n_tty_ioctl_helper);
 
+#ifdef CONFIG_PCI
 /**
  * pci_wake_from_d3 - enable/disable device to wake up from D3_hot or D3_cold
  * @dev: PCI device to prepare
@@ -463,4 +466,5 @@ int pci_wake_from_d3(struct pci_dev *dev, bool enable)
 			pci_enable_wake(dev, PCI_D3hot, enable);
 }
 EXPORT_SYMBOL_GPL(pci_wake_from_d3);
+#endif
 
