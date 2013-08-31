@@ -141,7 +141,6 @@ enum {
 
 	/* Power - legacy power table command */
 	POWER_TABLE_CMD = 0x77,
-	PSM_AP_UAPSD_MALFUNCTION_NOTIFICATION = 0x78,
 
 	/* Thermal Throttling*/
 	REPLY_THERMAL_MNG_BACKOFF = 0x7e,
