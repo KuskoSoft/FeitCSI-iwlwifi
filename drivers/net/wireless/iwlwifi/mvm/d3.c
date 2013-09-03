@@ -1196,6 +1196,10 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 	if (ret)
 		goto out;
 
+	ret = iwl_mvm_power_update_device_mode(mvm);
+	if (ret)
+		goto out;
+
 	ret = iwl_mvm_power_update_mode(mvm, vif);
 	if (ret)
 		goto out;

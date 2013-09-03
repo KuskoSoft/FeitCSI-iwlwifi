@@ -163,6 +163,7 @@ enum iwl_power_scheme {
 struct iwl_mvm_power_ops {
 	int (*power_update_mode)(struct iwl_mvm *mvm,
 				 struct ieee80211_vif *vif);
+	int (*power_update_device_mode)(struct iwl_mvm *mvm);
 	int (*power_disable)(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	int (*power_dbgfs_read)(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
@@ -493,7 +494,8 @@ struct iwl_mvm {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	struct dentry *debugfs_dir;
 	u32 dbgfs_sram_offset, dbgfs_sram_len;
-	bool prevent_power_down_d3;
+	bool disable_power_off;
+	bool disable_power_off_d3;
 #endif
 
 	struct iwl_mvm_phy_ctxt phy_ctxts[NUM_PHY_CTX];
@@ -788,6 +790,13 @@ static inline int iwl_mvm_power_disable(struct iwl_mvm *mvm,
 					struct ieee80211_vif *vif)
 {
 	return mvm->pm_ops->power_disable(mvm, vif);
+}
+
+static inline int iwl_mvm_power_update_device_mode(struct iwl_mvm *mvm)
+{
+	if (mvm->pm_ops->power_update_device_mode)
+		return mvm->pm_ops->power_update_device_mode(mvm);
+	return 0;
 }
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
