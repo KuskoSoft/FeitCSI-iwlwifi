@@ -2255,8 +2255,8 @@ static void rs_get_rate(void *mvm_r, struct ieee80211_sta *sta, void *mvm_sta,
 	if (rate_control_send_low(sta, mvm_sta, txrc))
 		return;
 
-	iwl_mvm_hwrate_to_tx_control(lq_sta->last_rate_n_flags,
-				     info);
+	iwl_mvm_hwrate_to_tx_rate(lq_sta->last_rate_n_flags,
+				  info->band, &info->control.rates[0]);
 
 	info->control.rates[0].count = 1;
 }
