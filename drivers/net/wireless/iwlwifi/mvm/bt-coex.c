@@ -751,17 +751,6 @@ static void iwl_mvm_bt_rssi_iterator(void *_data, u8 *mac,
 
 	struct ieee80211_sta *sta;
 	struct iwl_mvm_sta *mvmsta;
-	struct ieee80211_chanctx_conf *chanctx_conf;
-
-	rcu_read_lock();
-	chanctx_conf = rcu_dereference(vif->chanctx_conf);
-	/* If channel context is invalid or not on 2.4GHz .. */
-	if (WARN_ON(!chanctx_conf ||
-		    chanctx_conf->def.chan->band != IEEE80211_BAND_2GHZ)) {
-		rcu_read_unlock();
-		return;
-	}
-	rcu_read_unlock();
 
 	if (vif->type != NL80211_IFTYPE_STATION ||
 	    mvmvif->ap_sta_id == IWL_MVM_STATION_COUNT)
