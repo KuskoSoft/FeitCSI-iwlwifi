@@ -173,7 +173,6 @@ out_free_drv:
 	iwl_drv_stop(trans_pcie->drv);
 out_free_trans:
 	iwl_trans_pcie_free(iwl_trans);
-	pci_set_drvdata(pdev, NULL);
 	return ret;
 }
 
@@ -184,8 +183,6 @@ static void iwl_pci_remove(struct pci_dev *pdev)
 
 	iwl_drv_stop(trans_pcie->drv);
 	iwl_trans_pcie_free(trans);
-
-	pci_set_drvdata(pdev, NULL);
 }
 
 #ifdef CONFIG_PM_SLEEP
