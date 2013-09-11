@@ -206,7 +206,6 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	hw->max_listen_interval = IWL_CONN_MAX_LISTEN_INTERVAL;
 	hw->uapsd_queues = IWL_UAPSD_AC_INFO;
 	hw->uapsd_max_sp_len = IWL_UAPSD_MAX_SP;
-	hw->smps_mode_in_ps = IEEE80211_SMPS_OFF;
 
 	/* Extract MAC address */
 	memcpy(mvm->addresses[0].addr, mvm->nvm_data->hw_addr, ETH_ALEN);
