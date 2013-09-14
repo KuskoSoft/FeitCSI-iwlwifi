@@ -476,7 +476,7 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
  out_free:
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
-	if (iwlwifi_mod_params.nvm_file)
+	if (!iwlwifi_mod_params.nvm_file)
 		iwl_trans_stop_hw(trans, true);
 	ieee80211_free_hw(mvm->hw);
 	return NULL;
