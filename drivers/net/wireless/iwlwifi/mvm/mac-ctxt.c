@@ -569,9 +569,11 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm *mvm,
 	/* Don't use cts to self as the fw doesn't support it currently. */
 	if (vif->bss_conf.use_cts_prot) {
 		cmd->protection_flags |= cpu_to_le32(MAC_PROT_FLG_TGG_PROTECT);
+#if 0
 		if (IWL_UCODE_API(mvm->fw->ucode_ver) >= 8)
 			cmd->protection_flags |=
 				cpu_to_le32(MAC_PROT_FLG_SELF_CTS_EN);
+#endif
 	}
 
 	/*
