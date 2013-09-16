@@ -1616,10 +1616,6 @@ enum ieee80211_hw_flags {
  * @uapsd_max_sp_len: maximum number of total buffered frames the WMM AP may
  *	deliver to a WMM STA during any Service Period triggered by the WMM STA.
  *	Use IEEE80211_WMM_IE_STA_QOSINFO_SP_* for correct values.
- *
- * @smps_mode_in_ps: smps mode to use when automatic smps mode is configured.
- *	The default is _DYNAMIC.
- *	Use the %IEEE80211_SMPS_* values.
  */
 struct ieee80211_hw {
 	struct ieee80211_conf conf;
@@ -1647,7 +1643,6 @@ struct ieee80211_hw {
 	netdev_features_t netdev_features;
 	u8 uapsd_queues;
 	u8 uapsd_max_sp_len;
-	enum ieee80211_smps_mode smps_mode_in_ps;
 };
 
 /**
