@@ -2290,7 +2290,7 @@ static int rs_vht_highest_rx_mcs_index(struct ieee80211_sta_vht_cap *vht_cap,
 	else if (rx_mcs == IEEE80211_VHT_MCS_SUPPORT_0_9)
 		return IWL_RATE_MCS_9_INDEX;
 
-	WARN_ON_ONCE(1);
+	WARN_ON_ONCE(rx_mcs != IEEE80211_VHT_MCS_NOT_SUPPORTED);
 	return -1;
 }
 
@@ -2361,26 +2361,23 @@ void iwl_mvm_rs_rate_init(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 		lq_sta->is_vht = false;
 	} else {
 		int highest_mcs = rs_vht_highest_rx_mcs_index(vht_cap, 1);
-		if (highest_mcs < IWL_RATE_MCS_0_INDEX)
-			highest_mcs = IWL_RATE_MCS_8_INDEX;
+		if (highest_mcs >= IWL_RATE_MCS_0_INDEX) {
+			for (i = IWL_RATE_MCS_0_INDEX; i <= highest_mcs; i++) {
+				if (i == IWL_RATE_9M_INDEX)
+					continue;
 
-		for (i = IWL_RATE_MCS_0_INDEX; i <= highest_mcs; i++) {
-			/* FIXME: switch to different rate indexes for MCS */
-			if (i == IWL_RATE_9M_INDEX)
-				continue;
-
-			lq_sta->active_siso_rate |= BIT(i);
+				lq_sta->active_siso_rate |= BIT(i);
+			}
 		}
 
 		highest_mcs = rs_vht_highest_rx_mcs_index(vht_cap, 2);
-		if (highest_mcs < IWL_RATE_MCS_0_INDEX)
-			highest_mcs = IWL_RATE_MCS_8_INDEX;
+		if (highest_mcs >= IWL_RATE_MCS_0_INDEX) {
+			for (i = IWL_RATE_MCS_0_INDEX; i <= highest_mcs; i++) {
+				if (i == IWL_RATE_9M_INDEX)
+					continue;
 
-		for (i = IWL_RATE_MCS_0_INDEX; i <= highest_mcs; i++) {
-			if (i == IWL_RATE_9M_INDEX)
-				continue;
-
-			lq_sta->active_mimo2_rate |= BIT(i);
+				lq_sta->active_mimo2_rate |= BIT(i);
+			}
 		}
 
 		/* TODO: avoid MCS9 in 20Mhz which isn't valid for 11ac */
