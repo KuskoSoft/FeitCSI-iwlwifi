@@ -206,10 +206,12 @@ static void mspin_unlock(struct mspin_node **lock, struct mspin_node *node)
 
 static inline bool owner_running(struct mutex *lock, struct task_struct *owner)
 {
+	return false;
 }
 
 int mutex_spin_on_owner(struct mutex *lock, struct task_struct *owner)
 {
+	return 1;
 }
 
 static inline int mutex_can_spin_on_owner(struct mutex *lock)
