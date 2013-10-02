@@ -252,7 +252,6 @@ static void iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm *mvm,
 
 		memcpy(&tx_cmd->key[3], keyconf->key, keyconf->keylen);
 		break;
-
 	default:
 		IWL_ERR(mvm, "Unknown encode cipher %x\n", keyconf->cipher);
 		break;
