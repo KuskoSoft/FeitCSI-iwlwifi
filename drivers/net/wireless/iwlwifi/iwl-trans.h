@@ -186,12 +186,16 @@ struct iwl_rx_packet {
  * @CMD_ASYNC: Return right away and don't wait for the response
  * @CMD_WANT_SKB: valid only with CMD_SYNC. The caller needs the buffer of the
  *	response. The caller needs to call iwl_free_resp when done.
+ * @CMD_HIGH_PRIO: The command is high priority - it goes to the front of the
+ *	command queue, but after other high priority commands. valid only
+ *	with CMD_ASYNC.
  */
 enum CMD_MODE {
 	CMD_SYNC		= 0,
 	CMD_ASYNC		= BIT(0),
 	CMD_WANT_SKB		= BIT(1),
 	CMD_SEND_IN_RFKILL	= BIT(2),
+	CMD_HIGH_PRIO		= BIT(3),
 };
 
 #define DEF_CMD_PAYLOAD_SIZE 320
