@@ -907,13 +907,6 @@ static int iwl_mvm_start_ap_ibss(struct ieee80211_hw *hw,
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	int ret;
 
-	if (vif->bss_conf.beacon_int > 200 ||
-	    vif->bss_conf.beacon_int < 50) {
-		IWL_ERR(mvm, "unsupported beacon interval %d\n",
-			vif->bss_conf.beacon_int);
-		return -EINVAL;
-	}
-
 	mutex_lock(&mvm->mutex);
 
 	/* Send the beacon template */
