@@ -1131,15 +1131,14 @@ static int iwl_mvm_mac_sta_state(struct ieee80211_hw *hw,
 	if (old_state == IEEE80211_STA_NOTEXIST &&
 	    new_state == IEEE80211_STA_NONE) {
 		/*
-		 * The firmware, by definition, only works with beacon intervals
-		 * of 50-200 TU. We can't avoid connecting at all, so refuse the
+		 * Firmware bug - it'll crash if the beacon interval is less
+		 * than 16. We can't avoid connecting at all, so refuse the
 		 * station state change, this will cause mac80211 to abandon
 		 * attempts to connect to this AP, and eventually wpa_s will
 		 * blacklist the AP...
 		 */
 		if (vif->type == NL80211_IFTYPE_STATION &&
-		    (vif->bss_conf.beacon_int < 50 ||
-		     vif->bss_conf.beacon_int > 200)) {
+		    vif->bss_conf.beacon_int < 16) {
 			IWL_ERR(mvm,
 				"AP %pM beacon interval is %d, refusing due to firmware bug!\n",
 				sta->addr, vif->bss_conf.beacon_int);
