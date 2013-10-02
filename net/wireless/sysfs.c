@@ -30,7 +30,8 @@ static ssize_t name ## _show(struct device *dev,			\
 			      char *buf)				\
 {									\
 	return sprintf(buf, fmt "\n", dev_to_rdev(dev)->member);	\
-}
+}									\
+static DEVICE_ATTR_RO(name)
 
 SHOW_FMT(index, "%d", wiphy_idx);
 SHOW_FMT(macaddress, "%pM", wiphy.perm_addr);
@@ -42,7 +43,7 @@ static ssize_t name_show(struct device *dev,
 	struct wiphy *wiphy = &dev_to_rdev(dev)->wiphy;
 	return sprintf(buf, "%s\n", dev_name(&wiphy->dev));
 }
-
+static DEVICE_ATTR_RO(name);
 
 static ssize_t addresses_show(struct device *dev,
 			      struct device_attribute *attr,
@@ -60,15 +61,18 @@ static ssize_t addresses_show(struct device *dev,
 
 	return buf - start;
 }
+static DEVICE_ATTR_RO(addresses);
 
-static struct device_attribute ieee80211_dev_attrs[] = {
-	__ATTR_RO(index),
-	__ATTR_RO(macaddress),
-	__ATTR_RO(address_mask),
-	__ATTR_RO(addresses),
-	__ATTR_RO(name),
-	{}
+static struct attribute *ieee80211_attrs[] = {
+	&dev_attr_index.attr,
+	&dev_attr_macaddress.attr,
+	&dev_attr_address_mask.attr,
+	&dev_attr_addresses.attr,
+	&dev_attr_name.attr,
+	NULL,
 };
+#define BP_ATTR_GRP_STRUCT device_attribute
+ATTRIBUTE_GROUPS(ieee80211);
 
 static void wiphy_dev_release(struct device *dev)
 {
@@ -166,7 +170,11 @@ struct class ieee80211_class = {
 	.name = "ieee80211",
 	.owner = THIS_MODULE,
 	.dev_release = wiphy_dev_release,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+	.dev_groups = ieee80211_groups,
+#else
 	.dev_attrs = ieee80211_dev_attrs,
+#endif
 	.dev_uevent = wiphy_uevent,
 #if defined(CONFIG_PM) && !defined(CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME)
 	.suspend = wiphy_suspend,
@@ -180,6 +188,7 @@ struct class ieee80211_class = {
 
 int wiphy_sysfs_init(void)
 {
+	init_ieee80211_attrs();
 	return class_register(&ieee80211_class);
 }
 
