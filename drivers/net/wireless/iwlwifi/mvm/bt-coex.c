@@ -312,7 +312,13 @@ iwl_get_coex_type(struct iwl_mvm *mvm, const struct ieee80211_vif *vif)
 	enum iwl_bt_coex_lut_type ret;
 	u16 phy_ctx_id;
 
-	lockdep_assert_held(&mvm->mutex);
+	/*
+	 * Checking that we hold mvm->mutex is a good idea, but the rate
+	 * control can't acquire the mutex since it runs in Tx path.
+	 * So this is racy in that case, but in the worst case, the AMPDU
+	 * size limit will be wrong for a short time which is not a big
+	 * issue.
+	 */
 
 	rcu_read_lock();
 
