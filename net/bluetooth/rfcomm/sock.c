@@ -549,7 +549,7 @@ static int rfcomm_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 	struct sock *sk = sock->sk;
 	struct rfcomm_dlc *d = rfcomm_pi(sk)->dlc;
 	struct sk_buff *skb;
-	int sent = 0;
+	int sent;
 
 	if (test_bit(RFCOMM_DEFER_SETUP, &d->flags))
 		return -ENOTCONN;
@@ -563,6 +563,10 @@ static int rfcomm_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 	BT_DBG("sock %p, sk %p", sock, sk);
 
 	lock_sock(sk);
+
+	sent = bt_sock_wait_ready(sk, msg->msg_flags);
+	if (sent)
+		goto done;
 
 	while (len) {
 		size_t size = min_t(size_t, len, d->mtu);
@@ -599,6 +603,7 @@ static int rfcomm_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 		len  -= size;
 	}
 
+done:
 	release_sock(sk);
 
 	return sent;
