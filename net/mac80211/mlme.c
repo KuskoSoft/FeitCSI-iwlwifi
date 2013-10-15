@@ -1417,6 +1417,7 @@ static bool ieee80211_sta_wmm_params(struct ieee80211_local *local,
 	int count;
 	const u8 *pos;
 	u8 uapsd_queues = 0;
+	static const u8 default_aifs[] = { 2, 2, 3, 7 };
 
 	if (!local->ops->conf_tx)
 		return false;
@@ -1483,8 +1484,12 @@ static bool ieee80211_sta_wmm_params(struct ieee80211_local *local,
 		}
 
 		params.aifs = pos[0] & 0x0f;
+		if (params.aifs < 2)
+			params.aifs = default_aifs[queue];
 		params.cw_max = ecw2cw((pos[1] & 0xf0) >> 4);
 		params.cw_min = ecw2cw(pos[1] & 0x0f);
+		if (params.cw_max < params.cw_min)
+			params.cw_max = params.cw_min;
 		params.txop = get_unaligned_le16(pos + 2);
 		params.acm = acm;
 		params.uapsd = uapsd;
