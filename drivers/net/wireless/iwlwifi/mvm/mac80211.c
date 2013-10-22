@@ -179,16 +179,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	    !iwlwifi_mod_params.sw_crypto)
 		hw->flags |= IEEE80211_HW_MFP_CAPABLE;
 
-	/* Verify uAPSD support by examining TLV flag. Current WA examines
-	 * TLV flag that indicates new power API and device type.
-	 * Don't use uAPSD with 3160 devices.
-	 * TODO: remove this WA when new TLV flag indicating uAPSD support
-	 * will be available.
-	 */
-#define IWL3160_NVM_VERSION 0x709
-	if (mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_UAPSD &&
-	    mvm->cfg->device_family == IWL_DEVICE_FAMILY_7000 &&
-	    mvm->cfg->nvm_ver != IWL3160_NVM_VERSION) {
+	if (mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_UAPSD_SUPPORT) {
 		hw->flags |= IEEE80211_HW_SUPPORTS_UAPSD;
 		hw->uapsd_queues = IWL_UAPSD_AC_INFO;
 		hw->uapsd_max_sp_len = IWL_UAPSD_MAX_SP;
@@ -883,7 +874,8 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 		/* reset rssi values */
 		mvmvif->bf_data.ave_beacon_signal = 0;
 
-		if (!(mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_UAPSD)) {
+		if (!(mvm->fw->ucode_capa.flags &
+					IWL_UCODE_TLV_FLAGS_PM_CMD_SUPPORT)) {
 			/* Workaround for FW bug, otherwise FW disables device
 			 * power save upon disassociation
 			 */
