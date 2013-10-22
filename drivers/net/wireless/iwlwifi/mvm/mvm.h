@@ -629,6 +629,8 @@ struct iwl_mvm {
 	bool ps_disabled;
 	/* Indicate if device power management is allowed */
 	bool pm_disabled;
+
+	struct ieee80211_vif *csa_vif;
 };
 
 /* Extract MVM priv from op_mode and _hw */
