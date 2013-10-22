@@ -37,7 +37,6 @@
 #include "iwl-op-mode.h"
 #include "internal.h"
 #include "mvm/fw-api.h"
-#define REPLY_TX TX_CMD
 #define TX_CMD_FLG_MH_PAD_MSK cpu_to_le32(TX_CMD_FLG_MH_PAD)
 
 #define IWL_TX_CRC_SIZE 4
@@ -1675,7 +1674,6 @@ int iwl_trans_pcie_tx(struct iwl_trans *trans, struct sk_buff *skb,
 	txq->entries[q->write_ptr].skb = skb;
 	txq->entries[q->write_ptr].cmd = dev_cmd;
 
-	dev_cmd->hdr.cmd = REPLY_TX;
 	dev_cmd->hdr.sequence =
 		cpu_to_le16((u16)(QUEUE_TO_SEQ(txq_id) |
 			    INDEX_TO_SEQ(q->write_ptr)));
