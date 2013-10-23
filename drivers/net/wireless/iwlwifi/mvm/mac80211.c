@@ -1602,7 +1602,13 @@ static int iwl_mvm_assign_vif_chanctx(struct ieee80211_hw *hw,
 		goto out_unlock;
 
 	/*
-	 * Setting the quota at this stage is only required for monitor
+	 * Power state must be updated before quotas,
+	 * otherwise fw will complain.
+	 */
+	mvm->bound_vif_cnt++;
+	iwl_mvm_power_update_binding(mvm, vif, true);
+
+	/* Setting the quota at this stage is only required for monitor
 	 * interfaces. For the other types, the bss_info changed flow
 	 * will handle quota settings.
 	 */
@@ -1613,13 +1619,12 @@ static int iwl_mvm_assign_vif_chanctx(struct ieee80211_hw *hw,
 			goto out_remove_binding;
 	}
 
-	mvm->bound_vif_cnt++;
-	iwl_mvm_power_update_binding(mvm, vif);
-
 	goto out_unlock;
 
  out_remove_binding:
 	iwl_mvm_binding_remove_vif(mvm, vif);
+	mvm->bound_vif_cnt--;
+	iwl_mvm_power_update_binding(mvm, vif, false);
  out_unlock:
 	mutex_unlock(&mvm->mutex);
 	if (ret)
@@ -1654,7 +1659,7 @@ static void iwl_mvm_unassign_vif_chanctx(struct ieee80211_hw *hw,
 out_unlock:
 	mvmvif->phy_ctxt = NULL;
 	mvm->bound_vif_cnt--;
-	iwl_mvm_power_update_binding(mvm, vif);
+	iwl_mvm_power_update_binding(mvm, vif, false);
 
 	mutex_unlock(&mvm->mutex);
 }
