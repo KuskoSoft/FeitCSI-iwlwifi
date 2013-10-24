@@ -189,6 +189,7 @@ struct iwl_rx_packet {
  * @CMD_HIGH_PRIO: The command is high priority - it goes to the front of the
  *	command queue, but after other high priority commands. valid only
  *	with CMD_ASYNC.
+ * @CMD_SEND_IN_IDLE: The command should be sent even when the trans is idle.
  */
 enum CMD_MODE {
 	CMD_SYNC		= 0,
@@ -196,6 +197,7 @@ enum CMD_MODE {
 	CMD_WANT_SKB		= BIT(1),
 	CMD_SEND_IN_RFKILL	= BIT(2),
 	CMD_HIGH_PRIO		= BIT(3),
+	CMD_SEND_IN_IDLE	= BIT(4),
 };
 
 #define DEF_CMD_PAYLOAD_SIZE 320
