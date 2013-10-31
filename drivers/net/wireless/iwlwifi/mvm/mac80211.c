@@ -394,7 +394,6 @@ static void iwl_mvm_cleanup_iterator(void *data, u8 *mac,
 
 	mvmvif->uploaded = false;
 	mvmvif->ap_sta_id = IWL_MVM_STATION_COUNT;
-	mvmvif->phy_ctxt = NULL;
 
 	/* does this make sense at all? */
 	mvmvif->color++;
