@@ -80,7 +80,10 @@ void iwl_mvm_set_wowlan_qos_seq(struct iwl_mvm_sta *mvm_ap_sta,
 	}
 }
 
-int iwl_mvm_send_proto_offload(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
+int iwl_mvm_send_proto_offload(struct iwl_mvm *mvm,
+			       struct ieee80211_vif *vif,
+			       bool disable_offloading,
+			       u32 cmd_flags)
 {
 	union {
 		struct iwl_proto_offload_cmd_v1 v1;
@@ -90,7 +93,7 @@ int iwl_mvm_send_proto_offload(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 	} cmd = {};
 	struct iwl_host_cmd hcmd = {
 		.id = PROT_OFFLOAD_CONFIG_CMD,
-		.flags = CMD_SYNC,
+		.flags = cmd_flags,
 		.data[0] = &cmd,
 		.dataflags[0] = IWL_HCMD_DFL_DUP,
 	};
@@ -203,10 +206,8 @@ int iwl_mvm_send_proto_offload(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 		memcpy(common->arp_mac_addr, vif->addr, ETH_ALEN);
 	}
 
-	if (!enabled)
-		return 0;
-
-	common->enabled = cpu_to_le32(enabled);
+	if (!disable_offloading)
+		common->enabled = cpu_to_le32(enabled);
 
 	hcmd.len[0] = size;
 	return iwl_mvm_send_cmd(mvm, &hcmd);
