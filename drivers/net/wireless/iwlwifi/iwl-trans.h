@@ -190,6 +190,9 @@ struct iwl_rx_packet {
  *	command queue, but after other high priority commands. valid only
  *	with CMD_ASYNC.
  * @CMD_SEND_IN_IDLE: The command should be sent even when the trans is idle.
+ * @CMD_MAKE_TRANS_IDLE: The command response should mark the trans as idle.
+ * @CMD_WAKE_UP_TRANS: The command response should wake up the trans
+ *	(i.e. mark it as non-idle).
  */
 enum CMD_MODE {
 	CMD_SYNC		= 0,
@@ -198,6 +201,8 @@ enum CMD_MODE {
 	CMD_SEND_IN_RFKILL	= BIT(2),
 	CMD_HIGH_PRIO		= BIT(3),
 	CMD_SEND_IN_IDLE	= BIT(4),
+	CMD_MAKE_TRANS_IDLE	= BIT(5),
+	CMD_WAKE_UP_TRANS	= BIT(6),
 };
 
 #define DEF_CMD_PAYLOAD_SIZE 320
@@ -334,6 +339,8 @@ enum iwl_d3_status {
  * @STATUS_INT_ENABLED: interrupts are enabled
  * @STATUS_RFKILL: the HW RFkill switch is in KILL position
  * @STATUS_FW_ERROR: the fw is in error state
+ * @STATUS_TRANS_GOING_IDLE: shutting down the trans, only special commands
+ *	are sent
  * @STATUS_TRANS_IDLE: the trans is idle - general commands are not to be sent
  */
 enum iwl_trans_status {
@@ -343,6 +350,7 @@ enum iwl_trans_status {
 	STATUS_INT_ENABLED,
 	STATUS_RFKILL,
 	STATUS_FW_ERROR,
+	STATUS_TRANS_GOING_IDLE,
 	STATUS_TRANS_IDLE,
 };
 
