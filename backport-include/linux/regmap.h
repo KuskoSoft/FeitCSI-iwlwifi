@@ -25,11 +25,6 @@ struct regmap *devm_regmap_init(struct device *dev,
 struct regmap *devm_regmap_init_i2c(struct i2c_client *i2c,
 				    const struct regmap_config *config);
 #endif /* defined(CONFIG_REGMAP_I2C) */
-#if defined(CONFIG_REGMAP_SPI)
-#define devm_regmap_init_spi LINUX_BACKPORT(devm_regmap_init_spi)
-struct regmap *devm_regmap_init_spi(struct spi_device *dev,
-				    const struct regmap_config *config);
-#endif /* defined(CONFIG_REGMAP_SPI) */
 
 /*
  * We can't backport these unless we try to backport

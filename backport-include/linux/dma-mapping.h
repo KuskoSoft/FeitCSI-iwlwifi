@@ -90,4 +90,20 @@ static inline void dma_sync_single_range_for_device(struct device *dev,
 #endif /* arm */
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+/*
+ * Set both the DMA mask and the coherent DMA mask to the same thing.
+ * Note that we don't check the return value from dma_set_coherent_mask()
+ * as the DMA API guarantees that the coherent DMA mask can be set to
+ * the same or smaller than the streaming DMA mask.
+ */
+static inline int dma_set_mask_and_coherent(struct device *dev, u64 mask)
+{
+	int rc = dma_set_mask(dev, mask);
+	if (rc == 0)
+		dma_set_coherent_mask(dev, mask);
+	return rc;
+}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) */
+
 #endif /* __BACKPORT_LINUX_DMA_MAPPING_H */

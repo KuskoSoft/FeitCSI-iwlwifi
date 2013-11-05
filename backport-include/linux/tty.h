@@ -48,4 +48,9 @@ extern int n_tty_ioctl_helper(struct tty_struct *tty, struct file *file,
 	tty_register_device(driver, index, device)
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28))
+extern void tty_port_tty_wakeup(struct tty_port *port);
+extern void tty_port_tty_hangup(struct tty_port *port, bool check_clocal);
+#endif
+
 #endif /* __BACKPORT_LINUX_TTY_H */

@@ -71,8 +71,12 @@ static struct attribute *ieee80211_attrs[] = {
 	&dev_attr_name.attr,
 	NULL,
 };
-#define BP_ATTR_GRP_STRUCT device_attribute
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 ATTRIBUTE_GROUPS(ieee80211);
+#else
+#define BP_ATTR_GRP_STRUCT device_attribute
+ATTRIBUTE_GROUPS_BACKPORT(ieee80211);
+#endif
 
 static void wiphy_dev_release(struct device *dev)
 {

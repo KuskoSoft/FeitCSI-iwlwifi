@@ -17,4 +17,12 @@ static inline bool vlan_hw_offload_capable(netdev_features_t features,
 }
 #endif 
 
+#ifndef VLAN_PRIO_MASK
+#define VLAN_PRIO_MASK		0xe000 /* Priority Code Point */
+#endif
+
+#ifndef VLAN_PRIO_SHIFT
+#define VLAN_PRIO_SHIFT		13
+#endif
+
 #endif /* __BACKPORT_LINUX_IF_VLAN_H_ */

@@ -8,4 +8,9 @@
 extern size_t memweight(const void *ptr, size_t bytes);
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
+#define strtobool LINUX_BACKPORT(strtobool)
+extern int strtobool(const char *s, bool *res);
+#endif
+
 #endif /* __BACKPORT_LINUX_STRING_H */

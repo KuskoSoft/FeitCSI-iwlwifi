@@ -8,7 +8,6 @@ NOSTDINC_FLAGS := \
 	-I$(M)/backport-include/uapi \
 	-I$(M)/include/ \
 	-I$(M)/include/uapi \
-	-I$(M)/include/drm \
 	-include $(M)/backport-include/backport/backport.h \
 	$(call backport-cc-disable-warning, unused-but-set-variable) \
 	-DBACKPORTS_VERSION=\"$(BACKPORTS_VERSION)\" \
@@ -30,12 +29,10 @@ obj-$(CPTCFG_BT) += drivers/bluetooth/
 #obj-$(CPTCFG_BCMA) += drivers/bcma/
 #obj-$(CPTCFG_ETHERNET) += drivers/net/ethernet/
 #obj-$(CPTCFG_USB_NET_RNDIS_WLAN) += drivers/net/usb/
-#obj-$(CPTCFG_DRM) += drivers/gpu/drm/
 #obj-$(CPTCFG_NFC) += net/nfc/
 #obj-$(CPTCFG_NFC) += drivers/nfc/
 #obj-$(CPTCFG_REGULATOR) += drivers/regulator/
 #obj-$(CPTCFG_MEDIA_SUPPORT) += drivers/media/
-#obj-$(CPTCFG_INTEL_IPS) += drivers/platform/x86/
 #
 #obj-$(CPTCFG_IEEE802154) += net/ieee802154/
 #obj-$(CPTCFG_MAC802154) += net/mac802154/

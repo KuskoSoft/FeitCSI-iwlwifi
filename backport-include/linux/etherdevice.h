@@ -135,4 +135,23 @@ extern int eth_validate_addr(struct net_device *dev);
 #define netdev_hw_addr dev_mc_list
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
+/**
+ * eth_hw_addr_inherit - Copy dev_addr from another net_device
+ * @dst: pointer to net_device to copy dev_addr to
+ * @src: pointer to net_device to copy dev_addr from
+ *
+ * Copy the Ethernet address from one net_device to another along with
+ * the address attributes (addr_assign_type).
+ */
+static inline void eth_hw_addr_inherit(struct net_device *dst,
+				       struct net_device *src)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+	dst->addr_assign_type = src->addr_assign_type;
+#endif
+	memcpy(dst->dev_addr, src->dev_addr, ETH_ALEN);
+}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) */
+
 #endif /* _BACKPORT_LINUX_ETHERDEVICE_H */

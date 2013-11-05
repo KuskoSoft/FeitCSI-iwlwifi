@@ -11,29 +11,6 @@
 #include <linux/idr.h>
 #include <linux/cpufreq.h>
 
-/* This backports:
- * commit 3d73710880afa3d61cf57b5d4eb192e812eb7e4f
- * Author: Jesse Barnes <jbarnes@virtuousgeek.org>
- * Date:   Tue Jun 28 10:59:12 2011 -0700
- *
- * 	cpufreq: expose a cpufreq_quick_get_max routine
- */
-#ifdef CONFIG_CPU_FREQ
-unsigned int cpufreq_quick_get_max(unsigned int cpu)
-{
-	struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
-	unsigned int ret_freq = 0;
-
-	if (policy) {
-		ret_freq = policy->max;
-		cpufreq_cpu_put(policy);
-	}
-
-	return ret_freq;
-}
-EXPORT_SYMBOL_GPL(cpufreq_quick_get_max);
-#endif
-
 static DEFINE_SPINLOCK(compat_simple_ida_lock);
 
 /**

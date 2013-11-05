@@ -36,14 +36,10 @@ source drivers/net/wireless/Kconfig
 #source drivers/ssb/Kconfig
 #source drivers/bcma/Kconfig
 
-#source drivers/gpu/drm/Kconfig
-
 #source net/nfc/Kconfig
 
 #source drivers/regulator/Kconfig
 #source drivers/media/Kconfig
-
-#source drivers/platform/x86/Kconfig
 
 #source net/ieee802154/Kconfig
 #source net/mac802154/Kconfig

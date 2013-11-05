@@ -126,17 +126,6 @@ static inline int pcie_capability_clear_dword(struct pci_dev *dev, int pos,
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
-/*
- * DRM requires this, but we can't really backport it well
- */
-static inline void __iomem *pci_platform_rom(struct pci_dev *pdev, size_t *size)
-{
-	printk(KERN_WARNING "compat: not providing pci_platform_rom!\n");
-	return NULL;
-}
-#endif
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
 /* mask pci_pcie_cap as debian squeeze also backports this */
 #define pci_pcie_cap LINUX_BACKPORT(pci_pcie_cap)

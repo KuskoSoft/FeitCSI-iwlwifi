@@ -13,6 +13,7 @@
 #include <linux/err.h>
 #include <linux/proc_fs.h>
 #include <linux/random.h>
+#include <linux/tty.h>
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
 #include <linux/init.h>
@@ -90,3 +91,37 @@ unsigned int get_random_int(void)
 	return r;
 }
 EXPORT_SYMBOL_GPL(get_random_int);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28))
+/**
+ * tty_port_tty_wakeup - helper to wake up a tty
+ *
+ * @port: tty port
+ */
+void tty_port_tty_wakeup(struct tty_port *port)
+{
+	struct tty_struct *tty = tty_port_tty_get(port);
+
+	if (tty) {
+		tty_wakeup(tty);
+		tty_kref_put(tty);
+	}
+}
+EXPORT_SYMBOL_GPL(tty_port_tty_wakeup);
+
+/**
+ * tty_port_tty_hangup - helper to hang up a tty
+ *
+ * @port: tty port
+ * @check_clocal: hang only ttys with CLOCAL unset?
+ */
+void tty_port_tty_hangup(struct tty_port *port, bool check_clocal)
+{
+	struct tty_struct *tty = tty_port_tty_get(port);
+
+	if (tty && (!check_clocal || !C_CLOCAL(tty)))
+		tty_hangup(tty);
+	tty_kref_put(tty);
+}
+EXPORT_SYMBOL_GPL(tty_port_tty_hangup);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)) */

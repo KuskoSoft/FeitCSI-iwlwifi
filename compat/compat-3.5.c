@@ -64,17 +64,3 @@ int overflowgid = DEFAULT_OVERFLOWGID;
 EXPORT_SYMBOL_GPL(overflowuid);
 EXPORT_SYMBOL_GPL(overflowgid);
 #endif
-
-/*
- * We can't access the timekeeper static variable
- * on older kernels so we're shit out of luck and
- * have to rely on time that might jump. Upgrade
- * if you want timestamps that don't jump, this
- * important for DRM vblank and page flip event
- * timestamps.
- */
-ktime_t ktime_get_monotonic_offset(void)
-{
-	return ktime_get();
-}
-EXPORT_SYMBOL_GPL(ktime_get_monotonic_offset);

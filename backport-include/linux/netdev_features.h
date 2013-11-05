@@ -39,4 +39,12 @@ typedef u32 netdev_features_t;
 #define NETIF_F_RXCSUM 0
 #endif
 
+#if !defined(NETIF_F_RXALL)
+#define NETIF_F_RXALL 0
+#endif
+
+#if !defined(NETIF_F_RXFCS)
+#define NETIF_F_RXFCS 0
+#endif
+
 #endif /* __BACKPORT_NETDEV_FEATURES_H */

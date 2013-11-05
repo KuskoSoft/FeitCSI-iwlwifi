@@ -192,8 +192,11 @@ backport_device_release_driver(struct device *dev)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)
 #define DEVICE_ATTR_RO(_name) \
 struct device_attribute dev_attr_ ## _name = __ATTR_RO(_name);
+#define DEVICE_ATTR_RW(_name) \
+struct device_attribute dev_attr_ ## _name = __ATTR_RW(_name)
+#endif
 
-#define ATTRIBUTE_GROUPS(_name) \
+#define ATTRIBUTE_GROUPS_BACKPORT(_name) \
 static struct BP_ATTR_GRP_STRUCT _name##_dev_attrs[ARRAY_SIZE(_name##_attrs)];\
 static void init_##_name##_attrs(void)				\
 {									\
@@ -204,7 +207,8 @@ static void init_##_name##_attrs(void)				\
 				      struct BP_ATTR_GRP_STRUCT,	\
 				      attr);				\
 }
-#else
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 #undef ATTRIBUTE_GROUPS
 #define ATTRIBUTE_GROUPS(_name)					\
 static const struct attribute_group _name##_group = {		\
@@ -212,6 +216,14 @@ static const struct attribute_group _name##_group = {		\
 };								\
 static inline void init_##_name##_attrs(void) {}		\
 __ATTRIBUTE_GROUPS(_name)
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
+#define dev_get_platdata LINUX_BACKPORT(dev_get_platdata)
+static inline void *dev_get_platdata(const struct device *dev)
+{
+	return dev->platform_data;
+}
 #endif
 
 #endif /* __BACKPORT_DEVICE_H */

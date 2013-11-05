@@ -12,32 +12,6 @@
 #include <linux/compat.h>
 #include <linux/if_ether.h>
 
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6,4))
-/* This pulls-in a lot of non-exported symbol backports
- * on kernels older than 2.6.32. There's no harm for not
- * making this available on kernels < 2.6.32. */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
-#include <linux/pagemap.h>
-#include <linux/shmem_fs.h>
-
-/* This backports:
- *
- * commit d9d90e5eb70e09903dadff42099b6c948f814050
- * Author: Hugh Dickins <hughd@google.com>
- * Date:   Mon Jun 27 16:18:04 2011 -0700
- *
- *	tmpfs: add shmem_read_mapping_page_gfp
- */
-
-struct page *shmem_read_mapping_page_gfp(struct address_space *mapping,
-                                        pgoff_t index, gfp_t gfp)
-{
-       return read_cache_page_gfp(mapping, index, gfp);
-}
-EXPORT_SYMBOL_GPL(shmem_read_mapping_page_gfp);
-#endif
-#endif
-
 int mac_pton(const char *s, u8 *mac)
 {
 	int i;
@@ -86,3 +60,32 @@ kstrto_from_user(kstrtou16_from_user,	kstrtou16,	u16);
 kstrto_from_user(kstrtos16_from_user,	kstrtos16,	s16);
 kstrto_from_user(kstrtou8_from_user,	kstrtou8,	u8);
 kstrto_from_user(kstrtos8_from_user,	kstrtos8,	s8);
+
+/**
+ * strtobool - convert common user inputs into boolean values
+ * @s: input string
+ * @res: result
+ *
+ * This routine returns 0 iff the first character is one of 'Yy1Nn0'.
+ * Otherwise it will return -EINVAL.  Value pointed to by res is
+ * updated upon finding a match.
+ */
+int strtobool(const char *s, bool *res)
+{
+	switch (s[0]) {
+	case 'y':
+	case 'Y':
+	case '1':
+		*res = true;
+		break;
+	case 'n':
+	case 'N':
+	case '0':
+		*res = false;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(strtobool);

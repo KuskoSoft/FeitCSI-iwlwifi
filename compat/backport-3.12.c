@@ -10,6 +10,7 @@
 
 #include <linux/export.h>
 #include <linux/hid.h>
+#include <linux/bug.h>
 
 /*
  * Allocator for buffer that is going to be passed to hid_output_report()
