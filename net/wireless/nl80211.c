@@ -1943,7 +1943,7 @@ static int __nl80211_set_channel(struct cfg80211_registered_device *rdev,
 			result = -EBUSY;
 			break;
 		}
-		if (!cfg80211_reg_can_beacon(&rdev->wiphy, &chandef)) {
+		if (!cfg80211_reg_can_beacon(&rdev->wiphy, &chandef, iftype)) {
 			result = -EINVAL;
 			break;
 		}
@@ -3281,7 +3281,8 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 	} else if (!nl80211_get_ap_channel(rdev, &params))
 		return -EINVAL;
 
-	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &params.chandef))
+	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &params.chandef,
+				     wdev->iftype))
 		return -EINVAL;
 
 	err = cfg80211_chandef_dfs_required(wdev->wiphy, &params.chandef);
@@ -5937,7 +5938,8 @@ skip_beacons:
 	if (err)
 		return err;
 
-	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &params.chandef))
+	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &params.chandef,
+				     wdev->iftype))
 		return -EINVAL;
 
 	switch (dev->ieee80211_ptr->iftype) {
@@ -6720,7 +6722,8 @@ static int nl80211_join_ibss(struct sk_buff *skb, struct genl_info *info)
 	if (err)
 		return err;
 
-	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &ibss.chandef))
+	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &ibss.chandef,
+				     NL80211_IFTYPE_ADHOC))
 		return -EINVAL;
 
 	switch (ibss.chandef.width) {
