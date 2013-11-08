@@ -205,7 +205,7 @@ static int iwl_mvm_sf_config(struct iwl_mvm *mvm, u8 sta_id,
 		return -EINVAL;
 	}
 
-	ret = iwl_mvm_send_cmd_pdu(mvm, REPLY_SF_CFG_CMD, CMD_SYNC,
+	ret = iwl_mvm_send_cmd_pdu(mvm, REPLY_SF_CFG_CMD, CMD_ASYNC,
 				   sizeof(sf_cmd), &sf_cmd);
 	if (!ret)
 		mvm->sf_state = new_state;
