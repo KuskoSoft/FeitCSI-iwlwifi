@@ -787,8 +787,7 @@ void iwl_mvm_testmode_event(struct iwl_op_mode *op_mode, struct sk_buff *skb);
 #endif
 
 /* rate scaling */
-int iwl_mvm_send_lq_cmd(struct iwl_mvm *mvm, struct iwl_lq_cmd *lq,
-			u8 flags, bool init);
+int iwl_mvm_send_lq_cmd(struct iwl_mvm *mvm, struct iwl_lq_cmd *lq, bool init);
 
 /* power managment */
 static inline int iwl_mvm_power_update_mode(struct iwl_mvm *mvm,
