@@ -346,7 +346,8 @@ enum iwl_bt_coex_profile_traffic_load {
 /* Initialize station's rate scaling information after adding station */
 extern void iwl_mvm_rs_rate_init(struct iwl_mvm *mvm,
 				 struct ieee80211_sta *sta,
-				 enum ieee80211_band band);
+				 enum ieee80211_band band,
+				 bool init);
 
 /**
  * iwl_rate_control_register - Register the rate control algorithm callbacks
