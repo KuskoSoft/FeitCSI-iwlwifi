@@ -970,8 +970,8 @@ out:
 	mutex_unlock(&local->mtx);
 }
 
-int ieee80211_request_sched_scan_start(struct ieee80211_sub_if_data *sdata,
-				       struct cfg80211_sched_scan_request *req)
+int __ieee80211_request_sched_scan_start(struct ieee80211_sub_if_data *sdata,
+					struct cfg80211_sched_scan_request *req)
 {
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_sched_scan_ies sched_scan_ies = {};
@@ -981,17 +981,10 @@ int ieee80211_request_sched_scan_start(struct ieee80211_sub_if_data *sdata,
 	iebufsz = 2 + IEEE80211_MAX_SSID_LEN +
 		  local->scan_ies_len + req->ie_len;
 
-	mutex_lock(&local->mtx);
+	lockdep_assert_held(&local->mtx);
 
-	if (rcu_access_pointer(local->sched_scan_sdata)) {
-		ret = -EBUSY;
-		goto out;
-	}
-
-	if (!local->ops->sched_scan_start) {
-		ret = -ENOTSUPP;
-		goto out;
-	}
+	if (!local->ops->sched_scan_start)
+		return -ENOTSUPP;
 
 	for (i = 0; i < IEEE80211_NUM_BANDS; i++) {
 		if (!local->hw.wiphy->bands[i])
@@ -1012,13 +1005,39 @@ int ieee80211_request_sched_scan_start(struct ieee80211_sub_if_data *sdata,
 	}
 
 	ret = drv_sched_scan_start(local, sdata, req, &sched_scan_ies);
-	if (ret == 0)
+	if (ret == 0) {
 		rcu_assign_pointer(local->sched_scan_sdata, sdata);
+		local->sched_scan_req = req;
+	}
 
 out_free:
 	while (i > 0)
 		kfree(sched_scan_ies.ie[--i]);
-out:
+
+	if (ret) {
+		/* Clean in case of failure after HW restart or upon resume. */
+		rcu_assign_pointer(local->sched_scan_sdata, NULL);
+		local->sched_scan_req = NULL;
+	}
+
+	return ret;
+}
+
+int ieee80211_request_sched_scan_start(struct ieee80211_sub_if_data *sdata,
+				       struct cfg80211_sched_scan_request *req)
+{
+	struct ieee80211_local *local = sdata->local;
+	int ret;
+
+	mutex_lock(&local->mtx);
+
+	if (rcu_access_pointer(local->sched_scan_sdata)) {
+		mutex_unlock(&local->mtx);
+		return -EBUSY;
+	}
+
+	ret = __ieee80211_request_sched_scan_start(sdata, req);
+
 	mutex_unlock(&local->mtx);
 	return ret;
 }
@@ -1034,6 +1053,9 @@ int ieee80211_request_sched_scan_stop(struct ieee80211_sub_if_data *sdata)
 		ret = -ENOTSUPP;
 		goto out;
 	}
+
+	/* We don't want to restart sched scan anymore. */
+	local->sched_scan_req = NULL;
 
 	if (rcu_access_pointer(local->sched_scan_sdata))
 		drv_sched_scan_stop(local, sdata);
@@ -1068,6 +1090,9 @@ void ieee80211_sched_scan_stopped_work(struct work_struct *work)
 	}
 
 	rcu_assign_pointer(local->sched_scan_sdata, NULL);
+
+	/* If sched scan was aborted by the driver. */
+	local->sched_scan_req = NULL;
 
 	mutex_unlock(&local->mtx);
 
