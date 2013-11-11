@@ -5,7 +5,6 @@ config MAC80211
 	depends on CRYPTO
 	depends on CRYPTO_ARC4
 	depends on CRYPTO_AES
-	depends on CRYPTO_CCM
 	depends on CRC32
 	select BACKPORT_AVERAGE
 	---help---
