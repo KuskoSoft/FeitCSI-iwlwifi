@@ -35,10 +35,12 @@ endif
 
 ifeq ($(INTEL_IWL_USE_COMPAT_INSTALL),y)
 INTEL_IWL_COMPAT_INSTALL := iwlwifi_install
+INTEL_IWL_KERNEL_DEPEND := $(INSTALLED_KERNEL_TARGET)
 else
 # use system install
 copy_modules_to_root: iwlwifi
 ALL_KERNEL_MODULES += $(INTEL_IWL_OUT_DIR)
+INTEL_IWL_KERNEL_DEPEND := build_bzImage
 endif
 
 iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL)
@@ -47,7 +49,7 @@ iwlwifi_copy:
 	@mkdir -p $(INTEL_IWL_OUT_DIR)
 	@cp -rfl $(INTEL_IWL_SRC_DIR)/. $(INTEL_IWL_OUT_DIR)/
 
-iwlwifi_configure: $(INSTALLED_KERNEL_TARGET) iwlwifi_copy
+iwlwifi_configure: $(INTEL_IWL_KERNEL_DEPEND) iwlwifi_copy
 	$(info Configuring kernel module iwlwifi with defconfig-$(INTEL_IWL_BOARD_CONFIG))
 	$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) defconfig-$(INTEL_IWL_BOARD_CONFIG)
 
