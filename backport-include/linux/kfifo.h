@@ -5,11 +5,56 @@
 #else
 #include <linux/kfifo-new.h>
 #endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#undef kfifo_put
+/**
+ * kfifo_put - put data into the fifo
+ * @fifo: address of the fifo to be used
+ * @val: the data to be added
+ *
+ * This macro copies the given value into the fifo.
+ * It returns 0 if the fifo was full. Otherwise it returns the number
+ * processed elements.
+ *
+ * Note that with only one concurrent reader and one concurrent
+ * writer, you don't need extra locking to use these macro.
+ */
+#define	kfifo_put(fifo, val) \
+({ \
+	typeof((fifo) + 1) __tmp = (fifo); \
+	typeof((&val) + 1) __val = (&val); \
+	unsigned int __ret; \
+	const size_t __recsize = sizeof(*__tmp->rectype); \
+	struct __kfifo *__kfifo = &__tmp->kfifo; \
+	if (0) { \
+		typeof(__tmp->ptr_const) __dummy __attribute__ ((unused)); \
+		__dummy = (typeof(__val))NULL; \
+	} \
+	if (__recsize) \
+		__ret = __kfifo_in_r(__kfifo, __val, sizeof(*__val), \
+			__recsize); \
+	else { \
+		__ret = !kfifo_is_full(__tmp); \
+		if (__ret) { \
+			(__is_kfifo_ptr(__tmp) ? \
+			((typeof(__tmp->type))__kfifo->data) : \
+			(__tmp->buf) \
+			)[__kfifo->in & __tmp->kfifo.mask] = \
+				*(typeof(__tmp->type))__val; \
+			smp_wmb(); \
+			__kfifo->in++; \
+		} \
+	} \
+	__ret; \
+})
+#endif
+
 #else
 /*
  * A generic kernel FIFO implementation
  *
- * Copyright (C) 2009/2010 Stefani Seibold <stefani@seibold.net>
+ * Copyright (C) 2013 Stefani Seibold <stefani@seibold.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,9 +120,10 @@ struct __kfifo {
 	union { \
 		struct __kfifo	kfifo; \
 		datatype	*type; \
+		const datatype	*const_type; \
 		char		(*rectype)[recsize]; \
 		ptrtype		*ptr; \
-		const ptrtype	*ptr_const; \
+		ptrtype const	*ptr_const; \
 	}
 
 #define __STRUCT_KFIFO(type, size, recsize, ptrtype) \
@@ -194,6 +240,7 @@ __kfifo_int_must_check_helper(int val)
 #define __kfifo_alloc LINUX_BACKPORT(__kfifo_alloc)
 extern int __kfifo_alloc(struct __kfifo *fifo, unsigned int size,
 	size_t esize, gfp_t gfp_mask);
+
 #define __kfifo_free LINUX_BACKPORT(__kfifo_free)
 extern void __kfifo_free(struct __kfifo *fifo);
 
@@ -477,16 +524,12 @@ __kfifo_int_must_check_helper( \
 #define	kfifo_put(fifo, val) \
 ({ \
 	typeof((fifo) + 1) __tmp = (fifo); \
-	typeof((val) + 1) __val = (val); \
+	typeof(*__tmp->const_type) __val = (val); \
 	unsigned int __ret; \
-	const size_t __recsize = sizeof(*__tmp->rectype); \
+	size_t __recsize = sizeof(*__tmp->rectype); \
 	struct __kfifo *__kfifo = &__tmp->kfifo; \
-	if (0) { \
-		typeof(__tmp->ptr_const) __dummy __attribute__ ((unused)); \
-		__dummy = (typeof(__val))NULL; \
-	} \
 	if (__recsize) \
-		__ret = __kfifo_in_r(__kfifo, __val, sizeof(*__val), \
+		__ret = __kfifo_in_r(__kfifo, &__val, sizeof(__val), \
 			__recsize); \
 	else { \
 		__ret = !kfifo_is_full(__tmp); \
@@ -495,7 +538,7 @@ __kfifo_int_must_check_helper( \
 			((typeof(__tmp->type))__kfifo->data) : \
 			(__tmp->buf) \
 			)[__kfifo->in & __tmp->kfifo.mask] = \
-				*(typeof(__tmp->type))__val; \
+				(typeof(*__tmp->type))__val; \
 			smp_wmb(); \
 			__kfifo->in++; \
 		} \
@@ -506,7 +549,7 @@ __kfifo_int_must_check_helper( \
 /**
  * kfifo_get - get data from the fifo
  * @fifo: address of the fifo to be used
- * @val: the var where to store the data to be added
+ * @val: address where to store the data
  *
  * This macro reads the data from the fifo.
  * It returns 0 if the fifo was empty. Otherwise it returns the number
@@ -519,12 +562,10 @@ __kfifo_int_must_check_helper( \
 __kfifo_uint_must_check_helper( \
 ({ \
 	typeof((fifo) + 1) __tmp = (fifo); \
-	typeof((val) + 1) __val = (val); \
+	typeof(__tmp->ptr) __val = (val); \
 	unsigned int __ret; \
 	const size_t __recsize = sizeof(*__tmp->rectype); \
 	struct __kfifo *__kfifo = &__tmp->kfifo; \
-	if (0) \
-		__val = (typeof(__tmp->ptr))0; \
 	if (__recsize) \
 		__ret = __kfifo_out_r(__kfifo, __val, sizeof(*__val), \
 			__recsize); \
@@ -547,7 +588,7 @@ __kfifo_uint_must_check_helper( \
 /**
  * kfifo_peek - get data from the fifo without removing
  * @fifo: address of the fifo to be used
- * @val: the var where to store the data to be added
+ * @val: address where to store the data
  *
  * This reads the data from the fifo without removing it from the fifo.
  * It returns 0 if the fifo was empty. Otherwise it returns the number
@@ -560,12 +601,10 @@ __kfifo_uint_must_check_helper( \
 __kfifo_uint_must_check_helper( \
 ({ \
 	typeof((fifo) + 1) __tmp = (fifo); \
-	typeof((val) + 1) __val = (val); \
+	typeof(__tmp->ptr) __val = (val); \
 	unsigned int __ret; \
 	const size_t __recsize = sizeof(*__tmp->rectype); \
 	struct __kfifo *__kfifo = &__tmp->kfifo; \
-	if (0) \
-		__val = (typeof(__tmp->ptr))NULL; \
 	if (__recsize) \
 		__ret = __kfifo_out_peek_r(__kfifo, __val, sizeof(*__val), \
 			__recsize); \
@@ -599,14 +638,10 @@ __kfifo_uint_must_check_helper( \
 #define	kfifo_in(fifo, buf, n) \
 ({ \
 	typeof((fifo) + 1) __tmp = (fifo); \
-	typeof((buf) + 1) __buf = (buf); \
+	typeof(__tmp->ptr_const) __buf = (buf); \
 	unsigned long __n = (n); \
 	const size_t __recsize = sizeof(*__tmp->rectype); \
 	struct __kfifo *__kfifo = &__tmp->kfifo; \
-	if (0) { \
-		typeof(__tmp->ptr_const) __dummy __attribute__ ((unused)); \
-		__dummy = (typeof(__buf))NULL; \
-	} \
 	(__recsize) ?\
 	__kfifo_in_r(__kfifo, __buf, __n, __recsize) : \
 	__kfifo_in(__kfifo, __buf, __n); \
@@ -652,14 +687,10 @@ __kfifo_uint_must_check_helper( \
 __kfifo_uint_must_check_helper( \
 ({ \
 	typeof((fifo) + 1) __tmp = (fifo); \
-	typeof((buf) + 1) __buf = (buf); \
+	typeof(__tmp->ptr) __buf = (buf); \
 	unsigned long __n = (n); \
 	const size_t __recsize = sizeof(*__tmp->rectype); \
 	struct __kfifo *__kfifo = &__tmp->kfifo; \
-	if (0) { \
-		typeof(__tmp->ptr) __dummy = NULL; \
-		__buf = __dummy; \
-	} \
 	(__recsize) ?\
 	__kfifo_out_r(__kfifo, __buf, __n, __recsize) : \
 	__kfifo_out(__kfifo, __buf, __n); \
@@ -864,14 +895,10 @@ __kfifo_uint_must_check_helper( \
 __kfifo_uint_must_check_helper( \
 ({ \
 	typeof((fifo) + 1) __tmp = (fifo); \
-	typeof((buf) + 1) __buf = (buf); \
+	typeof(__tmp->ptr) __buf = (buf); \
 	unsigned long __n = (n); \
 	const size_t __recsize = sizeof(*__tmp->rectype); \
 	struct __kfifo *__kfifo = &__tmp->kfifo; \
-	if (0) { \
-		typeof(__tmp->ptr) __dummy __attribute__ ((unused)) = NULL; \
-		__buf = __dummy; \
-	} \
 	(__recsize) ? \
 	__kfifo_out_peek_r(__kfifo, __buf, __n, __recsize) : \
 	__kfifo_out_peek(__kfifo, __buf, __n); \

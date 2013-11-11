@@ -10,6 +10,7 @@
 #include <linux/version.h>
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
+#ifdef CONFIG_REGULATOR
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/regulator/driver.h>
@@ -80,4 +81,5 @@ void devm_regulator_unregister(struct device *dev, struct regulator_dev *rdev)
 		WARN_ON(rc);
 }
 EXPORT_SYMBOL_GPL(devm_regulator_unregister);
+#endif /* CONFIG_REGULATOR */
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)) */

@@ -318,6 +318,7 @@ void v2_6_28_skb_add_rx_frag(struct sk_buff *skb, int i, struct page *page, int 
 }
 EXPORT_SYMBOL_GPL(v2_6_28_skb_add_rx_frag);
 
+#ifdef CONFIG_TTY
 void tty_write_unlock(struct tty_struct *tty)
 {
 	mutex_unlock(&tty->atomic_write_lock);
@@ -443,6 +444,7 @@ int n_tty_ioctl_helper(struct tty_struct *tty, struct file *file,
 	}
 }
 EXPORT_SYMBOL_GPL(n_tty_ioctl_helper);
+#endif /* CONFIG_TTY */
 
 #ifdef CONFIG_PCI
 /**

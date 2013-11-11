@@ -16,12 +16,14 @@ static inline void debugfs_remove_recursive(struct dentry *dentry)
 #endif /* < 2.6.27 */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6,4)
 static inline struct dentry *debugfs_create_x64(const char *name, umode_t mode,
 						struct dentry *parent,
 						u64 *value)
 {
 	return debugfs_create_u64(name, mode, parent, value);
 }
+#endif
 #endif
 
 #endif /* __BACKPORT_LINUX_DEBUGFS_H */

@@ -324,6 +324,8 @@ struct ieee80211_tx_latency_stat {
  * @chain_signal_last: last signal (per chain)
  * @chain_signal_avg: signal average (per chain)
  * @cipher_scheme: optional cipher scheme for this station
+ * @known_smps_mode: the smps_mode the client thinks we are in. Relevant for
+ *	AP only.
  */
 struct sta_info {
 	/* General information, mostly static */
@@ -439,6 +441,7 @@ struct sta_info {
 	unsigned int beacon_loss_count;
 
 	const struct ieee80211_cipher_scheme *cipher_scheme;
+	enum ieee80211_smps_mode known_smps_mode;
 
 	/* keep last! */
 	struct ieee80211_sta sta;
@@ -642,6 +645,7 @@ void sta_set_rate_info_rx(struct sta_info *sta,
 			  struct rate_info *rinfo);
 void ieee80211_sta_expire(struct ieee80211_sub_if_data *sdata,
 			  unsigned long exp_time);
+u8 sta_info_tx_streams(struct sta_info *sta);
 
 void ieee80211_sta_ps_deliver_wakeup(struct sta_info *sta);
 void ieee80211_sta_ps_deliver_poll_response(struct sta_info *sta);

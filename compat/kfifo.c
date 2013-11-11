@@ -20,7 +20,7 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/log2.h>
@@ -42,8 +42,7 @@ int __kfifo_alloc(struct __kfifo *fifo, unsigned int size,
 	 * round down to the next power of 2, since our 'let the indices
 	 * wrap' technique works only in this case.
 	 */
-	if (!is_power_of_2(size))
-		size = rounddown_pow_of_two(size);
+	size = roundup_pow_of_two(size);
 
 	fifo->in = 0;
 	fifo->out = 0;
@@ -83,8 +82,7 @@ int __kfifo_init(struct __kfifo *fifo, void *buffer,
 {
 	size /= esize;
 
-	if (!is_power_of_2(size))
-		size = rounddown_pow_of_two(size);
+	size = roundup_pow_of_two(size);
 
 	fifo->in = 0;
 	fifo->out = 0;
@@ -217,7 +215,7 @@ static unsigned long kfifo_copy_from_user(struct __kfifo *fifo,
 	 * incrementing the fifo->in index counter
 	 */
 	smp_wmb();
-	*copied = len - ret;
+	*copied = len - ret * esize;
 	/* return the number of elements which are not copied */
 	return ret;
 }
@@ -277,7 +275,7 @@ static unsigned long kfifo_copy_to_user(struct __kfifo *fifo, void __user *to,
 	 * incrementing the fifo->out index counter
 	 */
 	smp_wmb();
-	*copied = len - ret;
+	*copied = len - ret * esize;
 	/* return the number of elements which are not copied */
 	return ret;
 }
@@ -402,6 +400,7 @@ unsigned int __kfifo_max_r(unsigned int len, size_t recsize)
 		return max;
 	return len;
 }
+EXPORT_SYMBOL_GPL(__kfifo_max_r);
 
 #define	__KFIFO_PEEK(data, out, mask) \
 	((data)[(out) & (mask)])

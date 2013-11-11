@@ -254,7 +254,6 @@ int pcie_capability_clear_and_set_dword(struct pci_dev *dev, int pos,
 EXPORT_SYMBOL_GPL(pcie_capability_clear_and_set_dword);
 #endif
 
-#ifdef KERNEL_HAS_OF_SUPPORT
 #ifdef CONFIG_OF
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
 /**
@@ -281,4 +280,3 @@ struct device_node *of_get_child_by_name(const struct device_node *node,
 EXPORT_SYMBOL_GPL(of_get_child_by_name);
 #endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)) */
 #endif /* CONFIG_OF */
-#endif /* KERNEL_HAS_OF_SUPPORT */
