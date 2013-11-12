@@ -78,6 +78,7 @@
 #include "fw-api-scan.h"
 #include "iwl-phy-db.h"
 #include "testmode.h"
+#include "vendor-cmd.h"
 
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
 	{
@@ -290,6 +291,8 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	}
 #endif
 #endif
+
+	iwl_mvm_set_wiphy_vendor_commands(hw->wiphy);
 
 	ret = iwl_mvm_leds_init(mvm);
 	if (ret)
