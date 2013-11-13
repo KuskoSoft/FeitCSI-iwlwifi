@@ -2649,11 +2649,11 @@ static int rs_pretty_print_rate(char *buf, const u32 rate)
 
 	return sprintf(buf, "%s | ANT: %s BW: %s MCS: %d NSS: %d %s%s%s%s%s\n",
 		       type, ant_name[ant], bw, mcs, nss,
-		       (rate & RATE_MCS_SGI_MSK) ? "SGI" : "NGI",
+		       (rate & RATE_MCS_SGI_MSK) ? "SGI " : "NGI ",
 		       (rate & RATE_MCS_STBC_MSK) ? "STBC " : "",
 		       (rate & RATE_MCS_LDPC_MSK) ? "LDPC " : "",
-		       (rate & RATE_MCS_BF_MSK) ? "BF  " : "",
-		       (rate & RATE_MCS_ZLF_MSK) ? "ZLF  " : "");
+		       (rate & RATE_MCS_BF_MSK) ? "BF " : "",
+		       (rate & RATE_MCS_ZLF_MSK) ? "ZLF " : "");
 }
 
 static ssize_t rs_sta_dbgfs_scale_table_read(struct file *file,
