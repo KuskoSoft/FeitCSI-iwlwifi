@@ -126,21 +126,13 @@ static void iwl_dbgfs_update_pm(struct iwl_mvm *mvm,
 	}
 }
 
-static ssize_t iwl_dbgfs_pm_params_write(struct file *file,
-					 const char __user *user_buf,
+static ssize_t iwl_dbgfs_pm_params_write(struct ieee80211_vif *vif, char *buf,
 					 size_t count, loff_t *ppos)
 {
-	struct ieee80211_vif *vif = file->private_data;
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct iwl_mvm *mvm = mvmvif->mvm;
 	enum iwl_dbgfs_pm_mask param;
-	char buf[32] = {};
-	size_t buf_size = min(count, sizeof(buf) - 1);
-	int val;
-	int ret;
-
-	if (copy_from_user(buf, user_buf, buf_size))
-		return -EFAULT;
+	int val, ret;
 
 	if (!strncmp("keep_alive=", buf, 11)) {
 		if (sscanf(buf + 11, "%d", &val) != 1)
@@ -319,20 +311,13 @@ static void iwl_dbgfs_update_bf(struct ieee80211_vif *vif,
 	}
 }
 
-static ssize_t iwl_dbgfs_bf_params_write(struct file *file,
-					 const char __user *user_buf,
+static ssize_t iwl_dbgfs_bf_params_write(struct ieee80211_vif *vif, char *buf,
 					 size_t count, loff_t *ppos)
 {
-	struct ieee80211_vif *vif = file->private_data;
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct iwl_mvm *mvm = mvmvif->mvm;
 	enum iwl_dbgfs_bf_mask param;
-	char buf[256] = {};
-	size_t buf_size = min(count, sizeof(buf) - 1);
 	int value, ret = 0;
-
-	if (copy_from_user(buf, user_buf, buf_size))
-		return -EFAULT;
 
 	if (!strncmp("bf_energy_delta=", buf, 16)) {
 		if (sscanf(buf+16, "%d", &value) != 1)
@@ -472,6 +457,10 @@ static ssize_t iwl_dbgfs_bf_params_read(struct file *file,
 	return simple_read_from_buffer(user_buf, count, ppos, buf, pos);
 }
 
+#define MVM_DEBUGFS_WRITE_FILE_OPS(name, bufsz) \
+	_MVM_DEBUGFS_WRITE_FILE_OPS(name, bufsz, struct ieee80211_vif)
+#define MVM_DEBUGFS_READ_WRITE_FILE_OPS(name, bufsz) \
+	_MVM_DEBUGFS_READ_WRITE_FILE_OPS(name, bufsz, struct ieee80211_vif)
 #define MVM_DEBUGFS_ADD_FILE_VIF(name, parent, mode) do {		\
 		if (!debugfs_create_file(#name, mode, parent, vif,	\
 					 &iwl_dbgfs_##name##_ops))	\
@@ -479,8 +468,8 @@ static ssize_t iwl_dbgfs_bf_params_read(struct file *file,
 	} while (0)
 
 MVM_DEBUGFS_READ_FILE_OPS(mac_params);
-MVM_DEBUGFS_READ_WRITE_FILE_OPS(pm_params);
-MVM_DEBUGFS_READ_WRITE_FILE_OPS(bf_params);
+MVM_DEBUGFS_READ_WRITE_FILE_OPS(pm_params, 32);
+MVM_DEBUGFS_READ_WRITE_FILE_OPS(bf_params, 256);
 
 void iwl_mvm_vif_dbgfs_register(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 {
