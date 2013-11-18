@@ -83,6 +83,8 @@
 #include "iwl-tm-infc.h"
 #include "iwl-tm-gnl.h"
 
+#define MONITOR_DATA_OVER_IDI_NOTIFICATION	0xf4
+
 int iwl_mvm_testmode_send_cmd(struct iwl_op_mode *op_mode,
 			      struct iwl_host_cmd *cmd)
 {
@@ -420,6 +422,14 @@ void iwl_tm_mvm_send_rx(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb)
 {
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	int length = iwl_rx_packet_len(pkt);
+
+	if (pkt->hdr.cmd == MONITOR_DATA_OVER_IDI_NOTIFICATION) {
+		length -= sizeof(struct iwl_cmd_header);
+		iwl_tm_gnl_send_msg(mvm->trans,
+				    IWL_TM_USER_CMD_NOTIF_MONITOR_DATA, false,
+				    (void *)pkt->data, length, GFP_ATOMIC);
+		return;
+	}
 
 	/* the length doesn't include len_n_flags field, so add it manually */
 	length += sizeof(__le32);
