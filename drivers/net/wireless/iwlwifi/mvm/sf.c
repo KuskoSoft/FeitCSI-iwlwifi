@@ -236,10 +236,10 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *changed_vif,
 	    (changed_vif && changed_vif->type == NL80211_IFTYPE_P2P_DEVICE))
 		return 0;
 
-	ieee80211_iterate_active_interfaces(mvm->hw,
-					    IEEE80211_IFACE_ITER_NORMAL,
-					    iwl_mvm_bound_iface_iterator,
-					    &data);
+	ieee80211_iterate_active_interfaces_atomic(mvm->hw,
+						   IEEE80211_IFACE_ITER_NORMAL,
+						   iwl_mvm_bound_iface_iterator,
+						   &data);
 
 	/* If changed_vif exists and is not to be removed, add to the count */
 	if (changed_vif && !remove_vif)
