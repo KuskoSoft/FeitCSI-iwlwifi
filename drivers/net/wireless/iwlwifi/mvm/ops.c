@@ -80,6 +80,10 @@
 #include "fw-api-scan.h"
 #include "iwl-tm-gnl.h"
 #include "time-event.h"
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+#include "iwl-dnt-cfg.h"
+#include "iwl-dnt-dispatch.h"
+#endif
 
 /*
  * module name, copyright, version, etc.
@@ -107,6 +111,22 @@ module_param_named(power_scheme, iwlmvm_mod_params.power_scheme, int, S_IRUGO);
 MODULE_PARM_DESC(power_scheme,
 		 "power management scheme: 1-active, 2-balanced, 3-low power, default: 2");
 
+
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+static int iwl_mvm_rx_fw_logs(struct iwl_mvm *mvm,
+			      struct iwl_rx_cmd_buffer *rxb,
+			      struct iwl_device_cmd *cmd)
+{
+	return iwl_dnt_dispatch_collect_ucode_message(mvm->trans, rxb);
+}
+
+static int iwl_mvm_dbg(struct iwl_mvm *mvm,
+		       struct iwl_rx_cmd_buffer *rxb,
+		       struct iwl_device_cmd *cmd)
+{
+	return iwl_dnt_dispatch_collect_interface_monitor(mvm->trans, rxb);
+}
+#endif
 
 /*
  * module init and exit functions
@@ -244,6 +264,10 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 	RX_HANDLER(PSM_UAPSD_AP_MISBEHAVING_NOTIFICATION,
 		   iwl_mvm_power_uapsd_misbehaving_ap_notif, false),
 
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	RX_HANDLER(DEBUG_LOG_MSG, iwl_mvm_rx_fw_logs, false),
+	RX_HANDLER(MONITOR_DATA_OVER_IDI_NOTIFICATION, iwl_mvm_dbg, false),
+#endif
 };
 #undef RX_HANDLER
 #define CMD(x) [x] = #x
@@ -427,6 +451,10 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	/* set up notification wait support */
 	iwl_notification_wait_init(&mvm->notif_wait);
 
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	iwl_dnt_init(mvm->trans);
+#endif
+
 	/* Init phy db */
 	mvm->phy_db = iwl_phy_db_init(trans);
 	if (!mvm->phy_db) {
@@ -494,6 +522,9 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	ieee80211_unregister_hw(mvm->hw);
 	iwl_mvm_leds_exit(mvm);
  out_free:
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	iwl_dnt_free(trans);
+#endif
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
 	if (!iwlwifi_mod_params.nvm_file)
@@ -526,6 +557,9 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	iwl_phy_db_free(mvm->phy_db);
 	mvm->phy_db = NULL;
 
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	iwl_dnt_free(mvm->trans);
+#endif
 	iwl_free_nvm_data(mvm->nvm_data);
 	for (i = 0; i < NVM_MAX_NUM_SECTIONS; i++)
 		kfree(mvm->nvm_sections[i].data);
