@@ -21,3 +21,6 @@ Module.symvers
 *.mod.c
 *.pyc
 __pycache__
+# cscope files
+cscope.*
+ncscope.*
