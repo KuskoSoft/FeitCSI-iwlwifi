@@ -38,4 +38,3 @@ config IWLWIFI_MVM_RFKILL_ON_SUSPEND
 
 	  Note that selecting this option will disable WoWLAN and
 	  actually remove the feature completely.
-
