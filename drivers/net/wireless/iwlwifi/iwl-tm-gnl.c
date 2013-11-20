@@ -72,36 +72,6 @@
 #include "iwl-tm-gnl.h"
 #include "iwl-tm-infc.h"
 
-struct iwl_test_trace {
-	u32 size;
-	u8 *cpu_addr;
-	dma_addr_t dma_addr;
-	bool enabled;
-};
-
-struct iwl_test {
-	struct iwl_test_trace trace;
-	bool notify;
-};
-
-
-/**
- * struct iwl_tm_gnl_dev - Devices data base
- * @list:	  Linked list to all devices
- * @trans:	  Pointer to the owning transport
- * @dev_name:	  Pointer to the device name
- * @cmd_handlers: Operation mode specific command handlers.
- *
- * Used to retrieve a device op mode pointer.
- * Device identifier it's name.
- */
-struct iwl_tm_gnl_dev {
-	struct list_head list;
-	struct iwl_test tst;
-	struct iwl_trans *trans;
-	const char *dev_name;
-};
-
 
 /**
  * iwl_tm_validate_fw_cmd() - Validates FW host command input data
