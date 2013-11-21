@@ -931,6 +931,23 @@ void iwl_mvm_set_last_nonqos_seq(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 		IWL_ERR(mvm, "failed to set non-QoS seqno\n");
 }
 
+void iwl_mvm_set_wowlan_qos_seq(struct iwl_mvm_sta *mvm_ap_sta,
+				struct iwl_wowlan_config_cmd *cmd)
+{
+	int i;
+
+	/*
+	 * For QoS counters, we store the one to use next, so subtract 0x10
+	 * since the uCode will add 0x10 *before* using the value while we
+	 * increment after using the value (i.e. store the next value to use).
+	 */
+	for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
+		u16 seq = mvm_ap_sta->tid_data[i].seq_number;
+		seq -= 0x10;
+		cmd->qos_seq[i] = cpu_to_le16(seq);
+	}
+}
+
 static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 			     struct cfg80211_wowlan *wowlan,
 			     bool test)
@@ -965,7 +982,7 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 		.tkip = &tkip_cmd,
 		.use_tkip = false,
 	};
-	int ret, i;
+	int ret;
 	int len __maybe_unused;
 
 	if (!wowlan) {
@@ -1016,16 +1033,7 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 		goto out_noreset;
 	wowlan_config_cmd.non_qos_seq = cpu_to_le16(ret);
 
-	/*
-	 * For QoS counters, we store the one to use next, so subtract 0x10
-	 * since the uCode will add 0x10 *before* using the value while we
-	 * increment after using the value (i.e. store the next value to use).
-	 */
-	for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
-		u16 seq = mvm_ap_sta->tid_data[i].seq_number;
-		seq -= 0x10;
-		wowlan_config_cmd.qos_seq[i] = cpu_to_le16(seq);
-	}
+	iwl_mvm_set_wowlan_qos_seq(mvm_ap_sta, &wowlan_config_cmd);
 
 	if (wowlan->disconnect)
 		wowlan_config_cmd.wakeup_filter |=
