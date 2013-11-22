@@ -1844,8 +1844,6 @@ static void rs_rate_scale_perform(struct iwl_mvm *mvm,
 	 * actual average throughput */
 	if (window->average_tpt != ((window->success_ratio *
 			tbl->expected_tpt[index] + 64) / 128)) {
-		IWL_ERR(mvm,
-			"expected_tpt should have been calculated by now\n");
 		window->average_tpt = ((window->success_ratio *
 					tbl->expected_tpt[index] + 64) / 128);
 	}
