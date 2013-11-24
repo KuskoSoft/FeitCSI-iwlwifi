@@ -71,6 +71,8 @@
 #include "iwl-op-mode.h"
 #include "iwl-tm-gnl.h"
 #include "iwl-tm-infc.h"
+#include "iwl-dnt-cfg.h"
+#include "iwl-dnt-dispatch.h"
 
 
 /**
@@ -171,8 +173,6 @@ static int iwl_tm_trace_begin(struct iwl_tm_gnl_dev *dev,
 			      struct iwl_tm_data *data_in,
 			      struct iwl_tm_data *data_out)
 {
-	struct iwl_trans *trans = dev->trans;
-	struct iwl_test_trace *trace = &dev->tst.trace;
 	struct iwl_tm_trace_request *req = data_in->data;
 	struct iwl_tm_trace_request *resp;
 
@@ -182,36 +182,25 @@ static int iwl_tm_trace_begin(struct iwl_tm_gnl_dev *dev,
 
 	req = data_in->data;
 
-	if (trace->enabled)
-		return -EBUSY;
-
 	/* size zero means use the default */
 	if (!req->size)
 		req->size = TRACE_BUFF_SIZE_DEF;
 	else if (req->size < TRACE_BUFF_SIZE_MIN ||
 		 req->size > TRACE_BUFF_SIZE_MAX)
 		return -EINVAL;
-	trace->size = req->size;
-
-	trace->cpu_addr = dma_alloc_coherent(trans->dev, trace->size,
-					     &trace->dma_addr, GFP_KERNEL);
-	if (!trace->cpu_addr)
+	else if (!dev->dnt->mon_buf_cpu_addr)
 		return -ENOMEM;
-
-	trace->enabled = true;
 
 	resp = kmalloc(sizeof(*resp), GFP_KERNEL);
 	if (!resp) {
-		iwl_tm_trace_end(dev);
 		return -ENOMEM;
 	}
-	resp->size = trace->size;
+	resp->size = dev->dnt->mon_buf_size;
 	/* Casting to avoid compilation warnings when DMA address is 32bit */
-	resp->addr = (u64)trace->dma_addr;
+	resp->addr = (u64)dev->dnt->mon_base_addr;
 
 	data_out->data = resp;
 	data_out->len = sizeof(*resp);
-
 
 	return 0;
 }
@@ -699,19 +688,19 @@ static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev *dev,
  * @tst:	Device's test data
  * @data_out:	Dump data
  */
-static int iwl_tm_trace_dump(struct iwl_test *tst,
+static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev *dev,
 			     struct iwl_tm_data *data_out)
 {
-	if (!tst->trace.enabled || !tst->trace.cpu_addr)
+	if (!dev->dnt->mon_buf_cpu_addr)
 		return -EINVAL;
 
-	data_out->data = kmemdup(tst->trace.cpu_addr, tst->trace.size,
-				 GFP_KERNEL);
+	data_out->data =  kmalloc(dev->dnt->mon_buf_size, GFP_KERNEL);
 	if (!data_out->data)
 		return -ENOMEM;
-	data_out->len = tst->trace.size;
 
-	return 0;
+	data_out->len = dev->dnt->mon_buf_size;
+	return iwl_dnt_dispatch_pull(dev->trans, data_out->data,
+				     dev->dnt->mon_buf_size, MONITOR);
 }
 
 /**
@@ -734,7 +723,7 @@ static int iwl_tm_gnl_command_dump(struct iwl_tm_gnl_cmd *cmd_data)
 	switch (cmd_data->cmd) {
 
 	case IWL_TM_USER_CMD_TRACE_DUMP:
-		ret = iwl_tm_trace_dump(&dev->tst, &cmd_data->data_out);
+		ret = iwl_tm_trace_dump(dev, &cmd_data->data_out);
 		break;
 
 	case IWL_TM_USER_CMD_SRAM_READ:
