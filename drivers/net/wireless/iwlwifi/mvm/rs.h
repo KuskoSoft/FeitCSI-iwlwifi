@@ -157,37 +157,6 @@ enum {
 #define IWL_RATE_INCREASE_TH		6400	/*  50% */
 #define RS_SR_FORCE_DECREASE		1920	/*  15% */
 
-/* possible actions when in legacy mode */
-enum {
-	IWL_LEGACY_SWITCH_ANTENNA,
-	IWL_LEGACY_SWITCH_SISO,
-	IWL_LEGACY_SWITCH_MIMO2,
-	IWL_LEGACY_FIRST_ACTION = IWL_LEGACY_SWITCH_ANTENNA,
-	IWL_LEGACY_LAST_ACTION = IWL_LEGACY_SWITCH_MIMO2,
-};
-
-/* possible actions when in siso mode */
-enum {
-	IWL_SISO_SWITCH_ANTENNA,
-	IWL_SISO_SWITCH_MIMO2,
-	IWL_SISO_SWITCH_GI,
-	IWL_SISO_FIRST_ACTION = IWL_SISO_SWITCH_ANTENNA,
-	IWL_SISO_LAST_ACTION = IWL_SISO_SWITCH_GI,
-};
-
-/* possible actions when in mimo mode */
-enum {
-	IWL_MIMO2_SWITCH_SISO_A,
-	IWL_MIMO2_SWITCH_SISO_B,
-	IWL_MIMO2_SWITCH_GI,
-	IWL_MIMO2_FIRST_ACTION = IWL_MIMO2_SWITCH_SISO_A,
-	IWL_MIMO2_LAST_ACTION = IWL_MIMO2_SWITCH_GI,
-};
-
-#define IWL_MAX_SEARCH IWL_MIMO2_LAST_ACTION
-
-#define IWL_ACTION_LIMIT		3	/* # possible actions */
-
 #define LINK_QUAL_AGG_TIME_LIMIT_DEF	(4000) /* 4 milliseconds */
 #define LINK_QUAL_AGG_TIME_LIMIT_MAX	(8000)
 #define LINK_QUAL_AGG_TIME_LIMIT_MIN	(100)
@@ -290,11 +259,16 @@ struct iwl_rate_scale_data {
  */
 struct iwl_scale_tbl_info {
 	struct rs_rate rate;
-	u8 action;	/* change modulation; IWL_[LEGACY/SISO/MIMO]_SWITCH_* */
-	u8 max_search;	/* maximun number of tables we can search */
+	u8 column;
 	s32 *expected_tpt;	/* throughput metrics; expected_tpt_G, etc. */
 	u32 current_rate;  /* rate_n_flags, uCode API format */
 	struct iwl_rate_scale_data win[IWL_RATE_COUNT]; /* rate histories */
+};
+
+enum {
+	RS_STATE_SEARCH_CYCLE_STARTED,
+	RS_STATE_SEARCH_CYCLE_ENDED,
+	RS_STATE_STAY_IN_COLUMN,
 };
 
 /**
@@ -304,8 +278,7 @@ struct iwl_scale_tbl_info {
  */
 struct iwl_lq_sta {
 	u8 active_tbl;		/* index of active table, range 0-1 */
-	u8 enable_counter;	/* indicates HT mode */
-	u8 stay_in_tbl;		/* 1: disallow, 0: allow search for new mode */
+	u8 rs_state;            /* RS_STATE_* */
 	u8 search_better_tbl;	/* 1: currently trying alternate mode */
 	s32 last_tpt;
 
@@ -318,7 +291,9 @@ struct iwl_lq_sta {
 	u32 total_success;	/* total successful frames, any/all rates */
 	u64 flush_timer;	/* time staying in mode before new search */
 
-	u8 action_counter;	/* # mode-switch actions tried */
+	u32 visited_columns;    /* Bitmask marking which Tx columns were
+				 * explored during a search cycle
+				 */
 	bool is_vht;
 	enum ieee80211_band band;
 
