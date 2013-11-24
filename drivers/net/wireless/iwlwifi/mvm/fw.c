@@ -371,8 +371,7 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 				ret = -ERFKILL;
 			goto error;
 		}
-		/* should stop & start HW since that INIT image just loaded */
-		iwl_trans_stop_hw(mvm->trans, false);
+		/* should start HW since that INIT image just loaded */
 		ret = iwl_trans_start_hw(mvm->trans);
 		if (ret)
 			return ret;
