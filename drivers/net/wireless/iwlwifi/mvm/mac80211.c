@@ -227,6 +227,23 @@ void iwl_mvm_unref(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref_type)
 	iwl_trans_unref(mvm->trans);
 }
 
+static void
+iwl_mvm_unref_all_except(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref)
+{
+	int i;
+
+	lockdep_assert_held(&mvm->mutex);
+
+	for_each_set_bit(i, mvm->ref_bitmap, IWL_MVM_REF_COUNT) {
+		if (ref == i)
+			continue;
+
+		IWL_DEBUG_RPM(mvm, "Cleanup: remove mvm ref type %d\n", i);
+		__clear_bit(i, mvm->ref_bitmap);
+		iwl_trans_unref(mvm->trans);
+	}
+}
+
 static void iwl_mvm_reset_phy_ctxts(struct iwl_mvm *mvm)
 {
 	int i;
@@ -544,6 +561,10 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 	memset(mvm->sta_drained, 0, sizeof(mvm->sta_drained));
 
 	ieee80211_wake_queues(mvm->hw);
+
+	/* cleanup all stale references (scan, roc), but keep the
+	 * ucode_down ref until reconfig is complete */
+	iwl_mvm_unref_all_except(mvm, IWL_MVM_REF_UCODE_DOWN);
 
 	mvm->vif_count = 0;
 	mvm->rx_ba_sessions = 0;
