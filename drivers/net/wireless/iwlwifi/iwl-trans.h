@@ -334,6 +334,7 @@ enum iwl_d3_status {
  * @STATUS_INT_ENABLED: interrupts are enabled
  * @STATUS_RFKILL: the HW RFkill switch is in KILL position
  * @STATUS_FW_ERROR: the fw is in error state
+ * @STATUS_TRANS_IDLE: the trans is idle - general commands are not to be sent
  */
 enum iwl_trans_status {
 	STATUS_SYNC_HCMD_ACTIVE,
@@ -342,6 +343,7 @@ enum iwl_trans_status {
 	STATUS_INT_ENABLED,
 	STATUS_RFKILL,
 	STATUS_FW_ERROR,
+	STATUS_TRANS_IDLE,
 };
 
 /**
