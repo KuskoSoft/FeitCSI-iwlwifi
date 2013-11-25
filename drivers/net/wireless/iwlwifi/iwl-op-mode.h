@@ -176,6 +176,8 @@ struct iwl_test_ops {
  * @nic_config: configure NIC, called before firmware is started.
  *	May sleep
  * @wimax_active: invoked when WiMax becomes active. May sleep
+ * @enter_d0i3: configure the fw to enter d0i3. May sleep.
+ * @exit_d0i3: configure the fw to exit d0i3. May sleep.
  */
 struct iwl_op_mode_ops {
 	struct iwl_op_mode *(*start)(struct iwl_trans *trans,
@@ -200,6 +202,8 @@ struct iwl_op_mode_ops {
 	int (*suspend)(struct iwl_op_mode *op_mode);
 	int (*resume)(struct iwl_op_mode *op_mode);
 #endif
+	int (*enter_d0i3)(struct iwl_op_mode *op_mode);
+	int (*exit_d0i3)(struct iwl_op_mode *op_mode);
 };
 
 int iwl_opmode_register(const char *name, const struct iwl_op_mode_ops *ops);
@@ -297,5 +301,23 @@ static inline int iwl_op_mode_resume(struct iwl_op_mode *op_mode)
 	return op_mode->ops->resume(op_mode);
 }
 #endif
+
+static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode *op_mode)
+{
+	might_sleep();
+
+	if (!op_mode->ops->enter_d0i3)
+		return 0;
+	return op_mode->ops->enter_d0i3(op_mode);
+}
+
+static inline int iwl_op_mode_exit_d0i3(struct iwl_op_mode *op_mode)
+{
+	might_sleep();
+
+	if (!op_mode->ops->exit_d0i3)
+		return 0;
+	return op_mode->ops->exit_d0i3(op_mode);
+}
 
 #endif /* __iwl_op_mode_h__ */
