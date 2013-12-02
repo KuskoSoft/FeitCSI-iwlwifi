@@ -20,12 +20,14 @@ ifeq ($(INTEL_COMPAT_INTEGRATED_BUILD),)
 # INTEL_IWL_BOARD_CONFIG := xmm6321  - the configuration, defconfig-xmm6321
 # INTEL_IWL_USE_COMPAT_INSTALL := y  - this will use kernel modules installation
 # INTEL_IWL_COMPAT_INSTALL_DIR := updates - the folder that the modules will be installed in
+# INTEL_IWL_COMPAT_INSTALL_PATH ?= $(ANDROID_BUILD_TOP)/$(TARGET_OUT) - the install path for the modules
 ifeq ($(BOARD_USING_INTEL_IWL),true)
 
 .PHONY: iwlwifi
 
 INTEL_IWL_SRC_DIR := $(call my-dir)
 INTEL_IWL_OUT_DIR := $(ANDROID_BUILD_TOP)/$(PRODUCT_OUT)/iwlwifi
+INTEL_IWL_COMPAT_INSTALL_PATH ?= $(ANDROID_BUILD_TOP)/$(TARGET_OUT)
 
 ifeq ($(TARGET_ARCH),arm)
 ifeq ($(CROSS_COMPILE),)
@@ -43,23 +45,41 @@ ALL_KERNEL_MODULES += $(INTEL_IWL_OUT_DIR)
 INTEL_IWL_KERNEL_DEPEND := build_bzImage
 endif
 
-iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL)
+# check if the modules.dep file should be edited and fixed with scripts
+ifeq ($(INTEL_IWL_EDIT_MOD_DEP),y)
+iwlwifi_install: iwlwifi_save_mod_dep
+INTEL_IWL_MOD_DEP := iwlwifi_run_dep_scripts
+# this will cause iwlwifi to be built as an extra module after
+# other modules have been installed
+EXTRA_KERNEL_MODULES += iwlwifi
+endif
+
+iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL) $(INTEL_IWL_MOD_DEP)
 
 iwlwifi_copy:
 	@mkdir -p $(INTEL_IWL_OUT_DIR)
 	@cp -rfl $(INTEL_IWL_SRC_DIR)/. $(INTEL_IWL_OUT_DIR)/
 
 iwlwifi_configure: $(INTEL_IWL_KERNEL_DEPEND) iwlwifi_copy
-	$(info Configuring kernel module iwlwifi with defconfig-$(INTEL_IWL_BOARD_CONFIG))
-	$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) defconfig-$(INTEL_IWL_BOARD_CONFIG)
+	@$(info Configuring kernel module iwlwifi with defconfig-$(INTEL_IWL_BOARD_CONFIG))
+	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) defconfig-$(INTEL_IWL_BOARD_CONFIG)
 
 iwlwifi_build: iwlwifi_configure
-	$(info Building kernel module iwlwifi in $(INTEL_IWL_OUT_DIR))
-	$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR)
+	@$(info Building kernel module iwlwifi in $(INTEL_IWL_OUT_DIR))
+	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR)
 
 iwlwifi_install: iwlwifi_build
-	$(info Installing kernel modules in $(ANDROID_BUILD_TOP)/$(TARGET_OUT))
-	$(MAKE) -C $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) M=$(INTEL_IWL_OUT_DIR)/ INSTALL_MOD_DIR=$(INTEL_IWL_COMPAT_INSTALL_DIR) INSTALL_MOD_PATH=$(ANDROID_BUILD_TOP)/$(TARGET_OUT) modules_install
+	@$(info Installing kernel modules in $(INTEL_IWL_COMPAT_INSTALL_PATH))
+	@$(MAKE) -C $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) M=$(INTEL_IWL_OUT_DIR)/ INSTALL_MOD_DIR=$(INTEL_IWL_COMPAT_INSTALL_DIR) INSTALL_MOD_PATH=$(INTEL_IWL_COMPAT_INSTALL_PATH) modules_install
+
+iwlwifi_save_mod_dep:
+	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.dep -exec cp {} $(INTEL_IWL_OUT_DIR)/modules.dep.orig \;
+
+iwlwifi_run_dep_scripts: iwlwifi_install
+	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -path \*updates\*\.ko -type f -exec $(INTEL_IWL_SRC_DIR)/intc-scripts/mv-compat-mod.py {} iwlmvm \;
+	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.dep -exec $(INTEL_IWL_SRC_DIR)/intc-scripts/ren-compat-deps.py {} updates iwlmvm \;
+	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.dep -exec sh -c 'cat $(INTEL_IWL_OUT_DIR)/modules.dep.orig >> {}' \;
+	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.alias -exec $(INTEL_IWL_SRC_DIR)/intc-scripts/ren-compat-aliases.py {} iwlwifi \;
 
 endif
 endif
