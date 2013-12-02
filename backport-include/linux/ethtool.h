@@ -11,14 +11,6 @@
 #define DUPLEX_UNKNOWN 0xff
 #endif /* DUPLEX_UNKNOWN */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
-#define ethtool_rxfh_indir_default LINUX_BACKPORT(ethtool_rxfh_indir_default)
-static inline u32 ethtool_rxfh_indir_default(u32 index, u32 n_rx_rings)
-{
-	return index % n_rx_rings;
-}
-#endif
-
 #ifndef ETHTOOL_FWVERS_LEN
 #define ETHTOOL_FWVERS_LEN 32
 #endif

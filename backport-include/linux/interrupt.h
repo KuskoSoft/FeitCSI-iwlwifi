@@ -10,22 +10,6 @@ static inline int irq_set_irq_wake(unsigned int irq, unsigned int on)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
-#include <linux/cpumask.h>
-/* mask irq_set_affinity_hint as RHEL6 backports this */
-#define irq_set_affinity_hint LINUX_BACKPORT(irq_set_affinity_hint)
-/*
- * We cannot backport this guy as the IRQ data structure
- * was modified in the kernel itself to support this. We
- * treat the system as uni-processor in this case.
- */
-static inline int irq_set_affinity_hint(unsigned int irq,
-					const struct cpumask *m)
-{
-	return -EINVAL;
-}
-#endif
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
 #define IRQ_WAKE_THREAD	(2)
 #endif

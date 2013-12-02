@@ -23,29 +23,6 @@ static void __usb_unanchor_urb(struct urb *urb, struct usb_anchor *anchor)
 }
 
 /**
- * usb_unlink_anchored_urbs - asynchronously cancel transfer requests en masse
- * @anchor: anchor the requests are bound to
- *
- * this allows all outstanding URBs to be unlinked starting
- * from the back of the queue. This function is asynchronous.
- * The unlinking is just tiggered. It may happen after this
- * function has returned.
- *
- * This routine should not be called by a driver after its disconnect
- * method has returned.
- */
-void usb_unlink_anchored_urbs(struct usb_anchor *anchor)
-{
-	struct urb *victim;
-
-	while ((victim = usb_get_from_anchor(anchor)) != NULL) {
-		usb_unlink_urb(victim);
-		usb_put_urb(victim);
-	}
-}
-EXPORT_SYMBOL_GPL(usb_unlink_anchored_urbs);
-
-/**
  * usb_get_from_anchor - get an anchor's oldest urb
  * @anchor: the anchor whose urb you want
  *

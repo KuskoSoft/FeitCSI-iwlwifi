@@ -255,6 +255,9 @@ static inline int netif_set_real_num_rx_queues(struct net_device *dev,
 #define netif_set_real_num_tx_queues LINUX_BACKPORT(netif_set_real_num_tx_queues)
 extern int netif_set_real_num_tx_queues(struct net_device *dev,
 					unsigned int txq);
+#define mc_addr(ha) (ha)->dmi_addr
+#else
+#define mc_addr(ha) (ha)->addr
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)

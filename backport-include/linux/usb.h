@@ -57,9 +57,7 @@
 #ifdef CPTCFG_BACKPORT_OPTION_USB_URB_THREAD_FIX
 #define usb_scuttle_anchored_urbs LINUX_BACKPORT(usb_scuttle_anchored_urbs)
 #define usb_get_from_anchor LINUX_BACKPORT(usb_get_from_anchor)
-#define usb_unlink_anchored_urbs LINUX_BACKPORT(usb_unlink_anchored_urbs)
 
-extern void usb_unlink_anchored_urbs(struct usb_anchor *anchor);
 extern struct urb *usb_get_from_anchor(struct usb_anchor *anchor);
 extern void usb_scuttle_anchored_urbs(struct usb_anchor *anchor);
 #endif

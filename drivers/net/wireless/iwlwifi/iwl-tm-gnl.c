@@ -389,7 +389,8 @@ static struct mutex dev_list_mtx; /* Protects dev_list */
  * Takes a lock on the devices list, so that the doit
  * operation will be protected
  */
-static int iwl_tm_gnl_cmd_pre_do(struct genl_ops *ops, struct sk_buff *skb,
+static int iwl_tm_gnl_cmd_pre_do(__genl_const struct genl_ops *ops,
+				 struct sk_buff *skb,
 				 struct genl_info *info)
 {
 	mutex_lock(&dev_list_mtx);
@@ -397,8 +398,9 @@ static int iwl_tm_gnl_cmd_pre_do(struct genl_ops *ops, struct sk_buff *skb,
 	return 0;
 }
 
-static void iwl_tm_gnl_cmd_post_do(struct genl_ops *ops, struct sk_buff *skb,
-				    struct genl_info *info)
+static void iwl_tm_gnl_cmd_post_do(__genl_const struct genl_ops *ops,
+				   struct sk_buff *skb,
+				   struct genl_info *info)
 {
 	mutex_unlock(&dev_list_mtx);
 }
@@ -433,8 +435,8 @@ static struct genl_family iwl_tm_gnl_family = {
 	.post_doit	= iwl_tm_gnl_cmd_post_do,
 };
 
-static struct genl_multicast_group iwl_tm_gnl_mcgrp = {
-	.name = IWL_TM_GNL_MC_GRP_NAME,
+static __genl_const struct genl_multicast_group iwl_tm_gnl_mcgrps[] = {
+	{ .name = IWL_TM_GNL_MC_GRP_NAME, },
 };
 
 /* TM GNL bus policy */
@@ -556,7 +558,7 @@ int iwl_tm_gnl_send_msg(const char *dev_name, u32 cmd,
 	if (!skb)
 		return -EINVAL;
 
-	return genlmsg_multicast(skb, 0, iwl_tm_gnl_mcgrp.id, flags);
+	return genlmsg_multicast(&iwl_tm_gnl_family, skb, 0, 0, flags);
 }
 IWL_EXPORT_SYMBOL(iwl_tm_gnl_send_msg);
 
@@ -880,7 +882,7 @@ static int iwl_tm_gnl_done(struct netlink_callback *cb)
  * There is only one NL command, and only one callback,
  * which handles all NL messages.
  */
-static struct genl_ops iwl_tm_gnl_ops[] = {
+static __genl_const struct genl_ops iwl_tm_gnl_ops[] = {
 	{
 	  .cmd = IWL_TM_GNL_CMD_EXECUTE,
 	  .policy = iwl_tm_gnl_msg_policy,
@@ -957,27 +959,12 @@ void iwl_tm_gnl_remove(struct iwl_op_mode *op_mode)
  */
 int iwl_tm_gnl_init(void)
 {
-	int ret;
-
-	ret = genl_register_family_with_ops(&iwl_tm_gnl_family,
-					    iwl_tm_gnl_ops,
-					    IWL_TM_GNL_CMD_MAX);
-	if (ret) {
-		pr_err("iwl_tm_gnl_init: Failed registering testmode genl\n");
-		return ret;
-	}
-
-	ret = genl_register_mc_group(&iwl_tm_gnl_family, &iwl_tm_gnl_mcgrp);
-	if (ret) {
-		pr_err("iwl_tm_gnl_init: Failed registering multicast group\n");
-		genl_unregister_family(&iwl_tm_gnl_family);
-		return ret;
-	}
-
 	INIT_LIST_HEAD(&dev_list);
 	mutex_init(&dev_list_mtx);
 
-	return 0;
+	return genl_register_family_with_ops_groups(&iwl_tm_gnl_family,
+						    iwl_tm_gnl_ops,
+						    iwl_tm_gnl_mcgrps);
 }
 
 /**

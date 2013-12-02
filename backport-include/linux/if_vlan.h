@@ -10,13 +10,6 @@
 
 #define __vlan_find_dev_deep(__real_dev, __vlan_proto, __vlan_id) __vlan_find_dev_deep(__real_dev, __vlan_id) 
 
-static inline bool vlan_hw_offload_capable(netdev_features_t features,
-					   __be16 proto)
-{
-	if (proto == htons(ETH_P_8021Q) && features & NETIF_F_HW_VLAN_CTAG_TX)
-		return true;
-	return false;
-}
 #endif 
 
 #ifndef VLAN_PRIO_MASK

@@ -17,9 +17,6 @@
 #include <net/sock.h>
 #include <net/compat.h>
 
-const char hex_asc[] = "0123456789abcdef";
-EXPORT_SYMBOL_GPL(hex_asc);
-
 /**
  * kobject_set_name_vargs - Set the name of an kobject
  * @kobj: struct kobject to set the name of
