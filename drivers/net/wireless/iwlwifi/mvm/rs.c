@@ -130,23 +130,6 @@ enum rs_column_mode {
 	RS_MIMO2,
 };
 
-/* Possible Tx columns
- * Tx Column = a combo of legacy/siso/mimo x antenna x SGI
- */
-enum rs_column {
-	RS_COLUMN_LEGACY_ANT_A = 0,
-	RS_COLUMN_LEGACY_ANT_B,
-	RS_COLUMN_SISO_ANT_A,
-	RS_COLUMN_SISO_ANT_B,
-	RS_COLUMN_SISO_ANT_A_SGI,
-	RS_COLUMN_SISO_ANT_B_SGI,
-	RS_COLUMN_MIMO2,
-	RS_COLUMN_MIMO2_SGI,
-
-	RS_COLUMN_LAST = RS_COLUMN_MIMO2_SGI,
-	RS_COLUMN_INVALID,
-};
-
 #define MAX_NEXT_COLUMNS 5
 #define MAX_COLUMN_CHECKS 3
 

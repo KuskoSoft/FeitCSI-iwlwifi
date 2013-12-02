@@ -251,6 +251,23 @@ struct iwl_rate_scale_data {
 	s32 average_tpt;	/* success ratio * expected throughput */
 };
 
+/* Possible Tx columns
+ * Tx Column = a combo of legacy/siso/mimo x antenna x SGI
+ */
+enum rs_column {
+	RS_COLUMN_LEGACY_ANT_A = 0,
+	RS_COLUMN_LEGACY_ANT_B,
+	RS_COLUMN_SISO_ANT_A,
+	RS_COLUMN_SISO_ANT_B,
+	RS_COLUMN_SISO_ANT_A_SGI,
+	RS_COLUMN_SISO_ANT_B_SGI,
+	RS_COLUMN_MIMO2,
+	RS_COLUMN_MIMO2_SGI,
+
+	RS_COLUMN_LAST = RS_COLUMN_MIMO2_SGI,
+	RS_COLUMN_INVALID,
+};
+
 /**
  * struct iwl_scale_tbl_info -- tx params and success history for all rates
  *
@@ -259,7 +276,7 @@ struct iwl_rate_scale_data {
  */
 struct iwl_scale_tbl_info {
 	struct rs_rate rate;
-	u8 column;
+	enum rs_column column;
 	s32 *expected_tpt;	/* throughput metrics; expected_tpt_G, etc. */
 	u32 current_rate;  /* rate_n_flags, uCode API format */
 	struct iwl_rate_scale_data win[IWL_RATE_COUNT]; /* rate histories */
