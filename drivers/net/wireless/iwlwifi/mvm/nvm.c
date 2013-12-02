@@ -464,7 +464,7 @@ int iwl_nvm_init(struct iwl_mvm *mvm)
 				break;
 			default:
 				WARN(1, "section: %d", section);
-			};
+			}
 #endif
 		}
 		kfree(nvm_buffer);
