@@ -412,9 +412,9 @@ struct sta_info {
 	 * Mesh peer link attributes
 	 * TODO: move to a sub-structure that is referenced with pointer?
 	 */
-	__le16 llid;
-	__le16 plid;
-	__le16 reason;
+	u16 llid;
+	u16 plid;
+	u16 reason;
 	u8 plink_retries;
 	bool ignore_plink_timer;
 	enum nl80211_plink_state plink_state;
@@ -440,8 +440,8 @@ struct sta_info {
 	unsigned int lost_packets;
 	unsigned int beacon_loss_count;
 
-	const struct ieee80211_cipher_scheme *cipher_scheme;
 	enum ieee80211_smps_mode known_smps_mode;
+	const struct ieee80211_cipher_scheme *cipher_scheme;
 
 	/* keep last! */
 	struct ieee80211_sta sta;

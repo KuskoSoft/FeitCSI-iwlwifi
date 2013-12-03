@@ -532,8 +532,8 @@ static void sta_set_sinfo(struct sta_info *sta, struct station_info *sinfo)
 				 STATION_INFO_PEER_PM |
 				 STATION_INFO_NONPEER_PM;
 
-		sinfo->llid = le16_to_cpu(sta->llid);
-		sinfo->plid = le16_to_cpu(sta->plid);
+		sinfo->llid = sta->llid;
+		sinfo->plid = sta->plid;
 		sinfo->plink_state = sta->plink_state;
 		if (test_sta_flag(sta, WLAN_STA_TOFFSET_KNOWN)) {
 			sinfo->filled |= STATION_INFO_T_OFFSET;
@@ -857,7 +857,7 @@ static int ieee80211_set_probe_resp(struct ieee80211_sub_if_data *sdata,
 	if (!resp || !resp_len)
 		return 1;
 
-	old = rtnl_dereference(sdata->u.ap.probe_resp);
+	old = sdata_dereference(sdata->u.ap.probe_resp, sdata);
 
 	new = kzalloc(sizeof(struct probe_resp) + resp_len, GFP_KERNEL);
 	if (!new)
@@ -881,7 +881,8 @@ static int ieee80211_assign_beacon(struct ieee80211_sub_if_data *sdata,
 	int size, err;
 	u32 changed = BSS_CHANGED_BEACON;
 
-	old = rtnl_dereference(sdata->u.ap.beacon);
+	old = sdata_dereference(sdata->u.ap.beacon, sdata);
+
 
 	/* Need to have a beacon head if we don't have one yet */
 	if (!params->head && !old)
@@ -958,7 +959,7 @@ static int ieee80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
 		      BSS_CHANGED_P2P_PS;
 	int err;
 
-	old = rtnl_dereference(sdata->u.ap.beacon);
+	old = sdata_dereference(sdata->u.ap.beacon, sdata);
 	if (old)
 		return -EALREADY;
 
@@ -1020,7 +1021,8 @@ static int ieee80211_start_ap(struct wiphy *wiphy, struct net_device *dev,
 
 	err = drv_start_ap(sdata->local, sdata);
 	if (err) {
-		old = rtnl_dereference(sdata->u.ap.beacon);
+		old = sdata_dereference(sdata->u.ap.beacon, sdata);
+
 		if (old)
 			kfree_rcu(old, rcu_head);
 		RCU_INIT_POINTER(sdata->u.ap.beacon, NULL);
@@ -1051,7 +1053,7 @@ static int ieee80211_change_beacon(struct wiphy *wiphy, struct net_device *dev,
 	if (sdata->vif.csa_active)
 		return -EBUSY;
 
-	old = rtnl_dereference(sdata->u.ap.beacon);
+	old = sdata_dereference(sdata->u.ap.beacon, sdata);
 	if (!old)
 		return -ENOENT;
 
@@ -1069,15 +1071,18 @@ static int ieee80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
 	struct ieee80211_local *local = sdata->local;
 	struct beacon_data *old_beacon;
 	struct probe_resp *old_probe_resp;
+	struct cfg80211_chan_def chandef;
 
-	old_beacon = rtnl_dereference(sdata->u.ap.beacon);
+	old_beacon = sdata_dereference(sdata->u.ap.beacon, sdata);
 	if (!old_beacon)
 		return -ENOENT;
-	old_probe_resp = rtnl_dereference(sdata->u.ap.probe_resp);
+	old_probe_resp = sdata_dereference(sdata->u.ap.probe_resp, sdata);
 
 	/* abort any running channel switch */
 	sdata->vif.csa_active = false;
-	cancel_work_sync(&sdata->csa_finalize_work);
+	kfree(sdata->u.ap.next_beacon);
+	sdata->u.ap.next_beacon = NULL;
+
 	cancel_work_sync(&sdata->u.ap.request_smps_work);
 
 	/* turn off carrier for this interface and dependent VLANs */
@@ -1110,8 +1115,10 @@ static int ieee80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
 	ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_BEACON_ENABLED);
 
 	if (sdata->wdev.cac_started) {
+		chandef = sdata->vif.bss_conf.chandef;
 		cancel_delayed_work_sync(&sdata->dfs_cac_timer_work);
-		cfg80211_cac_event(sdata->dev, NL80211_RADAR_CAC_ABORTED,
+		cfg80211_cac_event(sdata->dev, &chandef,
+				   NL80211_RADAR_CAC_ABORTED,
 				   GFP_KERNEL);
 	}
 
@@ -1972,7 +1979,7 @@ static int ieee80211_change_bss(struct wiphy *wiphy,
 	enum ieee80211_band band;
 	u32 changed = 0;
 
-	if (!rtnl_dereference(sdata->u.ap.beacon))
+	if (!sdata_dereference(sdata->u.ap.beacon, sdata))
 		return -ENOENT;
 
 	band = ieee80211_get_sdata_band(sdata);
@@ -2982,13 +2989,18 @@ void ieee80211_csa_finalize_work(struct work_struct *work)
 	struct ieee80211_local *local = sdata->local;
 	int err, changed = 0;
 
+	sdata_lock(sdata);
+	/* AP might have been stopped while waiting for the lock. */
+	if (!sdata->vif.csa_active)
+		goto unlock;
+
 	if (!ieee80211_sdata_running(sdata))
-		return;
+		goto unlock;
 
 	sdata->radar_required = sdata->csa_radar_required;
 	err = ieee80211_vif_change_channel(sdata, &changed);
 	if (WARN_ON(err < 0))
-		return;
+		goto unlock;
 
 	if (!local->use_chanctx) {
 		local->_oper_chandef = sdata->csa_chandef;
@@ -2997,11 +3009,13 @@ void ieee80211_csa_finalize_work(struct work_struct *work)
 
 	ieee80211_bss_info_change_notify(sdata, changed);
 
+	sdata->vif.csa_active = false;
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP:
 		err = ieee80211_assign_beacon(sdata, sdata->u.ap.next_beacon);
 		if (err < 0)
-			return;
+			goto unlock;
+
 		changed |= err;
 		kfree(sdata->u.ap.next_beacon);
 		sdata->u.ap.next_beacon = NULL;
@@ -3015,20 +3029,22 @@ void ieee80211_csa_finalize_work(struct work_struct *work)
 	case NL80211_IFTYPE_MESH_POINT:
 		err = ieee80211_mesh_finish_csa(sdata);
 		if (err < 0)
-			return;
+			goto unlock;
 		break;
 #endif
 	default:
 		WARN_ON(1);
-		return;
+		goto unlock;
 	}
-	sdata->vif.csa_active = false;
 
 	ieee80211_wake_queues_by_reason(&sdata->local->hw,
 					IEEE80211_MAX_QUEUE_MAP,
 					IEEE80211_QUEUE_STOP_REASON_CSA);
 
 	cfg80211_ch_switch_notify(sdata->dev, &sdata->csa_chandef);
+
+unlock:
+	sdata_unlock(sdata);
 }
 
 static int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
@@ -3040,6 +3056,8 @@ static int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	struct ieee80211_chanctx *chanctx;
 	struct ieee80211_if_mesh __maybe_unused *ifmsh;
 	int err, num_chanctx;
+
+	lockdep_assert_held(&sdata->wdev.mtx);
 
 	if (!list_empty(&local->roc_list) || local->scanning)
 		return -EBUSY;

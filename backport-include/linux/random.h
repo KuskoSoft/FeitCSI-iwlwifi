@@ -8,6 +8,7 @@
 #define prandom_seed(_seed)		srandom32(_seed)
 #define prandom_u32()			random32()
 #define prandom_u32_state(_state)	prandom32(_state)
+void prandom_bytes(void *buf, int bytes);
 #endif
 
 #endif /* __BACKPORT_RANDOM_H */

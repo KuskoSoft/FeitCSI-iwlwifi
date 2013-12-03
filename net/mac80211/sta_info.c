@@ -665,8 +665,8 @@ void sta_info_recalc_tim(struct sta_info *sta)
 #ifdef CPTCFG_MAC80211_MESH
 	} else if (ieee80211_vif_is_mesh(&sta->sdata->vif)) {
 		ps = &sta->sdata->u.mesh.ps;
-		/* TIM map only for PLID <= IEEE80211_MAX_AID */
-		id = le16_to_cpu(sta->plid) % IEEE80211_MAX_AID;
+		/* TIM map only for 1 <= PLID <= IEEE80211_MAX_AID */
+		id = sta->plid % (IEEE80211_MAX_AID + 1);
 #endif
 	} else {
 		return;
