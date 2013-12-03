@@ -228,6 +228,9 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *changed_vif,
 		.ignore_vif = changed_vif,
 	};
 
+	if (IWL_UCODE_API(mvm->fw->ucode_ver) < 8)
+		return 0;
+
 	/*
 	 * Ignore the call if we are in HW Restart flow, or if the handled
 	 * vif is a p2p device.
