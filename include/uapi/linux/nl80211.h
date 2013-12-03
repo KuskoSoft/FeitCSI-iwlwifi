@@ -1526,15 +1526,20 @@ enum nl80211_commands {
  *	to react to radar events, e.g. initiate a channel switch or leave the
  *	IBSS network.
  *
+ * @NL80211_ATTR_SUPPORT_5_MHZ: A flag indicating that the device supports
+ *	5 MHz channel bandwidth.
+ * @NL80211_ATTR_SUPPORT_10_MHZ: A flag indicating that the device supports
+ *	10 MHz channel bandwidth.
+ *
+ * @NL80211_ATTR_OPMODE_NOTIF: Operating mode field from Operating Mode
+ *	Notification Element based on association request when used with
+ *	%NL80211_CMD_NEW_STATION; u8 attribute.
+ *
  * @NL80211_ATTR_VENDOR_ID: The vendor ID, either a 24-bit OUI or, if
  *	%NL80211_VENDOR_ID_IS_LINUX is set, a special Linux ID (not used yet)
  * @NL80211_ATTR_VENDOR_SUBCMD: vendor sub-command
  * @NL80211_ATTR_VENDOR_DATA: data for the vendor command, if any; this
  *	attribute is also used for vendor command feature advertisement
- * @NL80211_ATTR_SUPPORT_5_MHZ: A flag indicating that the device supports
- *	5 MHz channel bandwidth.
- * @NL80211_ATTR_SUPPORT_10_MHZ: A flag indicating that the device supports
- *	10 MHz channel bandwidth.
  *
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -1852,12 +1857,14 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_HANDLE_DFS,
 
+	NL80211_ATTR_SUPPORT_5_MHZ,
+	NL80211_ATTR_SUPPORT_10_MHZ,
+
+	NL80211_ATTR_OPMODE_NOTIF,
+
 	NL80211_ATTR_VENDOR_ID,
 	NL80211_ATTR_VENDOR_SUBCMD,
 	NL80211_ATTR_VENDOR_DATA,
-
-	NL80211_ATTR_SUPPORT_5_MHZ,
-	NL80211_ATTR_SUPPORT_10_MHZ,
 
 	/* add attributes here, update the policy in nl80211.c */
 
