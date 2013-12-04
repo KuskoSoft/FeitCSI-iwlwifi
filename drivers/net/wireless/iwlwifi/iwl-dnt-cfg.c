@@ -72,6 +72,60 @@
 #include "iwl-dnt-dispatch.h"
 #include "iwl-dnt-dev-if.h"
 
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+
+/*
+ * iwl_dnt_debugfs_log_read - returns ucodeMessages to the user.
+ * The logs are returned in binary format until the buffer of debugfs is
+ * exhausted. If a log can't be copied to user (due to general error, not
+ * a size problem) it is totally discarded and lost.
+ */
+static ssize_t iwl_dnt_debugfs_log_read(struct file *file,
+					char __user *user_buf,
+					size_t count, loff_t *ppos)
+{
+	struct iwl_trans *trans = file->private_data;
+	unsigned char *temp_buf;
+	ssize_t ret = 0;
+
+	temp_buf = kzalloc(count, GFP_KERNEL);
+	if (!temp_buf)
+		return -ENOMEM;
+
+	ret = iwl_dnt_dispatch_pull(trans, temp_buf, count, UCODE_MESSAGES);
+	if (ret) {
+		IWL_DEBUG_INFO(trans, "Failed to retrieve debug data\n");
+		goto free_buf;
+	}
+
+	ret = simple_read_from_buffer(user_buf, count, ppos, temp_buf, count);
+free_buf:
+	kfree(temp_buf);
+	return ret;
+}
+
+static const struct file_operations iwl_dnt_debugfs_log_ops = {
+	.read = iwl_dnt_debugfs_log_read,
+	.open = simple_open,
+	.llseek = generic_file_llseek,
+};
+
+static bool iwl_dnt_register_debugfs_entries(struct iwl_trans *trans,
+					    struct dentry *dbgfs_dir)
+{
+	struct iwl_dnt *dnt = trans->tmdev->dnt;
+
+	dnt->debugfs_entry = debugfs_create_dir("dbgm", dbgfs_dir);
+	if (!dnt->debugfs_entry)
+		return false;
+
+	if (!debugfs_create_file("log", S_IRUSR, dnt->debugfs_entry,
+				 trans, &iwl_dnt_debugfs_log_ops))
+		return false;
+	return true;
+}
+#endif
+
 static bool iwl_dnt_configure_prepare_dma(struct iwl_dnt *dnt,
 					  struct iwl_trans *trans)
 {
@@ -141,12 +195,9 @@ void iwl_dnt_start(struct iwl_trans *trans)
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_start);
 
-int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans *trans, u32 output)
+static int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans *trans, u32 output)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
-
-	if (!dnt)
-		return -EINVAL;
 
 	dnt->cur_input_mask |= UCODE_MESSAGES;
 	dnt->dispatch.ucode_msgs_output = output;
@@ -167,10 +218,11 @@ int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans *trans, u32 output)
 	return 0;
 }
 
-void iwl_dnt_init(struct iwl_trans *trans)
+void iwl_dnt_init(struct iwl_trans *trans, struct dentry *dbgfs_dir)
 {
 	struct iwl_dnt *dnt;
 	bool ret;
+	int err;
 
 	dnt = kzalloc(sizeof(struct iwl_dnt), GFP_KERNEL);
 	if (!dnt)
@@ -185,6 +237,16 @@ void iwl_dnt_init(struct iwl_trans *trans)
 	ret = iwl_dnt_configure_prepare_dma(dnt, trans);
 	if (!ret)
 		IWL_ERR(trans, "Failed to prepare DMA\n");
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	ret = iwl_dnt_register_debugfs_entries(trans, dbgfs_dir);
+	if (!ret) {
+		IWL_ERR(trans, "Failed to create dnt debugfs entries\n");
+		return;
+	}
+	err = iwl_dnt_conf_ucode_msgs_via_rx(trans, DEBUGFS);
+	if (err)
+		IWL_DEBUG_INFO(trans, "Failed to configure uCodeMessages\n");
+#endif
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_init);
 
@@ -196,6 +258,9 @@ void iwl_dnt_free(struct iwl_trans *trans)
 		return;
 
 	iwl_dnt_dispatch_free(dnt, trans);
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	debugfs_remove_recursive(dnt->debugfs_entry);
+#endif
 	kfree(dnt);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_free);

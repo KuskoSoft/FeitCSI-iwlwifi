@@ -196,6 +196,9 @@ struct iwl_dnt {
 	bool mon_configured;
 
 	struct iwl_dnt_dispatch dispatch;
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	struct dentry *debugfs_entry;
+#endif
 };
 
 
@@ -203,7 +206,7 @@ struct iwl_dnt {
  * iwl_dnt_init - initialize iwl_dnt.
  *
  */
-void iwl_dnt_init(struct iwl_trans *trans);
+void iwl_dnt_init(struct iwl_trans *trans, struct dentry *dbgfs_dir);
 
 /**
  * iwl_dnt_free - free iwl_dnt.
@@ -222,10 +225,5 @@ void iwl_dnt_configure(struct iwl_trans *trans);
  *
  */
 void iwl_dnt_start(struct iwl_trans *trans);
-
-/**
- * iwl_dnt_conf_ucode_msgs_via_rx - Triggers uCodeMessages Collection vi Rx
- */
-int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans *trans, u32 output);
 
 #endif
