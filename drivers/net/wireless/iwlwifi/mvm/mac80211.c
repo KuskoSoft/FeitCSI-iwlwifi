@@ -552,6 +552,7 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 		iwl_mvm_cleanup_iterator, mvm);
 
 	mvm->p2p_device_vif = NULL;
+	mvm->d0i3_ap_sta_id = IWL_MVM_STATION_COUNT;
 
 	iwl_mvm_reset_phy_ctxts(mvm);
 	memset(mvm->fw_key_table, 0, sizeof(mvm->fw_key_table));
@@ -607,6 +608,7 @@ static void iwl_mvm_mac_stop(struct ieee80211_hw *hw)
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 
+	flush_work(&mvm->d0i3_exit_work);
 	flush_work(&mvm->async_handlers_wk);
 
 	mutex_lock(&mvm->mutex);
@@ -1227,6 +1229,9 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 			ret = iwl_mvm_rm_sta_id(mvm, vif, mvmvif->ap_sta_id);
 			if (ret)
 				IWL_ERR(mvm, "failed to remove AP station\n");
+
+			if (mvm->d0i3_ap_sta_id == mvmvif->ap_sta_id)
+				mvm->d0i3_ap_sta_id = IWL_MVM_STATION_COUNT;
 			mvmvif->ap_sta_id = IWL_MVM_STATION_COUNT;
 			/* remove quota for this interface */
 			ret = iwl_mvm_update_quotas(mvm, NULL);
