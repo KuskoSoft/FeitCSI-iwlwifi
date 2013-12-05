@@ -266,6 +266,8 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *changed_vif,
 				new_state = SF_UNINIT;
 			}
 		} else {
+			if (WARN_ON(!changed_vif))
+				return -EINVAL;
 			if (changed_vif->type != NL80211_IFTYPE_STATION) {
 				new_state = SF_UNINIT;
 			} else if (changed_vif->bss_conf.assoc) {
