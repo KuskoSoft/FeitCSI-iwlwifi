@@ -2312,15 +2312,17 @@ void ieee80211_dfs_radar_detected_work(struct work_struct *work)
 {
 	struct ieee80211_local *local =
 		container_of(work, struct ieee80211_local, radar_detected_work);
-	struct cfg80211_chan_def chandef = local->hw.conf.chandef;
+	struct cfg80211_chan_def chandef;
 
 	ieee80211_dfs_cac_cancel(local);
 
 	if (local->use_chanctx)
 		/* currently not handled */
 		WARN_ON(1);
-	else
+	else {
+		chandef = local->hw.conf.chandef;
 		cfg80211_radar_event(local->hw.wiphy, &chandef, GFP_KERNEL);
+	}
 }
 
 void ieee80211_radar_detected(struct ieee80211_hw *hw)
@@ -2496,6 +2498,7 @@ int ieee80211_send_action_csa(struct ieee80211_sub_if_data *sdata,
 			ifmsh->pre_value++;
 		put_unaligned_le16(ifmsh->pre_value, pos);/* Precedence Value */
 		pos += 2;
+		ifmsh->chsw_init = true;
 	}
 
 	ieee80211_tx_skb(sdata, skb);
