@@ -948,6 +948,7 @@ void iwl_tm_gnl_add(struct iwl_trans *trans)
 
 	dev->dev_name = dev_name(trans->dev);
 	trans->tmdev = dev;
+	dev->trans = trans;
 	list_add_tail(&dev->list, &dev_list);
 
 unlock:
