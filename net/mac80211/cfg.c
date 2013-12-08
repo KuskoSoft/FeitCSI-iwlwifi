@@ -3265,6 +3265,7 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 				IEEE80211_QUEUE_STOP_REASON_CSA);
 
 	sdata->csa_chandef = params->chandef;
+	sdata->csa_current_counter = params->count;
 	sdata->vif.csa_active = true;
 
 	cfg80211_ch_switch_started_notify(sdata->dev, &sdata->csa_chandef);
@@ -3292,6 +3293,7 @@ static int ieee80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	bool need_offchan = false;
 	u32 flags;
 	int ret;
+	u8 *data;
 
 	if (params->dont_wait_for_ack)
 		flags = IEEE80211_TX_CTL_NO_ACK;
@@ -3385,8 +3387,20 @@ static int ieee80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	}
 	skb_reserve(skb, local->hw.extra_tx_headroom);
 
-	memcpy(skb_put(skb, params->len), params->buf, params->len);
+	data = skb_put(skb, params->len);
+	memcpy(data, params->buf, params->len);
 
+	/* Update CSA counters*/
+	if (sdata->vif.csa_active &&
+	    (sdata->vif.type == NL80211_IFTYPE_AP ||
+	     sdata->vif.type == NL80211_IFTYPE_ADHOC) &&
+	    params->n_csa_offsets) {
+		int i;
+
+		for (i = 0; i < params->n_csa_offsets; i++)
+			data[params->csa_offsets[i]] =
+					sdata->csa_current_counter;
+	}
 	IEEE80211_SKB_CB(skb)->flags = flags;
 
 	skb->dev = sdata->dev;
