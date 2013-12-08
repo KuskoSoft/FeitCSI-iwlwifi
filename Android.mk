@@ -62,17 +62,22 @@ INTEL_IWL_MOD_DEP := iwlwifi_run_dep_scripts
 EXTRA_KERNEL_MODULES += iwlwifi
 endif
 
+# IWLWIFI_CONFIGURE is a rule to use a defconfig for iwlwifi
+IWLWIFI_CONFIGURE := $(INTEL_IWL_OUT_DIR)/.config
+
 iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL) $(INTEL_IWL_MOD_DEP)
 
-iwlwifi_copy:
+$(INTEL_IWL_OUT_DIR): $(INTEL_IWL_SRC_DIR)
+	@echo Copying directory $(INTEL_IWL_SRC_DIR) to $(INTEL_IWL_OUT_DIR)
+	@rm -rf $(INTEL_IWL_OUT_DIR)
 	@mkdir -p $(INTEL_IWL_OUT_DIR)
 	@cp -rfl $(INTEL_IWL_SRC_DIR)/. $(INTEL_IWL_OUT_DIR)/
 
-iwlwifi_configure: $(INTEL_IWL_KERNEL_DEPEND) iwlwifi_copy
-	@$(info Configuring kernel module iwlwifi with defconfig-$(INTEL_IWL_BOARD_CONFIG))
+$(IWLWIFI_CONFIGURE): $(INTEL_IWL_KERNEL_DEPEND) | $(INTEL_IWL_OUT_DIR)
+	@echo Configuring kernel module iwlwifi with defconfig-$(INTEL_IWL_BOARD_CONFIG)
 	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) defconfig-$(INTEL_IWL_BOARD_CONFIG)
 
-iwlwifi_build: iwlwifi_configure
+iwlwifi_build: $(IWLWIFI_CONFIGURE)
 	@$(info Building kernel module iwlwifi in $(INTEL_IWL_OUT_DIR))
 	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR)
 
