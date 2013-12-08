@@ -323,9 +323,9 @@ struct ieee80211_tx_latency_stat {
  * @chains: chains ever used for RX from this station
  * @chain_signal_last: last signal (per chain)
  * @chain_signal_avg: signal average (per chain)
- * @cipher_scheme: optional cipher scheme for this station
  * @known_smps_mode: the smps_mode the client thinks we are in. Relevant for
  *	AP only.
+ * @cipher_scheme: optional cipher scheme for this station
  */
 struct sta_info {
 	/* General information, mostly static */
