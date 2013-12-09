@@ -223,7 +223,7 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 	switch (dnt->cur_mon_type) {
 	case NO_MONITOR:
 		IWL_INFO(trans, "Monitor is disabled\n");
-		dnt->mon_configured = false;
+		dnt->iwl_dnt_status &= ~IWL_DNT_STATUS_MON_CONFIGURED;
 		break;
 	case MIPI:
 		iwl_dnt_dev_if_configure_mipi(trans);
@@ -250,12 +250,13 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		break;
 	case ICCM:
 	default:
-		dnt->mon_configured = false;
+		dnt->iwl_dnt_status &= ~IWL_DNT_STATUS_MON_CONFIGURED;
 		IWL_INFO(trans, "Invalid monitor type\n");
 		return -EINVAL;
 	}
 
-	dnt->mon_configured = true;
+
+	dnt->iwl_dnt_status |= IWL_DNT_STATUS_MON_CONFIGURED;
 
 	return 0;
 }
@@ -275,8 +276,10 @@ static int iwl_dnt_dev_if_send_dbgm(struct iwl_dnt *dnt,
 	int ret;
 
 	ret = iwl_trans_send_cmd(trans, &host_cmd);
-	if (ret)
+	if (ret) {
 		IWL_ERR(trans, "Failed to send monitor command\n");
+		dnt->iwl_dnt_status |= IWL_DNT_STATUS_FAILED_START_MONITOR;
+	}
 
 	return ret;
 }

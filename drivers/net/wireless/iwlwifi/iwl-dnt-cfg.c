@@ -143,6 +143,8 @@ static bool iwl_dnt_configure_prepare_dma(struct iwl_dnt *dnt,
 
 	dnt->mon_base_addr = (u64) dnt->mon_dma_addr;
 	dnt->mon_end_addr = dnt->mon_base_addr + dnt->mon_buf_size;
+	dnt->iwl_dnt_status |= IWL_DNT_STATUS_DMA_BUFFER_ALLOCATED;
+
 	return true;
 }
 
@@ -224,10 +226,12 @@ void iwl_dnt_start(struct iwl_trans *trans)
 	if (!dnt)
 		return;
 
-	if (dnt->mon_configured && usr_cfg->dbg_conf_monitor_cmd_id)
+	if ((dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED) &&
+	    usr_cfg->dbg_conf_monitor_cmd_id)
 		iwl_dnt_dev_if_start_monitor(dnt, trans);
 
-	if ((dnt->cur_input_mask & UCODE_MESSAGES) && usr_cfg->log_level_cmd_id)
+	if ((dnt->iwl_dnt_status & IWL_DNT_STATUS_UCODE_MSGS_CONFIGURED) &&
+	    usr_cfg->log_level_cmd_id)
 		iwl_dnt_dev_if_set_log_level(dnt, trans);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_start);
@@ -251,6 +255,7 @@ static int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans *trans, u32 output)
 	}
 	/* setting COLLECT in mode */
 	dnt->dispatch.ucode_msgs_in_mode = COLLECT;
+	dnt->iwl_dnt_status |= IWL_DNT_STATUS_UCODE_MSGS_CONFIGURED;
 
 	return 0;
 }
@@ -281,14 +286,15 @@ void iwl_dnt_init(struct iwl_trans *trans, struct dentry *dbgfs_dir)
 		IWL_DEBUG_INFO(trans, "Failed to configure uCodeMessages\n");
 #endif
 
-	dnt->is_configuration_valid = iwl_dnt_validate_configuration(trans);
-	if (!dnt->is_configuration_valid)
+	if (!iwl_dnt_validate_configuration(trans)) {
+		dnt->iwl_dnt_status |= IWL_DNT_STATUS_INVALID_MONITOR_CONF;
 		return;
-
+	}
 	/* allocate DMA if needed */
-	ret = iwl_dnt_configure_prepare_dma(dnt, trans);
-	if (!ret)
+	if (!iwl_dnt_configure_prepare_dma(dnt, trans)) {
 		IWL_ERR(trans, "Failed to prepare DMA\n");
+		dnt->iwl_dnt_status |= IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DMA;
+	}
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_init);
 
@@ -311,11 +317,15 @@ void iwl_dnt_configure(struct iwl_trans *trans)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
 	struct iwl_usr_cfg *usr_cfg = &trans->tmdev->usr_cfg;
+	bool is_conf_invalid;
 
 	if (!dnt)
 		return;
 
-	if (!dnt->is_configuration_valid)
+	is_conf_invalid = (dnt->iwl_dnt_status &
+			   IWL_DNT_STATUS_INVALID_MONITOR_CONF);
+
+	if (is_conf_invalid)
 		return;
 
 	switch (usr_cfg->dbm_destination_path) {

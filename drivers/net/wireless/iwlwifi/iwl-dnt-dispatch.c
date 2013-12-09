@@ -77,8 +77,10 @@ struct dnt_collect_db *iwl_dnt_dispatch_allocate_collect_db(struct iwl_dnt *dnt)
 	struct dnt_collect_db *db;
 
 	db = kzalloc(sizeof(struct dnt_collect_db), GFP_KERNEL);
-	if (!db)
+	if (!db) {
+		dnt->iwl_dnt_status |= IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DB;
 		return NULL;
+	}
 
 	mutex_init(&db->db_mutex);
 

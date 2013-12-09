@@ -84,6 +84,17 @@
 #define MONITOR_INPUT_MODE_MASK			0x01
 #define UCODE_MSGS_INPUT_MODE_MASK		0x02
 
+/* DnT status */
+enum {
+	IWL_DNT_STATUS_MON_CONFIGURED			= BIT(0),
+	IWL_DNT_STATUS_UCODE_MSGS_CONFIGURED		= BIT(1),
+	IWL_DNT_STATUS_DMA_BUFFER_ALLOCATED		= BIT(2),
+	IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DMA		= BIT(3),
+	IWL_DNT_STATUS_FAILED_START_MONITOR		= BIT(4),
+	IWL_DNT_STATUS_INVALID_MONITOR_CONF		= BIT(5),
+	IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DB		= BIT(6),
+};
+
 /* input modes */
 enum {
 	MONITOR = BIT(0),
@@ -172,6 +183,7 @@ struct iwl_dnt_dispatch {
  *
  * @cfg: pointer to user configuration
  * @dev: pointer to struct device for printing purposes
+ * @iwl_dnt_status: represents the DnT status
  * @is_configuration_valid: inidcates rather or not the persistent configuration
  *	is valid
  * @cur_input_mask: current mode mask
@@ -189,6 +201,7 @@ struct iwl_dnt {
 	struct iwl_usr_cfg *cfg;
 	struct device *dev;
 
+	u32 iwl_dnt_status;
 	bool is_configuration_valid;
 	u8 cur_input_mask;
 	u8 cur_output_mask;
@@ -200,7 +213,6 @@ struct iwl_dnt {
 	u64 mon_end_addr;
 	u32 mon_buf_size;
 	u32 cur_mon_mode;
-	bool mon_configured;
 
 	struct iwl_dnt_dispatch dispatch;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
