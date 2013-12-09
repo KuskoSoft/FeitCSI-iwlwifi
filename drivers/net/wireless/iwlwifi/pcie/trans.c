@@ -1608,11 +1608,11 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 	err = compat_request_threaded_irq(&trans_pcie->irq_compat,
-					  pdev->irq, iwl_pcie_isr_ict,
+					  pdev->irq, iwl_pcie_isr,
 					  iwl_pcie_irq_handler,
 					  IRQF_SHARED, DRV_NAME, trans);
 #else
-	err = request_threaded_irq(pdev->irq, iwl_pcie_isr_ict,
+	err = request_threaded_irq(pdev->irq, iwl_pcie_isr,
 				   iwl_pcie_irq_handler,
 				   IRQF_SHARED, DRV_NAME, trans);
 #endif
