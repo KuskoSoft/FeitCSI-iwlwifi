@@ -114,6 +114,9 @@ enum {
 	IWL_XVT_CMD_GET_CONFIG,
 	IWL_XVT_CMD_MOD_TX,
 	IWL_XVT_CMD_RX_HDRS_MODE,
+	IWL_XVT_CMD_ALLOC_DMA,
+	IWL_XVT_CMD_GET_DMA,
+	IWL_XVT_CMD_FREE_DMA,
 
 	/* Driver notifications */
 	IWL_XVT_CMD_SEND_REPLY_ALIVE,
@@ -307,6 +310,26 @@ struct iwl_tm_mod_tx_request {
  */
 struct iwl_xvt_rx_hdrs_mode_request {
 	__u32 mode;
+} __packed __aligned(4);
+
+/**
+ * struct iwl_xvt_alloc_dma - Data for alloc dma requests
+ * @addr:	Resulting DMA address of trace buffer LSB
+ * @size:	Requested size of dma buffer
+ */
+struct iwl_xvt_alloc_dma {
+	__u64 addr;
+	__u32 size;
+} __packed __aligned(4);
+
+/**
+ * struct iwl_xvt_alloc_dma - Data for alloc dma requests
+ * @size:	size of data
+ * @data:	Data to transmit
+ */
+struct iwl_xvt_get_dma {
+	__u32 size;
+	__u8 data[];
 } __packed __aligned(4);
 
 #endif
