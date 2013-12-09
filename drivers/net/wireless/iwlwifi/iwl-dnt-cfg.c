@@ -146,6 +146,43 @@ static bool iwl_dnt_configure_prepare_dma(struct iwl_dnt *dnt,
 	return true;
 }
 
+static bool iwl_dnt_validate_configuration(struct iwl_trans *trans)
+{
+	struct iwl_usr_cfg *usr_cfg = &trans->tmdev->usr_cfg;
+
+	if (!strcmp(trans->dev->bus->name, BUS_TYPE_PCI)) {
+		/* checking destination_path */
+		if (usr_cfg->dbm_destination_path != DMA &&
+		    usr_cfg->dbm_destination_path != MARBH) {
+			IWL_ERR(trans, "Invalid destination path for pci\n");
+			return false;
+		}
+		return true;
+	}
+
+	if (!strcmp(trans->dev->bus->name, BUS_TYPE_IDI)) {
+		/* checking destination_path */
+		if (usr_cfg->dbm_destination_path != INTERFACE &&
+		    usr_cfg->dbm_destination_path != MARBH &&
+		    usr_cfg->dbm_destination_path != MIPI) {
+			IWL_ERR(trans, "Invalid destination path for idi\n");
+			return false;
+		}
+		return true;
+	}
+
+	if (!strcmp(trans->dev->bus->name, BUS_TYPE_SDIO)) {
+		/* checking destination_path */
+		if (usr_cfg->dbm_destination_path != MARBH &&
+		    usr_cfg->dbm_destination_path != MIPI) {
+			IWL_ERR(trans, "Invalid destination path for sdio\n");
+			return false;
+		}
+		return true;
+	}
+	return false;
+}
+
 static int iwl_dnt_conf_monitor(struct iwl_trans *trans, u32 output,
 				u32 monitor_type, u32 target_mon_mode)
 {
@@ -233,10 +270,6 @@ void iwl_dnt_init(struct iwl_trans *trans, struct dentry *dbgfs_dir)
 	dnt->cfg = &trans->tmdev->usr_cfg;
 	dnt->dev = trans->dev;
 
-	/* allocate DMA if needed */
-	ret = iwl_dnt_configure_prepare_dma(dnt, trans);
-	if (!ret)
-		IWL_ERR(trans, "Failed to prepare DMA\n");
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	ret = iwl_dnt_register_debugfs_entries(trans, dbgfs_dir);
 	if (!ret) {
@@ -247,6 +280,15 @@ void iwl_dnt_init(struct iwl_trans *trans, struct dentry *dbgfs_dir)
 	if (err)
 		IWL_DEBUG_INFO(trans, "Failed to configure uCodeMessages\n");
 #endif
+
+	dnt->is_configuration_valid = iwl_dnt_validate_configuration(trans);
+	if (!dnt->is_configuration_valid)
+		return;
+
+	/* allocate DMA if needed */
+	ret = iwl_dnt_configure_prepare_dma(dnt, trans);
+	if (!ret)
+		IWL_ERR(trans, "Failed to prepare DMA\n");
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_init);
 
@@ -271,6 +313,9 @@ void iwl_dnt_configure(struct iwl_trans *trans)
 	struct iwl_usr_cfg *usr_cfg = &trans->tmdev->usr_cfg;
 
 	if (!dnt)
+		return;
+
+	if (!dnt->is_configuration_valid)
 		return;
 
 	switch (usr_cfg->dbm_destination_path) {

@@ -73,6 +73,10 @@
 
 #define IWL_DNT_ARRAY_SIZE	32
 
+#define BUS_TYPE_PCI	"pci"
+#define BUS_TYPE_IDI	"idi"
+#define BUS_TYPE_SDIO	"sdio"
+
 #define GET_RX_PACKET_SIZE(pkt)	 ((le32_to_cpu(pkt->len_n_flags) &\
 				   FH_RSCSR_FRAME_SIZE_MSK) -\
 				   sizeof(struct iwl_cmd_header))
@@ -168,6 +172,8 @@ struct iwl_dnt_dispatch {
  *
  * @cfg: pointer to user configuration
  * @dev: pointer to struct device for printing purposes
+ * @is_configuration_valid: inidcates rather or not the persistent configuration
+ *	is valid
  * @cur_input_mask: current mode mask
  * @cur_output_mask: current output mask
  * @cur_mon_type: current monitor type
@@ -183,6 +189,7 @@ struct iwl_dnt {
 	struct iwl_usr_cfg *cfg;
 	struct device *dev;
 
+	bool is_configuration_valid;
 	u8 cur_input_mask;
 	u8 cur_output_mask;
 
