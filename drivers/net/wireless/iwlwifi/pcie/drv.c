@@ -169,7 +169,6 @@ static DEFINE_PCI_DEVICE_TABLE(iwl_hw_card_ids) = {
 	{IWL_PCI_DEVICE(0x08B3, 0x1170, iwl3160_2ac_cfg)},
 
 /* 7265 Series */
-	{IWL_PCI_DEVICE(0x08B1, 0x0000, iwl7265_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x095A, 0x5010, iwl7265_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x095A, 0x5110, iwl7265_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x095B, 0x5310, iwl7265_2ac_cfg)},
