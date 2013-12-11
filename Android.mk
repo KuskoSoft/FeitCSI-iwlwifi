@@ -45,6 +45,14 @@ ALL_KERNEL_MODULES += $(INTEL_IWL_OUT_DIR)
 INTEL_IWL_KERNEL_DEPEND := build_bzImage
 endif
 
+ifeq ($(INTEL_IWL_USE_RM_MAC_CFG),y)
+copy_modules_to_root: iwlwifi
+INTEL_IWL_COMPAT_INSTALL_PATH := $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_MODINSTALL)
+INTEL_IWL_KERNEL_DEPEND := modules_install
+INTEL_IWL_RM_MAC_CFG_DEPEND := iwlwifi_rm_mac_cfg
+INTEL_IWL_INSTALL_MOD_STRIP := INSTALL_MOD_STRIP=1
+endif
+
 # check if the modules.dep file should be edited and fixed with scripts
 ifeq ($(INTEL_IWL_EDIT_MOD_DEP),y)
 iwlwifi_install: iwlwifi_save_mod_dep
@@ -68,9 +76,14 @@ iwlwifi_build: iwlwifi_configure
 	@$(info Building kernel module iwlwifi in $(INTEL_IWL_OUT_DIR))
 	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR)
 
-iwlwifi_install: iwlwifi_build
+iwlwifi_install: iwlwifi_build $(INTEL_IWL_RM_MAC_CFG_DEPEND)
 	@$(info Installing kernel modules in $(INTEL_IWL_COMPAT_INSTALL_PATH))
-	@$(MAKE) -C $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) M=$(INTEL_IWL_OUT_DIR)/ INSTALL_MOD_DIR=$(INTEL_IWL_COMPAT_INSTALL_DIR) INSTALL_MOD_PATH=$(INTEL_IWL_COMPAT_INSTALL_PATH) modules_install
+	@$(MAKE) -C $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) M=$(INTEL_IWL_OUT_DIR)/ INSTALL_MOD_DIR=$(INTEL_IWL_COMPAT_INSTALL_DIR) INSTALL_MOD_PATH=$(INTEL_IWL_COMPAT_INSTALL_PATH) $(INTEL_IWL_INSTALL_MOD_STRIP) modules_install
+
+iwlwifi_rm_mac_cfg: iwlwifi_build
+	$(info Remove kernel cfg80211.ko and mac80211.ko)
+	@find $(KERNEL_OUT_MODINSTALL)/lib/modules/ -name "mac80211.ko" | xargs rm -f
+	@find $(KERNEL_OUT_MODINSTALL)/lib/modules/ -name "cfg80211.ko" | xargs rm -f
 
 iwlwifi_save_mod_dep:
 	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.dep -exec cp {} $(INTEL_IWL_OUT_DIR)/modules.dep.orig \;
