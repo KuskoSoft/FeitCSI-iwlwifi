@@ -300,9 +300,8 @@ static int iwl_pci_resume(struct device *device)
 #endif
 }
 
-compat_pci_suspend(iwl_pci_suspend)
-compat_pci_resume(iwl_pci_resume)
-
+compat_pci_suspend(iwl_pci_suspend);
+compat_pci_resume(iwl_pci_resume);
 static SIMPLE_DEV_PM_OPS(iwl_dev_pm_ops, iwl_pci_suspend, iwl_pci_resume);
 
 #define IWL_PM_OPS	(&iwl_dev_pm_ops)

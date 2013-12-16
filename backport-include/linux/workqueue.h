@@ -75,26 +75,11 @@ void backport_system_workqueue_destroy(void);
 
 #define schedule_work LINUX_BACKPORT(schedule_work)
 int schedule_work(struct work_struct *work);
-#define schedule_work_on LINUX_BACKPORT(schedule_work_on)
-int schedule_work_on(int cpu, struct work_struct *work);
 #define schedule_delayed_work LINUX_BACKPORT(schedule_delayed_work)
 int schedule_delayed_work(struct delayed_work *dwork,
 			  unsigned long delay);
-#define schedule_delayed_work_on LINUX_BACKPORT(schedule_delayed_work_on)
-int schedule_delayed_work_on(int cpu,
-			     struct delayed_work *dwork,
-			     unsigned long delay);
 #define flush_scheduled_work LINUX_BACKPORT(flush_scheduled_work)
 void flush_scheduled_work(void);
-
-enum {
-	/* bit mask for work_busy() return values */
-	WORK_BUSY_PENDING       = 1 << 0,
-	WORK_BUSY_RUNNING       = 1 << 1,
-};
-
-#define work_busy LINUX_BACKPORT(work_busy)
-extern unsigned int work_busy(struct work_struct *work);
 
 #else
 

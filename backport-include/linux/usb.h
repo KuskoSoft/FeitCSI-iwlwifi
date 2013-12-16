@@ -4,7 +4,7 @@
 #include_next <linux/usb.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#ifndef module_usb_driver
 /**
  * module_usb_driver() - Helper macro for registering a USB driver
  * @__usb_driver: usb_driver struct
@@ -144,6 +144,7 @@ extern int usb_anchor_empty(struct usb_anchor *anchor);
 #endif /* 2.6.23-2.6.27 */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
+#define usb_translate_errors LINUX_BACKPORT(usb_translate_errors)
 static inline int usb_translate_errors(int error_code)
 {
 	switch (error_code) {

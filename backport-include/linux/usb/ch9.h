@@ -36,6 +36,7 @@ enum usb_device_speed {
  *
  * Returns @epd's max packet
  */
+#define usb_endpoint_maxp LINUX_BACKPORT(usb_endpoint_maxp)
 static inline int usb_endpoint_maxp(const struct usb_endpoint_descriptor *epd)
 {
 	return __le16_to_cpu(epd->wMaxPacketSize);

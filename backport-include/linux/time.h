@@ -3,6 +3,10 @@
 #include_next <linux/time.h>
 #include <linux/version.h>
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
+#define getrawmonotonic(ts) do_posix_clock_monotonic_gettime(ts)
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 /*
  * Similar to the struct tm in userspace <time.h>, but it needs to be here so

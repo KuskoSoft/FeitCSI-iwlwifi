@@ -16,6 +16,8 @@
 #include <linux/module.h>
 #include "hid-ids.h"
 #include <linux/netdevice.h>
+#include <linux/random.h>
+#include <linux/of.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,8))
 void netdev_set_default_ethtool_ops(struct net_device *dev,
@@ -438,6 +440,7 @@ void prandom_bytes(void *buf, int bytes)
 			random >>= BITS_PER_BYTE;
 		}
 	}
+
 	if (i < bytes) {
 		u32 random = random32();
 
@@ -447,7 +450,7 @@ void prandom_bytes(void *buf, int bytes)
 		}
 	}
 }
-EXPORT_SYMBOL(prandom_bytes);
+EXPORT_SYMBOL_GPL(prandom_bytes);
 
 #ifdef CONFIG_OF
 /**

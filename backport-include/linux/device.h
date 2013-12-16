@@ -29,7 +29,7 @@ backport_device_move(struct device *dev, struct device *new_parent,
 #define device_move LINUX_BACKPORT(device_move)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#ifndef module_driver
 /**
  * module_driver() - Helper macro for drivers that don't do anything
  * special in module init/exit. This eliminates a lot of boilerplate.
@@ -116,6 +116,7 @@ static inline void pm_wakeup_event(struct device *dev, unsigned int msec) {}
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
+#define device_lock LINUX_BACKPORT(device_lock)
 static inline void device_lock(struct device *dev)
 {
 #if defined(CONFIG_PREEMPT_RT) || defined(CONFIG_PREEMPT_DESKTOP)
@@ -125,6 +126,7 @@ static inline void device_lock(struct device *dev)
 #endif
 }
 
+#define device_trylock LINUX_BACKPORT(device_trylock)
 static inline int device_trylock(struct device *dev)
 {
 #if defined(CONFIG_PREEMPT_RT) || defined(CONFIG_PREEMPT_DESKTOP)
@@ -134,6 +136,7 @@ static inline int device_trylock(struct device *dev)
 #endif
 }
 
+#define device_unlock LINUX_BACKPORT(device_unlock)
 static inline void device_unlock(struct device *dev)
 {
 #if defined(CONFIG_PREEMPT_RT) || defined(CONFIG_PREEMPT_DESKTOP)

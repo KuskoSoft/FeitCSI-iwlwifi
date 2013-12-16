@@ -24,6 +24,7 @@ static inline unsigned long __ffs64(u64 word)
 #endif /* < 2.6.34 */
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
+#define sign_extend32 LINUX_BACKPORT(sign_extend32)
 static inline __s32 sign_extend32(__u32 value, int index)
 {
 	__u8 shift = 31 - index;

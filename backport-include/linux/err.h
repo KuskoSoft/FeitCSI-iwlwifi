@@ -4,6 +4,7 @@
 #include <linux/version.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39)
+#define PTR_RET LINUX_BACKPORT(PTR_RET)
 static inline int __must_check PTR_RET(const void *ptr)
 {
 	if (IS_ERR(ptr))

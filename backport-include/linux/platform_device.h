@@ -4,7 +4,7 @@
 #include_next <linux/platform_device.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#ifndef module_platform_driver_probe
 #define module_platform_driver_probe(__platform_driver, __platform_probe) \
 static int __init __platform_driver##_init(void) \
 { \

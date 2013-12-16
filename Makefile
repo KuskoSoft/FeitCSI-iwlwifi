@@ -138,7 +138,6 @@ help: defconfig-help
 	@echo ""
 	@echo "Configuration targets:"
 	@echo "  menuconfig      - Update current config utilising a menu based program"
-	@echo "  allyesconfig    - New config where all options are accepted with yes"
 	@echo "  oldconfig       - Update current config utilising a provided .config as base"
 	@echo "  oldaskconfig    - ??"
 	@echo "  silentoldconfig - Same as oldconfig, but quietly, additionally update deps"

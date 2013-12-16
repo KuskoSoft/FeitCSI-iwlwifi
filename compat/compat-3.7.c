@@ -12,6 +12,7 @@
 #include <linux/export.h>
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
+#include <linux/of.h>
 
 bool mod_delayed_work(struct workqueue_struct *wq, struct delayed_work *dwork,
 		      unsigned long delay)
@@ -46,19 +47,16 @@ static inline u16 pcie_flags_reg(struct pci_dev *dev)
 	return reg16;
 }
 
+#define pci_pcie_type LINUX_BACKPORT(pci_pcie_type)
 static inline int pci_pcie_type(struct pci_dev *dev)
 {
 	return (pcie_flags_reg(dev) & PCI_EXP_FLAGS_TYPE) >> 4;
 }
 
+#define pcie_cap_version LINUX_BACKPORT(pcie_cap_version)
 static inline int pcie_cap_version(struct pci_dev *dev)
 {
 	return pcie_flags_reg(dev) & PCI_EXP_FLAGS_VERS;
-}
-
-static inline bool pcie_cap_has_devctl(const struct pci_dev *dev)
-{
-	return true;
 }
 
 static inline bool pcie_cap_has_lnkctl(struct pci_dev *dev)
@@ -101,7 +99,7 @@ static bool pcie_capability_reg_implemented(struct pci_dev *dev, int pos)
 	case PCI_EXP_DEVCAP:
 	case PCI_EXP_DEVCTL:
 	case PCI_EXP_DEVSTA:
-		return pcie_cap_has_devctl(dev);
+		return true;
 	case PCI_EXP_LNKCAP:
 	case PCI_EXP_LNKCTL:
 	case PCI_EXP_LNKSTA:

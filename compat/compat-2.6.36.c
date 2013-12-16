@@ -85,30 +85,12 @@ int schedule_work(struct work_struct *work)
 }
 EXPORT_SYMBOL_GPL(schedule_work);
 
-int schedule_work_on(int cpu, struct work_struct *work)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
-	return queue_work_on(cpu, system_wq, work);
-#else
-	return queue_work(system_wq, work);
-#endif
-}
-EXPORT_SYMBOL_GPL(schedule_work_on);
-
 int schedule_delayed_work(struct delayed_work *dwork,
                                  unsigned long delay)
 {
 	return queue_delayed_work(system_wq, dwork, delay);
 }
 EXPORT_SYMBOL_GPL(schedule_delayed_work);
-
-int schedule_delayed_work_on(int cpu,
-                                    struct delayed_work *dwork,
-                                    unsigned long delay)
-{
-	return queue_delayed_work_on(cpu, system_wq, dwork, delay);
-}
-EXPORT_SYMBOL_GPL(schedule_delayed_work_on);
 
 void flush_scheduled_work(void)
 {
@@ -121,30 +103,6 @@ void flush_scheduled_work(void)
 	flush_scheduled_work();
 }
 EXPORT_SYMBOL_GPL(flush_scheduled_work);
-
-/**
- * work_busy - test whether a work is currently pending or running
- * @work: the work to be tested
- *
- * Test whether @work is currently pending or running.  There is no
- * synchronization around this function and the test result is
- * unreliable and only useful as advisory hints or for debugging.
- * Especially for reentrant wqs, the pending state might hide the
- * running state.
- *
- * RETURNS:
- * OR'd bitmask of WORK_BUSY_* bits.
- */
-unsigned int work_busy(struct work_struct *work)
-{
-	unsigned int ret = 0;
-
-	if (work_pending(work))
-		ret |= WORK_BUSY_PENDING;
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(work_busy);
 
 void backport_system_workqueue_create(void)
 {
