@@ -42,3 +42,12 @@ config IWLWIFI_MVM_RFKILL_ON_SUSPEND
 
 	  Note that selecting this option will disable WoWLAN and
 	  actually remove the feature completely.
+
+config IWLWIFI_MINI_PM_RUNTIME
+	bool "internal mini-runtime PM implementation"
+	depends on IWLWIFI
+	depends on !PM_RUNTIME
+	help
+	  Enable use of an internal reference counting framework for the
+	  purpose of getting the FW and bus into a low power state when
+	  the WiFi component is idle.
