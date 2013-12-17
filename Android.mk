@@ -53,14 +53,34 @@ INTEL_IWL_RM_MAC_CFG_DEPEND := iwlwifi_rm_mac_cfg
 INTEL_IWL_INSTALL_MOD_STRIP := INSTALL_MOD_STRIP=1
 endif
 
-# check if the modules.dep file should be edited and fixed with scripts
-ifeq ($(INTEL_IWL_EDIT_MOD_DEP),y)
-iwlwifi_install: iwlwifi_save_mod_dep
-INTEL_IWL_MOD_DEP := iwlwifi_run_dep_scripts
-# this will cause iwlwifi to be built as an extra module after
-# other modules have been installed
-EXTRA_KERNEL_MODULES += iwlwifi
-endif
+ifeq ($(INTEL_IWL_USE_SYSTEM_COMPAT_MOD_BUILD),y)
+# Build iwlwifi modules using system compat install
+LOCAL_PATH := $(INTEL_IWL_SRC_DIR)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := IWLWIFI
+LOCAL_KERNEL_COMPAT_DEFCONFIG := $(INTEL_IWL_BOARD_CONFIG)
+
+# $1: INSTALL_MOD_PATH
+# $2: Module source dir
+define COMPAT_PRIVATE_$(LOCAL_MODULE)_PREINSTALL
+        find $(1) -name modules.dep -exec cp {} $(2)/modules.dep.orig \;
+endef
+
+# $1: INSTALL_MOD_PATH
+# $2: Module source dir
+define COMPAT_PRIVATE_$(LOCAL_MODULE)_POSTINSTALL
+        find $(1) -path \*updates\*\.ko -type f -exec $(2)/intc-scripts/mv-compat-mod.py {} iwlmvm \;
+        find $(1) -name modules.dep -exec $(2)/intc-scripts/ren-compat-deps.py {} updates iwlmvm \;
+        find $(1) -name modules.dep -exec sh -c 'cat $(2)/modules.dep.orig >> {}' \;
+        find $(1) -name modules.alias -exec $(2)/intc-scripts/ren-compat-aliases.py {} iwlwifi \;
+endef
+
+include $(BUILD_COMPAT_MODULE)
+
+else
+# Build iwlwifi modules using this makefile
 
 # IWLWIFI_CONFIGURE is a rule to use a defconfig for iwlwifi
 IWLWIFI_CONFIGURE := $(INTEL_IWL_OUT_DIR)/.config
@@ -90,14 +110,6 @@ iwlwifi_rm_mac_cfg: iwlwifi_build
 	@find $(KERNEL_OUT_MODINSTALL)/lib/modules/ -name "mac80211.ko" | xargs rm -f
 	@find $(KERNEL_OUT_MODINSTALL)/lib/modules/ -name "cfg80211.ko" | xargs rm -f
 
-iwlwifi_save_mod_dep:
-	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.dep -exec cp {} $(INTEL_IWL_OUT_DIR)/modules.dep.orig \;
-
-iwlwifi_run_dep_scripts: iwlwifi_install
-	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -path \*updates\*\.ko -type f -exec $(INTEL_IWL_SRC_DIR)/intc-scripts/mv-compat-mod.py {} iwlmvm \;
-	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.dep -exec $(INTEL_IWL_SRC_DIR)/intc-scripts/ren-compat-deps.py {} updates iwlmvm \;
-	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.dep -exec sh -c 'cat $(INTEL_IWL_OUT_DIR)/modules.dep.orig >> {}' \;
-	@find $(INTEL_IWL_COMPAT_INSTALL_PATH) -name modules.alias -exec $(INTEL_IWL_SRC_DIR)/intc-scripts/ren-compat-aliases.py {} iwlwifi \;
-
+endif
 endif
 endif
