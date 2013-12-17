@@ -65,7 +65,7 @@
 #define __IWL_DBG_CFG_H__
 /*
  * with DBG_CFG_REINCLUDE set this file should contain nothing
- * but IWL_DBG_CFG() macro invocations so it can * be used in
+ * but IWL_DBG_CFG() macro invocations so it can be used in
  * the C file to generate more code (e.g. for debugfs and the
  * struct initialization with default values)
  */
