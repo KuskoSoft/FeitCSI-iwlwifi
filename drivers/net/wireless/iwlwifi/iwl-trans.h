@@ -71,6 +71,9 @@
 #include "iwl-config.h"
 #include "iwl-fw.h"
 #include "iwl-op-mode.h"
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#include "iwl-dbg-cfg.h"
+#endif
 
 /**
  * DOC: Transport layer - what is it ?
@@ -540,6 +543,10 @@ struct iwl_trans {
 
 #ifdef CONFIG_LOCKDEP
 	struct lockdep_map sync_cmd_lockdep_map;
+#endif
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	struct iwl_dbg_cfg dbg_cfg;
 #endif
 
 	/* pointer to trans specific struct */

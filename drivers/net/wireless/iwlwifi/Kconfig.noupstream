@@ -7,6 +7,10 @@ config IWLWIFI_NUM_CHANNELS
 config IWLWIFI_DEVICE_TESTMODE
 	bool "enable generic netlink testmode support"
 	default y if IWLMVM
+	select IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+
+config IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	bool "enable default value override (for debugging)"
 
 config IWLWIFI_PCIE_SUSPEND_RESUME
 	bool "enable PCIe suspend/resume code workarounds"

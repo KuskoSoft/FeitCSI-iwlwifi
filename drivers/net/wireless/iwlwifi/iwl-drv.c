@@ -75,6 +75,9 @@
 #include "iwl-tm-gnl.h"
 #include "iwl-config.h"
 #include "iwl-modparams.h"
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#include "iwl-dbg-cfg.h"
+#endif
 
 /* private includes */
 #include "iwl-fw-file.h"
@@ -1038,6 +1041,10 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	/* We have our copies now, allow OS release its copies */
 	release_firmware(ucode_raw);
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	iwl_dbg_cfg_load_ini(drv->trans->dev, &drv->trans->dbg_cfg);
+#endif
+
 	mutex_lock(&iwlwifi_opmode_table_mtx);
 	if (fw->mvm_fw)
 		op = &iwlwifi_opmode_table[MVM_OP_MODE];
@@ -1120,6 +1127,10 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans,
 	init_completion(&drv->request_firmware_complete);
 	INIT_LIST_HEAD(&drv->list);
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	trans->dbg_cfg = current_dbg_config;
+#endif
+
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	/* Create the device debugfs entries. */
 	drv->dbgfs_drv = debugfs_create_dir(dev_name(trans->dev),
@@ -1180,6 +1191,10 @@ void iwl_drv_stop(struct iwl_drv *drv)
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	debugfs_remove_recursive(drv->dbgfs_drv);
+#endif
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	iwl_dbg_cfg_free(&drv->trans->dbg_cfg);
 #endif
 
 	kfree(drv);
