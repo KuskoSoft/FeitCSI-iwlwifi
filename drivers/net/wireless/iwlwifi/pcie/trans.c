@@ -74,6 +74,9 @@
 #include "iwl-prph.h"
 #include "iwl-agn-hw.h"
 #include "internal.h"
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+#include "iwl-dnt-cfg.h"
+#endif
 
 static void iwl_pcie_set_pwr(struct iwl_trans *trans, bool vaux)
 {
@@ -550,6 +553,9 @@ static int iwl_pcie_load_given_ucode(struct iwl_trans *trans,
 		if (ret)
 			return ret;
 	} else {
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+		iwl_dnt_configure(trans);
+#endif
 		/* Remove all resets to allow NIC to operate */
 		iwl_write32(trans, CSR_RESET, 0);
 	}
