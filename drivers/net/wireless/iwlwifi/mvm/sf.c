@@ -65,7 +65,8 @@
 /* For counting bound interfaces */
 struct iwl_mvm_active_iface_iterator_data {
 	struct ieee80211_vif *ignore_vif;
-	struct ieee80211_vif *sta_vif;
+	u8 sta_vif_ap_sta_id;
+	enum iwl_sf_state sta_vif_state;
 	int num_active_macs;
 };
 
@@ -85,8 +86,13 @@ static void iwl_mvm_bound_iface_iterator(void *_data, u8 *mac,
 
 	data->num_active_macs++;
 
-	if (vif->type == NL80211_IFTYPE_STATION)
-		data->sta_vif = vif;
+	if (vif->type == NL80211_IFTYPE_STATION) {
+		data->sta_vif_ap_sta_id = mvmvif->ap_sta_id;
+		if (vif->bss_conf.assoc)
+			data->sta_vif_state = SF_FULL_ON;
+		else
+			data->sta_vif_state = SF_INIT_OFF;
+	}
 }
 
 /*
@@ -187,14 +193,15 @@ static int iwl_mvm_sf_config(struct iwl_mvm *mvm, u8 sta_id,
 				"No station: Cannot switch SF to FULL_ON\n");
 			return -EINVAL;
 		}
-		sta = rcu_dereference_protected(mvm->fw_id_to_mac_id[sta_id],
-						lockdep_is_held(&mvm->mutex));
-
+		rcu_read_lock();
+		sta = rcu_dereference(mvm->fw_id_to_mac_id[sta_id]);
 		if (IS_ERR_OR_NULL(sta)) {
 			IWL_ERR(mvm, "Invalid station id\n");
+			rcu_read_unlock();
 			return -EINVAL;
 		}
 		iwl_mvm_fill_sf_command(&sf_cmd, sta);
+		rcu_read_unlock();
 		break;
 	case SF_INIT_OFF:
 		iwl_mvm_fill_sf_command(&sf_cmd, NULL);
@@ -226,6 +233,8 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *changed_vif,
 	struct iwl_mvm_vif *mvmvif = NULL;
 	struct iwl_mvm_active_iface_iterator_data data = {
 		.ignore_vif = changed_vif,
+		.sta_vif_state = SF_UNINIT,
+		.sta_vif_ap_sta_id = IWL_MVM_STATION_COUNT,
 	};
 
 	if (IWL_UCODE_API(mvm->fw->ucode_ver) < 8)
@@ -255,16 +264,11 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *changed_vif,
 		break;
 	case 1:
 		if (remove_vif) {
-			/* The one active mac left is of type station */
-			if (data.sta_vif) {
-				mvmvif =
-				      iwl_mvm_vif_from_mac80211(data.sta_vif);
-				sta_id = mvmvif->ap_sta_id;
-				new_state = data.sta_vif->bss_conf.assoc ?
-						SF_FULL_ON : SF_INIT_OFF;
-			} else {
-				new_state = SF_UNINIT;
-			}
+			/* The one active mac left is of type station
+			 * and we filled the relevant data during iteration
+			 */
+			new_state = data.sta_vif_state;
+			sta_id = data.sta_vif_ap_sta_id;
 		} else {
 			if (WARN_ON(!changed_vif))
 				return -EINVAL;
