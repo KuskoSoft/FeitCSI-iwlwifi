@@ -930,6 +930,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 		if (test_bit(STATUS_INT_ENABLED, &trans->status))
 			iwl_enable_interrupts(trans);
 		spin_unlock(&trans_pcie->irq_lock);
+		lock_map_release(&trans->sync_cmd_lockdep_map);
 		return IRQ_NONE;
 	}
 
@@ -940,7 +941,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 		 */
 		IWL_WARN(trans, "HARDWARE GONE?? INTA == 0x%08x\n", inta);
 		spin_unlock(&trans_pcie->irq_lock);
-		return IRQ_HANDLED;
+		goto out;
 	}
 
 	/* Ack/clear/reset pending uCode interrupts.
