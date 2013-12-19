@@ -249,6 +249,12 @@ int hex_to_bin(char ch);
 )
 #endif /* rounddown */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
+/* kernels before 3.2 didn't have error checking for the function */
+#define hex2bin LINUX_BACKPORT(hex2bin)
+int __must_check hex2bin(u8 *dst, const char *src, size_t count);
+#endif /* < 3.2 */
+
 #endif /* __BACKPORT_KERNEL_H */
 
 /*

@@ -1613,6 +1613,9 @@ enum ieee80211_hw_flags {
  * @extra_tx_headroom: headroom to reserve in each transmit skb
  *	for use by the driver (e.g. for transmit headers.)
  *
+ * @extra_beacon_tailroom: tailroom to reserve in each beacon tx skb.
+ *	Can be used by drivers to add extra IEs.
+ *
  * @channel_change_time: time (in microseconds) it takes to change channels.
  *
  * @max_signal: Maximum value for signal (rssi) in RX information, used
@@ -1695,6 +1698,7 @@ struct ieee80211_hw {
 	void *priv;
 	u32 flags;
 	unsigned int extra_tx_headroom;
+	unsigned int extra_beacon_tailroom;
 	int channel_change_time;
 	int vif_data_size;
 	int sta_data_size;
@@ -2411,9 +2415,6 @@ enum ieee80211_roc_type {
  *	See the section "Frame filtering" for more information.
  *	This callback must be implemented and can sleep.
  *
- * @set_multicast_list: Configure the device's interface specific RX multicast
- *	filter. This callback is optional. This callback must be atomic.
- *
  * @set_tim: Set TIM bit. mac80211 calls this function when a TIM bit
  * 	must be set or cleared for a given STA. Must be atomic.
  *
@@ -2795,16 +2796,6 @@ struct ieee80211_ops {
 				 unsigned int changed_flags,
 				 unsigned int *total_flags,
 				 u64 multicast);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
-	void (*set_multicast_list)(struct ieee80211_hw *hw,
-				   struct ieee80211_vif *vif, bool allmulti,
-				   struct netdev_hw_addr_list *mc_list);
-#else
-	void (*set_multicast_list)(struct ieee80211_hw *hw,
-				   struct ieee80211_vif *vif, bool allmulti,
-				   int mc_count, struct dev_addr_list *ha);
-#endif
-
 	int (*set_tim)(struct ieee80211_hw *hw, struct ieee80211_sta *sta,
 		       bool set);
 	int (*set_key)(struct ieee80211_hw *hw, enum set_key_cmd cmd,

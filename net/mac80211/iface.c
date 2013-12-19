@@ -1013,29 +1013,8 @@ static void ieee80211_set_multicast_list(struct net_device *dev)
 			atomic_dec(&local->iff_promiscs);
 		sdata->flags ^= IEEE80211_SDATA_PROMISC;
 	}
-
-	/*
-	 * TODO: If somebody needs this on AP interfaces,
-	 *	 it can be enabled easily but multicast
-	 *	 addresses from VLANs need to be synced.
-	 */
-	if (sdata->vif.type != NL80211_IFTYPE_MONITOR &&
-	    sdata->vif.type != NL80211_IFTYPE_AP_VLAN &&
-	    sdata->vif.type != NL80211_IFTYPE_AP)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
-		drv_set_multicast_list(local, sdata, &dev->mc);
-#else
-		drv_set_multicast_list(local, sdata, dev->mc_count,
-				       dev->mc_list);
-#endif
-
 	spin_lock_bh(&local->filter_lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	__hw_addr_sync(&local->mc_list, &dev->mc, dev->addr_len);
-#else
-	__dev_addr_sync(&local->mc_list, &local->mc_count,
-			&dev->mc_list, &dev->mc_count);
-#endif
 	spin_unlock_bh(&local->filter_lock);
 	ieee80211_queue_work(&local->hw, &local->reconfig_filter);
 }

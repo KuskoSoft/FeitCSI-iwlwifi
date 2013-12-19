@@ -26,6 +26,7 @@ compat-$(CPTCFG_BACKPORT_KERNEL_2_6_37) += compat-2.6.37.o
 compat-$(CPTCFG_BACKPORT_KERNEL_2_6_39) += compat-2.6.39.o kstrtox.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_0) += compat-3.0.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_1) += compat-3.1.o
+compat-$(CPTCFG_BACKPORT_KERNEL_3_2) += backport-3.2.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_3) += compat-3.3.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_4) += compat-3.4.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_5) += compat-3.5.o user_namespace.o
