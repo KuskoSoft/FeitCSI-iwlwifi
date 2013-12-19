@@ -108,8 +108,8 @@ static const struct iwl_ht_params iwl8000_ht_params = {
 	.base_params = &iwl8000_base_params,			\
 	.led_mode = IWL_LED_RF_STATE
 
-const struct iwl_cfg iwl8000_2ac_cfg = {
-	.name = "Intel(R) Dual Band Wireless AC 8000",
+const struct iwl_cfg iwl8260_2ac_cfg = {
+	.name = "Intel(R) Dual Band Wireless AC 8260",
 	.fw_name_pre = IWL8000_FW_PRE,
 	IWL_DEVICE_8000,
 	.ht_params = &iwl8000_ht_params,
