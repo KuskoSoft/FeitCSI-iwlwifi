@@ -702,6 +702,18 @@ void iwl_pcie_tx_start(struct iwl_trans *trans, u32 scd_base_addr)
 	iwl_write_direct32(trans, FH_TX_CHICKEN_BITS_REG,
 			   reg_val | FH_TX_CHICKEN_BITS_SCD_AUTO_RETRY_EN);
 
+	/*
+	 * This is a bit of an abuse - This is needed for 7260 / 3160 only
+	* check host_interrupt_operation_mode even if this is not related to
+	* host_interrupt_operation_mode.
+	*
+	* Enable the oscillator to count wake up time for L1 exit. This
+	* consumes slightly more power (100uA) - but allows to be sure that we
+	* wake up from L1 on time.
+	*/
+	if (trans->cfg->host_interrupt_operation_mode)
+		iwl_set_bits_prph(trans, OSC_CLK, OSC_CLK_FORCE_CONTROL);
+
 	/* Enable L1-Active */
 	iwl_clear_bits_prph(trans, APMG_PCIDEV_STT_REG,
 			    APMG_PCIDEV_STT_VAL_L1_ACT_DIS);
