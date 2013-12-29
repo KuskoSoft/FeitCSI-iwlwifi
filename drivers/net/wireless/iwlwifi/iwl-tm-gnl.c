@@ -368,6 +368,24 @@ static int iwl_tm_validate_rx_hdrs_mode_req(struct iwl_tm_data *data_in)
 	return 0;
 }
 
+static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
+				    struct iwl_tm_data *data_in,
+				    struct iwl_tm_data *data_out)
+{
+	__u32 *status;
+
+	status = kmalloc(sizeof(__u32), GFP_KERNEL);
+	if (!status)
+		return -ENOMEM;
+
+	*status = 0;
+
+	data_out->data = status;
+	data_out->len = sizeof(__u32);
+
+	return 0;
+}
+
 /*
  * Testmode GNL family types (This NL family
  * will eventually replace nl80211 support in
@@ -669,6 +687,10 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 		common_op = true;
 		break;
 
+	case IWL_TM_USER_CMD_GET_DEVICE_STATUS:
+		ret = iwl_tm_get_device_status(dev, &cmd_data->data_in,
+					       &cmd_data->data_out);
+		break;
 	}
 	if (ret)
 		return ret;
