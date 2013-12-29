@@ -138,7 +138,7 @@ struct iwl_tm_cmd_request {
 	__u32 want_resp;
 	__u32 len;
 	__u8 data[];
-};
+} __packed __aligned(4);
 
 /* Register operations - Operation type */
 enum {
@@ -157,7 +157,7 @@ struct iwl_tm_reg_op {
 	__u32 op_type;
 	__u32 address;
 	__u32 value;
-};
+} __packed __aligned(4);
 
 /**
  * struct iwl_tm_regs_request - Register operation request data
@@ -167,7 +167,7 @@ struct iwl_tm_reg_op {
 struct iwl_tm_regs_request {
 	__u32 num;
 	struct iwl_tm_reg_op reg_ops[];
-};
+} __packed __aligned(4);
 
 /**
  * struct iwl_tm_trace_request - Data for trace begin requests
@@ -177,7 +177,7 @@ struct iwl_tm_regs_request {
 struct iwl_tm_trace_request {
 	__u64 addr;
 	__u32 size;
-};
+} __packed __aligned(4);
 
 /**
  * struct iwl_tm_sram_write_request
@@ -189,7 +189,7 @@ struct iwl_tm_sram_write_request {
 	__u32 offset;
 	__u32 len;
 	__u8 buffer[];
-};
+} __packed __aligned(4);
 
 /**
  * struct iwl_tm_sram_read_request
@@ -199,7 +199,7 @@ struct iwl_tm_sram_write_request {
 struct iwl_tm_sram_read_request {
 	__u32 offset;
 	__u32 length;
-};
+} __packed __aligned(4);
 
 /**
  * struct iwl_tm_dev_info - Result data for get info request
@@ -217,7 +217,7 @@ struct iwl_tm_dev_info {
 	__u32 fw_ver;
 	__u32 build_ver;
 	__u8 driver_ver[];
-};
+} __packed __aligned(4);
 
 /* xVT defeinitions */
 
@@ -227,7 +227,7 @@ struct iwl_tm_dev_info {
 struct iwl_xvt_user_calib_ctrl {
 	__u32 flow_trigger;
 	__u32 event_trigger;
-};
+} __packed __aligned(4);
 
 #define IWL_USER_FW_IMAGE_IDX_INIT	0
 #define IWL_USER_FW_IMAGE_IDX_REGULAR	1
@@ -257,7 +257,7 @@ struct iwl_xvt_sw_cfg_request {
 	__u32 phy_config;
 	__u32 get_calib_type;
 	struct iwl_xvt_user_calib_ctrl calib_ctrl[IWL_UCODE_TYPE_MAX];
-};
+} __packed __aligned(4);
 
 /**
  * iwl_xvt_sw_cfg_request - Data for set SW stack configuration request
@@ -272,7 +272,7 @@ struct iwl_xvt_phy_db_request {
 	__u32 chg_id;
 	__u32 size;
 	__u8 data[];
-};
+} __packed __aligned(4);
 
 #define IWL_TM_STATION_COUNT	16
 
@@ -296,7 +296,7 @@ struct iwl_tm_mod_tx_request {
 	__u32 rate_flags;
 	__u8 sta_id;
 	__u8 data[];
-};
+} __packed __aligned(4);
 
 /**
  * struct iwl_xvt_rx_hdrs_mode_request - Start/Stop gathering headers info.
@@ -305,6 +305,6 @@ struct iwl_tm_mod_tx_request {
  */
 struct iwl_xvt_rx_hdrs_mode_request {
 	__u32 mode;
-};
+} __packed __aligned(4);
 
 #endif
