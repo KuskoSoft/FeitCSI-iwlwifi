@@ -1515,7 +1515,6 @@ void iwl_pcie_hcmd_complete(struct iwl_trans *trans,
 }
 
 #define HOST_COMPLETE_TIMEOUT	(2 * HZ)
-#define COMMAND_POKE_TIMEOUT	(HZ / 10)
 
 static int iwl_pcie_send_hcmd_async(struct iwl_trans *trans,
 				    struct iwl_host_cmd *cmd)
