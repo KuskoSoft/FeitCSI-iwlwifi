@@ -162,7 +162,7 @@ static int iwl_mvm_tm_send_hcmd(struct iwl_mvm *mvm,
 		IWL_ERR(mvm->trans, "HCMD received a null response packet\n");
 		return -ENOMSG;
 	}
-	reply_len = le32_to_cpu(pkt->len_n_flags) & FH_RSCSR_FRAME_SIZE_MSK;
+	reply_len = iwl_rx_packet_len(pkt);
 
 	/* Set response data */
 	resp_size = sizeof(struct iwl_tm_cmd_request) + reply_len;
@@ -418,11 +418,8 @@ int iwl_mvm_tm_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
  */
 void iwl_tm_mvm_send_rx(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb)
 {
-	struct iwl_rx_packet *pkt;
-	int length;
-
-	pkt = rxb_addr(rxb);
-	length = le32_to_cpu(pkt->len_n_flags) & FH_RSCSR_FRAME_SIZE_MSK;
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	int length = iwl_rx_packet_len(pkt);
 
 	/* the length doesn't include len_n_flags field, so add it manually */
 	length += sizeof(__le32);
