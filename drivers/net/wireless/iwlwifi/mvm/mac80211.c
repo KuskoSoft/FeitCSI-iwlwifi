@@ -139,10 +139,13 @@ static const struct wiphy_wowlan_tcp_support iwl_mvm_wowlan_tcp_support = {
  *	be the vif's ip address. in case there is not a single
  *	ip address (0, or more than 1), this attribute will
  *	be skipped.
+ * BC_FILTER_MAGIC_MAC - set the val of this attribute to
+ *	the LSB bytes of the vif's mac address
  */
 enum {
 	BC_FILTER_MAGIC_NONE = 0,
 	BC_FILTER_MAGIC_IP,
+	BC_FILTER_MAGIC_MAC,
 };
 
 static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
@@ -170,6 +173,28 @@ static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
 				.mask = cpu_to_le32(0xffffffff),
 				/* mark it as special field */
 				.reserved1 = cpu_to_le16(BC_FILTER_MAGIC_IP),
+			},
+		},
+	},
+	{
+		/* dhcp offer bcast */
+		.discard = 0,
+		.frame_type = BCAST_FILTER_FRAME_TYPE_IPV4,
+		.attrs = {
+			{
+				/* udp dest port - 68 (bootp client)*/
+				.offset_type = BCAST_FILTER_OFFSET_IP_END,
+				.offset = offsetof(struct udphdr, dest),
+				.val = cpu_to_le32(0x00440000),
+				.mask = cpu_to_le32(0xffff0000),
+			},
+			{
+				/* dhcp - lsb bytes of client hw address */
+				.offset_type = BCAST_FILTER_OFFSET_IP_END,
+				.offset = 38,
+				.mask = cpu_to_le32(0xffffffff),
+				/* mark it as special field */
+				.reserved1 = cpu_to_le16(BC_FILTER_MAGIC_MAC),
 			},
 		},
 	},
@@ -965,6 +990,11 @@ iwl_mvm_set_bcast_filter(struct ieee80211_vif *vif,
 
 			ip_addr = be32_to_cpu(vif->bss_conf.arp_addr_list[0]);
 			attr->val = cpu_to_le32(ip_addr);
+			break;
+		}
+		case cpu_to_le16(BC_FILTER_MAGIC_MAC): {
+			u32 lsb_mac = be32_to_cpu(*(__be32 *)&vif->addr[2]);
+			attr->val = cpu_to_le32(lsb_mac);
 			break;
 		}
 		default:
