@@ -51,3 +51,4 @@ config IWLWIFI_MINI_PM_RUNTIME
 	  Enable use of an internal reference counting framework for the
 	  purpose of getting the FW and bus into a low power state when
 	  the WiFi component is idle.
+
