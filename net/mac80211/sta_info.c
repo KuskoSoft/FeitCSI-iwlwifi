@@ -1404,7 +1404,16 @@ ieee80211_sta_ps_deliver_response(struct sta_info *sta,
 				info->flags |= IEEE80211_TX_STATUS_EOSP |
 					       IEEE80211_TX_CTL_REQ_TX_STATUS;
 			} else {
-				/* FIXME: do we need to set more-data? */
+				/* The standard isn't completely clear on this
+				 * as it says the more-data bit should be set
+				 * if there are more BUs. The QoS-Null frame
+				 * we're about to send isn't buffered yet, we
+				 * only create it below, but let's pretend it
+				 * was buffered just in case some clients only
+				 * expect more-data=0 when eosp=1.
+				 */
+				hdr->frame_control |=
+					cpu_to_le16(IEEE80211_FCTL_MOREDATA);
 				need_null = true;
 				num++;
 			}
