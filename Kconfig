@@ -28,7 +28,7 @@ source compat/Kconfig
 # these are copied from the kernel
 source net/wireless/Kconfig
 source net/mac80211/Kconfig
-source net/bluetooth/Kconfig
+#source net/bluetooth/Kconfig
 source drivers/net/wireless/Kconfig
 #source drivers/net/ethernet/Kconfig
 #source drivers/net/usb/Kconfig
