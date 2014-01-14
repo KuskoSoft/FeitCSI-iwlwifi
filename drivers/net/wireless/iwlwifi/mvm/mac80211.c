@@ -129,6 +129,28 @@ static const struct wiphy_wowlan_tcp_support iwl_mvm_wowlan_tcp_support = {
 };
 #endif
 
+#ifdef CPTCFG_IWLWIFI_BCAST_FILTERING
+static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
+	{
+		/* arp */
+		.discard = 0,
+		.frame_type = BCAST_FILTER_FRAME_TYPE_ALL,
+		.attrs = {
+			{
+				/* frame type - arp, hw type - ethernet */
+				.offset_type =
+					BCAST_FILTER_OFFSET_PAYLOAD_START,
+				.offset = sizeof(rfc1042_header),
+				.val = cpu_to_le32(0x08060001),
+				.mask = cpu_to_le32(0xffffffff),
+			},
+		},
+	},
+	/* last filter must be empty */
+	{},
+};
+#endif
+
 static void iwl_mvm_reset_phy_ctxts(struct iwl_mvm *mvm)
 {
 	int i;
@@ -293,6 +315,11 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		hw->wiphy->wowlan = &mvm->wowlan;
 	}
 #endif
+#endif
+
+#ifdef CPTCFG_IWLWIFI_BCAST_FILTERING
+	/* assign default bcast filtering configuration */
+	mvm->bcast_filters = iwl_mvm_default_bcast_filters;
 #endif
 
 	iwl_mvm_set_wiphy_vendor_commands(hw->wiphy);
