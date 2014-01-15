@@ -458,7 +458,7 @@ void iwl_mvm_dump_sram(struct iwl_mvm *mvm)
 	const struct fw_img *img;
 	int ofs, len = 0;
 	int i;
-	u32 *buf;
+	__le32 *buf;
 
 	if (!mvm->ucode_loaded)
 		return;
@@ -474,7 +474,7 @@ void iwl_mvm_dump_sram(struct iwl_mvm *mvm)
 	iwl_trans_read_mem_bytes(mvm->trans, ofs, buf, len);
 	len = len >> 2;
 	for (i = 0; i < len; i++) {
-		IWL_ERR(mvm, "0x%08X\n", buf[i]);
+		IWL_ERR(mvm, "0x%08X\n", le32_to_cpu(buf[i]));
 		/* Add a small delay to let syslog catch up */
 		udelay(10);
 	}
