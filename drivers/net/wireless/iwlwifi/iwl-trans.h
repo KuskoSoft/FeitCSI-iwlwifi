@@ -582,6 +582,8 @@ struct iwl_trans {
 	struct iwl_dbg_cfg dbg_cfg;
 #endif
 
+	u64 dflt_pwr_limit;
+
 	/* pointer to trans specific struct */
 	/*Ensure that this pointer will always be aligned to sizeof pointer */
 	char trans_specific[0] __aligned(sizeof(void *));
