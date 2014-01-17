@@ -191,7 +191,7 @@ static int iwl_pcie_apm_init(struct iwl_trans *trans)
 		 *
 		 * This looks weird: read twice the same register, discard the
 		 * value, set a bit, and yet again, read that same register
-		 * just to discard the value. But that the way the hardware
+		 * just to discard the value. But that's the way the hardware
 		 * seems to like it.
 		 */
 		iwl_read_prph(trans, OSC_CLK);
