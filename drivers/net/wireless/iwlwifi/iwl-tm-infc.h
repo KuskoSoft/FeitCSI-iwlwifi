@@ -261,6 +261,7 @@ struct iwl_xvt_sw_cfg_request {
 	__u32 cfg_mask;
 	__u32 phy_config;
 	__u32 get_calib_type;
+	__u32 dbg_flags;
 	struct iwl_xvt_user_calib_ctrl calib_ctrl[IWL_UCODE_TYPE_MAX];
 } __packed __aligned(4);
 
