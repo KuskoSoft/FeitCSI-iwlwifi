@@ -228,6 +228,9 @@ iwl_mvm_unref_all_except(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref)
 {
 	int i;
 
+	if (!mvm->trans->cfg->d0i3)
+		return;
+
 	for_each_set_bit(i, mvm->ref_bitmap, IWL_MVM_REF_COUNT) {
 		if (ref == i)
 			continue;
