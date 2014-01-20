@@ -348,4 +348,3 @@ void iwl_dnt_configure(struct iwl_trans *trans)
 		return;
 	}
 }
-IWL_EXPORT_SYMBOL(iwl_dnt_configure);

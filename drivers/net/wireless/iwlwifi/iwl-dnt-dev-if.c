@@ -260,7 +260,6 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 
 	return 0;
 }
-IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_configure_monitor);
 
 static int iwl_dnt_dev_if_send_dbgm(struct iwl_dnt *dnt,
 				    struct iwl_trans *trans)
@@ -326,7 +325,6 @@ int iwl_dnt_dev_if_start_monitor(struct iwl_dnt *dnt,
 		return -EINVAL;
 	}
 }
-IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_start_monitor);
 
 int iwl_dnt_dev_if_set_log_level(struct iwl_dnt *dnt,
 				 struct iwl_trans *trans)
@@ -347,7 +345,6 @@ int iwl_dnt_dev_if_set_log_level(struct iwl_dnt *dnt,
 
 	return ret;
 }
-IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_set_log_level);
 
 int iwl_dnt_dev_if_retreive_monitor_data(struct iwl_dnt *dnt,
 					 struct iwl_trans *trans,
