@@ -205,25 +205,21 @@ static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
 
 void iwl_mvm_ref(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref_type)
 {
-	lockdep_assert_held(&mvm->mutex);
-
 	if (!mvm->trans->cfg->d0i3)
 		return;
 
 	IWL_DEBUG_RPM(mvm, "Take mvm reference - type %d\n", ref_type);
-	WARN_ON(__test_and_set_bit(ref_type, mvm->ref_bitmap));
+	WARN_ON(test_and_set_bit(ref_type, mvm->ref_bitmap));
 	iwl_trans_ref(mvm->trans);
 }
 
 void iwl_mvm_unref(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref_type)
 {
-	lockdep_assert_held(&mvm->mutex);
-
 	if (!mvm->trans->cfg->d0i3)
 		return;
 
 	IWL_DEBUG_RPM(mvm, "Leave mvm reference - type %d\n", ref_type);
-	WARN_ON(!__test_and_clear_bit(ref_type, mvm->ref_bitmap));
+	WARN_ON(!test_and_clear_bit(ref_type, mvm->ref_bitmap));
 	iwl_trans_unref(mvm->trans);
 }
 
@@ -232,14 +228,12 @@ iwl_mvm_unref_all_except(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref)
 {
 	int i;
 
-	lockdep_assert_held(&mvm->mutex);
-
 	for_each_set_bit(i, mvm->ref_bitmap, IWL_MVM_REF_COUNT) {
 		if (ref == i)
 			continue;
 
 		IWL_DEBUG_RPM(mvm, "Cleanup: remove mvm ref type %d\n", i);
-		__clear_bit(i, mvm->ref_bitmap);
+		clear_bit(i, mvm->ref_bitmap);
 		iwl_trans_unref(mvm->trans);
 	}
 }

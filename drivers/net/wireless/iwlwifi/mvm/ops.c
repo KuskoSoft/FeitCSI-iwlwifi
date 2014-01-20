@@ -486,7 +486,7 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	memset(&mvm->rx_stats, 0, sizeof(struct mvm_statistics_rx));
 
 	/* rpm starts with a taken ref. only set the appropriate bit here. */
-	__set_bit(IWL_MVM_REF_UCODE_DOWN, mvm->ref_bitmap);
+	set_bit(IWL_MVM_REF_UCODE_DOWN, mvm->ref_bitmap);
 
 	return op_mode;
 
