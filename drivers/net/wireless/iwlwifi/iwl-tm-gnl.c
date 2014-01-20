@@ -473,7 +473,8 @@ static __genl_const struct genl_multicast_group iwl_tm_gnl_mcgrps[] = {
 };
 
 /* TM GNL bus policy */
-static struct nla_policy iwl_tm_gnl_msg_policy[IWL_TM_GNL_MSG_ATTR_MAX] = {
+static const struct nla_policy
+iwl_tm_gnl_msg_policy[IWL_TM_GNL_MSG_ATTR_MAX] = {
 	[IWL_TM_GNL_MSG_ATTR_DEVNAME] =	{
 			.type = NLA_NUL_STRING,
 			.len = IWL_TM_GNL_DEVNAME_LEN-1 },
