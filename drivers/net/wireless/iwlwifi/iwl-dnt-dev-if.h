@@ -81,12 +81,12 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 				     struct iwl_trans *trans);
 
 /**
- * iwl_dnt_dev_if_retreive_monitor_data - retreive monitor data.
+ * iwl_dnt_dev_if_retrieve_monitor_data - retreive monitor data.
  *
  * retreive monitor data - depends on the monitor mode.
  * Note: monitor must be stopped in order to retreive data.
  */
-int iwl_dnt_dev_if_retreive_monitor_data(struct iwl_dnt *dnt,
+int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt *dnt,
 					 struct iwl_trans *trans, u8 *buffer,
 					 u32 buffer_size);
 /**

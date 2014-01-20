@@ -138,7 +138,7 @@ static void iwl_dnt_dev_if_configure_dbgm_registers(struct iwl_trans *trans,
 		       cfg->dbg_mon_sample_ctl_val);
 }
 
-static int iwl_dnt_dev_if_retreive_dma_monitor_data(struct iwl_dnt *dnt,
+static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 						    struct iwl_trans *trans,
 						    void *buffer,
 						    u32 buffer_size)
@@ -172,7 +172,7 @@ static int iwl_dnt_dev_if_retreive_dma_monitor_data(struct iwl_dnt *dnt,
 	return 0;
 }
 
-static int iwl_dnt_dev_if_retreive_iccm_monitor_data(struct iwl_dnt *dnt,
+static int iwl_dnt_dev_if_retrieve_iccm_monitor_data(struct iwl_dnt *dnt,
 						     struct iwl_trans *trans,
 						     void *buffer,
 						     u32 buffer_size)
@@ -180,7 +180,7 @@ static int iwl_dnt_dev_if_retreive_iccm_monitor_data(struct iwl_dnt *dnt,
 	return 0;
 }
 
-static int iwl_dnt_dev_if_retreive_marbh_monitor_data(struct iwl_dnt *dnt,
+static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 						      struct iwl_trans *trans,
 						      u8 *buffer,
 						      u32 buffer_size)
@@ -346,21 +346,21 @@ int iwl_dnt_dev_if_set_log_level(struct iwl_dnt *dnt,
 	return ret;
 }
 
-int iwl_dnt_dev_if_retreive_monitor_data(struct iwl_dnt *dnt,
+int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt *dnt,
 					 struct iwl_trans *trans,
 					 u8 *buffer, u32 buffer_size)
 {
 	switch (dnt->cur_mon_type) {
 	case DMA:
-		return iwl_dnt_dev_if_retreive_dma_monitor_data(dnt, trans,
+		return iwl_dnt_dev_if_retrieve_dma_monitor_data(dnt, trans,
 								buffer,
 								buffer_size);
 	case MARBH:
-		return iwl_dnt_dev_if_retreive_marbh_monitor_data(dnt, trans,
+		return iwl_dnt_dev_if_retrieve_marbh_monitor_data(dnt, trans,
 								  buffer,
 								  buffer_size);
 	case ICCM:
-		return iwl_dnt_dev_if_retreive_iccm_monitor_data(dnt, trans,
+		return iwl_dnt_dev_if_retrieve_iccm_monitor_data(dnt, trans,
 								 buffer,
 								 buffer_size);
 	case INTERFACE:

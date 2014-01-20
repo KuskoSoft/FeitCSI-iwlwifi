@@ -154,7 +154,7 @@ static int iwl_dnt_dispatch_pull_monitor(struct iwl_dnt *dnt,
 		iwl_dnt_dispatch_get_list_data(dnt->dispatch.dbgm_db, buffer,
 					       buffer_size);
 	else
-		ret = iwl_dnt_dev_if_retreive_monitor_data(dnt, trans, buffer,
+		ret = iwl_dnt_dev_if_retrieve_monitor_data(dnt, trans, buffer,
 							   buffer_size);
 	return ret;
 }
