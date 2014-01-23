@@ -228,6 +228,7 @@ struct iwl_pwr_tx_backoff {
  * @host_interrupt_operation_mode: device needs host interrupt operation
  *	mode set
  * @d0i3: device uses d0i3 instead of d3
+ * @nvm_hw_section_num: the ID of the HW NVM section
  * @pwr_tx_backoffs: translation table between power limits and backoffs
  *
  * We enable the driver to be backward compatible wrt. hardware features.

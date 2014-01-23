@@ -549,6 +549,7 @@ enum iwl_trans_state {
  *	starting the firmware, used for tracing
  * @rx_mpdu_cmd_hdr_size: used for tracing, amount of data before the
  *	start of the 802.11 header in the @rx_mpdu_cmd
+ * @dflt_pwr_limit: default power limit fetched from the platform (ACPI)
  */
 struct iwl_trans {
 	const struct iwl_trans_ops *ops;
