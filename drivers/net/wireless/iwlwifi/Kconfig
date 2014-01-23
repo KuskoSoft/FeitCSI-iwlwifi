@@ -138,7 +138,7 @@ endmenu
 
 config IWLWIFI_BCAST_FILTERING
 	bool "Enable broadcast filtering"
-	depends on IWLWIFI
+	depends on IWLMVM
 	help
 	  Say Y here to enable default bcast filtering configuration.
 
