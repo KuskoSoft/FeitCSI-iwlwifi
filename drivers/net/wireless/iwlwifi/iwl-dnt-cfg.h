@@ -198,7 +198,6 @@ struct iwl_dnt_dispatch {
  * @dispatch: a pointer to dispatch
  */
 struct iwl_dnt {
-	struct iwl_usr_cfg *cfg;
 	struct device *dev;
 
 	u32 iwl_dnt_status;

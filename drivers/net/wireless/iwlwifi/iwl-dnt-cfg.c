@@ -129,12 +129,12 @@ static bool iwl_dnt_register_debugfs_entries(struct iwl_trans *trans,
 static bool iwl_dnt_configure_prepare_dma(struct iwl_dnt *dnt,
 					  struct iwl_trans *trans)
 {
-	struct iwl_usr_cfg *usr_cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
 
-	if (usr_cfg->dbm_destination_path != DMA || !usr_cfg->dbgm_mem_power)
+	if (dbg_cfg->dbm_destination_path != DMA || !dbg_cfg->dbgm_mem_power)
 		return true;
 
-	dnt->mon_buf_size = 0x800 << usr_cfg->dbgm_mem_power;
+	dnt->mon_buf_size = 0x800 << dbg_cfg->dbgm_mem_power;
 	dnt->mon_buf_cpu_addr =
 		dma_alloc_coherent(trans->dev, dnt->mon_buf_size,
 				   &dnt->mon_dma_addr, GFP_KERNEL);
@@ -150,12 +150,12 @@ static bool iwl_dnt_configure_prepare_dma(struct iwl_dnt *dnt,
 
 static bool iwl_dnt_validate_configuration(struct iwl_trans *trans)
 {
-	struct iwl_usr_cfg *usr_cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
 
 	if (!strcmp(trans->dev->bus->name, BUS_TYPE_PCI)) {
 		/* checking destination_path */
-		if (usr_cfg->dbm_destination_path != DMA &&
-		    usr_cfg->dbm_destination_path != MARBH) {
+		if (dbg_cfg->dbm_destination_path != DMA &&
+		    dbg_cfg->dbm_destination_path != MARBH) {
 			IWL_ERR(trans, "Invalid destination path for pci\n");
 			return false;
 		}
@@ -164,9 +164,9 @@ static bool iwl_dnt_validate_configuration(struct iwl_trans *trans)
 
 	if (!strcmp(trans->dev->bus->name, BUS_TYPE_IDI)) {
 		/* checking destination_path */
-		if (usr_cfg->dbm_destination_path != INTERFACE &&
-		    usr_cfg->dbm_destination_path != MARBH &&
-		    usr_cfg->dbm_destination_path != MIPI) {
+		if (dbg_cfg->dbm_destination_path != INTERFACE &&
+		    dbg_cfg->dbm_destination_path != MARBH &&
+		    dbg_cfg->dbm_destination_path != MIPI) {
 			IWL_ERR(trans, "Invalid destination path for idi\n");
 			return false;
 		}
@@ -175,13 +175,14 @@ static bool iwl_dnt_validate_configuration(struct iwl_trans *trans)
 
 	if (!strcmp(trans->dev->bus->name, BUS_TYPE_SDIO)) {
 		/* checking destination_path */
-		if (usr_cfg->dbm_destination_path != MARBH &&
-		    usr_cfg->dbm_destination_path != MIPI) {
+		if (dbg_cfg->dbm_destination_path != MARBH &&
+		    dbg_cfg->dbm_destination_path != MIPI) {
 			IWL_ERR(trans, "Invalid destination path for sdio\n");
 			return false;
 		}
 		return true;
 	}
+
 	return false;
 }
 
@@ -221,17 +222,17 @@ static int iwl_dnt_conf_monitor(struct iwl_trans *trans, u32 output,
 void iwl_dnt_start(struct iwl_trans *trans)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
-	struct iwl_usr_cfg *usr_cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
 
 	if (!dnt)
 		return;
 
 	if ((dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED) &&
-	    usr_cfg->dbg_conf_monitor_cmd_id)
+	    dbg_cfg->dbg_conf_monitor_cmd_id)
 		iwl_dnt_dev_if_start_monitor(dnt, trans);
 
 	if ((dnt->iwl_dnt_status & IWL_DNT_STATUS_UCODE_MSGS_CONFIGURED) &&
-	    usr_cfg->log_level_cmd_id)
+	    dbg_cfg->log_level_cmd_id)
 		iwl_dnt_dev_if_set_log_level(dnt, trans);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_start);
@@ -272,7 +273,6 @@ void iwl_dnt_init(struct iwl_trans *trans, struct dentry *dbgfs_dir)
 
 	trans->tmdev->dnt = dnt;
 
-	dnt->cfg = &trans->tmdev->usr_cfg;
 	dnt->dev = trans->dev;
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
@@ -316,7 +316,7 @@ IWL_EXPORT_SYMBOL(iwl_dnt_free);
 void iwl_dnt_configure(struct iwl_trans *trans)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
-	struct iwl_usr_cfg *usr_cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
 	bool is_conf_invalid;
 
 	if (!dnt)
@@ -328,7 +328,7 @@ void iwl_dnt_configure(struct iwl_trans *trans)
 	if (is_conf_invalid)
 		return;
 
-	switch (usr_cfg->dbm_destination_path) {
+	switch (dbg_cfg->dbm_destination_path) {
 	case DMA:
 		if (!dnt->mon_buf_cpu_addr) {
 			IWL_ERR(trans, "DMA buffer wasn't allocated\n");
@@ -339,9 +339,9 @@ void iwl_dnt_configure(struct iwl_trans *trans)
 	case INTERFACE:
 	case ICCM:
 	case MARBH:
-		iwl_dnt_conf_monitor(trans, usr_cfg->dnt_out_mode,
-				     usr_cfg->dbm_destination_path,
-				     usr_cfg->dbgm_enable_mode);
+		iwl_dnt_conf_monitor(trans, dbg_cfg->dnt_out_mode,
+				     dbg_cfg->dbm_destination_path,
+				     dbg_cfg->dbgm_enable_mode);
 		break;
 	default:
 		IWL_INFO(trans, "Invalid monitor type\n");

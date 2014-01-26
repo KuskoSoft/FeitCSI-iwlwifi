@@ -103,7 +103,7 @@ static void iwl_dnt_dev_if_configure_mipi(struct iwl_trans *trans)
 
 static void iwl_dnt_dev_if_configure_marbh(struct iwl_trans *trans)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 
 	iwl_trans_set_bits_mask(trans, cfg->dbg_marbh_conf_reg,
 				cfg->dbg_marbh_conf_mask,
@@ -114,7 +114,7 @@ static void iwl_dnt_dev_if_configure_dbgm_registers(struct iwl_trans *trans,
 						    u32 base_addr,
 						    u32 end_addr)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 
 	/* configuring monitor */
 	iwl_write_prph(trans, cfg->dbg_mon_buff_base_addr_reg_addr, base_addr);
@@ -143,7 +143,7 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 						    void *buffer,
 						    u32 buffer_size)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	u32 wr_ptr;
 	u8 *temp_buf = NULL;
 	/* FIXME send stop command to FW */
@@ -185,7 +185,7 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 						      u8 *buffer,
 						      u32 buffer_size)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	int buf_size_in_dwords, buf_index, i;
 	u32 wr_ptr, read_val;
 
@@ -264,11 +264,11 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 static int iwl_dnt_dev_if_send_dbgm(struct iwl_dnt *dnt,
 				    struct iwl_trans *trans)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	struct iwl_host_cmd host_cmd = {
 		.id = cfg->dbg_conf_monitor_cmd_id,
-		.data[0] = cfg->dbg_conf_monitor_host_command,
-		.len[0] = sizeof(cfg->dbg_conf_monitor_host_command),
+		.data[0] = cfg->dbg_conf_monitor_host_command.data,
+		.len[0] = cfg->dbg_conf_monitor_host_command.len,
 		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
 		.flags = CMD_SYNC | CMD_WANT_SKB,
 	};
@@ -287,10 +287,10 @@ static int iwl_dnt_dev_if_send_ldbg(struct iwl_dnt *dnt,
 				    struct iwl_trans *trans,
 				    int cmd_index)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	struct iwl_host_cmd host_cmd = {
 		.id = cfg->dbg_conf_monitor_cmd_id,
-		.data[0] = cfg->ldbg_cmd[cmd_index],
+		.data[0] = cfg->ldbg_cmd[cmd_index].data,
 		.len[0] = DNT_LDBG_CMD_SIZE,
 		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
 		.flags = CMD_SYNC | CMD_WANT_SKB,
@@ -303,7 +303,7 @@ static int iwl_dnt_dev_if_send_ldbg(struct iwl_dnt *dnt,
 int iwl_dnt_dev_if_start_monitor(struct iwl_dnt *dnt,
 				 struct iwl_trans *trans)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	int i, ret;
 
 	switch (cfg->dbgm_enable_mode) {
@@ -329,11 +329,11 @@ int iwl_dnt_dev_if_start_monitor(struct iwl_dnt *dnt,
 int iwl_dnt_dev_if_set_log_level(struct iwl_dnt *dnt,
 				 struct iwl_trans *trans)
 {
-	struct iwl_usr_cfg *cfg = &trans->tmdev->usr_cfg;
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	struct iwl_host_cmd host_cmd = {
 		.id = cfg->log_level_cmd_id,
-		.data[0] = cfg->log_level_cmd,
-		.len[0] = sizeof(cfg->log_level_cmd),
+		.data[0] = cfg->log_level_cmd.data,
+		.len[0] = cfg->log_level_cmd.len,
 		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
 		.flags = CMD_SYNC | CMD_WANT_SKB,
 	};

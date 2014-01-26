@@ -66,45 +66,6 @@
 #include <linux/types.h>
 
 
-struct iwl_usr_cfg {
-	u32 dnt_out_mode;
-	u32 dbm_destination_path;
-	u32 dbgm_enable_mode;
-	u32 dbgm_mem_power;
-	u32 dbg_flags;
-	u32 d0_is_usniffer;
-	u32 dbg_mon_sample_ctl_addr;
-	u32 dbg_mon_sample_ctl_val;
-	u32 dbg_mon_buff_base_addr_reg_addr;
-	u32 dbg_mon_buff_end_addr_reg_addr;
-	u32 dbg_mon_data_sel_ctl_addr;
-	u32 dbg_mon_data_sel_ctl_val;
-	u32 dbg_mon_mc_msk_addr;
-	u32 dbg_mon_mc_msk_val;
-	u32 dbg_mon_sample_mask_addr;
-	u32 dbg_mon_sample_mask_val;
-	u32 dbg_mon_start_mask_addr;
-	u32 dbg_mon_start_mask_val;
-	u32 dbg_mon_end_mask_addr;
-	u32 dbg_mon_end_mask_val;
-	u32 dbg_mon_end_threshold_addr;
-	u32 dbg_mon_end_threshold_val;
-	u32 dbg_mon_sample_period_addr;
-	u32 dbg_mon_sample_period_val;
-	u32 dbg_mon_wr_ptr_addr;
-	u32 dbg_mon_cyc_cnt_addr;
-	u32 dbg_mon_dmarb_rd_ctl_addr;
-	u32 dbg_mon_dmarb_rd_data_addr;
-	u8 dbg_conf_monitor_host_command[16];
-	u8 dbg_conf_monitor_cmd_id;
-	u8 ldbg_cmd[32][80];
-	u8 ldbg_cmd_nums;
-	u8 log_level_cmd[96];
-	u8 log_level_cmd_id;
-	u32 dbg_marbh_conf_reg;
-	u32 dbg_marbh_conf_mask;
-};
-
 struct iwl_test_trace {
 	u32 size;
 	u8 *cpu_addr;
@@ -132,7 +93,6 @@ struct iwl_tm_gnl_dev {
 	struct list_head list;
 	struct iwl_test tst;
 	struct iwl_dnt *dnt;
-	struct iwl_usr_cfg usr_cfg;
 	struct iwl_trans *trans;
 	const char *dev_name;
 };

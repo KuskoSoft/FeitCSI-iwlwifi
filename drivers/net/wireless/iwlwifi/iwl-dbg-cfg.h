@@ -155,6 +155,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_BINA(ldbg_cmd, 32)
 	IWL_DBG_CFG_NODEF(u8, log_level_cmd_id)
 	IWL_DBG_CFG_NODEF(u8, dbg_conf_monitor_cmd_id)
+	IWL_DBG_CFG_NODEF(u8, ldbg_cmd_nums)
 #endif /* CPTCFG_IWLWIFI_DEVICE_TESTMODE */
 #undef IWL_DBG_CFG
 #undef IWL_DBG_CFG_NODEF
