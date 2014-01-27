@@ -362,7 +362,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	else
 		hw->wiphy->flags &= ~WIPHY_FLAG_PS_ON_BY_DEFAULT;
 
-	if (0 && mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_SCHED_SCAN) {
+	if (mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_SCHED_SCAN) {
 		hw->wiphy->flags |= WIPHY_FLAG_SUPPORTS_SCHED_SCAN;
 		hw->wiphy->max_sched_scan_ssids = PROBE_OPTION_MAX;
 		hw->wiphy->max_match_sets = IWL_SCAN_MAX_PROFILES;
@@ -1446,6 +1446,8 @@ static int iwl_mvm_mac_hw_scan(struct ieee80211_hw *hw,
 			       struct cfg80211_scan_request *req)
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_notification_wait wait_scan_done;
+	static const u8 scan_done_notif[] = { SCAN_OFFLOAD_COMPLETE, };
 	int ret;
 
 	if (req->n_channels == 0 || req->n_channels > MAX_NUM_SCAN_CHANNELS)
@@ -1453,7 +1455,28 @@ static int iwl_mvm_mac_hw_scan(struct ieee80211_hw *hw,
 
 	mutex_lock(&mvm->mutex);
 
-	if (mvm->scan_status != IWL_MVM_SCAN_NONE) {
+	switch (mvm->scan_status) {
+	case IWL_MVM_SCAN_SCHED:
+		iwl_init_notification_wait(&mvm->notif_wait, &wait_scan_done,
+					   scan_done_notif,
+					   ARRAY_SIZE(scan_done_notif),
+					   NULL, NULL);
+		iwl_mvm_sched_scan_stop(mvm);
+		ret = iwl_wait_notification(&mvm->notif_wait,
+					    &wait_scan_done, HZ);
+		if (ret) {
+			ret = -EBUSY;
+			goto out;
+		}
+		/* iwl_mvm_rx_scan_offload_complete_notif() will be called
+		 * soon but will not reset the scan status as it won't be
+		 * IWL_MVM_SCAN_SCHED any more since we queue the next scan
+		 * immediately (below)
+		 */
+		break;
+	case IWL_MVM_SCAN_NONE:
+		break;
+	default:
 		ret = -EBUSY;
 		goto out;
 	}
