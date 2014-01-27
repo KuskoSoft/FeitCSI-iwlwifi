@@ -223,6 +223,9 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 	const char *name_pre = drv->cfg->fw_name_pre;
 	char tag[8];
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	iwl_dbg_cfg_load_ini(drv->trans->dev, &drv->trans->dbg_cfg);
+#endif
 	if (first) {
 		drv->fw_index = drv->cfg->ucode_api_max;
 		sprintf(tag, "%d", drv->fw_index);
@@ -238,6 +241,15 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 
 	snprintf(drv->firmware_name, sizeof(drv->firmware_name), "%s%s.ucode",
 		 name_pre, tag);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/*
+	 * Check if different uCode is required, according to configuration.
+	 * If so - overwrite existing firmware_name.
+	 */
+	if (drv->trans->dbg_cfg.d0_is_usniffer)
+		snprintf(drv->firmware_name, sizeof(drv->firmware_name),
+			 "usniffer-%s%s.ucode", name_pre, tag);
+#endif
 
 	IWL_DEBUG_INFO(drv, "attempting to load firmware %s'%s'\n",
 		       (drv->fw_index == UCODE_EXPERIMENTAL_INDEX)
@@ -1041,10 +1053,6 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 
 	/* We have our copies now, allow OS release its copies */
 	release_firmware(ucode_raw);
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-	iwl_dbg_cfg_load_ini(drv->trans->dev, &drv->trans->dbg_cfg);
-#endif
 
 	mutex_lock(&iwlwifi_opmode_table_mtx);
 	if (fw->mvm_fw)
