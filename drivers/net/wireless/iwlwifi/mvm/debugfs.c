@@ -644,8 +644,8 @@ static ssize_t iwl_dbgfs_bcast_filters_read(struct file *file,
 				 j, attr->offset,
 				 attr->offset_type ? "IP End" :
 						     "Payload Start",
-				 le32_to_cpu(attr->mask),
-				 le32_to_cpu(attr->val),
+				 be32_to_cpu(attr->mask),
+				 be32_to_cpu(attr->val),
 				 le16_to_cpu(attr->reserved1));
 		}
 	}
@@ -685,8 +685,8 @@ static ssize_t iwl_dbgfs_bcast_filters_write(struct iwl_mvm *mvm, char *buf,
 			   &mask, &value, &next_pos) != 4)
 			return -EINVAL;
 
-		attr->mask = cpu_to_le32(mask);
-		attr->val = cpu_to_le32(value);
+		attr->mask = cpu_to_be32(mask);
+		attr->val = cpu_to_be32(value);
 		if (mask)
 			filter.num_attrs++;
 

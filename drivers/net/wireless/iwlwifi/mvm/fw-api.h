@@ -1187,8 +1187,8 @@ struct iwl_fw_bcast_filter_attr {
 	u8 offset_type;
 	u8 offset;
 	__le16 reserved1;
-	__le32 val;
-	__le32 mask;
+	__be32 val;
+	__be32 mask;
 } __packed; /* BCAST_FILTER_ATT_S_VER_1 */
 
 /**

@@ -159,8 +159,8 @@ static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
 				.offset_type =
 					BCAST_FILTER_OFFSET_PAYLOAD_START,
 				.offset = sizeof(rfc1042_header),
-				.val = cpu_to_le32(0x08060001),
-				.mask = cpu_to_le32(0xffffffff),
+				.val = cpu_to_be32(0x08060001),
+				.mask = cpu_to_be32(0xffffffff),
 			},
 			{
 				/* arp dest ip */
@@ -170,7 +170,7 @@ static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
 					  sizeof(struct arphdr) +
 					  ETH_ALEN + sizeof(__be32) +
 					  ETH_ALEN,
-				.mask = cpu_to_le32(0xffffffff),
+				.mask = cpu_to_be32(0xffffffff),
 				/* mark it as special field */
 				.reserved1 = cpu_to_le16(BC_FILTER_MAGIC_IP),
 			},
@@ -185,14 +185,14 @@ static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
 				/* udp dest port - 68 (bootp client)*/
 				.offset_type = BCAST_FILTER_OFFSET_IP_END,
 				.offset = offsetof(struct udphdr, dest),
-				.val = cpu_to_le32(0x00440000),
-				.mask = cpu_to_le32(0xffff0000),
+				.val = cpu_to_be32(0x00440000),
+				.mask = cpu_to_be32(0xffff0000),
 			},
 			{
 				/* dhcp - lsb bytes of client hw address */
 				.offset_type = BCAST_FILTER_OFFSET_IP_END,
 				.offset = 38,
-				.mask = cpu_to_le32(0xffffffff),
+				.mask = cpu_to_be32(0xffffffff),
 				/* mark it as special field */
 				.reserved1 = cpu_to_le16(BC_FILTER_MAGIC_MAC),
 			},
@@ -1031,23 +1031,17 @@ iwl_mvm_set_bcast_filter(struct ieee80211_vif *vif,
 			break;
 
 		switch (attr->reserved1) {
-		case cpu_to_le16(BC_FILTER_MAGIC_IP): {
-			u32 ip_addr;
-
+		case cpu_to_le16(BC_FILTER_MAGIC_IP):
 			if (vif->bss_conf.arp_addr_cnt != 1) {
 				attr->mask = 0;
 				continue;
 			}
 
-			ip_addr = be32_to_cpu(vif->bss_conf.arp_addr_list[0]);
-			attr->val = cpu_to_le32(ip_addr);
+			attr->val = vif->bss_conf.arp_addr_list[0];
 			break;
-		}
-		case cpu_to_le16(BC_FILTER_MAGIC_MAC): {
-			u32 lsb_mac = be32_to_cpu(*(__be32 *)&vif->addr[2]);
-			attr->val = cpu_to_le32(lsb_mac);
+		case cpu_to_le16(BC_FILTER_MAGIC_MAC):
+			attr->val = *(__be32 *)&vif->addr[2];
 			break;
-		}
 		default:
 			break;
 		}
