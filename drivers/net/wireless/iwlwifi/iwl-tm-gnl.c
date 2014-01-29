@@ -337,7 +337,7 @@ static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
 	if (!status)
 		return -ENOMEM;
 
-	*status = 0;
+	*status = dev->dnt->iwl_dnt_status;
 
 	data_out->data = status;
 	data_out->len = sizeof(__u32);
