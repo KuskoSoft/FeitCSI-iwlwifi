@@ -950,18 +950,19 @@ static void ieee80211_chswitch_work(struct work_struct *work)
 	if (!ifmgd->associated)
 		goto out;
 
-	mutex_lock(&local->mtx);
-	ret = ieee80211_vif_change_channel(sdata, &changed);
-	mutex_unlock(&local->mtx);
-	if (ret) {
-		sdata_info(sdata,
-			   "vif channel switch failed, disconnecting\n");
-		ieee80211_queue_work(&sdata->local->hw,
-				     &ifmgd->csa_connection_drop_work);
-		goto out;
-	}
-
+	/* TODO: update this when Michal's patches get applied */
 	if (!local->use_chanctx) {
+		mutex_lock(&local->mtx);
+		ret = ieee80211_vif_change_channel(sdata, &changed);
+		mutex_unlock(&local->mtx);
+		if (ret) {
+			sdata_info(sdata,
+				   "vif channel switch failed, disconnecting\n");
+			ieee80211_queue_work(&sdata->local->hw,
+					     &ifmgd->csa_connection_drop_work);
+			goto out;
+		}
+
 		local->_oper_chandef = sdata->csa_chandef;
 		/* Call "hw_config" only if doing sw channel switch.
 		 * Otherwise update the channel directly
@@ -970,6 +971,17 @@ static void ieee80211_chswitch_work(struct work_struct *work)
 			ieee80211_hw_config(local, 0);
 		else
 			local->hw.conf.chandef = local->_oper_chandef;
+	} else {
+		mutex_lock(&local->mtx);
+		ret = ieee80211_vif_use_reserved_context(sdata, &changed);
+		mutex_unlock(&local->mtx);
+		if (ret) {
+			sdata_info(sdata,
+				   "using reserved context during channel switch failed, disconnecting\n");
+			ieee80211_queue_work(&sdata->local->hw,
+					     &ifmgd->csa_connection_drop_work);
+			goto out;
+		}
 	}
 
 	/* XXX: shouldn't really modify cfg80211-owned data! */
@@ -1030,7 +1042,6 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	struct cfg80211_bss *cbss = ifmgd->associated;
-	struct ieee80211_chanctx *chanctx;
 	enum ieee80211_band current_band;
 	struct ieee80211_csa_ie csa_ie;
 	int res;
@@ -1071,40 +1082,25 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 		return;
 	}
 
-	mutex_lock(&local->chanctx_mtx);
-	if (local->use_chanctx) {
-		u32 num_chanctx = 0;
-		list_for_each_entry(chanctx, &local->chanctx_list, list)
-		       num_chanctx++;
-
-		if (num_chanctx > 1 ||
-		    !(local->hw.flags & IEEE80211_HW_CHANCTX_STA_CSA)) {
-			sdata_info(sdata,
-				   "not handling chan-switch with channel contexts\n");
-			ieee80211_queue_work(&local->hw,
-					     &ifmgd->csa_connection_drop_work);
-			mutex_unlock(&local->chanctx_mtx);
-			return;
-		}
-	}
-
-	if (WARN_ON(!rcu_access_pointer(sdata->vif.chanctx_conf))) {
-		ieee80211_queue_work(&local->hw,
-				     &ifmgd->csa_connection_drop_work);
-		mutex_unlock(&local->chanctx_mtx);
+	/* TODO: we don't support !use_chanctx with this patch, since
+	 * we don't need it internally.  This will be fixed when we
+	 * get Michal's patches from upstream.
+	 */
+	if (WARN_ONCE(!local->use_chanctx,
+		      "context reservation not supported with !use_chanctx drivers\n"))
 		return;
-	}
-	chanctx = container_of(rcu_access_pointer(sdata->vif.chanctx_conf),
-			       struct ieee80211_chanctx, conf);
-	if (ieee80211_chanctx_refcount(local, chanctx) > 1) {
+
+	mutex_lock(&local->mtx);
+	res = ieee80211_vif_reserve_chanctx(sdata, &csa_ie.chandef,
+					    IEEE80211_CHANCTX_SHARED, false);
+	mutex_unlock(&local->mtx);
+	if (res) {
 		sdata_info(sdata,
-			   "channel switch with multiple interfaces on the same channel, disconnecting\n");
+			   "reserving context for channel switch failed, disconnecting\n");
 		ieee80211_queue_work(&local->hw,
 				     &ifmgd->csa_connection_drop_work);
-		mutex_unlock(&local->chanctx_mtx);
 		return;
 	}
-	mutex_unlock(&local->chanctx_mtx);
 
 	sdata->csa_chandef = csa_ie.chandef;
 
