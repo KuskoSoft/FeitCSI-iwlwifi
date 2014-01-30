@@ -876,7 +876,7 @@ static ssize_t iwl_dbgfs_d0i3_refs_write(struct iwl_mvm *mvm, char *buf,
 
 	ret = kstrtoul(buf, 10, &value);
 	if (ret < 0)
-		return -EINVAL;
+		return ret;
 
 	mutex_lock(&mvm->mutex);
 
