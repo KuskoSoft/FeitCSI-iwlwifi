@@ -106,7 +106,7 @@
 #define DEVICE_SET_NMI_REG 0x00a01c30
 
 /*
- * Device reset (starting from family 8000)
+ * Device reset for family 8000
  * write to bit 24 in order to reset the CPU
 */
 #define RELEASE_CPU_RESET		(0x300C)
