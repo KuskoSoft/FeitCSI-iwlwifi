@@ -420,7 +420,6 @@ static void iwl_mvm_power_build_cmd(struct iwl_mvm *mvm,
 static int _iwl_mvm_power_mac_update_mode(struct iwl_mvm *mvm,
 					 struct ieee80211_vif *vif)
 {
-	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct iwl_mac_power_cmd cmd = {};
 
 	if (vif->type != NL80211_IFTYPE_STATION)
@@ -433,7 +432,7 @@ static int _iwl_mvm_power_mac_update_mode(struct iwl_mvm *mvm,
 	iwl_mvm_power_build_cmd(mvm, vif, &cmd);
 	iwl_mvm_power_log(mvm, &cmd);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-	memcpy(&mvmvif->mac_pwr_cmd, &cmd, sizeof(cmd));
+	memcpy(&iwl_mvm_vif_from_mac80211(vif)->mac_pwr_cmd, &cmd, sizeof(cmd));
 #endif
 
 	return iwl_mvm_send_cmd_pdu(mvm, MAC_PM_POWER_TABLE, CMD_SYNC,
