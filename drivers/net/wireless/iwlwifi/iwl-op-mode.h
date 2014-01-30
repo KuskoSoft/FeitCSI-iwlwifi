@@ -301,7 +301,6 @@ static inline int iwl_op_mode_resume(struct iwl_op_mode *op_mode)
 	return op_mode->ops->resume(op_mode);
 }
 #endif
-
 static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode *op_mode)
 {
 	might_sleep();
