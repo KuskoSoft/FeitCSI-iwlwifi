@@ -129,11 +129,57 @@ static void iwl_dnt_dev_if_configure_marbh(struct iwl_trans *trans)
 	}
 }
 
+static void iwl_dnt_dev_if_configure_dbgc_registers(struct iwl_trans *trans,
+						    u32 base_addr,
+						    u32 end_addr)
+{
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
+
+	switch (trans->tmdev->dnt->cur_mon_type) {
+	case MIPI:
+		iwl_write_prph(trans, cfg->dbgc_hb_base_addr,
+			       cfg->dbgc_hb_base_val_mipi);
+		iwl_write_prph(trans, cfg->dbgc_hb_end_addr,
+			       cfg->dbgc_hb_end_val_mipi);
+		break;
+
+	case SMEM:
+		iwl_write_prph(trans, cfg->dbgc_hb_base_addr,
+			       cfg->dbgc_hb_base_val_smem);
+		iwl_write_prph(trans, cfg->dbgc_hb_end_addr,
+			       cfg->dbgc_hb_end_val_smem);
+
+		/*
+		 * SMEM requires the same internal configuration as MARBH,
+		 * which preceeded it.
+		 */
+		iwl_dnt_dev_if_configure_marbh(trans);
+		break;
+
+	case DMA:
+	default:
+		/*
+		 * The given addresses are already shifted by 4 places so we
+		 * need to shift by another 4
+		 */
+		iwl_write_prph(trans, cfg->dbgc_hb_base_addr, base_addr >> 4);
+		iwl_write_prph(trans, cfg->dbgc_hb_end_addr, end_addr >> 4);
+		break;
+	};
+}
+
 static void iwl_dnt_dev_if_configure_dbgm_registers(struct iwl_trans *trans,
 						    u32 base_addr,
 						    u32 end_addr)
 {
 	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
+
+	/* If we're running a device that supports DBGC - use it */
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
+		iwl_dnt_dev_if_configure_dbgc_registers(trans, base_addr,
+							end_addr);
+		return;
+	}
 
 	/* configuring monitor */
 	iwl_write_prph(trans, cfg->dbg_mon_buff_base_addr_reg_addr, base_addr);
@@ -171,14 +217,22 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 		return -ENOMEM;
 	}
 
-	wr_ptr = iwl_read_prph(trans, cfg->dbg_mon_wr_ptr_addr);
+	/* If we're running a device that supports DBGC - use it */
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
+		wr_ptr = iwl_read_prph(trans, cfg->dbgc_dram_wrptr_addr);
+	else
+		wr_ptr = iwl_read_prph(trans, cfg->dbg_mon_wr_ptr_addr);
 	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
 	if (wr_ptr == 0x5a5a5a5a) {
 		IWL_ERR(trans, "Can't read write pointer\n");
 		return -ENODEV;
 	}
 
-	wr_ptr = (wr_ptr << 4) - dnt->mon_base_addr;
+	/* If we're running a device that supports DBGC.... */
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
+		wr_ptr = (wr_ptr - (dnt->mon_base_addr >> 6)) << 6;
+	else
+		wr_ptr = (wr_ptr << 4) - dnt->mon_base_addr;
 	temp_buf = kmemdup(dnt->mon_buf_cpu_addr, dnt->mon_buf_size,
 			   GFP_KERNEL);
 	if (!temp_buf)
@@ -258,9 +312,6 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		IWL_INFO(trans, "Monitor is disabled\n");
 		dnt->iwl_dnt_status &= ~IWL_DNT_STATUS_MON_CONFIGURED;
 		break;
-	case MIPI:
-		iwl_dnt_dev_if_configure_mipi(trans);
-		break;
 	case MARBH:
 		iwl_dnt_dev_if_configure_marbh(trans);
 		break;
@@ -272,6 +323,19 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		}
 		base_addr = dnt->mon_base_addr >> 4;
 		end_addr = dnt->mon_end_addr >> 4;
+		iwl_dnt_dev_if_configure_dbgm_registers(trans, base_addr,
+							end_addr);
+		break;
+	case MIPI:
+		base_addr = 0;
+		end_addr = 0;
+
+		/* If not working with DBGC... */
+		if (trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) {
+			iwl_dnt_dev_if_configure_mipi(trans);
+			break;
+		}
+	case SMEM:
 		iwl_dnt_dev_if_configure_dbgm_registers(trans, base_addr,
 							end_addr);
 		break;

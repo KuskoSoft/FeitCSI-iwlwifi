@@ -116,7 +116,8 @@ enum {
 	INTERFACE = BIT(1),
 	DMA = BIT(2),
 	MARBH = BIT(3),
-	ICCM = BIT(4)
+	ICCM = BIT(4),
+	SMEM = BIT(5)
 };
 
 /* monitor modes */

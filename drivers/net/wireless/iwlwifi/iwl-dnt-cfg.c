@@ -195,6 +195,14 @@ static int iwl_dnt_conf_monitor(struct iwl_trans *trans, u32 output,
 	} else {
 		dnt->dispatch.mon_out_mode = PULL;
 		dnt->dispatch.mon_in_mode = RETRIEVE;
+
+		/*
+		 * If we're running a device that supports DBGC and monitor
+		 * was given value as MARBH, it should be interpreted as SMEM
+		 */
+		if ((trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) &&
+		    (monitor_type == MARBH))
+			dnt->cur_mon_type = SMEM;
 	}
 	return iwl_dnt_dev_if_configure_monitor(dnt, trans);
 }
