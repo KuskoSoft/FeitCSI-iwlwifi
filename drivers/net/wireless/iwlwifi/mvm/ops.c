@@ -165,12 +165,24 @@ static void iwl_mvm_nic_config(struct iwl_op_mode *op_mode)
 	u8 radio_cfg_type, radio_cfg_step, radio_cfg_dash;
 	u32 reg_val = 0;
 
-	radio_cfg_type = (mvm->fw->phy_config & FW_PHY_CFG_RADIO_TYPE) >>
-			  FW_PHY_CFG_RADIO_TYPE_POS;
-	radio_cfg_step = (mvm->fw->phy_config & FW_PHY_CFG_RADIO_STEP) >>
-			  FW_PHY_CFG_RADIO_STEP_POS;
-	radio_cfg_dash = (mvm->fw->phy_config & FW_PHY_CFG_RADIO_DASH) >>
-			  FW_PHY_CFG_RADIO_DASH_POS;
+	if (mvm->trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) {
+		radio_cfg_type = (mvm->fw->phy_config &
+				  FW_PHY_CFG_RADIO_TYPE) >>
+				  FW_PHY_CFG_RADIO_TYPE_POS;
+		radio_cfg_step = (mvm->fw->phy_config &
+				  FW_PHY_CFG_RADIO_STEP) >>
+				  FW_PHY_CFG_RADIO_STEP_POS;
+		radio_cfg_dash = (mvm->fw->phy_config &
+				  FW_PHY_CFG_RADIO_DASH) >>
+				  FW_PHY_CFG_RADIO_DASH_POS;
+	} else {
+		radio_cfg_type =
+			NVM_RF_CFG_TYPE_MSK_FAMILY_8000(mvm->fw->phy_config);
+		radio_cfg_step =
+			NVM_RF_CFG_STEP_MSK_FAMILY_8000(mvm->fw->phy_config);
+		radio_cfg_dash =
+			NVM_RF_CFG_DASH_MSK_FAMILY_8000(mvm->fw->phy_config);
+	}
 
 	/* SKU control */
 	reg_val |= CSR_HW_REV_STEP(mvm->trans->hw_rev) <<

@@ -113,21 +113,6 @@ enum nvm_sku_bits {
 	NVM_SKU_CAP_11AC_ENABLE	= BIT(3),
 };
 
-/* radio config bits (actual values from NVM definition) */
-#define NVM_RF_CFG_DASH_MSK(x)   (x & 0x3)         /* bits 0-1   */
-#define NVM_RF_CFG_STEP_MSK(x)   ((x >> 2)  & 0x3) /* bits 2-3   */
-#define NVM_RF_CFG_TYPE_MSK(x)   ((x >> 4)  & 0x3) /* bits 4-5   */
-#define NVM_RF_CFG_PNUM_MSK(x)   ((x >> 6)  & 0x3) /* bits 6-7   */
-#define NVM_RF_CFG_TX_ANT_MSK(x) ((x >> 8)  & 0xF) /* bits 8-11  */
-#define NVM_RF_CFG_RX_ANT_MSK(x) ((x >> 12) & 0xF) /* bits 12-15 */
-
-#define NVM_RF_CFG_FLAVOR_MSK_FAMILY_8000(x)   (x & 0xF)
-#define NVM_RF_CFG_DASH_MSK_FAMILY_8000(x)   ((x >> 4) & 0xF)
-#define NVM_RF_CFG_STEP_MSK_FAMILY_8000(x)   ((x >> 8) & 0xF)
-#define NVM_RF_CFG_TYPE_MSK_FAMILY_8000(x)   ((x >> 12) & 0xFFF)
-#define NVM_RF_CFG_TX_ANT_MSK_FAMILY_8000(x) ((x >> 24) & 0xF)
-#define NVM_RF_CFG_RX_ANT_MSK_FAMILY_8000(x) ((x >> 28) & 0xF)
-
 /*
  * These are the channel numbers in the order that they are stored in the NVM
  */
