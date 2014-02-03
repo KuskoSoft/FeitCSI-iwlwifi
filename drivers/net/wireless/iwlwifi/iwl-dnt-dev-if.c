@@ -201,7 +201,7 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 	wr_ptr = (wr_ptr << 4) - dnt->mon_base_addr;
 	iwl_write_prph(trans, cfg->dbg_mon_dmarb_rd_ctl_addr, 0x00000001);
 
-	buf_size_in_dwords = 0x2000;
+	buf_size_in_dwords = dnt->mon_buf_size / sizeof(u32);
 	for (i = 0; i < buf_size_in_dwords; i++) {
 		/* reordering cyclic buffer */
 		buf_index = (wr_ptr + i) % buf_size_in_dwords;
@@ -229,6 +229,7 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		iwl_dnt_dev_if_configure_mipi(trans);
 		break;
 	case MARBH:
+		dnt->mon_buf_size = DNT_MARBH_BUF_SIZE;
 		iwl_dnt_dev_if_configure_marbh(trans);
 		break;
 	case DMA:

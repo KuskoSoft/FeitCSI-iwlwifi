@@ -71,6 +71,7 @@
 struct iwl_dnt;
 
 #define DNT_LDBG_CMD_SIZE	80
+#define DNT_MARBH_BUF_SIZE	(0x3cff * sizeof(u32))
 
 /**
  * iwl_dnt_dev_if_configure_monitor - configure monitor.

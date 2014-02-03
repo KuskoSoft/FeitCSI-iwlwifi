@@ -691,9 +691,6 @@ static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev *dev,
 static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev *dev,
 			     struct iwl_tm_data *data_out)
 {
-	if (!dev->dnt->mon_buf_cpu_addr)
-		return -EINVAL;
-
 	data_out->data =  kmalloc(dev->dnt->mon_buf_size, GFP_KERNEL);
 	if (!data_out->data)
 		return -ENOMEM;
