@@ -950,6 +950,18 @@ static void iwl_trans_pcie_configure(struct iwl_trans *trans,
 
 	trans_pcie->command_names = trans_cfg->command_names;
 	trans_pcie->bc_table_dword = trans_cfg->bc_table_dword;
+
+	/* Initialize NAPI here - it should be before registering to mac80211
+	 * in the opmode but after the HW struct is allocated.
+	 * As this function may be called again in some corner cases don't
+	 * do anything if NAPI was already initialized.
+	 */
+	if (!trans_pcie->napi.poll && trans->op_mode->ops->napi_add) {
+		init_dummy_netdev(&trans_pcie->napi_dev);
+		iwl_op_mode_napi_add(trans->op_mode, &trans_pcie->napi,
+				     &trans_pcie->napi_dev, iwl_pcie_napi_poll,
+				     64);
+	}
 }
 
 void iwl_trans_pcie_free(struct iwl_trans *trans)
