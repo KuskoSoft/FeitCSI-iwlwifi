@@ -71,7 +71,7 @@ enum wkp_nvm_offsets {
 	/* NVM HW-Section offset (in words) definitions */
 	HW_ADDR = 0x15,
 
-/* NVM SW-Section offset (in words) definitions */
+	/* NVM SW-Section offset (in words) definitions */
 	NVM_SW_SECTION = 0x1C0,
 	NVM_VERSION = 0,
 	RADIO_CFG = 1,
@@ -79,7 +79,7 @@ enum wkp_nvm_offsets {
 	N_HW_ADDRS = 3,
 	NVM_CHANNELS = 0x1E0 - NVM_SW_SECTION,
 
-/* NVM calibration section offset (in words) definitions */
+	/* NVM calibration section offset (in words) definitions */
 	NVM_CALIB_SECTION = 0x2B8,
 	XTAL_CALIB = 0x316 - NVM_CALIB_SECTION
 };
