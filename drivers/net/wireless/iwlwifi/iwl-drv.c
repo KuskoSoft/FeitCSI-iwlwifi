@@ -241,7 +241,7 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 
 	snprintf(drv->firmware_name, sizeof(drv->firmware_name), "%s%s.ucode",
 		 name_pre, tag);
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	/*
 	 * Check if different uCode is required, according to configuration.
 	 * If so - overwrite existing firmware_name.
