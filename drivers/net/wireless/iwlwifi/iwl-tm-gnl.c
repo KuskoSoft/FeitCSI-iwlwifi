@@ -691,13 +691,18 @@ static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev *dev,
 static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev *dev,
 			     struct iwl_tm_data *data_out)
 {
+	int ret;
+
 	data_out->data =  kmalloc(dev->dnt->mon_buf_size, GFP_KERNEL);
 	if (!data_out->data)
 		return -ENOMEM;
 
 	data_out->len = dev->dnt->mon_buf_size;
-	return iwl_dnt_dispatch_pull(dev->trans, data_out->data,
-				     dev->dnt->mon_buf_size, MONITOR);
+	ret = iwl_dnt_dispatch_pull(dev->trans, data_out->data,
+				    dev->dnt->mon_buf_size, MONITOR);
+	if (ret)
+		kfree(data_out->data);
+	return ret;
 }
 
 /**
