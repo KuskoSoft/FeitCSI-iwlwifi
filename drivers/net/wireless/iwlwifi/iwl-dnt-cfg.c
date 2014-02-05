@@ -152,36 +152,16 @@ static bool iwl_dnt_validate_configuration(struct iwl_trans *trans)
 {
 	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
 
-	if (!strcmp(trans->dev->bus->name, BUS_TYPE_PCI)) {
-		/* checking destination_path */
-		if (dbg_cfg->dbm_destination_path != DMA &&
-		    dbg_cfg->dbm_destination_path != MARBH) {
-			IWL_ERR(trans, "Invalid destination path for pci\n");
-			return false;
-		}
-		return true;
-	}
-
-	if (!strcmp(trans->dev->bus->name, BUS_TYPE_IDI)) {
-		/* checking destination_path */
-		if (dbg_cfg->dbm_destination_path != INTERFACE &&
-		    dbg_cfg->dbm_destination_path != MARBH &&
-		    dbg_cfg->dbm_destination_path != MIPI) {
-			IWL_ERR(trans, "Invalid destination path for idi\n");
-			return false;
-		}
-		return true;
-	}
-
-	if (!strcmp(trans->dev->bus->name, BUS_TYPE_SDIO)) {
-		/* checking destination_path */
-		if (dbg_cfg->dbm_destination_path != MARBH &&
-		    dbg_cfg->dbm_destination_path != MIPI) {
-			IWL_ERR(trans, "Invalid destination path for sdio\n");
-			return false;
-		}
-		return true;
-	}
+	if (!strcmp(trans->dev->bus->name, BUS_TYPE_PCI))
+		return dbg_cfg->dbm_destination_path == DMA ||
+		       dbg_cfg->dbm_destination_path == MARBH;
+	else if (!strcmp(trans->dev->bus->name, BUS_TYPE_IDI))
+		return dbg_cfg->dbm_destination_path == INTERFACE ||
+		       dbg_cfg->dbm_destination_path == MARBH ||
+		       dbg_cfg->dbm_destination_path == MIPI;
+	else if (!strcmp(trans->dev->bus->name, BUS_TYPE_SDIO))
+		return dbg_cfg->dbm_destination_path == MARBH ||
+		       dbg_cfg->dbm_destination_path == MIPI;
 
 	return false;
 }
