@@ -739,24 +739,12 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 			if (tlv_len != sizeof(u32))
 				goto invalid_tlv_len;
 			drv->fw.phy_config = le32_to_cpup((__le32 *)tlv_data);
-			if (drv->trans->cfg->device_family !=
-			    IWL_DEVICE_FAMILY_8000) {
-				drv->fw.valid_tx_ant = (
-						drv->fw.phy_config &
+			drv->fw.valid_tx_ant = (drv->fw.phy_config &
 						FW_PHY_CFG_TX_CHAIN) >>
 						FW_PHY_CFG_TX_CHAIN_POS;
-				drv->fw.valid_rx_ant = (
-						drv->fw.phy_config &
+			drv->fw.valid_rx_ant = (drv->fw.phy_config &
 						FW_PHY_CFG_RX_CHAIN) >>
 						FW_PHY_CFG_RX_CHAIN_POS;
-			} else {
-				drv->fw.valid_tx_ant =
-					NVM_RF_CFG_TX_ANT_MSK_FAMILY_8000(
-							drv->fw.phy_config);
-				drv->fw.valid_rx_ant =
-					NVM_RF_CFG_RX_ANT_MSK_FAMILY_8000(
-							drv->fw.phy_config);
-			}
 			break;
 		 case IWL_UCODE_TLV_SECURE_SEC_RT:
 			iwl_store_ucode_sec(pieces, tlv_data, IWL_UCODE_REGULAR,
