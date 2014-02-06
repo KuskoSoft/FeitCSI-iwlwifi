@@ -709,7 +709,7 @@ static int iwl_pcie_rx_handle(struct iwl_trans *trans, int budget)
 	int handled = 0;
 
 restart:
-	spin_lock_bh(&rxq->lock);
+	spin_lock(&rxq->lock);
 	/* uCode's read index (stored in shared DRAM) indicates the last Rx
 	 * buffer that the driver may process (last buffer filled by ucode). */
 	r = le16_to_cpu(ACCESS_ONCE(rxq->rb_stts->closed_rb_num)) & 0x0FFF;
@@ -745,7 +745,7 @@ restart:
 			count++;
 			if (count >= 8) {
 				rxq->read = i;
-				spin_unlock_bh(&rxq->lock);
+				spin_unlock(&rxq->lock);
 				iwl_pcie_rx_replenish_now(trans);
 				count = 0;
 				goto restart;
@@ -755,7 +755,7 @@ restart:
 
 	/* Backtrack one entry */
 	rxq->read = i;
-	spin_unlock_bh(&rxq->lock);
+	spin_unlock(&rxq->lock);
 
 	if (fill_rx)
 		iwl_pcie_rx_replenish_now(trans);
@@ -1089,6 +1089,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 
 		isr_stats->rx++;
 
+		local_bh_disable();
 		if (trans_pcie->napi.poll &&
 		    napi_schedule_prep(&trans_pcie->napi)) {
 			/* Disable RX interrupts while NAPI is scheduled.
@@ -1101,12 +1102,11 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 				    trans_pcie->inta_mask &
 					~(CSR_INT_BIT_FH_RX |
 					  CSR_INT_BIT_SW_RX));
-			local_bh_disable();
 			__napi_schedule(&trans_pcie->napi);
-			local_bh_enable();
 		} else {
 			iwl_pcie_rx_handle(trans, RX_QUEUE_SIZE);
 		}
+		local_bh_enable();
 	}
 
 	/* This "Tx" DMA channel is used only for loading uCode */
