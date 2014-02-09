@@ -629,3 +629,20 @@ int iwl_mvm_update_low_latency(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	return iwl_mvm_power_update_mac(mvm, vif);
 }
+
+void iwl_mvm_set_wowlan_qos_seq(struct iwl_mvm_sta *mvm_ap_sta,
+				struct iwl_wowlan_config_cmd *cmd)
+{
+	int i;
+
+	/*
+	 * For QoS counters, we store the one to use next, so subtract 0x10
+	 * since the uCode will add 0x10 *before* using the value while we
+	 * increment after using the value (i.e. store the next value to use).
+	 */
+	for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
+		u16 seq = mvm_ap_sta->tid_data[i].seq_number;
+		seq -= 0x10;
+		cmd->qos_seq[i] = cpu_to_le16(seq);
+	}
+}
