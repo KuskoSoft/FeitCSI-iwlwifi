@@ -80,7 +80,6 @@ enum iwl_power_level {
 };
 
 #define IWL_DISABLE_HT_ALL	BIT(0)
-#define IWL_DISABLE_HT_TXAGG	BIT(1)
 #define IWL_DISABLE_HT_RXAGG	BIT(2)
 
 /**
