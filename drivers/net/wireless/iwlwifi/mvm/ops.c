@@ -100,7 +100,7 @@ MODULE_LICENSE("GPL");
 static const struct iwl_op_mode_ops iwl_mvm_ops;
 
 struct iwl_mvm_mod_params iwlmvm_mod_params = {
-	.power_scheme = IWL_POWER_SCHEME_BPS,
+	.power_scheme = CPTCFG_IWLMVM_POWER_SCHEME,
 	/* rest of fields are 0 by default */
 };
 
