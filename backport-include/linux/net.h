@@ -41,4 +41,9 @@ do {								\
 	net_ratelimited_function(pr_debug, fmt, ##__VA_ARGS__)
 #endif
 
+#ifndef DECLARE_SOCKADDR
+#define DECLARE_SOCKADDR(type, dst, src)	\
+	type dst = ({ __sockaddr_check_size(sizeof(*dst)); (type) src; })
+#endif
+
 #endif /* __BACKPORT_LINUX_NET_H */

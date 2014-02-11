@@ -7,4 +7,8 @@
 #define ARPHRD_IEEE802154_MONITOR 805	/* IEEE 802.15.4 network monitor */
 #endif
 
+#ifndef ARPHRD_6LOWPAN
+#define ARPHRD_6LOWPAN	825		/* IPv6 over LoWPAN             */
+#endif
+
 #endif /* _BACKPORTS_LINUX_AF_ARP_H */

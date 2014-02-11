@@ -33,4 +33,12 @@
 #define IFF_LIVE_ADDR_CHANGE 0x100000
 #endif
 
+#ifndef IFF_SUPP_NOFCS
+#define IFF_SUPP_NOFCS	0x80000		/* device supports sending custom FCS */
+#endif
+
+#ifndef IFF_UNICAST_FLT
+#define IFF_UNICAST_FLT	0x20000		/* Supports unicast filtering	*/
+#endif
+
 #endif	/* _BACKPORT_LINUX_IF_H */

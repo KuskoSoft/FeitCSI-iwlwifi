@@ -13,4 +13,9 @@
 #endif
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0))
+#define compat_put_timespec LINUX_BACKPORT(compat_put_timespec)
+extern int compat_put_timespec(const struct timespec *, void __user *);
+#endif
+
 #endif /* __BACKPORT_COMPAT_H */

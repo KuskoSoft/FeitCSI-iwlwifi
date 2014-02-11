@@ -194,15 +194,14 @@ static int fq_codel_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 
 	if (list_empty(&flow->flowchain)) {
 		list_add_tail(&flow->flowchain, &q->new_flows);
-		codel_vars_init(&flow->cvars);
 		q->new_flow_count++;
 		flow->deficit = q->quantum;
 		flow->dropped = 0;
 	}
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,39))
-	if (++sch->q.qlen < q->limit)
+	if (++sch->q.qlen <= q->limit)
 #else
-	if (++sch->q.qlen < sch->limit)
+	if (++sch->q.qlen <= sch->limit)
 #endif
 		return NET_XMIT_SUCCESS;
 
@@ -414,7 +413,7 @@ static int fq_codel_init(struct Qdisc *sch, struct nlattr *opt)
 #endif
 	q->flows_cnt = 1024;
 	q->quantum = psched_mtu(qdisc_dev(sch));
-	q->perturbation = net_random();
+	q->perturbation = prandom_u32();
 	INIT_LIST_HEAD(&q->new_flows);
 	INIT_LIST_HEAD(&q->old_flows);
 	codel_params_init(&q->cparams);
@@ -441,6 +440,7 @@ static int fq_codel_init(struct Qdisc *sch, struct nlattr *opt)
 			struct fq_codel_flow *flow = q->flows + i;
 
 			INIT_LIST_HEAD(&flow->flowchain);
+			codel_vars_init(&flow->cvars);
 		}
 	}
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,39))

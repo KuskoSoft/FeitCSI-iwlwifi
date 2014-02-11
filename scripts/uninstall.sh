@@ -11,7 +11,7 @@ else
 fi
 
 for driver in $(find ${BACKPORT_PWD} -type f -name *.ko); do
-	mod_name=${KLIB}${KMODDIR}/${driver}${compr}
+	mod_name=${driver/${BACKPORT_PWD}/${KLIB}${KMODDIR}}${compr}
 	echo "  uninstall" $mod_name
 	rm -f $mod_name
 done

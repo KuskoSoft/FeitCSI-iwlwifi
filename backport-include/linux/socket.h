@@ -10,4 +10,9 @@
 #define SOL_NFC		280
 #endif
 
+#ifndef __sockaddr_check_size
+#define __sockaddr_check_size(size)	\
+	BUILD_BUG_ON(((size) > sizeof(struct __kernel_sockaddr_storage)))
+#endif
+
 #endif /* __BACKPORT_SOCKET_H */

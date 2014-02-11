@@ -35,6 +35,7 @@ obj-$(CPTCFG_WLAN) += drivers/net/wireless/
 #obj-$(CPTCFG_MEDIA_SUPPORT) += drivers/media/
 #
 #obj-$(CPTCFG_IEEE802154) += net/ieee802154/
+#obj-$(CPTCFG_BT) += net/ieee802154/
 #obj-$(CPTCFG_MAC802154) += net/mac802154/
 #obj-$(CPTCFG_IEEE802154) += drivers/net/ieee802154/
 #

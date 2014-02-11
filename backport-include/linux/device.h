@@ -211,7 +211,22 @@ static void init_##_name##_attrs(void)				\
 				      attr);				\
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+#ifndef __ATTRIBUTE_GROUPS
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
+#define __ATTRIBUTE_GROUPS(_name)				\
+static const struct attribute_group *_name##_groups[] = {	\
+	&_name##_group,						\
+	NULL,							\
+}
+#else
+#define __ATTRIBUTE_GROUPS(_name)				\
+static struct attribute_group *_name##_groups[] = {		\
+	&_name##_group,						\
+	NULL,							\
+}
+#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31)) */
+#endif /* __ATTRIBUTE_GROUPS */
+
 #undef ATTRIBUTE_GROUPS
 #define ATTRIBUTE_GROUPS(_name)					\
 static const struct attribute_group _name##_group = {		\
@@ -219,7 +234,6 @@ static const struct attribute_group _name##_group = {		\
 };								\
 static inline void init_##_name##_attrs(void) {}		\
 __ATTRIBUTE_GROUPS(_name)
-#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
 #define dev_get_platdata LINUX_BACKPORT(dev_get_platdata)
@@ -227,6 +241,10 @@ static inline void *dev_get_platdata(const struct device *dev)
 {
 	return dev->platform_data;
 }
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#define devm_kmalloc(dev, size, flags) devm_kzalloc(dev, size, flags) 
 #endif
 
 #endif /* __BACKPORT_DEVICE_H */

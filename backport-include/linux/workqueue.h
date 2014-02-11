@@ -117,4 +117,10 @@ static inline void flush_delayed_work(struct delayed_work *dwork)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)
+/* power efficient workqueues were added in commit 0668106ca386. */
+#define system_power_efficient_wq system_wq
+#define system_freezable_power_efficient_wq system_freezable_wq
+#endif
+
 #endif /* __BACKPORT_LINUX_WORKQUEUE_H */

@@ -11,6 +11,8 @@
 #include <linux/fs.h>
 #include <linux/module.h>
 #include <linux/wait.h>
+#include <linux/compat.h>
+#include <asm/uaccess.h>
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0))
 #include <linux/regmap.h>
@@ -179,3 +181,21 @@ int simple_open(struct inode *inode, struct file *file)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(simple_open);
+
+#ifdef CONFIG_COMPAT
+static int __compat_put_timespec(const struct timespec *ts, struct compat_timespec __user *cts)
+{
+	return (!access_ok(VERIFY_WRITE, cts, sizeof(*cts)) ||
+			__put_user(ts->tv_sec, &cts->tv_sec) ||
+			__put_user(ts->tv_nsec, &cts->tv_nsec)) ? -EFAULT : 0;
+}
+
+int compat_put_timespec(const struct timespec *ts, void __user *uts)
+{
+	if (COMPAT_USE_64BIT_TIME)
+		return copy_to_user(uts, ts, sizeof *ts) ? -EFAULT : 0;
+	else
+		return __compat_put_timespec(ts, uts);
+}
+EXPORT_SYMBOL_GPL(compat_put_timespec);
+#endif

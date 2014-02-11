@@ -47,8 +47,7 @@ struct net_device_ops {
 	netdev_tx_t		(*ndo_start_xmit) (struct sk_buff *skb,
 						   struct net_device *dev);
 	u16			(*ndo_select_queue)(struct net_device *dev,
-						    struct sk_buff *skb,
-						    void *accel_priv);
+						    struct sk_buff *skb);
 	void			(*ndo_change_rx_flags)(struct net_device *dev,
 						       int flags);
 	void			(*ndo_set_rx_mode)(struct net_device *dev);
@@ -474,6 +473,14 @@ struct net *dev_net(const struct net_device *dev)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)
 #define netdev_notifier_info_to_dev(ndev) ndev
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34) && \
+    LINUX_VERSION_CODE != KERNEL_VERSION(2,6,32)
+/* there is no equivalent function to update arp table */
+#define netdev_notify_peers(dev)
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#define netdev_notify_peers(dev) netif_notify_peers(dev)
 #endif
 
 #endif /* __BACKPORT_NETDEVICE_H */

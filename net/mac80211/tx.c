@@ -878,7 +878,7 @@ static int ieee80211_fragment(struct ieee80211_tx_data *tx,
 	}
 
 	/* adjust first fragment's length */
-	skb->len = hdrlen + per_fragm;
+	skb_trim(skb, hdrlen + per_fragm);
 	return 0;
 }
 
@@ -1517,7 +1517,7 @@ void ieee80211_xmit(struct ieee80211_sub_if_data *sdata, struct sk_buff *skb,
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27))
 	/* Older kernels do not have the select_queue callback */
-	skb_set_queue_mapping(skb, ieee80211_select_queue(sdata, skb, NULL));
+	skb_set_queue_mapping(skb, ieee80211_select_queue(sdata, skb));
 #endif
 	ieee80211_set_qos_hdr(sdata, skb);
 	ieee80211_tx(sdata, skb, false, band);

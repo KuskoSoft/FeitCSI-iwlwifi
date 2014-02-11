@@ -97,16 +97,6 @@ config BACKPORT_BUILD_CORDIC
 config BACKPORT_CORDIC
 	bool
 
-config BACKPORT_BUILD_CRC8
-	tristate
-	depends on m
-	depends on !CRC8
-	default m if BACKPORT_CRC8
-	default m if BACKPORT_USERSEL_BUILD_ALL
-
-config BACKPORT_CRC8
-	bool
-
 config BACKPORT_BUILD_GENERIC_ATOMIC64
 	bool
 	default y if !64BIT && !GENERIC_ATOMIC64
@@ -161,7 +151,7 @@ config BACKPORT_BUILD_DMA_SHARED_HELPERS
 
 config BACKPORT_BUILD_LEDS
 	bool
-	depends on !NEW_LEDS || !LEDS_CLASS || !LEDS_TRIGGERS
+	depends on !NEW_LEDS || LEDS_CLASS=n || !LEDS_TRIGGERS
 	default y if BACKPORT_NEW_LEDS
 	default y if BACKPORT_LEDS_CLASS
 	default y if BACKPORT_LEDS_TRIGGERS

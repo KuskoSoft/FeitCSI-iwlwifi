@@ -21,4 +21,7 @@
         (config_enabled(option) || config_enabled(option##_MODULE))
 #endif
 
+#undef IS_BUILTIN
+#define IS_BUILTIN(option) config_enabled(option)
+
 #endif

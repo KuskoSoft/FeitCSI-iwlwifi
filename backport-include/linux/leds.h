@@ -28,6 +28,7 @@
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37) && \
     !defined(CPTCFG_BACKPORT_BUILD_LEDS)
+#define led_blink_set LINUX_BACKPORT(led_blink_set)
 extern void led_blink_set(struct led_classdev *led_cdev,
 			  unsigned long *delay_on,
 			  unsigned long *delay_off);

@@ -99,6 +99,10 @@ struct led_trigger {
 #define led_trigger_register LINUX_BACKPORT(led_trigger_register)
 #undef led_trigger_unregister
 #define led_trigger_unregister LINUX_BACKPORT(led_trigger_unregister)
+#undef led_trigger_register_simple
+#define led_trigger_register_simple LINUX_BACKPORT(led_trigger_register_simple)
+#undef led_trigger_unregister_simple
+#define led_trigger_unregister_simple LINUX_BACKPORT(led_trigger_unregister_simple)
 #undef led_trigger_event
 #define led_trigger_event LINUX_BACKPORT(led_trigger_event)
 
@@ -112,6 +116,15 @@ static inline int led_classdev_register(struct device *parent,
 }
 
 static inline void led_classdev_unregister(struct led_classdev *led_cdev)
+{
+}
+
+static inline void led_trigger_register_simple(const char *name,
+					       struct led_trigger **trigger)
+{
+}
+
+static inline void led_trigger_unregister_simple(struct led_trigger *trigger)
 {
 }
 
@@ -148,6 +161,19 @@ static inline void led_trigger_unregister(struct led_trigger *trigger)
 
 static inline void led_trigger_event(struct led_trigger *trigger,
 				     enum led_brightness event)
+{
+}
+
+static inline void led_trigger_blink(struct led_trigger *trigger,
+				     unsigned long *delay_on,
+				     unsigned long *delay_off)
+{
+}
+
+static inline void led_trigger_blink_oneshot(struct led_trigger *trigger,
+					     unsigned long *delay_on,
+					     unsigned long *delay_off,
+					     int invert)
 {
 }
 #endif

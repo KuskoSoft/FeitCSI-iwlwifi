@@ -1,8 +1,10 @@
+#ifndef __BACKPORT_LINUX_U64_STATS_SYNC_H
+#define __BACKPORT_LINUX_U64_STATS_SYNC_H
+
+#include <linux/version.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
 #include_next <linux/u64_stats_sync.h>
 #else
-#ifndef _LINUX_U64_STATS_SYNC_H
-#define _LINUX_U64_STATS_SYNC_H
 
 /*
  * To properly implement 64bits network statistics on 32bit and 64bit hosts,
@@ -140,5 +142,14 @@ static inline bool u64_stats_fetch_retry_bh(const struct u64_stats_sync *syncp,
 #endif
 }
 
-#endif /* _LINUX_U64_STATS_SYNC_H */
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#if BITS_PER_LONG == 32 && defined(CONFIG_SMP)
+# define u64_stats_init(syncp)	seqcount_init(syncp.seq)
+#else
+# define u64_stats_init(syncp)	do { } while (0)
+#endif
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) */
+
+#endif /* __BACKPORT_LINUX_U64_STATS_SYNC_H */

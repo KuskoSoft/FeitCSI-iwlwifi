@@ -1029,7 +1029,12 @@ static void ieee80211_set_multicast_list(struct net_device *dev)
 		sdata->flags ^= IEEE80211_SDATA_PROMISC;
 	}
 	spin_lock_bh(&local->filter_lock);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	__hw_addr_sync(&local->mc_list, &dev->mc, dev->addr_len);
+#else
+	__dev_addr_sync(&local->mc_list, &local->mc_count,
+			&dev->mc_list, &dev->mc_count);
+#endif
 	spin_unlock_bh(&local->filter_lock);
 	ieee80211_queue_work(&local->hw, &local->reconfig_filter);
 }
@@ -1060,12 +1065,13 @@ static void ieee80211_uninit(struct net_device *dev)
 	ieee80211_teardown_sdata(IEEE80211_DEV_TO_SUB_IF(dev));
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
 static u16 ieee80211_netdev_select_queue(struct net_device *dev,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14, 0)
-					 struct sk_buff *skb)
-#else
 					 struct sk_buff *skb,
 					 void *accel_priv)
+#else
+static u16 ieee80211_netdev_select_queue(struct net_device *dev,
+					 struct sk_buff *skb)
 #endif
 {
 	return ieee80211_select_queue(IEEE80211_DEV_TO_SUB_IF(dev), skb);
@@ -1082,12 +1088,13 @@ static const struct net_device_ops ieee80211_dataif_ops = {
 	.ndo_select_queue	= ieee80211_netdev_select_queue,
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
 static u16 ieee80211_monitor_select_queue(struct net_device *dev,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14, 0)
-					 struct sk_buff *skb)
+					  struct sk_buff *skb,
+					  void *accel_priv)
 #else
-					 struct sk_buff *skb,
-					 void *accel_priv)
+static u16 ieee80211_monitor_select_queue(struct net_device *dev,
+					  struct sk_buff *skb)
 #endif
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);

@@ -125,4 +125,12 @@
 #define PCI_PM_CAP_PME_SHIFT	11
 #endif
 
+#ifndef PCI_SRIOV_VF_DID
+#define PCI_SRIOV_VF_DID	0x1a	/* VF Device ID */
+#endif
+
+#ifndef PCI_SRIOV_CTRL_VFE
+#define PCI_SRIOV_CTRL_VFE	0x01	/* VF Enable */
+#endif
+
 #endif /* __BACKPORT_UAPI_PCI_REGS_H */
