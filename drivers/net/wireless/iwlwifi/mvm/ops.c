@@ -453,6 +453,11 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	else
 		trans_cfg.queue_watchdog_timeout = IWL_WATCHDOG_DISABLED;
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (!iwlwifi_mod_params.wd_disable)
+		trans_cfg.queue_watchdog_timeout =
+			mvm->trans->dbg_cfg.MVM_WD_TIMEOUT;
+#endif
 	trans_cfg.command_names = iwl_mvm_cmd_strings;
 
 	trans_cfg.cmd_queue = IWL_MVM_CMD_QUEUE;
