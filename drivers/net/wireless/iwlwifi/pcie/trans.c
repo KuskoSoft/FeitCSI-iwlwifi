@@ -991,6 +991,9 @@ void iwl_trans_pcie_free(struct iwl_trans *trans)
 	pci_disable_device(trans_pcie->pci_dev);
 	kmem_cache_destroy(trans->dev_cmd_pool);
 
+	if (trans_pcie->napi.poll)
+		netif_napi_del(&trans_pcie->napi);
+
 	kfree(trans);
 }
 
