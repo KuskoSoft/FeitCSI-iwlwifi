@@ -2816,7 +2816,6 @@ static void rs_rate_init_stub(void *mvm_r,
 }
 
 static const struct rate_control_ops rs_mvm_ops = {
-	.module = NULL,
 	.name = RS_NAME,
 	.tx_status = rs_tx_status,
 	.get_rate = rs_get_rate,
