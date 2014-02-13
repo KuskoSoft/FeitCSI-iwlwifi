@@ -487,12 +487,20 @@ static int iwl_mvm_mac_ampdu_action(struct ieee80211_hw *hw,
 
 	switch (action) {
 	case IEEE80211_AMPDU_RX_START:
+		if (iwlwifi_mod_params.disable_11n & IWL_DISABLE_HT_RXAGG) {
+			ret = -EINVAL;
+			break;
+		}
 		ret = iwl_mvm_sta_rx_agg(mvm, sta, tid, *ssn, true);
 		break;
 	case IEEE80211_AMPDU_RX_STOP:
 		ret = iwl_mvm_sta_rx_agg(mvm, sta, tid, 0, false);
 		break;
 	case IEEE80211_AMPDU_TX_START:
+		if (iwlwifi_mod_params.disable_11n & IWL_DISABLE_HT_TXAGG) {
+			ret = -EINVAL;
+			break;
+		}
 		ret = iwl_mvm_sta_tx_agg_start(mvm, vif, sta, tid, ssn);
 		break;
 	case IEEE80211_AMPDU_TX_STOP_CONT:

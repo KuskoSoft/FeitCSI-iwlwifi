@@ -498,6 +498,8 @@ iwl_parse_nvm_data(struct device *dev, const struct iwl_cfg *cfg,
 	data->sku_cap_band_52GHz_enable = sku & NVM_SKU_CAP_BAND_52GHZ;
 	data->sku_cap_11n_enable = sku & NVM_SKU_CAP_11N_ENABLE;
 	data->sku_cap_11ac_enable = sku & NVM_SKU_CAP_11AC_ENABLE;
+	if (iwlwifi_mod_params.disable_11n & IWL_DISABLE_HT_ALL)
+		data->sku_cap_11n_enable = false;
 
 	/* check overrides (some devices have wrong NVM) */
 	if (cfg->valid_tx_ant)
