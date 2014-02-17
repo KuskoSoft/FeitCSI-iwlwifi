@@ -217,6 +217,7 @@ void iwl_dnt_start(struct iwl_trans *trans)
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_start);
 
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
 static int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans *trans, u32 output)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
@@ -240,12 +241,13 @@ static int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans *trans, u32 output)
 
 	return 0;
 }
+#endif
 
 void iwl_dnt_init(struct iwl_trans *trans, struct dentry *dbgfs_dir)
 {
 	struct iwl_dnt *dnt;
-	bool ret;
-	int err;
+	bool __maybe_unused ret;
+	int __maybe_unused err;
 
 	dnt = kzalloc(sizeof(struct iwl_dnt), GFP_KERNEL);
 	if (!dnt)
