@@ -148,13 +148,13 @@ struct dnt_collect_entry {
 /**
  * @list_read_ptr: list read pointer
  * @list_wr_ptr: list write pointer
- * @list_mutex: lock for the list
+ * @db_lock: lock for the list
  */
 struct dnt_collect_db {
 	struct dnt_collect_entry collect_array[IWL_DNT_ARRAY_SIZE];
 	unsigned int read_ptr;
 	unsigned int wr_ptr;
-	struct mutex db_mutex;	/*locks the array */
+	spinlock_t db_lock;	/*locks the array */
 };
 
 /**

@@ -82,7 +82,7 @@ struct dnt_collect_db *iwl_dnt_dispatch_allocate_collect_db(struct iwl_dnt *dnt)
 		return NULL;
 	}
 
-	mutex_init(&db->db_mutex);
+	spin_lock_init(&db->db_lock);
 
 	return db;
 }
@@ -104,7 +104,7 @@ static void iwl_dnt_dispatch_get_list_data(struct dnt_collect_db *db,
 	struct dnt_collect_entry *cur_entry;
 	int i, cur_index = 0;
 
-	mutex_lock(&db->db_mutex);
+	spin_lock_bh(&db->db_lock);
 	for (i = 0; i < ARRAY_SIZE(db->collect_array); i++) {
 		cur_index = (i + db->read_ptr) % IWL_DNT_ARRAY_SIZE;
 		cur_entry = &db->collect_array[cur_index];
@@ -118,7 +118,7 @@ static void iwl_dnt_dispatch_get_list_data(struct dnt_collect_db *db,
 	}
 
 	db->read_ptr = cur_index;
-	mutex_unlock(&db->db_mutex);
+	spin_unlock_bh(&db->db_lock);
 }
 
 /**
@@ -190,7 +190,7 @@ static int iwl_dnt_dispatch_collect_data(struct iwl_dnt *dnt,
 	u32 data_size;
 
 	data_size = GET_RX_PACKET_SIZE(pkt);
-	mutex_lock(&db->db_mutex);
+	spin_lock(&db->db_lock);
 	wr_entry = &db->collect_array[db->wr_ptr];
 
 	/*
@@ -209,15 +209,15 @@ static int iwl_dnt_dispatch_collect_data(struct iwl_dnt *dnt,
 	}
 
 	wr_entry->size = data_size;
-	wr_entry->data = kzalloc(data_size, GFP_KERNEL);
+	wr_entry->data = kzalloc(data_size, GFP_ATOMIC);
 	if (!wr_entry->data) {
-		mutex_unlock(&db->db_mutex);
+		spin_unlock(&db->db_lock);
 		return -ENOMEM;
 	}
 
 	memcpy(wr_entry->data, pkt->data, wr_entry->size);
 	db->wr_ptr = (db->wr_ptr + 1) % IWL_DNT_ARRAY_SIZE;
-	mutex_unlock(&db->db_mutex);
+	spin_unlock(&db->db_lock);
 
 	return 0;
 }
