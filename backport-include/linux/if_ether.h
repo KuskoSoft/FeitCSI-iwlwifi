@@ -31,4 +31,12 @@ int mac_pton(const char *s, u8 *mac);
 #define ETH_P_PAE 0x888E      /* Port Access Entity (IEEE 802.1X) */
 #endif
 
+#ifndef ETH_P_TEB
+#define ETH_P_TEB	0x6558		/* Trans Ether Bridging		*/
+#endif
+
+#ifndef ETH_P_8021AD
+#define ETH_P_8021AD	0x88A8          /* 802.1ad Service VLAN		*/
+#endif
+
 #endif /* __BACKPORT_IF_ETHER_H */

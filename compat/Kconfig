@@ -66,20 +66,25 @@ config BACKPORT_FW_LOADER
 	bool
 
 config BACKPORT_USERSEL_NET_SCH_CODEL
-	tristate "codel"
+	tristate "Controlled Delay AQM (CODEL)"
 	depends on m
 	depends on m
 	depends on !BACKPORT_KERNEL_2_6_25
 	default m if NET_SCH_CODEL=n
 	default m if BACKPORT_USERSEL_BUILD_ALL
+	#module-name sch_codel
+	#c-file net/sched/sch_codel.c
 
 config BACKPORT_USERSEL_NET_SCH_FQ_CODEL
-	tristate "FQ codel"
+	tristate "Fair Queue Controlled Delay AQM (FQ_CODEL)"
 	depends on m
 	depends on m
 	depends on !BACKPORT_KERNEL_2_6_25
 	default m if NET_SCH_FQ_CODEL=n
 	default m if BACKPORT_USERSEL_BUILD_ALL
+	#module-name sch_fq_codel
+	#c-file net/sched/sch_fq_codel.c
+	#c-file net/core/flow_dissector.c
 
 config BACKPORT_BUILD_KFIFO
 	def_bool y
@@ -88,11 +93,14 @@ config BACKPORT_BUILD_KFIFO
 	depends on BACKPORT_KERNEL_2_6_36
 
 config BACKPORT_BUILD_CORDIC
+	depends on n
 	tristate
 	depends on m
 	depends on !CORDIC
 	default m if BACKPORT_CORDIC
 	default m if BACKPORT_USERSEL_BUILD_ALL
+	#module-name cordic
+	#c-file lib/cordic.c
 
 config BACKPORT_CORDIC
 	bool
