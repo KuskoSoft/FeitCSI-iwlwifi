@@ -152,6 +152,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(u32, dbg_mon_dmarb_rd_data_addr)
 	IWL_DBG_CFG_NODEF(u32, dbg_marbh_conf_reg)
 	IWL_DBG_CFG_NODEF(u32, dbg_marbh_conf_mask)
+	IWL_DBG_CFG_NODEF(u32, dbg_marbh_access_type)
 	IWL_DBG_CFG_BIN(dbg_conf_monitor_host_command)
 	IWL_DBG_CFG_BIN(log_level_cmd)
 	IWL_DBG_CFG_BINA(ldbg_cmd, 32)

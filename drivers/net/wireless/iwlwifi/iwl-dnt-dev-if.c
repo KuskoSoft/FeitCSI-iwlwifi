@@ -104,10 +104,29 @@ static void iwl_dnt_dev_if_configure_mipi(struct iwl_trans *trans)
 static void iwl_dnt_dev_if_configure_marbh(struct iwl_trans *trans)
 {
 	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
+	u32 ret, reg_val = 0;
 
-	iwl_trans_set_bits_mask(trans, cfg->dbg_marbh_conf_reg,
-				cfg->dbg_marbh_conf_mask,
-				cfg->dbg_marbh_conf_mask);
+	if (cfg->dbg_marbh_access_type == ACCESS_TYPE_DIRECT) {
+		iwl_trans_set_bits_mask(trans, cfg->dbg_marbh_conf_reg,
+					cfg->dbg_marbh_conf_mask,
+					cfg->dbg_marbh_conf_mask);
+	} else if (cfg->dbg_marbh_access_type == ACCESS_TYPE_INDIRECT) {
+		ret = iwl_trans_read_mem(trans, cfg->dbg_marbh_conf_reg,
+					 &reg_val, 1);
+		if (ret) {
+			IWL_ERR(trans, "Failed to read MARBH conf reg\n");
+			return;
+		}
+		reg_val |= cfg->dbg_marbh_conf_mask;
+		ret = iwl_trans_write_mem(trans, cfg->dbg_marbh_conf_reg,
+							 &reg_val, 1);
+		if (ret) {
+			IWL_ERR(trans, "Failed to write MARBH conf reg\n");
+			return;
+		}
+	} else {
+		IWL_ERR(trans, "Invalid MARBH access type\n");
+	}
 }
 
 static void iwl_dnt_dev_if_configure_dbgm_registers(struct iwl_trans *trans,
