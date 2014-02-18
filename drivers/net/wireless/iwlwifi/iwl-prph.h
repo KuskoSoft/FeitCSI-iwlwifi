@@ -105,6 +105,14 @@
 /* Device NMI register */
 #define DEVICE_SET_NMI_REG 0x00a01c30
 
+/* General purpose APMG register */
+#define DEVICE_APMG_GP1_REG	0x00a101dc
+#define APMG_GP1_WF_XTAL_LP_EN	0x00000004
+
+#define DEVICE_APMG_DL_CFG_REG			0x00a101c4
+#define APMG_DL_CFG_RTCS_CLK_SELECTOR_MSK	0x000000c0
+#define APMG_DL_CFG_RTCS_CLK_INTERNAL_XTAL	0x00000080
+
 /*
  * Device reset for family 8000
  * write to bit 24 in order to reset the CPU

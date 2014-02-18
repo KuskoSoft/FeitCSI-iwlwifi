@@ -265,6 +265,24 @@ static void iwl_pcie_apm_stop(struct iwl_trans *trans)
 	udelay(10);
 
 	/*
+	 * Enable LP XTAL to avoid HW bug where device may consume much power if
+	 * FW is not loaded after device reset. LP XTAL is disabled by default
+	 * after device HW reset. Do it only if XTAL is fed by internal source.
+	 */
+	if (trans->cfg->lp_xtal_workaround) {
+		u32 source;
+
+		source = __iwl_read_prph(trans, DEVICE_APMG_DL_CFG_REG) &
+				APMG_DL_CFG_RTCS_CLK_SELECTOR_MSK;
+
+		if (source == APMG_DL_CFG_RTCS_CLK_INTERNAL_XTAL)
+			__iwl_write_prph(trans, DEVICE_APMG_GP1_REG,
+					 __iwl_read_prph(trans,
+							 DEVICE_APMG_GP1_REG) |
+						APMG_GP1_WF_XTAL_LP_EN);
+	}
+
+	/*
 	 * Clear "initialization complete" bit to move adapter from
 	 * D0A* (powered-up Active) --> D0U* (Uninitialized) state.
 	 */
