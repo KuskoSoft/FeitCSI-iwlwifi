@@ -25,6 +25,7 @@ enum nl80211_dfs_regions reg_get_dfs_region(struct wiphy *wiphy);
 
 int regulatory_hint_user(const char *alpha2,
 			 enum nl80211_user_reg_hint_type user_reg_hint_type);
+int regulatory_hint_indoor_user(void);
 
 int reg_device_uevent(struct device *dev, struct kobj_uevent_env *env);
 void wiphy_regulatory_register(struct wiphy *wiphy);
@@ -116,5 +117,10 @@ void regulatory_hint_disconnect(void);
  * 2 for UNII-2B, 3 for UNII-2C and 4 for UNII-3.
  */
 int cfg80211_get_unii(int freq);
+
+/**
+ * regulatory_indoor_allowed - is indoor operation allowed
+ */
+bool regulatory_indoor_allowed(void);
 
 #endif  /* __NET_WIRELESS_REG_H */
