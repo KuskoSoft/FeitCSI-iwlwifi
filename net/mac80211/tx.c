@@ -487,7 +487,8 @@ ieee80211_tx_h_unicast_ps_buf(struct ieee80211_tx_data *tx)
 		 * been queued to pending queue. No reordering can happen, go
 		 * ahead and Tx the packet.
 		 */
-		if (!test_sta_flag(sta, WLAN_STA_PS_STA)) {
+		if (!test_sta_flag(sta, WLAN_STA_PS_STA) &&
+		    !test_sta_flag(sta, WLAN_STA_PS_DRIVER)) {
 			spin_unlock(&sta->ps_lock);
 			return TX_CONTINUE;
 		}
