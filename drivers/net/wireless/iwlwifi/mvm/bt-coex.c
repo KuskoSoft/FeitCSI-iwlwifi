@@ -594,8 +594,6 @@ int iwl_send_bt_init_conf(struct iwl_mvm *mvm)
 					    BT_VALID_LUT |
 					    BT_VALID_WIFI_RX_SW_PRIO_BOOST |
 					    BT_VALID_WIFI_TX_SW_PRIO_BOOST |
-					    BT_VALID_CORUN_LUT_20 |
-					    BT_VALID_CORUN_LUT_40 |
 					    BT_VALID_ANT_ISOLATION |
 					    BT_VALID_ANT_ISOLATION_THRS |
 					    BT_VALID_TXTX_DELTA_FREQ_THRS |
@@ -604,6 +602,10 @@ int iwl_send_bt_init_conf(struct iwl_mvm *mvm)
 
 	if (IWL_MVM_BT_COEX_SYNC2SCO)
 		bt_cmd->flags |= cpu_to_le32(BT_COEX_SYNC2SCO);
+
+	if (IWL_MVM_BT_COEX_CORUNNING)
+		bt_cmd->valid_bit_msk = cpu_to_le32(BT_VALID_CORUN_LUT_20 |
+						    BT_VALID_CORUN_LUT_40);
 
 	if (mvm->cfg->bt_shared_single_ant)
 		memcpy(&bt_cmd->decision_lut, iwl_single_shared_ant,
@@ -1214,6 +1216,9 @@ int iwl_mvm_rx_ant_coupling_notif(struct iwl_mvm *mvm,
 		.dataflags = { IWL_HCMD_DFL_NOCOPY, },
 		.flags = CMD_SYNC,
 	};
+
+	if (!IWL_MVM_BT_COEX_CORUNNING)
+		return 0;
 
 	lockdep_assert_held(&mvm->mutex);
 
