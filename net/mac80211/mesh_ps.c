@@ -456,11 +456,12 @@ static void mps_frame_deliver(struct sta_info *sta, int n_frames)
 	skb_queue_head_init(&frames);
 
 	/* collect frame(s) from buffers */
+	spin_lock_bh(&sta->ps_lock);
 	for (ac = 0; ac < IEEE80211_NUM_ACS; ac++) {
 		while (n_frames != 0) {
-			skb = skb_dequeue(&sta->tx_filtered[ac]);
+			skb = __skb_dequeue(&sta->tx_filtered[ac]);
 			if (!skb) {
-				skb = skb_dequeue(
+				skb = __skb_dequeue(
 					&sta->ps_tx_buf[ac]);
 				if (skb)
 					local->total_ps_buffered--;
@@ -475,6 +476,7 @@ static void mps_frame_deliver(struct sta_info *sta, int n_frames)
 		    !skb_queue_empty(&sta->ps_tx_buf[ac]))
 			more_data = true;
 	}
+	spin_unlock_bh(&sta->ps_lock);
 
 	/* nothing to send? -> EOSP */
 	if (skb_queue_empty(&frames)) {

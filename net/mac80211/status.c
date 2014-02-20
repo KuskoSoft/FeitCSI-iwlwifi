@@ -136,9 +136,12 @@ static void ieee80211_handle_filtered_frame(struct ieee80211_local *local,
 	 *      changes before calling TX status events if ordering can be
 	 *	unknown.
 	 */
+	spin_lock(&sta->ps_lock);
 	if (test_sta_flag(sta, WLAN_STA_PS_STA) &&
 	    skb_queue_len(&sta->tx_filtered[ac]) < STA_MAX_TX_BUFFER) {
-		skb_queue_tail(&sta->tx_filtered[ac], skb);
+		__skb_queue_tail(&sta->tx_filtered[ac], skb);
+		spin_unlock(&sta->ps_lock);
+
 		sta_info_recalc_tim(sta);
 
 		if (!timer_pending(&local->sta_cleanup))
@@ -147,6 +150,7 @@ static void ieee80211_handle_filtered_frame(struct ieee80211_local *local,
 						STA_INFO_CLEANUP_INTERVAL));
 		return;
 	}
+	spin_unlock(&sta->ps_lock);
 
 	if (!test_sta_flag(sta, WLAN_STA_PS_STA) &&
 	    !(info->flags & IEEE80211_TX_INTFL_RETRIED)) {

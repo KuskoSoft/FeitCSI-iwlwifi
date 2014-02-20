@@ -373,8 +373,8 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 		sta->timer_to_tid[i] = i;
 	}
 	for (i = 0; i < IEEE80211_NUM_ACS; i++) {
-		skb_queue_head_init(&sta->ps_tx_buf[i]);
-		skb_queue_head_init(&sta->tx_filtered[i]);
+		__skb_queue_head_init(&sta->ps_tx_buf[i]);
+		__skb_queue_head_init(&sta->tx_filtered[i]);
 	}
 
 	for (i = 0; i < IEEE80211_NUM_TIDS; i++)
@@ -730,8 +730,9 @@ static bool sta_info_buffer_expired(struct sta_info *sta, struct sk_buff *skb)
 static bool sta_info_cleanup_expire_buffered_ac(struct ieee80211_local *local,
 						struct sta_info *sta, int ac)
 {
-	unsigned long flags;
 	struct sk_buff *skb;
+
+	spin_lock_bh(&sta->ps_lock);
 
 	/*
 	 * First check for frames that should expire on the filtered
@@ -740,23 +741,18 @@ static bool sta_info_cleanup_expire_buffered_ac(struct ieee80211_local *local,
 	 * frames. They also aren't accounted for right now in the
 	 * total_ps_buffered counter.
 	 */
-	for (;;) {
-		spin_lock_irqsave(&sta->tx_filtered[ac].lock, flags);
-		skb = skb_peek(&sta->tx_filtered[ac]);
-		if (sta_info_buffer_expired(sta, skb))
-			skb = __skb_dequeue(&sta->tx_filtered[ac]);
-		else
-			skb = NULL;
-		spin_unlock_irqrestore(&sta->tx_filtered[ac].lock, flags);
-
-		/*
-		 * Frames are queued in order, so if this one
-		 * hasn't expired yet we can stop testing. If
-		 * we actually reached the end of the queue we
-		 * also need to stop, of course.
-		 */
-		if (!skb)
+	while ((skb = skb_peek(&sta->tx_filtered[ac]))) {
+		if (!sta_info_buffer_expired(sta, skb)) {
+			/*
+			 * Frames are queued in order, so if this one
+			 * hasn't expired yet we can stop testing. If
+			 * we actually reached the end of the queue we
+			 * also need to stop, of course.
+			 */
 			break;
+		}
+
+		__skb_dequeue(&sta->tx_filtered[ac]);
 		ieee80211_free_txskb(&local->hw, skb);
 	}
 
@@ -766,28 +762,24 @@ static bool sta_info_cleanup_expire_buffered_ac(struct ieee80211_local *local,
 	 * since the filtered frames are all before the normal PS
 	 * buffered frames.
 	 */
-	for (;;) {
-		spin_lock_irqsave(&sta->ps_tx_buf[ac].lock, flags);
-		skb = skb_peek(&sta->ps_tx_buf[ac]);
-		if (sta_info_buffer_expired(sta, skb))
-			skb = __skb_dequeue(&sta->ps_tx_buf[ac]);
-		else
-			skb = NULL;
-		spin_unlock_irqrestore(&sta->ps_tx_buf[ac].lock, flags);
-
-		/*
-		 * frames are queued in order, so if this one
-		 * hasn't expired yet (or we reached the end of
-		 * the queue) we can stop testing
-		 */
-		if (!skb)
+	while ((skb = skb_peek(&sta->ps_tx_buf[ac]))) {
+		if (!sta_info_buffer_expired(sta, skb)) {
+			/*
+			 * frames are queued in order, so if this one
+			 * hasn't expired yet (or we reached the end of
+			 * the queue) we can stop testing
+			 */
 			break;
+		}
+
+		__skb_dequeue(&sta->ps_tx_buf[ac]);
 
 		local->total_ps_buffered--;
 		ps_dbg(sta->sdata, "Buffered frame expired (STA %pM)\n",
 		       sta->sta.addr);
 		ieee80211_free_txskb(&local->hw, skb);
 	}
+	spin_unlock_bh(&sta->ps_lock);
 
 	/*
 	 * Finally, recalculate the TIM bit for this station -- it might
@@ -1116,7 +1108,6 @@ void ieee80211_sta_ps_deliver_wakeup(struct sta_info *sta)
 	struct ieee80211_local *local = sdata->local;
 	struct sk_buff_head pending;
 	int filtered = 0, buffered = 0, ac;
-	unsigned long flags;
 
 	clear_sta_flag(sta, WLAN_STA_SP);
 
@@ -1134,16 +1125,12 @@ void ieee80211_sta_ps_deliver_wakeup(struct sta_info *sta)
 	for (ac = 0; ac < IEEE80211_NUM_ACS; ac++) {
 		int count = skb_queue_len(&pending), tmp;
 
-		spin_lock_irqsave(&sta->tx_filtered[ac].lock, flags);
 		skb_queue_splice_tail_init(&sta->tx_filtered[ac], &pending);
-		spin_unlock_irqrestore(&sta->tx_filtered[ac].lock, flags);
 		tmp = skb_queue_len(&pending);
 		filtered += tmp - count;
 		count = tmp;
 
-		spin_lock_irqsave(&sta->ps_tx_buf[ac].lock, flags);
 		skb_queue_splice_tail_init(&sta->ps_tx_buf[ac], &pending);
-		spin_unlock_irqrestore(&sta->ps_tx_buf[ac].lock, flags);
 		tmp = skb_queue_len(&pending);
 		buffered += tmp - count;
 	}
@@ -1281,6 +1268,7 @@ ieee80211_sta_ps_deliver_response(struct sta_info *sta,
 	__skb_queue_head_init(&frames);
 
 	/* Get response frame(s) and more data bit for the last one. */
+	spin_lock_bh(&sta->ps_lock);
 	for (ac = 0; ac < IEEE80211_NUM_ACS; ac++) {
 		unsigned long tids;
 
@@ -1313,9 +1301,9 @@ ieee80211_sta_ps_deliver_response(struct sta_info *sta,
 			struct sk_buff *skb;
 
 			while (n_frames > 0) {
-				skb = skb_dequeue(&sta->tx_filtered[ac]);
+				skb = __skb_dequeue(&sta->tx_filtered[ac]);
 				if (!skb) {
-					skb = skb_dequeue(
+					skb = __skb_dequeue(
 						&sta->ps_tx_buf[ac]);
 					if (skb)
 						local->total_ps_buffered--;
@@ -1337,6 +1325,7 @@ ieee80211_sta_ps_deliver_response(struct sta_info *sta,
 			break;
 		}
 	}
+	spin_unlock_bh(&sta->ps_lock);
 
 	if (skb_queue_empty(&frames) && !driver_release_tids) {
 		int tid;

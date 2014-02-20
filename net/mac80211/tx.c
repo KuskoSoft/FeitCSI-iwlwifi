@@ -366,8 +366,9 @@ static void purge_old_ps_buffers(struct ieee80211_local *local)
 	list_for_each_entry_rcu(sta, &local->sta_list, list) {
 		int ac;
 
+		spin_lock(&sta->ps_lock);
 		for (ac = IEEE80211_AC_BK; ac >= IEEE80211_AC_VO; ac--) {
-			skb = skb_dequeue(&sta->ps_tx_buf[ac]);
+			skb = __skb_dequeue(&sta->ps_tx_buf[ac]);
 			total += skb_queue_len(&sta->ps_tx_buf[ac]);
 			if (skb) {
 				purged++;
@@ -375,6 +376,7 @@ static void purge_old_ps_buffers(struct ieee80211_local *local)
 				break;
 			}
 		}
+		spin_unlock(&sta->ps_lock);
 	}
 
 	local->total_ps_buffered = total;
@@ -491,10 +493,13 @@ ieee80211_tx_h_unicast_ps_buf(struct ieee80211_tx_data *tx)
 		}
 
 		if (skb_queue_len(&sta->ps_tx_buf[ac]) >= STA_MAX_TX_BUFFER) {
-			struct sk_buff *old = skb_dequeue(&sta->ps_tx_buf[ac]);
+			struct sk_buff *old;
+
 			ps_dbg(tx->sdata,
 			       "STA %pM TX buffer for AC %d full - dropping oldest frame\n",
 			       sta->sta.addr, ac);
+
+			old = __skb_dequeue(&sta->ps_tx_buf[ac]);
 			ieee80211_free_txskb(&local->hw, old);
 		} else
 			tx->local->total_ps_buffered++;
@@ -503,7 +508,7 @@ ieee80211_tx_h_unicast_ps_buf(struct ieee80211_tx_data *tx)
 		info->control.vif = &tx->sdata->vif;
 		info->flags |= IEEE80211_TX_INTFL_NEED_TXPROCESSING;
 		info->flags &= ~IEEE80211_TX_TEMPORARY_FLAGS;
-		skb_queue_tail(&sta->ps_tx_buf[ac], tx->skb);
+		__skb_queue_tail(&sta->ps_tx_buf[ac], tx->skb);
 		spin_unlock(&sta->ps_lock);
 
 		if (!timer_pending(&local->sta_cleanup))
