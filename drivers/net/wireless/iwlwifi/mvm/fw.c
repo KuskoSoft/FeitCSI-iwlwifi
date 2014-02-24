@@ -327,14 +327,6 @@ static int iwl_send_phy_cfg_cmd(struct iwl_mvm *mvm)
 			cpu_to_le32(event_override);
 		IWL_DEBUG_CALIB(mvm, "new event calib setting = %x\n",
 				event_override);
-
-		if ((le32_to_cpu(default_calib->event_trigger) &
-		     IWL_CALIB_CFG_ANT_COUPLING_IDX) &&
-		    !(event_override & IWL_CALIB_CFG_ANT_COUPLING_IDX)) {
-			mvm->trans->dbg_cfg.MVM_BT_COEX_CORUNNING = false;
-			IWL_DEBUG_CALIB(mvm,
-					"ANT_COUPING is off, disable BT Co-running block!\n");
-		}
 	}
 #endif
 	IWL_DEBUG_INFO(mvm, "Sending Phy CFG command: 0x%x\n",
