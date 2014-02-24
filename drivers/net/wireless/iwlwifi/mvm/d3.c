@@ -932,7 +932,7 @@ void iwl_mvm_set_last_nonqos_seq(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 }
 
 void iwl_mvm_set_wowlan_qos_seq(struct iwl_mvm_sta *mvm_ap_sta,
-				struct iwl_wowlan_config_cmd *cmd)
+				struct iwl_wowlan_config_cmd_v2 *cmd)
 {
 	int i;
 
@@ -948,6 +948,20 @@ void iwl_mvm_set_wowlan_qos_seq(struct iwl_mvm_sta *mvm_ap_sta,
 	}
 }
 
+static int
+iwl_mvm_send_wowlan_config_cmd(struct iwl_mvm *mvm,
+			       const struct iwl_wowlan_config_cmd_v3 *cmd)
+{
+	/* start only with the v2 part of the command */
+	u16 cmd_len = sizeof(cmd->common);
+
+	if (mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_WOWLAN_CONFIG_TID)
+		cmd_len = sizeof(*cmd);
+
+	return iwl_mvm_send_cmd_pdu(mvm, WOWLAN_CONFIGURATION, CMD_SYNC,
+				    cmd_len, cmd);
+}
+
 static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 			     struct cfg80211_wowlan *wowlan,
 			     bool test)
@@ -960,7 +974,7 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 	struct iwl_mvm_vif *mvmvif;
 	struct ieee80211_sta *ap_sta;
 	struct iwl_mvm_sta *mvm_ap_sta;
-	struct iwl_wowlan_config_cmd wowlan_config_cmd = {};
+	struct iwl_wowlan_config_cmd_v3 wowlan_config_cmd = {};
 	struct iwl_wowlan_kek_kck_material_cmd kek_kck_cmd = {};
 	struct iwl_wowlan_tkip_params_cmd tkip_cmd = {};
 	struct iwl_d3_manager_config d3_cfg_cmd_data = {
@@ -1023,40 +1037,41 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 
 	mvm_ap_sta = (struct iwl_mvm_sta *)ap_sta->drv_priv;
 
-	/* TODO: wowlan_config_cmd.wowlan_ba_teardown_tids */
+	/* TODO: wowlan_config_cmd.common.wowlan_ba_teardown_tids */
 
-	wowlan_config_cmd.is_11n_connection = ap_sta->ht_cap.ht_supported;
+	wowlan_config_cmd.common.is_11n_connection =
+					ap_sta->ht_cap.ht_supported;
 
 	/* Query the last used seqno and set it */
 	ret = iwl_mvm_get_last_nonqos_seq(mvm, vif);
 	if (ret < 0)
 		goto out_noreset;
-	wowlan_config_cmd.non_qos_seq = cpu_to_le16(ret);
+	wowlan_config_cmd.common.non_qos_seq = cpu_to_le16(ret);
 
-	iwl_mvm_set_wowlan_qos_seq(mvm_ap_sta, &wowlan_config_cmd);
+	iwl_mvm_set_wowlan_qos_seq(mvm_ap_sta, &wowlan_config_cmd.common);
 
 	if (wowlan->disconnect)
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_BEACON_MISS |
 				    IWL_WOWLAN_WAKEUP_LINK_CHANGE);
 	if (wowlan->magic_pkt)
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_MAGIC_PACKET);
 	if (wowlan->gtk_rekey_failure)
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_GTK_REKEY_FAIL);
 	if (wowlan->eap_identity_req)
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_EAP_IDENT_REQ);
 	if (wowlan->four_way_handshake)
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_4WAY_HANDSHAKE);
 	if (wowlan->n_patterns)
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_PATTERN_MATCH);
 
 	if (wowlan->rfkill_release)
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_RF_KILL_DEASSERT);
 
 	if (wowlan->tcp) {
@@ -1064,7 +1079,7 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 		 * Set the "link change" (really "link lost") flag as well
 		 * since that implies losing the TCP connection.
 		 */
-		wowlan_config_cmd.wakeup_filter |=
+		wowlan_config_cmd.common.wakeup_filter |=
 			cpu_to_le32(IWL_WOWLAN_WAKEUP_REMOTE_LINK_LOSS |
 				    IWL_WOWLAN_WAKEUP_REMOTE_SIGNATURE_TABLE |
 				    IWL_WOWLAN_WAKEUP_REMOTE_WAKEUP_PACKET |
@@ -1162,9 +1177,7 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 		}
 	}
 
-	ret = iwl_mvm_send_cmd_pdu(mvm, WOWLAN_CONFIGURATION,
-				   CMD_SYNC, sizeof(wowlan_config_cmd),
-				   &wowlan_config_cmd);
+	ret = iwl_mvm_send_wowlan_config_cmd(mvm, &wowlan_config_cmd);
 	if (ret)
 		goto out;
 
