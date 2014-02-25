@@ -1,7 +1,6 @@
 #ifndef __BACKPORT_LINUX_ACPI_H
 #define __BACKPORT_LINUX_ACPI_H
 #include_next <linux/acpi.h>
-#include_next <linux/device.h>
 #include <linux/version.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0)

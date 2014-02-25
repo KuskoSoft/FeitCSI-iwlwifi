@@ -247,4 +247,9 @@ static inline void *dev_get_platdata(const struct device *dev)
 #define devm_kmalloc(dev, size, flags) devm_kzalloc(dev, size, flags) 
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)
+#define devm_kstrdup LINUX_BACKPORT(devm_kstrdup)
+extern char *devm_kstrdup(struct device *dev, const char *s, gfp_t gfp);
+#endif
+
 #endif /* __BACKPORT_DEVICE_H */
