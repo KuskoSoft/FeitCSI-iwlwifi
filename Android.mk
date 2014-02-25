@@ -85,6 +85,15 @@ else
 # IWLWIFI_CONFIGURE is a rule to use a defconfig for iwlwifi
 IWLWIFI_CONFIGURE := $(INTEL_IWL_OUT_DIR)/.config
 
+# some build envs define KERNEL_OUT_DIR as relative to ANDROID_BUILD_TOP,
+# while others define it as the absolute path. check for it
+# and define KERNEL_OUT_ABS_DIR appropriately.
+ifeq (/,$(shell echo $(KERNEL_OUT_DIR) | cut -c1))
+KERNEL_OUT_ABS_DIR := $(KERNEL_OUT_DIR)
+else
+KERNEL_OUT_ABS_DIR := $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR)
+endif
+
 iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL) $(INTEL_IWL_MOD_DEP)
 
 $(INTEL_IWL_OUT_DIR): $(INTEL_IWL_SRC_DIR)
@@ -95,15 +104,15 @@ $(INTEL_IWL_OUT_DIR): $(INTEL_IWL_SRC_DIR)
 
 $(IWLWIFI_CONFIGURE): $(INTEL_IWL_KERNEL_DEPEND) | $(INTEL_IWL_OUT_DIR)
 	@echo Configuring kernel module iwlwifi with defconfig-$(INTEL_IWL_BOARD_CONFIG)
-	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) defconfig-$(INTEL_IWL_BOARD_CONFIG)
+	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(KERNEL_OUT_ABS_DIR) defconfig-$(INTEL_IWL_BOARD_CONFIG)
 
 iwlwifi_build: $(IWLWIFI_CONFIGURE)
 	@$(info Building kernel module iwlwifi in $(INTEL_IWL_OUT_DIR))
-	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR)
+	@$(MAKE) -C $(INTEL_IWL_OUT_DIR)/ ARCH=$(TARGET_ARCH) $(CROSS_COMPILE) KLIB_BUILD=$(KERNEL_OUT_ABS_DIR)
 
 iwlwifi_install: iwlwifi_build $(INTEL_IWL_RM_MAC_CFG_DEPEND)
 	@$(info Installing kernel modules in $(INTEL_IWL_COMPAT_INSTALL_PATH))
-	@$(MAKE) -C $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR) M=$(INTEL_IWL_OUT_DIR)/ INSTALL_MOD_DIR=$(INTEL_IWL_COMPAT_INSTALL_DIR) INSTALL_MOD_PATH=$(INTEL_IWL_COMPAT_INSTALL_PATH) $(INTEL_IWL_INSTALL_MOD_STRIP) modules_install
+	@$(MAKE) -C $(KERNEL_OUT_ABS_DIR) M=$(INTEL_IWL_OUT_DIR)/ INSTALL_MOD_DIR=$(INTEL_IWL_COMPAT_INSTALL_DIR) INSTALL_MOD_PATH=$(INTEL_IWL_COMPAT_INSTALL_PATH) $(INTEL_IWL_INSTALL_MOD_STRIP) modules_install
 
 iwlwifi_rm_mac_cfg: iwlwifi_build
 	$(info Remove kernel cfg80211.ko and mac80211.ko)
