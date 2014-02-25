@@ -1316,3 +1316,4 @@ int iwl_mvm_rx_ant_coupling_notif(struct iwl_mvm *mvm,
 	kfree(bt_cmd);
 	return ret;
 }
+

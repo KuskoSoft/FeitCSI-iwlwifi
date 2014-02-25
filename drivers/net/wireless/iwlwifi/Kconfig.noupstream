@@ -55,3 +55,4 @@ config IWLMVM_TCM
 	  This option enables (vendor) events to userspace and traffic
 	  monitoring for low-latency and traffic thresholds, as well as
 	  their impact on quota and other submodules.
+
