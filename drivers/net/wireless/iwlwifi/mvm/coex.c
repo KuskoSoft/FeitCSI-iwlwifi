@@ -312,10 +312,15 @@ struct corunning_block_luts {
 
 /*
  * Ranges for the antenna coupling calibration / co-running block LUT:
- *		< 0
- *		[0, 12[
- *		[12, 20[
- *		etc...
+ *		LUT0: [ 0, 12[
+ *		LUT1: [12, 20[
+ *		LUT2: [20, 21[
+ *		LUT3: [21, 23[
+ *		LUT4: [23, 27[
+ *		LUT5: [27, 30[
+ *		LUT6: [30, 32[
+ *		LUT7: [32, 33[
+ *		LUT8: [33, - [
  */
 static const struct corunning_block_luts antenna_coupling_ranges[] = {
 	{
@@ -1224,17 +1229,20 @@ int iwl_mvm_rx_ant_coupling_notif(struct iwl_mvm *mvm,
 
 	lockdep_assert_held(&mvm->mutex);
 
-	for (lut = 0; lut < ARRAY_SIZE(antenna_coupling_ranges); lut++)
-		if (ant_isolation < antenna_coupling_ranges[lut].range)
-			break;
-
 	if (ant_isolation ==  mvm->last_ant_isol)
 		return 0;
-	lower_bound = lut ? antenna_coupling_ranges[lut - 1].range :
-			    antenna_coupling_ranges[lut].range;
-	upper_bound = lut != ARRAY_SIZE(antenna_coupling_ranges) ?
-			antenna_coupling_ranges[lut].range :
-			antenna_coupling_ranges[lut - 1].range;
+
+	for (lut = 0; lut < ARRAY_SIZE(antenna_coupling_ranges) - 1; lut++)
+		if (ant_isolation < antenna_coupling_ranges[lut + 1].range)
+			break;
+
+	lower_bound = antenna_coupling_ranges[lut].range;
+
+	if (lut < ARRAY_SIZE(antenna_coupling_ranges) - 1)
+		upper_bound = antenna_coupling_ranges[lut + 1].range;
+	else
+		upper_bound = antenna_coupling_ranges[lut].range;
+
 	IWL_DEBUG_COEX(mvm, "Antenna isolation=%d in range [%d,%d[, lut=%d\n",
 		       ant_isolation, lower_bound, upper_bound, lut);
 
