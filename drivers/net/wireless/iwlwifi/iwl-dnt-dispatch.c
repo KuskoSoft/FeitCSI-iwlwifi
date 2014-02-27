@@ -301,3 +301,14 @@ void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans)
 
 	memset(dispatch, 0, sizeof(*dispatch));
 }
+
+void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
+{
+	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
+
+	trans->tmdev->dnt->iwl_dnt_status |= IWL_DNT_STATUS_FW_CRASH;
+
+	if (!dbg_cfg->dbg_flags)
+		return;
+}
+IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_handle_nic_err);
