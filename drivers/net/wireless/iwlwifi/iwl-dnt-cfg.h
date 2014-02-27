@@ -233,6 +233,7 @@ struct iwl_dnt_dispatch {
  */
 struct iwl_dnt {
 	struct device *dev;
+	const struct fw_img *image;
 
 	u32 iwl_dnt_status;
 	bool is_configuration_valid;
@@ -270,7 +271,7 @@ void iwl_dnt_free(struct iwl_trans *trans);
  * iwl_dnt_configure - configures iwl_dnt.
  *
  */
-void iwl_dnt_configure(struct iwl_trans *trans);
+void iwl_dnt_configure(struct iwl_trans *trans, const struct fw_img *image);
 
 /**
  * iwl_dnt_start - starts monitor and set log level

@@ -109,4 +109,6 @@ int iwl_dnt_dev_if_start_monitor(struct iwl_dnt *dnt,
 int iwl_dnt_dev_if_set_log_level(struct iwl_dnt *dnt,
 				 struct iwl_trans *trans);
 
+int iwl_dnt_dev_if_read_sram(struct iwl_dnt *dnt, struct iwl_trans *trans);
+
 #endif

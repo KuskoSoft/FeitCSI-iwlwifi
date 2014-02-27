@@ -295,7 +295,7 @@ void iwl_dnt_free(struct iwl_trans *trans)
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_free);
 
-void iwl_dnt_configure(struct iwl_trans *trans)
+void iwl_dnt_configure(struct iwl_trans *trans, const struct fw_img *image)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
 	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
@@ -303,6 +303,8 @@ void iwl_dnt_configure(struct iwl_trans *trans)
 
 	if (!dnt)
 		return;
+
+	dnt->image = image;
 
 	is_conf_invalid = (dnt->iwl_dnt_status &
 			   IWL_DNT_STATUS_INVALID_MONITOR_CONF);

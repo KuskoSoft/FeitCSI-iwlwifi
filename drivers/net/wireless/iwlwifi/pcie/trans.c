@@ -731,7 +731,7 @@ static int iwl_pcie_load_given_ucode(struct iwl_trans *trans,
 	}
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_configure(trans);
+	iwl_dnt_configure(trans, image);
 #endif
 	/* release CPU reset */
 	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)

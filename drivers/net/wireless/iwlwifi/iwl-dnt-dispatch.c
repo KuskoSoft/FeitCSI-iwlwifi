@@ -289,6 +289,7 @@ IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_collect_interface_monitor);
 void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans)
 {
 	struct iwl_dnt_dispatch *dispatch = &dnt->dispatch;
+	struct dnt_crash_data *crash = &dispatch->crash;
 
 	if (dispatch->dbgm_db)
 		iwl_dnt_dispatch_free_collect_db(dispatch->dbgm_db);
@@ -299,16 +300,40 @@ void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans)
 		dma_free_coherent(trans->dev, dnt->mon_buf_size,
 				  dnt->mon_buf_cpu_addr, dnt->mon_dma_addr);
 
+	kfree(crash->sram);
+
 	memset(dispatch, 0, sizeof(*dispatch));
+}
+
+static void iwl_dnt_dispatch_retrieve_crash_sram(struct iwl_dnt *dnt,
+						 struct iwl_trans *trans)
+{
+	int ret;
+	struct dnt_crash_data *crash = &dnt->dispatch.crash;
+
+	if (crash->sram) {
+		crash->sram_buf_size = 0;
+		kfree(crash->sram);
+	}
+
+	ret = iwl_dnt_dev_if_read_sram(dnt, trans);
+	if (ret) {
+		IWL_ERR(dnt, "Failed to read sram\n");
+		return;
+	}
 }
 
 void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
 {
+	struct iwl_dnt *dnt = trans->tmdev->dnt;
 	struct iwl_dbg_cfg *dbg_cfg = &trans->dbg_cfg;
 
 	trans->tmdev->dnt->iwl_dnt_status |= IWL_DNT_STATUS_FW_CRASH;
 
 	if (!dbg_cfg->dbg_flags)
 		return;
+
+	if (dbg_cfg->dbg_flags & SRAM)
+		iwl_dnt_dispatch_retrieve_crash_sram(dnt, trans);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_handle_nic_err);

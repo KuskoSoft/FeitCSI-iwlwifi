@@ -402,3 +402,20 @@ int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt *dnt,
 		return -EINVAL;
 	}
 }
+
+int iwl_dnt_dev_if_read_sram(struct iwl_dnt *dnt, struct iwl_trans *trans)
+{
+	struct dnt_crash_data *crash = &dnt->dispatch.crash;
+	int ofs, len = 0;
+
+	ofs = dnt->image->sec[IWL_UCODE_SECTION_DATA].offset;
+	len = dnt->image->sec[IWL_UCODE_SECTION_DATA].len;
+
+	crash->sram =  kzalloc(len , GFP_ATOMIC);
+	if (!crash->sram)
+		return -ENOMEM;
+
+	crash->sram_buf_size = len;
+	return iwl_trans_read_mem(trans, ofs, crash->sram, len);
+}
+IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_read_sram);
