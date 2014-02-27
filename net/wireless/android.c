@@ -52,10 +52,6 @@ static int cfg80211_android_p2pdev_open(struct net_device *dev)
 	if (wdev->p2p_started)
 		return 0;
 
-	err = cfg80211_can_add_interface(rdev, wdev->iftype);
-	if (err)
-		return err;
-
 	err = rdev_start_p2p_device(rdev, wdev);
 	if (err)
 		return err;
