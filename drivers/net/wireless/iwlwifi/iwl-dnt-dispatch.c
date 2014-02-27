@@ -302,6 +302,7 @@ void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans)
 
 	kfree(crash->sram);
 	kfree(crash->rx);
+	kfree(crash->dbgm);
 
 	memset(dispatch, 0, sizeof(*dispatch));
 }
@@ -342,6 +343,51 @@ static void iwl_dnt_dispatch_retrieve_crash_rx(struct iwl_dnt *dnt,
 	}
 }
 
+static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
+					       struct iwl_trans *trans)
+{
+	int ret;
+	u32 buf_size;
+	struct dnt_crash_data *crash = &dnt->dispatch.crash;
+
+	if (crash->dbgm) {
+		crash->dbgm_buf_size = 0;
+		kfree(crash->dbgm);
+	}
+
+	switch (dnt->cur_mon_type) {
+	case MARBH:
+		buf_size = 0x2000 * sizeof(u32);
+		break;
+	case INTERFACE:
+		if (dnt->dispatch.mon_output == NETLINK)
+			return;
+		buf_size = ARRAY_SIZE(dnt->dispatch.dbgm_db->collect_array);
+		break;
+	default:
+		return;
+	}
+	crash->dbgm = kzalloc(buf_size, GFP_ATOMIC);
+	if (!crash->dbgm)
+		return;
+
+	if (dnt->cur_mon_type == INTERFACE) {
+		iwl_dnt_dispatch_get_list_data(dnt->dispatch.dbgm_db,
+					       crash->dbgm, buf_size);
+
+	} else {
+		ret = iwl_dnt_dev_if_retrieve_monitor_data(dnt, trans,
+							   crash->dbgm,
+							   buf_size);
+		if (ret) {
+			IWL_ERR(dnt, "Failed to read DBGM\n");
+			kfree(crash->dbgm);
+			return;
+		}
+	}
+	crash->dbgm_buf_size = buf_size;
+}
+
 void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
@@ -356,5 +402,7 @@ void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
 		iwl_dnt_dispatch_retrieve_crash_sram(dnt, trans);
 	if (dbg_cfg->dbg_flags & RX_FIFO)
 		iwl_dnt_dispatch_retrieve_crash_rx(dnt, trans);
+	if (dbg_cfg->dbg_flags & DBGM)
+		iwl_dnt_dispatch_retrieve_crash_dbgm(dnt, trans);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_handle_nic_err);
