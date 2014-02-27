@@ -483,3 +483,40 @@ int iwl_dnt_dev_if_read_sram(struct iwl_dnt *dnt, struct iwl_trans *trans)
 	return iwl_trans_read_mem(trans, ofs, crash->sram, len);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_read_sram);
+
+int iwl_dnt_dev_if_read_rx(struct iwl_dnt *dnt, struct iwl_trans *trans)
+{
+	struct dnt_crash_data *crash = &dnt->dispatch.crash;
+	int i, reg_val;
+	u32 buf32_size, offset = 0;
+	u32 *buf32;
+	unsigned long flags;
+
+	/* reading buffer size */
+	reg_val = iwl_trans_read_prph(trans, RXF_SIZE_ADDR);
+	crash->rx_buf_size = (reg_val & RXF_SIZE_BYTE_CNT_MSK) >> 6;
+	if (!crash->rx_buf_size)
+		return -ENOMEM;
+
+	buf32_size = crash->rx_buf_size / sizeof(u32);
+
+	crash->rx =  kzalloc(crash->rx_buf_size , GFP_ATOMIC);
+	if (!crash->rx)
+		return -ENOMEM;
+
+	buf32 = (u32 *)crash->rx;
+
+	if (!iwl_trans_grab_nic_access(trans, false, &flags)) {
+		kfree(crash->rx);
+		return -EBUSY;
+	}
+	for (i = 0; i < buf32_size; i++) {
+		iwl_trans_write_prph(trans, RXF_LD_FENCE_OFFSET_ADDR, offset);
+		offset += sizeof(u32);
+		buf32[i] = iwl_trans_read_prph(trans, RXF_FIFO_RD_FENCE_ADDR);
+	}
+	iwl_trans_release_nic_access(trans, &flags);
+
+	return 0;
+}
+IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_read_rx);

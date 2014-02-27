@@ -301,6 +301,7 @@ void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans)
 				  dnt->mon_buf_cpu_addr, dnt->mon_dma_addr);
 
 	kfree(crash->sram);
+	kfree(crash->rx);
 
 	memset(dispatch, 0, sizeof(*dispatch));
 }
@@ -323,6 +324,24 @@ static void iwl_dnt_dispatch_retrieve_crash_sram(struct iwl_dnt *dnt,
 	}
 }
 
+static void iwl_dnt_dispatch_retrieve_crash_rx(struct iwl_dnt *dnt,
+					       struct iwl_trans *trans)
+{
+	int ret;
+	struct dnt_crash_data *crash = &dnt->dispatch.crash;
+
+	if (crash->rx) {
+		crash->rx_buf_size = 0;
+		kfree(crash->rx);
+	}
+
+	ret = iwl_dnt_dev_if_read_rx(dnt, trans);
+	if (ret) {
+		IWL_ERR(dnt, "Failed to read rx\n");
+		return;
+	}
+}
+
 void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
@@ -335,5 +354,7 @@ void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
 
 	if (dbg_cfg->dbg_flags & SRAM)
 		iwl_dnt_dispatch_retrieve_crash_sram(dnt, trans);
+	if (dbg_cfg->dbg_flags & RX_FIFO)
+		iwl_dnt_dispatch_retrieve_crash_rx(dnt, trans);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_handle_nic_err);

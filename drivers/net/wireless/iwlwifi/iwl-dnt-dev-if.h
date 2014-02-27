@@ -70,6 +70,12 @@
 
 struct iwl_dnt;
 
+#define RXF_SIZE_ADDR			0xA00C88
+#define RXF_SIZE_BYTE_CNT_MSK		0x00000ff8
+
+#define RXF_LD_FENCE_OFFSET_ADDR	0xA00c10
+#define RXF_FIFO_RD_FENCE_ADDR		0xA00C0C
+
 #define DNT_LDBG_CMD_SIZE	80
 #define DNT_MARBH_BUF_SIZE	(0x3cff * sizeof(u32))
 
@@ -110,5 +116,7 @@ int iwl_dnt_dev_if_set_log_level(struct iwl_dnt *dnt,
 				 struct iwl_trans *trans);
 
 int iwl_dnt_dev_if_read_sram(struct iwl_dnt *dnt, struct iwl_trans *trans);
+
+int iwl_dnt_dev_if_read_rx(struct iwl_dnt *dnt, struct iwl_trans *trans);
 
 #endif
