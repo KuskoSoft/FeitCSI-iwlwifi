@@ -73,6 +73,7 @@
 #include "iwl-tm-infc.h"
 #include "iwl-tm-gnl.h"
 #include "iwl-io.h"
+#include "iwl-fw-error-dump.h"
 
 
 struct dnt_collect_db *iwl_dnt_dispatch_allocate_collect_db(struct iwl_dnt *dnt)
@@ -398,6 +399,103 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
 	crash->dbgm_buf_size = buf_size;
 }
 
+static void iwl_dnt_dispatch_create_tlv(struct iwl_fw_error_dump_data *tlv,
+				       u32 type, u32 len, u8 *value)
+{
+	tlv->type = cpu_to_le32(type);
+	tlv->len = cpu_to_le32(len);
+	memcpy(tlv->data, value, len);
+}
+
+static u32 iwl_dnt_dispatch_create_crash_tlv(struct iwl_trans *trans,
+					     u8 **tlv_buf)
+{
+	struct iwl_fw_error_dump_file *dump_file;
+	struct iwl_fw_error_dump_data *cur_tlv;
+	struct iwl_dnt *dnt = trans->tmdev->dnt;
+	struct dnt_crash_data *crash = &dnt->dispatch.crash;
+	u32 total_size;
+	if (!dnt) {
+		IWL_DEBUG_INFO(trans, "DnT is not intialized\n");
+		return 0;
+	}
+
+	/*
+	 * data will be represetned as TLV - each buffer is represented as
+	 * follow:
+	 * u32 - type (SRAM/DBGM/RX/TX/PERIPHERY)
+	 * u32 - length
+	 * u8[] - data
+	 */
+	total_size = sizeof(*dump_file) + crash->sram_buf_size +
+		     crash->dbgm_buf_size + crash->rx_buf_size +
+		     crash->tx_buf_size + crash->periph_buf_size +
+		     sizeof(u32) * 10;
+	dump_file = vmalloc(total_size);
+	if (!dump_file)
+		return 0;
+
+	dump_file->file_len = cpu_to_le32(total_size);
+	dump_file->barker = cpu_to_le32(IWL_FW_ERROR_DUMP_BARKER);
+	*tlv_buf = (u8 *)dump_file;
+
+	cur_tlv = (void *)dump_file->data;
+	if (crash->sram_buf_size) {
+		iwl_dnt_dispatch_create_tlv(cur_tlv, IWL_FW_ERROR_DUMP_SRAM,
+					    crash->sram_buf_size, crash->sram);
+		cur_tlv = iwl_fw_error_next_data(cur_tlv);
+	}
+	if (crash->dbgm_buf_size) {
+		iwl_dnt_dispatch_create_tlv(cur_tlv,
+					    IWL_FW_ERROR_DUMP_FW_MONITOR,
+					    crash->dbgm_buf_size,
+					    crash->dbgm);
+		cur_tlv = iwl_fw_error_next_data(cur_tlv);
+	}
+	if (crash->tx_buf_size) {
+		iwl_dnt_dispatch_create_tlv(cur_tlv, IWL_FW_ERROR_DUMP_TXF,
+					    crash->tx_buf_size, crash->tx);
+		cur_tlv = iwl_fw_error_next_data(cur_tlv);
+	}
+	if (crash->rx_buf_size) {
+		iwl_dnt_dispatch_create_tlv(cur_tlv, IWL_FW_ERROR_DUMP_RXF,
+					    crash->rx_buf_size, crash->rx);
+		cur_tlv = iwl_fw_error_next_data(cur_tlv);
+	}
+
+	return total_size;
+}
+
+static void iwl_dnt_dispatch_handle_crash_netlink(struct iwl_dnt *dnt,
+						  struct iwl_trans *trans)
+{
+	int ret;
+	u8 *tlv_buf;
+	u32 tlv_buf_size;
+	struct iwl_tm_crash_data *crash_notif;
+
+	tlv_buf_size = iwl_dnt_dispatch_create_crash_tlv(trans, &tlv_buf);
+	if (!tlv_buf_size)
+		return;
+
+	crash_notif = vmalloc(sizeof(struct iwl_tm_crash_data) + tlv_buf_size);
+	if (!crash_notif)
+		return;
+
+	crash_notif->size = tlv_buf_size;
+	memcpy(crash_notif->data, tlv_buf, tlv_buf_size);
+	ret = iwl_tm_gnl_send_msg(trans, IWL_TM_USER_CMD_NOTIF_CRASH_DATA,
+				  false, crash_notif,
+				  sizeof(struct iwl_tm_crash_data) +
+				  tlv_buf_size, GFP_ATOMIC);
+
+	if (ret)
+		IWL_ERR(dnt, "Failed to send crash data notification\n");
+
+	vfree(crash_notif);
+	vfree(tlv_buf);
+}
+
 void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
 {
 	struct iwl_dnt *dnt = trans->tmdev->dnt;
@@ -414,5 +512,8 @@ void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans)
 		iwl_dnt_dispatch_retrieve_crash_rx(dnt, trans);
 	if (dbg_cfg->dbg_flags & DBGM)
 		iwl_dnt_dispatch_retrieve_crash_dbgm(dnt, trans);
+
+	if (dnt->dispatch.crash_out_mode & NETLINK)
+		iwl_dnt_dispatch_handle_crash_netlink(dnt, trans);
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_handle_nic_err);

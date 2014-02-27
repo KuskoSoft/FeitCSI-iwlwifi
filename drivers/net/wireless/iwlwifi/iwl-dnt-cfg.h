@@ -209,6 +209,8 @@ struct iwl_dnt_dispatch {
 	u32 ucode_msgs_out_mode;
 	u32 ucode_msgs_output;
 
+	u32 crash_out_mode;
+
 	struct dnt_collect_db *dbgm_db;
 	struct dnt_collect_db *um_db;
 

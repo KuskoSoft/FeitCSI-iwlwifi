@@ -119,6 +119,7 @@ enum {
 	IWL_TM_USER_CMD_NOTIF_UCODE_MSGS_DATA,
 	IWL_TM_USER_CMD_NOTIF_APMG_PD,
 	IWL_TM_USER_CMD_NOTIF_RETRIEVE_MONITOR,
+	IWL_TM_USER_CMD_NOTIF_CRASH_DATA,
 	IWL_TM_USER_CMD_NOTIF_BFE,
 };
 
@@ -404,6 +405,17 @@ struct iwl_xvt_get_dma {
  */
 struct iwl_xvt_chip_id {
 	__u32 registers[3];
+} __packed __aligned(4);
+
+/**
+ * struct iwl_tm_crash_data - Notifications containing crash data
+ * @data_type:	type of the data
+ * @size:	data size
+ * @data:	data
+ */
+struct iwl_tm_crash_data {
+	__u32 size;
+	__u8 data[];
 } __packed __aligned(4);
 
 #endif

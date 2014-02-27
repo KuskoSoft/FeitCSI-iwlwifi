@@ -345,4 +345,6 @@ void iwl_dnt_configure(struct iwl_trans *trans, const struct fw_img *image)
 		IWL_INFO(trans, "Invalid monitor type\n");
 		return;
 	}
+
+	dnt->dispatch.crash_out_mode |= dbg_cfg->dnt_out_mode;
 }
