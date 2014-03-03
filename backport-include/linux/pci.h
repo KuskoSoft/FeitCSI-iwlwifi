@@ -246,6 +246,7 @@ static inline int pci_enable_msi_range(struct pci_dev *dev, int minvec,
 #endif
 #endif
 
+#ifdef CONFIG_PCI
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
 #define pci_enable_msix_range LINUX_BACKPORT(pci_enable_msix_range)
 #ifdef CONFIG_PCI_MSI
@@ -255,6 +256,7 @@ int pci_enable_msix_range(struct pci_dev *dev, struct msix_entry *entries,
 static inline int pci_enable_msix_range(struct pci_dev *dev,
 		      struct msix_entry *entries, int minvec, int maxvec)
 { return -ENOSYS; }
+#endif
 #endif
 #endif
 
