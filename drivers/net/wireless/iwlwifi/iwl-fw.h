@@ -143,9 +143,11 @@ enum iwl_ucode_tlv_api {
 /**
  * enum iwl_ucode_tlv_capa - ucode capabilities
  * @IWL_UCODE_TLV_CAPA_D0I3_SUPPORT: supports D0i3
+ * @IWL_UCODE_TLV_CAPA_LAR_SUPPORT: supports Location Aware Regulatory
  */
 enum iwl_ucode_tlv_capa {
 	IWL_UCODE_TLV_CAPA_D0I3_SUPPORT		= BIT(0),
+	IWL_UCODE_TLV_CAPA_LAR_SUPPORT		= BIT(1),
 };
 
 /* The default calibrate table size if not specified by firmware file */
