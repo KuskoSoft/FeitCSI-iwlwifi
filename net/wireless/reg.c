@@ -564,8 +564,9 @@ static const struct ieee80211_regdomain *reg_get_regdomain(struct wiphy *wiphy)
 	return get_cfg80211_regdom();
 }
 
-unsigned int reg_get_max_bandwidth(const struct ieee80211_regdomain *rd,
-				   const struct ieee80211_reg_rule *rule)
+static unsigned int
+reg_get_max_bandwidth_from_range(const struct ieee80211_regdomain *rd,
+				 const struct ieee80211_reg_rule *rule)
 {
 	const struct ieee80211_freq_range *freq_range = &rule->freq_range;
 	const struct ieee80211_freq_range *freq_range_tmp;
@@ -611,6 +612,21 @@ unsigned int reg_get_max_bandwidth(const struct ieee80211_regdomain *rd,
 	end_freq = freq_range->end_freq_khz;
 
 	return end_freq - start_freq;
+}
+
+unsigned int reg_get_max_bandwidth(const struct ieee80211_regdomain *rd,
+				   const struct ieee80211_reg_rule *rule)
+{
+	unsigned int bw = reg_get_max_bandwidth_from_range(rd, rule);
+
+	if (rule->flags & NL80211_RRF_NO_160MHZ)
+		bw = min_t(unsigned int, bw, MHZ_TO_KHZ(80));
+	if (rule->flags & NL80211_RRF_NO_80MHZ)
+		bw = min_t(unsigned int, bw, MHZ_TO_KHZ(40));
+	if (rule->flags & NL80211_RRF_NO_HT40)
+		bw = min_t(unsigned int, bw, MHZ_TO_KHZ(20));
+
+	return bw;
 }
 
 /* Sanity check on a regulatory rule */
@@ -898,6 +914,16 @@ static u32 map_regdom_flags(u32 rd_flags)
 		channel_flags |= IEEE80211_CHAN_NO_OFDM;
 	if (rd_flags & NL80211_RRF_NO_OUTDOOR)
 		channel_flags |= IEEE80211_CHAN_INDOOR_ONLY;
+	if (rd_flags & NL80211_RRF_GO_CONCURRENT)
+		channel_flags |= IEEE80211_CHAN_GO_CONCURRENT;
+	if (rd_flags & NL80211_RRF_NO_HT40MINUS)
+		channel_flags |= IEEE80211_CHAN_NO_HT40MINUS;
+	if (rd_flags & NL80211_RRF_NO_HT40PLUS)
+		channel_flags |= IEEE80211_CHAN_NO_HT40PLUS;
+	if (rd_flags & NL80211_RRF_NO_80MHZ)
+		channel_flags |= IEEE80211_CHAN_NO_80MHZ;
+	if (rd_flags & NL80211_RRF_NO_160MHZ)
+		channel_flags |= IEEE80211_CHAN_NO_160MHZ;
 	return channel_flags;
 }
 
