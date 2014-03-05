@@ -81,6 +81,7 @@
 #include "iwl-phy-db.h"
 #include "testmode.h"
 #include "vendor-cmd.h"
+#include "iwl-nvm-parse.h"
 
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
 	{
@@ -261,6 +262,48 @@ static int iwl_mvm_max_scan_ie_len(struct iwl_mvm *mvm)
 	return mvm->fw->ucode_capa.max_probe_length - 24 - 34;
 }
 
+static struct ieee80211_regdomain *iwl_mvm_get_regdomain(struct wiphy *wiphy,
+							 const char *alpha2)
+{
+	struct ieee80211_regdomain *regd = NULL;
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_mcc_update_resp *resp;
+
+	IWL_DEBUG_LAR(mvm, "Getting regdomain data for %s from FW\n", alpha2);
+
+	mutex_lock(&mvm->mutex);
+
+	/* change "99" to "ZZ" for the FW */
+	if (alpha2[0] == '9' && alpha2[1] == '9')
+		alpha2 = "ZZ";
+
+	resp = iwl_mvm_update_mcc(mvm, alpha2);
+	if (IS_ERR_OR_NULL(resp)) {
+		IWL_DEBUG_LAR(mvm, "Could not get update from FW %d\n",
+			      PTR_RET(resp));
+		goto out_unlock;
+	}
+
+	regd = iwl_parse_nvm_mcc_info(mvm->trans->dev,
+				      __le32_to_cpu(resp->n_channels),
+				      resp->channels,
+				      __le16_to_cpu(resp->mcc));
+	kfree(resp);
+	if (IS_ERR_OR_NULL(regd)) {
+		IWL_DEBUG_LAR(mvm, "Could not get parse update from FW %d\n",
+			      PTR_RET(resp));
+		goto out_unlock;
+	}
+
+	IWL_DEBUG_LAR(mvm, "setting alpha2 from FW to %s (0x%x, 0x%x)\n",
+		      regd->alpha2, regd->alpha2[0], regd->alpha2[1]);
+
+out_unlock:
+	mutex_unlock(&mvm->mutex);
+	return regd;
+}
+
 int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 {
 	struct ieee80211_hw *hw = mvm->hw;
@@ -381,6 +424,11 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 
 	hw->wiphy->features |= NL80211_FEATURE_P2P_GO_CTWIN |
 			       NL80211_FEATURE_P2P_GO_OPPPS;
+
+	if (iwl_mvm_is_lar_supported(mvm)) {
+		hw->wiphy->get_regd = iwl_mvm_get_regdomain;
+		hw->wiphy->features |= NL80211_FEATURE_CELL_BASE_REG_HINTS;
+	}
 
 	mvm->rts_threshold = IEEE80211_MAX_RTS_THRESHOLD;
 
