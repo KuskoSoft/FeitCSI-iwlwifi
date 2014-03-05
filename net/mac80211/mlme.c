@@ -982,6 +982,7 @@ static void ieee80211_chswitch_work(struct work_struct *work)
 
 	ieee80211_bss_info_change_notify(sdata, changed);
 
+	cfg80211_ch_switch_notify(sdata->dev, &sdata->reserved_chandef);
  out:
 	sdata->vif.csa_active = false;
 	sdata_unlock(sdata);
