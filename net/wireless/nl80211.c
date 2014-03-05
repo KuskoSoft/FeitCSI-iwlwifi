@@ -11221,7 +11221,8 @@ EXPORT_SYMBOL(cfg80211_pmksa_candidate_notify);
 static void nl80211_ch_switch_notify(struct cfg80211_registered_device *rdev,
 				     struct net_device *netdev,
 				     struct cfg80211_chan_def *chandef,
-				     gfp_t gfp)
+				     gfp_t gfp,
+				     enum nl80211_commands notif)
 {
 	struct sk_buff *msg;
 	void *hdr;
@@ -11230,7 +11231,7 @@ static void nl80211_ch_switch_notify(struct cfg80211_registered_device *rdev,
 	if (!msg)
 		return;
 
-	hdr = nl80211hdr_put(msg, 0, 0, 0, NL80211_CMD_CH_SWITCH_NOTIFY);
+	hdr = nl80211hdr_put(msg, 0, 0, 0, notif);
 	if (!hdr) {
 		nlmsg_free(msg);
 		return;
@@ -11272,9 +11273,38 @@ void cfg80211_ch_switch_notify(struct net_device *dev,
 
 	wdev->chandef = *chandef;
 	wdev->preset_chandef = *chandef;
-	nl80211_ch_switch_notify(rdev, dev, chandef, GFP_KERNEL);
+	nl80211_ch_switch_notify(rdev, dev, chandef, GFP_KERNEL,
+				 NL80211_CMD_CH_SWITCH_NOTIFY);
 }
 EXPORT_SYMBOL(cfg80211_ch_switch_notify);
+
+void cfg80211_ch_switch_started_notify(struct net_device *dev,
+			       struct cfg80211_chan_def *chandef)
+{
+	struct wireless_dev *wdev = dev->ieee80211_ptr;
+	struct wiphy *wiphy = wdev->wiphy;
+	struct cfg80211_registered_device *rdev = wiphy_to_dev(wiphy);
+
+	trace_cfg80211_ch_switch_started_notify(dev, chandef);
+
+	nl80211_ch_switch_notify(rdev, dev, chandef, GFP_KERNEL,
+				 NL80211_CMD_CH_SWITCH_STARTED_NOTIFY);
+}
+EXPORT_SYMBOL(cfg80211_ch_switch_started_notify);
+
+void cfg80211_ch_switch_failed_notify(struct net_device *dev,
+				      struct cfg80211_chan_def *chandef)
+{
+	struct wireless_dev *wdev = dev->ieee80211_ptr;
+	struct wiphy *wiphy = wdev->wiphy;
+	struct cfg80211_registered_device *rdev = wiphy_to_dev(wiphy);
+
+	trace_cfg80211_ch_switch_failed_notify(dev, chandef);
+
+	nl80211_ch_switch_notify(rdev, dev, chandef, GFP_KERNEL,
+				 NL80211_CMD_CH_SWITCH_FAILED_NOTIFY);
+}
+EXPORT_SYMBOL(cfg80211_ch_switch_failed_notify);
 
 void cfg80211_cqm_txe_notify(struct net_device *dev,
 			     const u8 *peer, u32 num_packets,

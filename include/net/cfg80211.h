@@ -4563,6 +4563,29 @@ bool cfg80211_reg_can_beacon(struct wiphy *wiphy,
 void cfg80211_ch_switch_notify(struct net_device *dev,
 			       struct cfg80211_chan_def *chandef);
 
+/*
+ * cfg80211_ch_switch_started_notify - notify channel switch start
+ * @dev: the device on which the channel switch started
+ * @chandef: the future channel definition
+ *
+ * Inform the userspace about the channel switch that has just
+ * started, so that it can take appropriate actions (eg. starting
+ * channel switch on other vifs), if necessary.
+ */
+void cfg80211_ch_switch_started_notify(struct net_device *dev,
+				       struct cfg80211_chan_def *chandef);
+
+/*
+ * cfg80211_ch_switch_failed_notify - notify channel switch failure
+ * @dev: the device on which the channel switch has failed
+ * @chandef: the channel definition to which we failed to switch
+ *
+ * Inform the userspace that a channel switch has failed after the
+ * channel switch started notification has been sent.
+ */
+void cfg80211_ch_switch_failed_notify(struct net_device *dev,
+				      struct cfg80211_chan_def *chandef);
+
 /**
  * ieee80211_operating_class_to_band - convert operating class to band
  *

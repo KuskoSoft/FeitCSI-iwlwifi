@@ -638,6 +638,20 @@
  *	%NL80211_ATTR_IFINDEX is now on %NL80211_ATTR_WIPHY_FREQ and the
  *	attributes determining channel width.
  *
+ * @NL80211_CMD_CH_SWITCH_STARTED_NOTIFY: Notify that a channel switch
+ *	has been started on an interface, regardless of the initiator
+ *	(ie. whether it was requested from a remote device or
+ *	initiated on our own).  It indicates that
+ *	%NL80211_ATTR_IFINDEX will be on %NL80211_ATTR_WIPHY_FREQ
+ *	after %NL80211_ATTR_CH_SWITCH_COUNT TBTT's.  The userspace may
+ *	decide to react to this indication by requesting other
+ *	interfaces to change channel as well.
+ *
+ * @NL80211_CMD_CH_SWITCH_FAILED_NOTIFY: Notify that a channel switch
+ *	has failed on %NL80211_ATTR_IFINDEX.  This notification can
+ *	only be sent after a @NL80211_CMD_CH_SWITCH_STARTED_NOTIFY has
+ *	been issued.
+ *
  * @NL80211_CMD_START_P2P_DEVICE: Start the given P2P Device, identified by
  *	its %NL80211_ATTR_WDEV identifier. It must have been created with
  *	%NL80211_CMD_NEW_INTERFACE previously. After it has been started, the
@@ -889,6 +903,9 @@ enum nl80211_commands {
 	NL80211_CMD_VENDOR,
 
 	NL80211_CMD_SET_QOS_MAP,
+
+	NL80211_CMD_CH_SWITCH_STARTED_NOTIFY,
+	NL80211_CMD_CH_SWITCH_FAILED_NOTIFY,
 
 	/* add new commands above here */
 
