@@ -217,10 +217,24 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 		return -ENODEV;
 	}
 
-	wr_ptr = (wr_ptr << 4) - dnt->mon_base_addr;
+	read_val = iwl_read_prph(trans, cfg->dbg_mon_buff_base_addr_reg_addr);
+	if (read_val == 0x5a5a5a5a) {
+		IWL_ERR(trans, "Can't read monitor base address\n");
+		return -ENODEV;
+	}
+	dnt->mon_base_addr = read_val;
+
+	read_val = iwl_read_prph(trans, cfg->dbg_mon_buff_end_addr_reg_addr);
+	if (read_val == 0x5a5a5a5a) {
+		IWL_ERR(trans, "Can't read monitor end address\n");
+		return -ENODEV;
+	}
+	dnt->mon_end_addr = read_val;
+
+	wr_ptr = wr_ptr - dnt->mon_base_addr;
 	iwl_write_prph(trans, cfg->dbg_mon_dmarb_rd_ctl_addr, 0x00000001);
 
-	buf_size_in_dwords = dnt->mon_buf_size / sizeof(u32);
+	buf_size_in_dwords = dnt->mon_end_addr - dnt->mon_base_addr;
 	for (i = 0; i < buf_size_in_dwords; i++) {
 		/* reordering cyclic buffer */
 		buf_index = (wr_ptr + i) % buf_size_in_dwords;
@@ -248,7 +262,6 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		iwl_dnt_dev_if_configure_mipi(trans);
 		break;
 	case MARBH:
-		dnt->mon_buf_size = DNT_MARBH_BUF_SIZE;
 		iwl_dnt_dev_if_configure_marbh(trans);
 		break;
 	case DMA:
