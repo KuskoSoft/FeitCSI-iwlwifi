@@ -621,6 +621,12 @@ int iwl_send_bt_init_conf(struct iwl_mvm *mvm)
 		memcpy(&bt_cmd->decision_lut, iwl_combined_lookup,
 		       sizeof(iwl_combined_lookup));
 
+	/* Take first Co-running block LUT to get started */
+	memcpy(bt_cmd->bt4_corun_lut20, antenna_coupling_ranges[0].lut20,
+	       sizeof(bt_cmd->bt4_corun_lut20));
+	memcpy(bt_cmd->bt4_corun_lut40, antenna_coupling_ranges[0].lut20,
+	       sizeof(bt_cmd->bt4_corun_lut40));
+
 	memcpy(&bt_cmd->bt_prio_boost, iwl_bt_prio_boost,
 	       sizeof(iwl_bt_prio_boost));
 	memcpy(&bt_cmd->bt4_multiprio_lut, iwl_bt_mprio_lut,
