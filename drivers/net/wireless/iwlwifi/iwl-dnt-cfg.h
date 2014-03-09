@@ -71,7 +71,7 @@
 #include "iwl-op-mode.h"
 #include "iwl-config.h"
 
-#define IWL_DNT_ARRAY_SIZE	32
+#define IWL_DNT_ARRAY_SIZE	128
 
 #define BUS_TYPE_PCI	"pci"
 #define BUS_TYPE_IDI	"idi"
