@@ -94,6 +94,7 @@ enum {
 	IWL_TM_USER_CMD_END_TRACE,
 	IWL_TM_USER_CMD_TRACE_DUMP,
 	IWL_TM_USER_CMD_NOTIFICATIONS,
+	IWL_TM_USER_CMD_SWICTH_OP_MODE,
 
 	IWL_TM_USER_CMD_NOTIF_UCODE_RX_PKT = TM_CMD_NOTIF_BASE,
 	IWL_TM_USER_CMD_NOTIF_DRIVER,
@@ -225,6 +226,15 @@ struct iwl_tm_dev_info {
 	__u32 fw_ver;
 	__u32 build_ver;
 	__u8 driver_ver[];
+} __packed __aligned(4);
+
+#define MAX_OP_MODE_LENGTH	16
+/**
+ * struct iwl_switch_op_mode - switch op_mode
+ * @new_op_mode:	size of data
+ */
+struct iwl_switch_op_mode {
+	__u8 new_op_mode[MAX_OP_MODE_LENGTH];
 } __packed __aligned(4);
 
 /* xVT defeinitions */

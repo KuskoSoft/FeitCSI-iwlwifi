@@ -345,6 +345,35 @@ static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
 	return 0;
 }
 
+static int iwl_tm_switch_op_mode(struct iwl_tm_gnl_dev *dev,
+				 struct iwl_tm_data *data_in)
+{
+	struct iwl_switch_op_mode *switch_cmd = data_in->data;
+	struct iwl_drv *drv;
+	int ret = 0;
+
+	if (data_in->len < sizeof(*switch_cmd))
+		return -EINVAL;
+
+	drv = iwl_drv_get_dev_container(dev->trans->dev);
+	if (!drv) {
+		IWL_ERR(dev->trans, "Couldn't retrieve device information\n");
+		return -ENODEV;
+	}
+
+	/* Executing switch command */
+	ret = iwl_drv_switch_op_mode(drv, switch_cmd->new_op_mode);
+	/*
+	 * Upon success, return value should be "count"
+	 * otherwise, negative value is returned
+	 */
+	if (!ret)
+		IWL_ERR(dev->trans, "Failed to switch op mode to %s (err:%d)\n",
+			switch_cmd->new_op_mode, ret);
+
+	return ret;
+}
+
 /*
  * Testmode GNL family types (This NL family
  * will eventually replace nl80211 support in
@@ -376,27 +405,6 @@ struct iwl_tm_gnl_cmd {
 static struct list_head dev_list;
 static struct mutex dev_list_mtx; /* Protects dev_list */
 
-/*
- * iwl_tm_gnl_cmd_pre_do
- * Takes a lock on the devices list, so that the doit
- * operation will be protected
- */
-static int iwl_tm_gnl_cmd_pre_do(__genl_const struct genl_ops *ops,
-				 struct sk_buff *skb,
-				 struct genl_info *info)
-{
-	mutex_lock(&dev_list_mtx);
-
-	return 0;
-}
-
-static void iwl_tm_gnl_cmd_post_do(__genl_const struct genl_ops *ops,
-				   struct sk_buff *skb,
-				   struct genl_info *info)
-{
-	mutex_unlock(&dev_list_mtx);
-}
-
 /* Testmode GNL family command attributes  */
 enum iwl_tm_gnl_cmd_attr_t {
 	IWL_TM_GNL_MSG_ATTR_INVALID = 0,
@@ -423,8 +431,6 @@ static struct genl_family iwl_tm_gnl_family = {
 	.name		= IWL_TM_GNL_FAMILY_NAME,
 	.version	= IWL_TM_GNL_VERSION_NR,
 	.maxattr	= IWL_TM_GNL_MSG_ATTR_MAX,
-	.pre_doit	= iwl_tm_gnl_cmd_pre_do,
-	.post_doit	= iwl_tm_gnl_cmd_post_do,
 };
 
 static __genl_const struct genl_multicast_group iwl_tm_gnl_mcgrps[] = {
@@ -603,11 +609,11 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 	struct iwl_tm_gnl_dev *dev;
 	bool common_op = false;
 	int ret = 0;
-
+	mutex_lock(&dev_list_mtx);
 	dev = iwl_tm_gnl_get_dev(cmd_data->dev_name);
+	mutex_unlock(&dev_list_mtx);
 	if (!dev)
 		return -ENODEV;
-
 	switch (cmd_data->cmd) {
 
 	case IWL_TM_USER_CMD_HCMD:
@@ -650,6 +656,9 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 	case IWL_TM_USER_CMD_GET_DEVICE_STATUS:
 		ret = iwl_tm_get_device_status(dev, &cmd_data->data_in,
 					       &cmd_data->data_out);
+		break;
+	case IWL_TM_USER_CMD_SWICTH_OP_MODE:
+		ret = iwl_tm_switch_op_mode(dev, &cmd_data->data_in);
 		break;
 	}
 	if (ret)
@@ -925,6 +934,9 @@ void iwl_tm_gnl_add(struct iwl_trans *trans)
 	struct iwl_tm_gnl_dev *dev;
 
 	if (!trans)
+		return;
+
+	if (trans->tmdev)
 		return;
 
 	mutex_lock(&dev_list_mtx);
