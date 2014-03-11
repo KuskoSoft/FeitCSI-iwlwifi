@@ -1035,4 +1035,8 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy);
 
+#ifdef CPTCFG_IWLMVM_TCM_API
+void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
+#endif
+
 #endif /* __IWL_MVM_H__ */

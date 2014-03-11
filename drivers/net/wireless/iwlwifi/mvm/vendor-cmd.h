@@ -68,22 +68,30 @@
  * @IWL_MVM_VENDOR_CMD_SET_LOW_LATENCY: set low-latency mode for the given
  *	virtual interface
  * @IWL_MVM_VENDOR_CMD_GET_LOW_LATENCY: query low-latency mode
+ * @IWL_MVM_VENDOR_CMD_TCM_EVENT: TCM event
  */
 enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_SET_LOW_LATENCY,
 	IWL_MVM_VENDOR_CMD_GET_LOW_LATENCY,
+	IWL_MVM_VENDOR_CMD_TCM_EVENT,
 };
 
 /**
  * enum iwl_mvm_vendor_attr - attributes used in vendor commands
  * @__IWL_MVM_VENDOR_ATTR_INVALID: attribute 0 is invalid
  * @IWL_MVM_VENDOR_ATTR_LOW_LATENCY: low-latency flag attribute
+ * @IWL_MVM_VENDOR_ATTR_VIF_ADDR: interface MAC address
+ * @IWL_MVM_VENDOR_ATTR_VIF_LL: vif-low-latency (u8, 0/1)
+ * @IWL_MVM_VENDOR_ATTR_LL: global low-latency (u8, 0/1)
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
  */
 enum iwl_mvm_vendor_attr {
 	__IWL_MVM_VENDOR_ATTR_INVALID,
 	IWL_MVM_VENDOR_ATTR_LOW_LATENCY,
+	IWL_MVM_VENDOR_ATTR_VIF_ADDR,
+	IWL_MVM_VENDOR_ATTR_VIF_LL,
+	IWL_MVM_VENDOR_ATTR_LL,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,
