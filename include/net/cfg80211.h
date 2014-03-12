@@ -3006,6 +3006,23 @@ struct wiphy {
 	void (*reg_notifier)(struct wiphy *wiphy,
 			     struct regulatory_request *request);
 
+	/*
+	 * Indicates this wiphy can provide regulatory information.
+	 * Must be set before the wiphy is registered. Only the first
+	 * wiphy with this callback will be called to provide a regdomain
+	 * on country-code changes. The alpha2 in the returned regdomain
+	 * information can be different from the one given via argument,
+	 * if the argument contains the "99" alpha2, meaning unknown.
+	 * If an ERR_PTR is returned the regulatory core will consult other
+	 * sources for the regdomain info (internal regdb and CRDA).
+	 * Returning NULL will cause the regdomain to remain the same.
+	 * The callee will return a struct allocated with kmalloc(). After
+	 * the struct is returned, the regulatory core is responsible
+	 * for freeing it.
+	 */
+	struct ieee80211_regdomain * (*get_regd)(struct wiphy *wiphy,
+						 const char *alpha2);
+
 	/* fields below are read-only, assigned by cfg80211 */
 
 	const struct ieee80211_regdomain __rcu *regd;
