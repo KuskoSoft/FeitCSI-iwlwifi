@@ -141,11 +141,13 @@ enum iwl_ucode_tlv_api {
  * enum iwl_ucode_tlv_capa - ucode capabilities
  * @IWL_UCODE_TLV_CAPA_D0I3_SUPPORT: supports D0i3
  * @IWL_UCODE_TLV_CAPA_LAR_SUPPORT: supports Location Aware Regulatory
+ * @IWL_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT: supports Quiet Period requests
  */
 enum iwl_ucode_tlv_capa {
-	IWL_UCODE_TLV_CAPA_D0I3_SUPPORT		= BIT(0),
-	IWL_UCODE_TLV_CAPA_LAR_SUPPORT		= BIT(1),
-	IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT = BIT(8),
+	IWL_UCODE_TLV_CAPA_D0I3_SUPPORT			= BIT(0),
+	IWL_UCODE_TLV_CAPA_LAR_SUPPORT			= BIT(1),
+	IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT	= BIT(8),
+	IWL_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT		= BIT(11),
 };
 
 /* The default calibrate table size if not specified by firmware file */

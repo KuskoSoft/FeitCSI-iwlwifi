@@ -464,6 +464,9 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	if (mvm->fw->ucode_capa.capa[0] &
 	    IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT)
 		hw->wiphy->features |= NL80211_FEATURE_TX_POWER_INSERTION;
+	if (mvm->fw->ucode_capa.capa[0] &
+	    IWL_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT)
+		hw->wiphy->features |= NL80211_FEATURE_QUIET;
 
 	if (iwl_mvm_is_lar_supported(mvm)) {
 		hw->wiphy->get_regd = iwl_mvm_get_regdomain;
