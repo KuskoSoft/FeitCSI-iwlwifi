@@ -153,7 +153,7 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 static const struct nl80211_vendor_cmd_info iwl_mvm_vendor_events[] = {
 	{
 		.vendor_id = INTEL_OUI,
-		.subcmd = IWL_MVM_VENDOR_CMD_GET_LOW_LATENCY,
+		.subcmd = IWL_MVM_VENDOR_CMD_TCM_EVENT,
 	},
 };
 #endif
@@ -173,7 +173,7 @@ void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct sk_buff *msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy,
-							  200, 1, GFP_ATOMIC);
+							  200, 0, GFP_ATOMIC);
 
 	if (!msg)
 		return;
