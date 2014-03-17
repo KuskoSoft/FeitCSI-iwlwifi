@@ -445,6 +445,14 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	SET_IEEE80211_DEV(mvm->hw, mvm->trans->dev);
 
+#ifdef CPTCFG_IWLMVM_TCM
+	spin_lock_init(&mvm->tcm.lock);
+	setup_timer(&mvm->tcm.timer, iwl_mvm_tcm_timer, (unsigned long)mvm);
+	INIT_WORK(&mvm->tcm.work, iwl_mvm_tcm_work);
+	mvm->tcm.ts = jiffies;
+	mvm->tcm.ll_ts = jiffies;
+#endif
+
 	/*
 	 * Populate the state variables that the transport layer needs
 	 * to know about.
@@ -595,6 +603,11 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	iwl_free_nvm_data(mvm->nvm_data);
 	for (i = 0; i < NVM_MAX_NUM_SECTIONS; i++)
 		kfree(mvm->nvm_sections[i].data);
+
+#ifdef CPTCFG_IWLMVM_TCM
+	del_timer_sync(&mvm->tcm.timer);
+	cancel_work_sync(&mvm->tcm.work);
+#endif
 
 	ieee80211_free_hw(mvm->hw);
 }

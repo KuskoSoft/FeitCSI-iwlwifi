@@ -67,6 +67,9 @@
 
 #include "mvm.h"
 #include "fw-api-rs.h"
+#ifdef CPTCFG_IWLMVM_TCM
+#include "vendor-cmd.h"
+#endif
 
 /*
  * Will return 0 even if the cmd failed when RFKILL is asserted unless
@@ -623,7 +626,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	iwl_mvm_bt_coex_vif_change(mvm);
 
-#ifdef CPTCFG_IWLMVM_TCM_API
+#ifdef CPTCFG_IWLMVM_TCM
 	iwl_mvm_send_tcm_event(mvm, vif);
 #endif
 
@@ -648,3 +651,160 @@ bool iwl_mvm_low_latency(struct iwl_mvm *mvm)
 
 	return result;
 }
+
+#ifdef CPTCFG_IWLMVM_TCM
+static enum iwl_mvm_vendor_load
+iwl_mvm_tcm_load(struct iwl_mvm *mvm, u32 airtime, unsigned long elapsed)
+{
+	unsigned long load = (100 * airtime / elapsed) / USEC_PER_MSEC;
+
+	if (load > IWL_MVM_TCM_LOAD_HIGH_THRESH)
+		return IWL_MVM_VENDOR_LOAD_HIGH;
+	if (load > IWL_MVM_TCM_LOAD_MEDIUM_THRESH)
+		return IWL_MVM_VENDOR_LOAD_MEDIUM;
+	return IWL_MVM_VENDOR_LOAD_LOW;
+}
+
+void iwl_mvm_tcm_timer(unsigned long data)
+{
+	iwl_mvm_recalc_tcm((void *)data);
+}
+
+struct iwl_mvm_tcm_iter_data {
+	struct iwl_mvm *mvm;
+	bool any_sent;
+};
+
+static void iwl_mvm_tcm_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_tcm_iter_data *data = _data;
+	struct iwl_mvm *mvm = data->mvm;
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	bool low_latency;
+
+	if (mvmvif->id >= NUM_MAC_INDEX_DRIVER)
+		return;
+
+	low_latency = mvm->tcm.result.low_latency[mvmvif->id];
+
+	if (!mvm->tcm.result.change[mvmvif->id] &&
+	    mvmvif->low_latency == low_latency)
+		return;
+
+	if (mvmvif->low_latency != low_latency) {
+		/* this sends traffic load and updates quota as well */
+		iwl_mvm_update_low_latency(mvm, vif, low_latency);
+	} else {
+		iwl_mvm_send_tcm_event(mvm, vif);
+		iwl_mvm_update_quotas(mvm, NULL);
+	}
+
+	data->any_sent = true;
+}
+
+void iwl_mvm_tcm_work(struct work_struct *work)
+{
+	struct iwl_mvm *mvm = container_of(work, struct iwl_mvm, tcm.work);
+	struct iwl_mvm_tcm_iter_data data = {
+		.mvm = mvm,
+		.any_sent = false,
+	};
+
+	mutex_lock(&mvm->mutex);
+
+	ieee80211_iterate_active_interfaces(
+		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+		iwl_mvm_tcm_iter, &data);
+
+	/* send global only */
+	if (mvm->tcm.result.global_change && !data.any_sent)
+		iwl_mvm_send_tcm_event(mvm, NULL);
+
+	mutex_unlock(&mvm->mutex);
+}
+
+static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
+					    unsigned long ts)
+{
+	unsigned int elapsed = jiffies_to_msecs(ts - mvm->tcm.ts);
+	u32 total_airtime = 0;
+	int ac, mac;
+	bool low_latency = false;
+	u8 load;
+	bool handle_ll = time_after(ts, mvm->tcm.ll_ts + MVM_LL_PERIOD);
+
+	if (handle_ll)
+		mvm->tcm.ll_ts = ts;
+
+	for (mac = 0; mac < NUM_MAC_INDEX_DRIVER; mac++) {
+		u32 vo_vi_pkts = 0;
+		u32 airtime = 0;
+
+		for (ac = IEEE80211_AC_VO; ac <= IEEE80211_AC_BK; ac++)
+			airtime += mvm->tcm.data[mac].rx.airtime[ac] +
+				   mvm->tcm.data[mac].tx.airtime[ac];
+		total_airtime += airtime;
+
+		load = iwl_mvm_tcm_load(mvm, airtime, elapsed);
+		mvm->tcm.result.change[mac] = load != mvm->tcm.result.load[mac];
+		mvm->tcm.result.load[mac] = load;
+
+		for (ac = IEEE80211_AC_VO; ac <= IEEE80211_AC_VI; ac++)
+			vo_vi_pkts += mvm->tcm.data[mac].rx.pkts[ac] +
+				      mvm->tcm.data[mac].tx.pkts[ac];
+
+		/* enable immediately with enough packets but defer disabling */
+		if (vo_vi_pkts > IWL_MVM_TCM_LOWLAT_ENABLE_THRESH)
+			mvm->tcm.result.low_latency[mac] = true;
+		else if (handle_ll)
+			mvm->tcm.result.low_latency[mac] = false;
+
+		if (handle_ll) {
+			/* clear old data */
+			memset(&mvm->tcm.data[mac].rx.pkts, 0,
+			       sizeof(mvm->tcm.data[mac].rx.pkts));
+			memset(&mvm->tcm.data[mac].tx.pkts, 0,
+			       sizeof(mvm->tcm.data[mac].tx.pkts));
+		}
+		low_latency |= mvm->tcm.result.low_latency[mac];
+
+		/* clear old data */
+		memset(&mvm->tcm.data[mac].rx.airtime, 0,
+		       sizeof(mvm->tcm.data[mac].rx.airtime));
+		memset(&mvm->tcm.data[mac].tx.airtime, 0,
+		       sizeof(mvm->tcm.data[mac].tx.airtime));
+	}
+
+	load = iwl_mvm_tcm_load(mvm, total_airtime, elapsed);
+	mvm->tcm.result.global_change = load != mvm->tcm.result.global_load;
+	mvm->tcm.result.global_load = load;
+
+	schedule_work(&mvm->tcm.work);
+
+	if (load != IWL_MVM_VENDOR_LOAD_LOW)
+		return MVM_TCM_PERIOD;
+	if (low_latency)
+		return MVM_LL_PERIOD;
+	return 0;
+}
+
+void iwl_mvm_recalc_tcm(struct iwl_mvm *mvm)
+{
+	unsigned long ts = jiffies;
+
+	spin_lock(&mvm->tcm.lock);
+	/* re-check if somebody else won the recheck race */
+	if (time_after(ts, mvm->tcm.ts + MVM_TCM_PERIOD)) {
+		/* calculate statistics */
+		unsigned long timer_delay = iwl_mvm_calc_tcm_stats(mvm, ts);
+
+		/* the memset needs to be visible before the timestamp */
+		smp_mb();
+		mvm->tcm.ts = ts;
+		if (timer_delay)
+			mod_timer(&mvm->tcm.timer,
+				  mvm->tcm.ts + timer_delay);
+	}
+	spin_unlock(&mvm->tcm.lock);
+}
+#endif

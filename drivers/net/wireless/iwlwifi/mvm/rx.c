@@ -59,8 +59,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
+#include <linux/etherdevice.h>
 #include "iwl-trans.h"
-
 #include "mvm.h"
 #include "fw-api.h"
 
@@ -293,6 +293,37 @@ int iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 		(pkt->data + sizeof(*rx_res) + len));
 
 	memset(&rx_status, 0, sizeof(rx_status));
+
+#ifdef CPTCFG_IWLMVM_TCM
+	if (len >= sizeof(*hdr) && !is_multicast_ether_addr(hdr->addr1) &&
+	    ieee80211_is_data(hdr->frame_control)) {
+		int ac = IEEE80211_AC_BE; /* treat non-QoS as BE */
+		struct ieee80211_sta *sta;
+
+		if (ieee80211_is_data_qos(hdr->frame_control)) {
+			int tid = *ieee80211_get_qos_ctl(hdr) &
+					IEEE80211_QOS_CTL_TID_MASK;
+
+			ac = tid_to_mac80211_ac[tid];
+		}
+
+		/* This is fine since we don't support multiple AP interfaces */
+		sta = ieee80211_find_sta_by_ifaddr(mvm->hw, hdr->addr2, NULL);
+		if (sta) {
+			struct iwl_mvm_sta *mvmsta;
+			int mac;
+
+			mvmsta = iwl_mvm_sta_from_mac80211(sta);
+			mac = mvmsta->mac_id_n_color & FW_CTXT_ID_MSK;
+
+			if (time_after(jiffies, mvm->tcm.ts + MVM_TCM_PERIOD))
+				iwl_mvm_recalc_tcm(mvm);
+			mvm->tcm.data[mac].rx.pkts[ac]++;
+			mvm->tcm.data[mac].rx.airtime[ac] +=
+				le16_to_cpu(phy_info->frame_time);
+		}
+	}
+#endif
 
 	/*
 	 * drop the packet if it has failed being decrypted by HW

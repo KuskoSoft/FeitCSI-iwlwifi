@@ -65,10 +65,11 @@ config IWLWIFI_MINI_PM_RUNTIME
 	  purpose of getting the FW and bus into a low power state when
 	  the WiFi component is idle.
 
-config IWLMVM_TCM_API
-	bool "enable traffic conditions monitoring API"
+config IWLMVM_TCM
+	bool "enable traffic conditions monitoring"
 	depends on IWLMVM
 	default y
 	help
-	  This option enables (vendor) events to userspace and traffic monitoring
-	  for low-latency and traffic thresholds.
+	  This option enables (vendor) events to userspace and traffic
+	  monitoring for low-latency and traffic thresholds, as well as
+	  their impact on quota and other submodules.

@@ -620,6 +620,33 @@ struct iwl_mvm {
 	struct iwl_mvm_tt_mgmt thermal_throttle;
 	s32 temperature;	/* Celsius */
 
+#ifdef CPTCFG_IWLMVM_TCM
+	struct {
+		struct timer_list timer;
+		struct work_struct work;
+		spinlock_t lock; /* used when time elapsed */
+		unsigned long ts; /* timestamp when period ends */
+		unsigned long ll_ts;
+		struct {
+			struct {
+				u32 pkts[IEEE80211_NUM_ACS];
+				u32 airtime[IEEE80211_NUM_ACS];
+			} tx;
+			struct {
+				u32 pkts[IEEE80211_NUM_ACS];
+				u32 airtime[IEEE80211_NUM_ACS];
+			} rx;
+		} data[NUM_MAC_INDEX_DRIVER];
+		struct {
+			u8 load[NUM_MAC_INDEX_DRIVER];
+			u8 global_load;
+			bool low_latency[NUM_MAC_INDEX_DRIVER];
+			bool change[NUM_MAC_INDEX_DRIVER];
+			bool global_change;
+		} result;
+	} tcm;
+#endif
+
 #ifdef CPTCFG_NL80211_TESTMODE
 	u32 noa_duration;
 	struct ieee80211_vif *noa_vif;
@@ -1044,8 +1071,13 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy);
 
-#ifdef CPTCFG_IWLMVM_TCM_API
+#ifdef CPTCFG_IWLMVM_TCM
+#define MVM_TCM_PERIOD (HZ/2)
+#define MVM_LL_PERIOD (10 * HZ)
 void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
+void iwl_mvm_tcm_timer(unsigned long data);
+void iwl_mvm_tcm_work(struct work_struct *work);
+void iwl_mvm_recalc_tcm(struct iwl_mvm *mvm);
 #endif
 
 #endif /* __IWL_MVM_H__ */

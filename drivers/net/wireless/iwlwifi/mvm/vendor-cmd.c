@@ -149,7 +149,7 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	},
 };
 
-#ifdef CPTCFG_IWLMVM_TCM_API
+#ifdef CPTCFG_IWLMVM_TCM
 static const struct nl80211_vendor_cmd_info iwl_mvm_vendor_events[] = {
 	{
 		.vendor_id = INTEL_OUI,
@@ -162,26 +162,36 @@ void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy)
 {
 	wiphy->vendor_commands = iwl_mvm_vendor_commands;
 	wiphy->n_vendor_commands = ARRAY_SIZE(iwl_mvm_vendor_commands);
-#ifdef CPTCFG_IWLMVM_TCM_API
+#ifdef CPTCFG_IWLMVM_TCM
 	wiphy->vendor_events = iwl_mvm_vendor_events;
 	wiphy->n_vendor_events = ARRAY_SIZE(iwl_mvm_vendor_events);
 #endif
 }
 
-#ifdef CPTCFG_IWLMVM_TCM_API
+#ifdef CPTCFG_IWLMVM_TCM
 void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 {
-	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct sk_buff *msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy,
 							  200, 0, GFP_ATOMIC);
 
 	if (!msg)
 		return;
 
-	if (nla_put(msg, IWL_MVM_VENDOR_ATTR_VIF_ADDR, ETH_ALEN, vif->addr) ||
-	    nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_VIF_LL,
-		       iwl_mvm_vif_low_latency(mvmvif)) ||
-	    nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_LL, iwl_mvm_low_latency(mvm)))
+	if (vif) {
+		struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+		if (nla_put(msg, IWL_MVM_VENDOR_ATTR_VIF_ADDR,
+			    ETH_ALEN, vif->addr) ||
+		    nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_VIF_LL,
+			       iwl_mvm_vif_low_latency(mvmvif)) ||
+		    nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_VIF_LOAD,
+			       mvm->tcm.result.load[mvmvif->id]))
+			goto nla_put_failure;
+	}
+
+	if (nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_LL, iwl_mvm_low_latency(mvm)) ||
+	    nla_put_u8(msg, IWL_MVM_VENDOR_ATTR_LOAD,
+		       mvm->tcm.result.global_load))
 		goto nla_put_failure;
 
 	cfg80211_vendor_event(msg, GFP_ATOMIC);
