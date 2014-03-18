@@ -161,10 +161,14 @@ static void iwl_dnt_dev_if_configure_dbgc_registers(struct iwl_trans *trans,
 	default:
 		/*
 		 * The given addresses are already shifted by 4 places so we
-		 * need to shift by another 4
+		 * need to shift by another 4.
+		 * Note that in SfP the end addr points to the last block of
+		 * data that the DBGC can write to, so when setting the end
+		 * register we need to set it to 1 block before.
 		 */
 		iwl_write_prph(trans, cfg->dbgc_hb_base_addr, base_addr >> 4);
-		iwl_write_prph(trans, cfg->dbgc_hb_end_addr, end_addr >> 4);
+		iwl_write_prph(trans, cfg->dbgc_hb_end_addr,
+			       (end_addr >> 4) - 1);
 		break;
 	};
 }
