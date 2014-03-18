@@ -235,7 +235,13 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 
 	/* If we're running a device that supports DBGC.... */
 	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
-		wr_ptr = (wr_ptr - (dnt->mon_base_addr >> 6)) << 6;
+		/*
+		 * In DBGC the write pointer points to the chuck previously
+		 * written, and in this function we refer to it as pointing to
+		 * the oldest data in the buffer, so we need to also increment
+		 * the value we're using by a chuck (256 bytes).
+		 */
+		wr_ptr = ((wr_ptr - (dnt->mon_base_addr >> 6)) << 6) + 256;
 	else
 		wr_ptr = (wr_ptr << 4) - dnt->mon_base_addr;
 	temp_buf = kmemdup(dnt->mon_buf_cpu_addr, dnt->mon_buf_size,
