@@ -869,6 +869,9 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 
 	lockdep_assert_held(&mvm->mutex);
 
+	if (mvm->fw_error_dump)
+		return;
+
 	file_len = mvm->fw_error_sram_len +
 		   sizeof(*dump_file) +
 		   sizeof(*dump_data);
