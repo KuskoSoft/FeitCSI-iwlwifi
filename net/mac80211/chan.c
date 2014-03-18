@@ -826,7 +826,8 @@ int ieee80211_vif_use_reserved_context(struct ieee80211_sub_if_data *sdata,
 			goto out;
 		}
 
-		__ieee80211_vif_copy_chanctx_to_vlans(sdata, false);
+		if (sdata->vif.type == NL80211_IFTYPE_AP)
+			__ieee80211_vif_copy_chanctx_to_vlans(sdata, false);
 	}
 
 	*changed = tmp_changed;
