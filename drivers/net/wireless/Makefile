@@ -59,3 +59,4 @@ obj-$(CPTCFG_MAC80211_HWSIM)	+= mac80211_hwsim.o
 #obj-$(CONFIG_BRCMSMAC)	+= brcm80211/
 #
 #obj-$(CONFIG_CW1200)	+= cw1200/
+#obj-$(CONFIG_RSI_91X)	+= rsi/
