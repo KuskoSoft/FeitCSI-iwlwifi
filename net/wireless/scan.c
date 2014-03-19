@@ -968,11 +968,12 @@ cfg80211_inform_bss_width_frame(struct wiphy *wiphy,
 	if (WARN_ON(len < offsetof(struct ieee80211_mgmt, u.probe_resp.variable)))
 		return NULL;
 
-	rx_freq = channel->center_freq;
 	channel = cfg80211_get_bss_channel(wiphy, mgmt->u.beacon.variable,
 					   ielen, rx_channel);
 	if (!channel)
 		return NULL;
+
+	rx_freq = channel->center_freq;
 
 	ies = kmalloc(sizeof(*ies) + ielen, gfp);
 	if (!ies)
