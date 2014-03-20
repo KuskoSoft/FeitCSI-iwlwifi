@@ -585,6 +585,7 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	kfree(mvm->scan_cmd);
 	vfree(mvm->fw_error_dump);
 	kfree(mvm->fw_error_sram);
+	kfree(mvm->fw_error_rxf);
 	kfree(mvm->mcast_filter_cmd);
 	mvm->mcast_filter_cmd = NULL;
 
@@ -886,8 +887,9 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 		return;
 
 	file_len = mvm->fw_error_sram_len +
+		   mvm->fw_error_rxf_len +
 		   sizeof(*dump_file) +
-		   sizeof(*dump_data);
+		   sizeof(*dump_data) * 2;
 
 	dump_file = vmalloc(file_len);
 	if (!dump_file)
@@ -898,7 +900,12 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 	dump_file->barker = cpu_to_le32(IWL_FW_ERROR_DUMP_BARKER);
 	dump_file->file_len = cpu_to_le32(file_len);
 	dump_data = (void *)dump_file->data;
-	dump_data->type = IWL_FW_ERROR_DUMP_SRAM;
+	dump_data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_RXF);
+	dump_data->len = cpu_to_le32(mvm->fw_error_rxf_len);
+	memcpy(dump_data->data, mvm->fw_error_rxf, mvm->fw_error_rxf_len);
+
+	dump_data = (void *)((u8 *)dump_data->data + mvm->fw_error_rxf_len);
+	dump_data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_SRAM);
 	dump_data->len = cpu_to_le32(mvm->fw_error_sram_len);
 
 	/*
@@ -907,6 +914,14 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 	 * mvm->fw_error_sram right now.
 	 */
 	memcpy(dump_data->data, mvm->fw_error_sram, mvm->fw_error_sram_len);
+
+	kfree(mvm->fw_error_rxf);
+	mvm->fw_error_rxf = NULL;
+	mvm->fw_error_rxf_len = 0;
+
+	kfree(mvm->fw_error_sram);
+	mvm->fw_error_sram = NULL;
+	mvm->fw_error_sram_len = 0;
 }
 #endif
 
@@ -918,6 +933,7 @@ static void iwl_mvm_nic_error(struct iwl_op_mode *op_mode)
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	iwl_mvm_fw_error_sram_dump(mvm);
+	iwl_mvm_fw_error_rxf_dump(mvm);
 #endif
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
