@@ -704,7 +704,7 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans *trans,
 /*
  * iwl_pcie_rx_handle - Main entry function for receiving responses from fw
  */
-static int iwl_pcie_rx_handle(struct iwl_trans *trans, int budget)
+static void iwl_pcie_rx_handle(struct iwl_trans *trans)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	struct iwl_rxq *rxq = &trans_pcie->rxq;
@@ -712,7 +712,6 @@ static int iwl_pcie_rx_handle(struct iwl_trans *trans, int budget)
 	u8 fill_rx = 0;
 	u32 count = 8;
 	int total_empty;
-	int handled = 0;
 
 restart:
 	spin_lock(&rxq->lock);
@@ -733,15 +732,14 @@ restart:
 	if (total_empty > (RX_QUEUE_SIZE / 2))
 		fill_rx = 1;
 
-	while (i != r && handled < budget) {
+	while (i != r) {
 		struct iwl_rx_mem_buffer *rxb;
 
 		rxb = rxq->queue[i];
 		rxq->queue[i] = NULL;
 
-		IWL_DEBUG_RX(trans, "rxbuf: HW = %d, SW = %d (%p), budget=%d\n",
-			     r, i, rxb, budget);
-		handled++;
+		IWL_DEBUG_RX(trans, "rxbuf: HW = %d, SW = %d (%p)\n",
+			     r, i, rxb);
 		iwl_pcie_rx_handle_rb(trans, rxb);
 
 		i = (i + 1) & RX_QUEUE_MASK;
@@ -768,7 +766,8 @@ restart:
 	else
 		iwl_pcie_rxq_restock(trans);
 
-	return handled;
+	if (trans_pcie->napi.poll)
+		napi_gro_flush(&trans_pcie->napi, false);
 }
 
 /*
@@ -1094,22 +1093,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 		isr_stats->rx++;
 
 		local_bh_disable();
-		if (trans_pcie->napi.poll &&
-		    napi_schedule_prep(&trans_pcie->napi)) {
-			/* Disable RX interrupts while NAPI is scheduled.
-			 * This isn't reflected in trans_pcie->inta_mask,
-			 * but that shouldn't matter since the interrupt
-			 * is locked against the NAPI poll, so even if it
-			 * ends up being enabled again that won't hurt.
-			 */
-			iwl_write32(trans, CSR_INT_MASK,
-				    trans_pcie->inta_mask &
-					~(CSR_INT_BIT_FH_RX |
-					  CSR_INT_BIT_SW_RX));
-			__napi_schedule(&trans_pcie->napi);
-		} else {
-			iwl_pcie_rx_handle(trans, RX_QUEUE_SIZE);
-		}
+		iwl_pcie_rx_handle(trans);
 		local_bh_enable();
 	}
 
@@ -1220,8 +1204,6 @@ void iwl_pcie_reset_ict(struct iwl_trans *trans)
 	IWL_DEBUG_ISR(trans, "CSR_DRAM_INT_TBL_REG =0x%x\n", val);
 
 	iwl_write32(trans, CSR_DRAM_INT_TBL_REG, val);
-	if (trans_pcie->napi.poll && !trans_pcie->use_ict)
-		napi_enable(&trans_pcie->napi);
 	trans_pcie->use_ict = true;
 	trans_pcie->ict_index = 0;
 	iwl_write32(trans, CSR_INT, trans_pcie->inta_mask);
@@ -1239,8 +1221,6 @@ void iwl_pcie_disable_ict(struct iwl_trans *trans)
 	old_use_ict = trans_pcie->use_ict;
 	trans_pcie->use_ict = false;
 	spin_unlock(&trans_pcie->irq_lock);
-	if (trans_pcie->napi.poll && old_use_ict)
-		napi_disable(&trans_pcie->napi);
 }
 
 irqreturn_t iwl_pcie_isr(int irq, void *data)
@@ -1258,22 +1238,4 @@ irqreturn_t iwl_pcie_isr(int irq, void *data)
 	iwl_write32(trans, CSR_INT_MASK, 0x00000000);
 
 	return IRQ_WAKE_THREAD;
-}
-
-int iwl_pcie_napi_poll(struct napi_struct *napi, int budget)
-{
-	struct iwl_trans_pcie *trans_pcie =
-		container_of(napi, struct iwl_trans_pcie, napi);
-	struct iwl_trans *trans = iwl_trans_pcie_get_trans(trans_pcie);
-	int done;
-
-	done = iwl_pcie_rx_handle(trans, budget);
-	if (done < budget) {
-		napi_complete(&trans_pcie->napi);
-		/* enable IRQ again */
-		iwl_write32(trans, CSR_INT_MASK, trans_pcie->inta_mask |
-						 CSR_INT_BIT_FH_RX |
-						 CSR_INT_BIT_SW_RX);
-	}
-	return done;
 }

@@ -1059,6 +1059,12 @@ static void iwl_trans_pcie_write_prph(struct iwl_trans *trans, u32 addr,
 	iwl_trans_pcie_write32(trans, HBUS_TARG_PRPH_WDAT, val);
 }
 
+static int iwl_pcie_dummy_napi_poll(struct napi_struct *napi, int budget)
+{
+	WARN_ON(1);
+	return 0;
+}
+
 static void iwl_trans_pcie_configure(struct iwl_trans *trans,
 				     const struct iwl_trans_config *trans_cfg)
 {
@@ -1094,8 +1100,8 @@ static void iwl_trans_pcie_configure(struct iwl_trans *trans,
 	if (!trans_pcie->napi.poll && trans->op_mode->ops->napi_add) {
 		init_dummy_netdev(&trans_pcie->napi_dev);
 		iwl_op_mode_napi_add(trans->op_mode, &trans_pcie->napi,
-				     &trans_pcie->napi_dev, iwl_pcie_napi_poll,
-				     64);
+				     &trans_pcie->napi_dev,
+				     iwl_pcie_dummy_napi_poll, 64);
 	}
 }
 
