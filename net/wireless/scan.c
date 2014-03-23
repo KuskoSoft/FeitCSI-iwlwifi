@@ -659,9 +659,6 @@ static bool cfg80211_combine_bsses(struct cfg80211_registered_device *dev,
 			continue;
 		if (ssidlen && ie[1] != ssidlen)
 			continue;
-		/* that would be odd ... */
-		if (bss->pub.beacon_ies)
-			continue;
 		if (WARN_ON_ONCE(bss->pub.hidden_beacon_bss))
 			continue;
 		if (WARN_ON_ONCE(!list_empty(&bss->hidden_list)))
@@ -947,13 +944,11 @@ cfg80211_inform_bss_width_frame(struct wiphy *wiphy,
 	struct ieee80211_channel *channel;
 	size_t ielen = len - offsetof(struct ieee80211_mgmt,
 				      u.probe_resp.variable);
-	u16 rx_freq;
-
 	BUILD_BUG_ON(offsetof(struct ieee80211_mgmt, u.probe_resp.variable) !=
 			offsetof(struct ieee80211_mgmt, u.beacon.variable));
 
-	trace_cfg80211_inform_bss_width_frame(wiphy, rx_channel, scan_width,
-					      mgmt, len, signal);
+	trace_cfg80211_inform_bss_width_frame(wiphy, rx_channel, scan_width, mgmt,
+					      len, signal);
 
 	if (WARN_ON(!mgmt))
 		return NULL;
@@ -972,8 +967,6 @@ cfg80211_inform_bss_width_frame(struct wiphy *wiphy,
 					   ielen, rx_channel);
 	if (!channel)
 		return NULL;
-
-	rx_freq = channel->center_freq;
 
 	ies = kmalloc(sizeof(*ies) + ielen, gfp);
 	if (!ies)

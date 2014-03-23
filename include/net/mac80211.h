@@ -701,7 +701,6 @@ struct ieee80211_tx_info {
 			u8 ampdu_ack_len;
 			u8 ampdu_len;
 			u8 antenna;
-			/* 21 bytes free */
 			void *status_driver_data[21 / sizeof(void *)];
 		} status;
 		struct {

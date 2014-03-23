@@ -2923,11 +2923,11 @@ static int ieee80211_cancel_remain_on_channel(struct wiphy *wiphy,
 
 static int ieee80211_start_radar_detection(struct wiphy *wiphy,
 					   struct net_device *dev,
-					   struct cfg80211_chan_def *chandef)
+					   struct cfg80211_chan_def *chandef,
+					   u32 cac_time_ms)
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = sdata->local;
-	unsigned long timeout;
 	int err;
 
 	mutex_lock(&local->mtx);
@@ -2945,9 +2945,9 @@ static int ieee80211_start_radar_detection(struct wiphy *wiphy,
 	if (err)
 		goto out_unlock;
 
-	timeout = msecs_to_jiffies(IEEE80211_DFS_MIN_CAC_TIME_MS);
 	ieee80211_queue_delayed_work(&sdata->local->hw,
-				     &sdata->dfs_cac_timer_work, timeout);
+				     &sdata->dfs_cac_timer_work,
+				     msecs_to_jiffies(cac_time_ms));
 
  out_unlock:
 	mutex_unlock(&local->mtx);
@@ -3108,8 +3108,9 @@ unlock:
 	sdata_unlock(sdata);
 }
 
-int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
-			     struct cfg80211_csa_settings *params)
+static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
+				    struct cfg80211_csa_settings *params,
+				    u32 *changed)
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = sdata->local;
@@ -3197,7 +3198,7 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 
 			return err;
 		}
-		changed |= err;
+		*changed |= err;
 
 		break;
 	case NL80211_IFTYPE_ADHOC:
@@ -3253,14 +3254,16 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 			err = ieee80211_ibss_csa_beacon(sdata, params);
 			if (err < 0)
 				return err;
-			changed |= err;
+			*changed |= err;
 		}
 
 		ieee80211_send_action_csa(sdata, params);
 
 		break;
 #ifdef CPTCFG_MAC80211_MESH
-	case NL80211_IFTYPE_MESH_POINT:
+	case NL80211_IFTYPE_MESH_POINT: {
+		struct ieee80211_if_mesh *ifmsh = &sdata->u.mesh;
+
 		/*
 		 * TODO: mesh CSA implementation doesn't look correct now,
 		 * so disable it meanwhile.
@@ -3293,17 +3296,71 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 				ifmsh->csa_role = IEEE80211_MESH_CSA_ROLE_NONE;
 				return err;
 			}
-			changed |= err;
+			*changed |= err;
 		}
 
 		if (ifmsh->csa_role == IEEE80211_MESH_CSA_ROLE_INIT)
 			ieee80211_send_action_csa(sdata, params);
 
 		break;
+		}
 #endif
 	default:
 		return -EOPNOTSUPP;
 	}
+
+	return 0;
+}
+
+int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
+			     struct cfg80211_csa_settings *params)
+{
+	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
+	struct ieee80211_local *local = sdata->local;
+	struct ieee80211_chanctx_conf *chanctx_conf;
+	struct ieee80211_chanctx *chanctx;
+	int err, num_chanctx, changed = 0;
+
+	sdata_assert_lock(sdata);
+
+	if (!list_empty(&local->roc_list) || local->scanning)
+		return -EBUSY;
+
+	if (sdata->wdev.cac_started)
+		return -EBUSY;
+
+	if (cfg80211_chandef_identical(&params->chandef,
+				       &sdata->vif.bss_conf.chandef))
+		return -EINVAL;
+
+	rcu_read_lock();
+	chanctx_conf = rcu_dereference(sdata->vif.chanctx_conf);
+	if (!chanctx_conf) {
+		rcu_read_unlock();
+		return -EBUSY;
+	}
+
+	/* don't handle for multi-VIF cases */
+	chanctx = container_of(chanctx_conf, struct ieee80211_chanctx, conf);
+	if (chanctx->refcount > 1) {
+		rcu_read_unlock();
+		return -EBUSY;
+	}
+	num_chanctx = 0;
+	list_for_each_entry_rcu(chanctx, &local->chanctx_list, list)
+		num_chanctx++;
+	rcu_read_unlock();
+
+	if (num_chanctx > 1)
+		return -EBUSY;
+
+	/* don't allow another channel switch if one is already active. */
+	if (sdata->vif.csa_active)
+		return -EBUSY;
+
+	err = ieee80211_set_csa_beacon(sdata, params, &changed);
+	if (err)
+		return err;
 
 	sdata->csa_radar_required = params->radar_required;
 
