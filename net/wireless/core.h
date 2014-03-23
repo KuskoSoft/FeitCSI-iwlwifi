@@ -461,8 +461,8 @@ void cfg80211_stop_p2p_device(struct cfg80211_registered_device *rdev,
 #endif
 
 #ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-void cfg80211_android_create_p2p_device(struct wireless_dev *wdev,
-					const char *name);
+int cfg80211_android_create_p2p_device(struct wireless_dev *wdev,
+				       const char *name);
 void cfg80211_android_destroy_p2p_device(struct wireless_dev *wdev);
 #endif
 

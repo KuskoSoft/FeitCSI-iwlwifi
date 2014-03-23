@@ -2623,13 +2623,19 @@ static int nl80211_new_interface(struct sk_buff *skb, struct genl_info *info)
 		INIT_LIST_HEAD(&wdev->mgmt_registrations);
 		spin_lock_init(&wdev->mgmt_registrations_lock);
 
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-		cfg80211_android_create_p2p_device(wdev,
-			nla_data(info->attrs[NL80211_ATTR_IFNAME]));
-#endif
 		wdev->identifier = ++rdev->wdev_id;
 		list_add_rcu(&wdev->list, &rdev->wdev_list);
 		rdev->devlist_generation++;
+
+#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
+		err = cfg80211_android_create_p2p_device(wdev,
+				nla_data(info->attrs[NL80211_ATTR_IFNAME]));
+		if (err) {
+			nlmsg_free(msg);
+			rdev_del_virtual_intf(rdev, wdev);
+			return err;
+		}
+#endif
 		break;
 	default:
 		break;

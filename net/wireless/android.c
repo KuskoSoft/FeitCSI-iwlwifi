@@ -96,30 +96,40 @@ static void cfg80211_android_p2pdev_setup(struct net_device *dev)
 	dev->destructor = free_netdev;
 }
 
-void cfg80211_android_create_p2p_device(struct wireless_dev *wdev,
-					const char *name)
+int cfg80211_android_create_p2p_device(struct wireless_dev *wdev,
+				       const char *name)
 {
+	int ret;
+
 	if (WARN_ON(wdev->p2pdev))
-		return;
+		return -EEXIST;
 
 	wdev->p2pdev = alloc_netdev(0, name, cfg80211_android_p2pdev_setup);
-	if (WARN(!wdev->p2pdev,
-		 "Failed to allocate P2P-Device netdev, things will fail!\n"))
-		return;
+	if (!wdev->p2pdev)
+		return -ENOMEM;
 
 	memcpy(wdev->p2pdev->dev_addr, wdev->address, ETH_ALEN);
 	wdev->p2pdev->ieee80211_ptr = wdev;
 
-	if (WARN(register_netdevice(wdev->p2pdev),
-		 "Failed to register P2P-Device netdev, things will fail!\n")) {
-		free_netdev(wdev->p2pdev);
-		wdev->p2pdev = NULL;
-		return;
+	ret = register_netdevice(wdev->p2pdev);
+	if (ret)
+		goto out_free;
+
+	ret = sysfs_create_link(&wdev->p2pdev->dev.kobj,
+				&wdev->wiphy->dev.kobj, "phy80211");
+	if (ret) {
+		pr_err("failed to add phy80211 symlink to netdev!\n");
+		goto out_unregister;
 	}
 
-	if (sysfs_create_link(&wdev->p2pdev->dev.kobj, &wdev->wiphy->dev.kobj,
-			      "phy80211"))
-		pr_err("failed to add phy80211 symlink to netdev!\n");
+	return ret;
+
+out_unregister:
+	unregister_netdevice(wdev->p2pdev);
+out_free:
+	free_netdev(wdev->p2pdev);
+	wdev->p2pdev = NULL;
+	return ret;
 }
 
 void cfg80211_android_destroy_p2p_device(struct wireless_dev *wdev)
