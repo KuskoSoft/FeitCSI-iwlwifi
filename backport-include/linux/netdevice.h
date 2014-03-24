@@ -481,6 +481,7 @@ struct net *dev_net(const struct net_device *dev)
 #define netdev_notify_peers(dev)
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
 #define netdev_notify_peers(dev) netif_notify_peers(dev)
+#define napi_gro_flush(napi, old) napi_gro_flush(napi)
 #endif
 
 #endif /* __BACKPORT_NETDEVICE_H */
