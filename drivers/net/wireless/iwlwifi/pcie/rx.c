@@ -181,7 +181,7 @@ static void iwl_pcie_rxq_check_wrptr(struct iwl_trans *trans)
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	struct iwl_rxq *rxq = &trans_pcie->rxq;
 
-	spin_lock_bh(&rxq->lock);
+	spin_lock(&rxq->lock);
 
 	if (!rxq->need_update)
 		goto exit_unlock;
@@ -190,7 +190,7 @@ static void iwl_pcie_rxq_check_wrptr(struct iwl_trans *trans)
 	rxq->need_update = false;
 
  exit_unlock:
-	spin_unlock_bh(&rxq->lock);
+	spin_unlock(&rxq->lock);
 }
 
 /*
@@ -221,7 +221,7 @@ static void iwl_pcie_rxq_restock(struct iwl_trans *trans)
 	if (!test_bit(STATUS_DEVICE_ENABLED, &trans->status))
 		return;
 
-	spin_lock_bh(&rxq->lock);
+	spin_lock(&rxq->lock);
 	while ((iwl_rxq_space(rxq) > 0) && (rxq->free_count)) {
 		/* The overwritten rxb must be a used one */
 		rxb = rxq->queue[rxq->write];
@@ -238,7 +238,7 @@ static void iwl_pcie_rxq_restock(struct iwl_trans *trans)
 		rxq->write = (rxq->write + 1) & RX_QUEUE_MASK;
 		rxq->free_count--;
 	}
-	spin_unlock_bh(&rxq->lock);
+	spin_unlock(&rxq->lock);
 	/* If the pre-allocated buffer pool is dropping low, schedule to
 	 * refill it */
 	if (rxq->free_count <= RX_LOW_WATERMARK)
@@ -247,9 +247,9 @@ static void iwl_pcie_rxq_restock(struct iwl_trans *trans)
 	/* If we've added more space for the firmware to place data, tell it.
 	 * Increment device's write pointer in multiples of 8. */
 	if (rxq->write_actual != (rxq->write & ~0x7)) {
-		spin_lock_bh(&rxq->lock);
+		spin_lock(&rxq->lock);
 		iwl_pcie_rxq_inc_wr_ptr(trans);
-		spin_unlock_bh(&rxq->lock);
+		spin_unlock(&rxq->lock);
 	}
 }
 
@@ -271,12 +271,12 @@ static void iwl_pcie_rxq_alloc_rbs(struct iwl_trans *trans, gfp_t priority)
 	gfp_t gfp_mask = priority;
 
 	while (1) {
-		spin_lock_bh(&rxq->lock);
+		spin_lock(&rxq->lock);
 		if (list_empty(&rxq->rx_used)) {
-			spin_unlock_bh(&rxq->lock);
+			spin_unlock(&rxq->lock);
 			return;
 		}
-		spin_unlock_bh(&rxq->lock);
+		spin_unlock(&rxq->lock);
 
 		if (rxq->free_count > RX_LOW_WATERMARK)
 			gfp_mask |= __GFP_NOWARN;
@@ -305,17 +305,17 @@ static void iwl_pcie_rxq_alloc_rbs(struct iwl_trans *trans, gfp_t priority)
 			return;
 		}
 
-		spin_lock_bh(&rxq->lock);
+		spin_lock(&rxq->lock);
 
 		if (list_empty(&rxq->rx_used)) {
-			spin_unlock_bh(&rxq->lock);
+			spin_unlock(&rxq->lock);
 			__free_pages(page, trans_pcie->rx_page_order);
 			return;
 		}
 		rxb = list_first_entry(&rxq->rx_used, struct iwl_rx_mem_buffer,
 				       list);
 		list_del(&rxb->list);
-		spin_unlock_bh(&rxq->lock);
+		spin_unlock(&rxq->lock);
 
 		BUG_ON(rxb->page);
 		rxb->page = page;
@@ -326,9 +326,9 @@ static void iwl_pcie_rxq_alloc_rbs(struct iwl_trans *trans, gfp_t priority)
 				     DMA_FROM_DEVICE);
 		if (dma_mapping_error(trans->dev, rxb->page_dma)) {
 			rxb->page = NULL;
-			spin_lock_bh(&rxq->lock);
+			spin_lock(&rxq->lock);
 			list_add(&rxb->list, &rxq->rx_used);
-			spin_unlock_bh(&rxq->lock);
+			spin_unlock(&rxq->lock);
 			__free_pages(page, trans_pcie->rx_page_order);
 			return;
 		}
@@ -337,12 +337,12 @@ static void iwl_pcie_rxq_alloc_rbs(struct iwl_trans *trans, gfp_t priority)
 		/* and also 256 byte aligned! */
 		BUG_ON(rxb->page_dma & DMA_BIT_MASK(8));
 
-		spin_lock_bh(&rxq->lock);
+		spin_lock(&rxq->lock);
 
 		list_add_tail(&rxb->list, &rxq->rx_free);
 		rxq->free_count++;
 
-		spin_unlock_bh(&rxq->lock);
+		spin_unlock(&rxq->lock);
 	}
 }
 
@@ -510,7 +510,7 @@ int iwl_pcie_rx_init(struct iwl_trans *trans)
 			return err;
 	}
 
-	spin_lock_bh(&rxq->lock);
+	spin_lock(&rxq->lock);
 
 	INIT_WORK(&trans_pcie->rx_replenish, iwl_pcie_rx_replenish_work);
 
@@ -526,15 +526,15 @@ int iwl_pcie_rx_init(struct iwl_trans *trans)
 	rxq->read = rxq->write = 0;
 	rxq->write_actual = 0;
 	memset(rxq->rb_stts, 0, sizeof(*rxq->rb_stts));
-	spin_unlock_bh(&rxq->lock);
+	spin_unlock(&rxq->lock);
 
 	iwl_pcie_rx_replenish(trans);
 
 	iwl_pcie_rx_hw_init(trans, rxq);
 
-	spin_lock_bh(&rxq->lock);
+	spin_lock(&rxq->lock);
 	iwl_pcie_rxq_inc_wr_ptr(trans);
-	spin_unlock_bh(&rxq->lock);
+	spin_unlock(&rxq->lock);
 
 	return 0;
 }
@@ -553,9 +553,9 @@ void iwl_pcie_rx_free(struct iwl_trans *trans)
 
 	cancel_work_sync(&trans_pcie->rx_replenish);
 
-	spin_lock_bh(&rxq->lock);
+	spin_lock(&rxq->lock);
 	iwl_pcie_rxq_free_rbs(trans);
-	spin_unlock_bh(&rxq->lock);
+	spin_unlock(&rxq->lock);
 
 	dma_free_coherent(trans->dev, sizeof(__le32) * RX_QUEUE_SIZE,
 			  rxq->bd, rxq->bd_dma);
