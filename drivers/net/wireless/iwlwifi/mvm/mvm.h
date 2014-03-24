@@ -638,6 +638,7 @@ struct iwl_mvm {
 			} rx;
 		} data[NUM_MAC_INDEX_DRIVER];
 		struct {
+			u32 airtime[NUM_MAC_INDEX_DRIVER];
 			u8 load[NUM_MAC_INDEX_DRIVER];
 			u8 global_load;
 			bool low_latency[NUM_MAC_INDEX_DRIVER];
@@ -1072,7 +1073,8 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy);
 
 #ifdef CPTCFG_IWLMVM_TCM
-#define MVM_TCM_PERIOD (HZ/2)
+#define MVM_TCM_PERIOD_MSEC 500
+#define MVM_TCM_PERIOD (HZ * MVM_TCM_PERIOD_MSEC / 1000)
 #define MVM_LL_PERIOD (10 * HZ)
 void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 void iwl_mvm_tcm_timer(unsigned long data);

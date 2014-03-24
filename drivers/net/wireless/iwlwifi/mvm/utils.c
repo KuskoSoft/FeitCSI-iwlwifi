@@ -748,6 +748,7 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 		load = iwl_mvm_tcm_load(mvm, airtime, elapsed);
 		mvm->tcm.result.change[mac] = load != mvm->tcm.result.load[mac];
 		mvm->tcm.result.load[mac] = load;
+		mvm->tcm.result.airtime[mac] = airtime;
 
 		for (ac = IEEE80211_AC_VO; ac <= IEEE80211_AC_VI; ac++)
 			vo_vi_pkts += mvm->tcm.data[mac].rx.pkts[ac] +
