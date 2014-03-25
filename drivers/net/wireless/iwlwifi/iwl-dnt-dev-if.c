@@ -69,6 +69,7 @@
 #include "iwl-tm-gnl.h"
 #include "iwl-dnt-cfg.h"
 #include "iwl-dnt-dev-if.h"
+#include "iwl-prph.h"
 
 static void iwl_dnt_dev_if_configure_mipi(struct iwl_trans *trans)
 {
@@ -494,7 +495,12 @@ int iwl_dnt_dev_if_read_rx(struct iwl_dnt *dnt, struct iwl_trans *trans)
 
 	/* reading buffer size */
 	reg_val = iwl_trans_read_prph(trans, RXF_SIZE_ADDR);
-	crash->rx_buf_size = (reg_val & RXF_SIZE_BYTE_CNT_MSK) >> 6;
+	crash->rx_buf_size =
+		(reg_val & RXF_SIZE_BYTE_CNT_MSK) >> RXF_SIZE_BYTE_CND_POS;
+
+	/* the register holds the value divided by 128 */
+	crash->rx_buf_size = crash->rx_buf_size << 7;
+
 	if (!crash->rx_buf_size)
 		return -ENOMEM;
 
