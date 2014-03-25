@@ -345,35 +345,6 @@ static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
 	return 0;
 }
 
-static int iwl_tm_switch_op_mode(struct iwl_tm_gnl_dev *dev,
-				 struct iwl_tm_data *data_in)
-{
-	struct iwl_switch_op_mode *switch_cmd = data_in->data;
-	struct iwl_drv *drv;
-	int ret = 0;
-
-	if (data_in->len < sizeof(*switch_cmd))
-		return -EINVAL;
-
-	drv = iwl_drv_get_dev_container(dev->trans->dev);
-	if (!drv) {
-		IWL_ERR(dev->trans, "Couldn't retrieve device information\n");
-		return -ENODEV;
-	}
-
-	/* Executing switch command */
-	ret = iwl_drv_switch_op_mode(drv, switch_cmd->new_op_mode);
-	/*
-	 * Upon success, return value should be "count"
-	 * otherwise, negative value is returned
-	 */
-	if (!ret)
-		IWL_ERR(dev->trans, "Failed to switch op mode to %s (err:%d)\n",
-			switch_cmd->new_op_mode, ret);
-
-	return ret;
-}
-
 /*
  * Testmode GNL family types (This NL family
  * will eventually replace nl80211 support in
@@ -656,9 +627,6 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 	case IWL_TM_USER_CMD_GET_DEVICE_STATUS:
 		ret = iwl_tm_get_device_status(dev, &cmd_data->data_in,
 					       &cmd_data->data_out);
-		break;
-	case IWL_TM_USER_CMD_SWICTH_OP_MODE:
-		ret = iwl_tm_switch_op_mode(dev, &cmd_data->data_in);
 		break;
 	}
 	if (ret)
