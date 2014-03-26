@@ -396,6 +396,108 @@ static ssize_t sta_last_rx_rate_read(struct file *file, char __user *userbuf,
 STA_OPS(last_rx_rate);
 
 static int
+sta_tx_consec_loss_stat_header(struct ieee80211_tx_consec_loss_ranges *tx_csc,
+			       char *buf, int pos, int bufsz)
+{
+	int i;
+	u32 range_count = tx_csc->n_ranges;
+	u32 *bin_ranges = tx_csc->ranges;
+
+	pos += scnprintf(buf + pos, bufsz - pos,
+			  "Station\t\t\tTID\tType");
+	if (range_count) {
+		for (i = 0; i < range_count - 1; i++)
+			pos += scnprintf(buf + pos, bufsz - pos, "\t%d-%d",
+					  bin_ranges[i], bin_ranges[i+1]);
+
+		pos += scnprintf(buf + pos, bufsz - pos,
+				 "\t%d=<", bin_ranges[range_count - 1]);
+	}
+
+	pos += scnprintf(buf + pos, bufsz - pos, "\n");
+
+	return pos;
+}
+
+static int
+tx_consec_loss_stat_table(struct ieee80211_tx_consec_loss_ranges *tx_range,
+			  u32 bin_count, char *buf, int pos, int bufsz,
+			  u32 *bins, char *type, int tid)
+{
+	int j;
+
+	pos += scnprintf(buf + pos, bufsz - pos, "\t\t\t%d\t%s", tid, type);
+
+	if (tx_range->n_ranges && bins)
+		for (j = 0; j < bin_count; j++)
+			pos += scnprintf(buf + pos, bufsz - pos,
+					  "\t%d", bins[j]);
+
+	pos += scnprintf(buf + pos, bufsz - pos, "\n");
+
+	return pos;
+}
+
+/*
+ * Output stations Tx consecutive loss statistics
+ */
+static ssize_t sta_tx_consecutive_loss_stat_read(struct file *file,
+						 char __user *userbuf,
+						 size_t count, loff_t *ppos)
+{
+	struct sta_info *sta = file->private_data;
+	struct ieee80211_local *local = sta->local;
+	struct ieee80211_tx_consec_loss_ranges *tx_consec;
+	struct ieee80211_tx_consec_loss_stat *tx_csc;
+	char *buf;
+	size_t bufsz, i;
+	int ret;
+	size_t pos = 0;
+
+	bufsz = 100 * IEEE80211_NUM_TIDS;
+	buf = kzalloc(bufsz, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	rcu_read_lock();
+
+	tx_consec = rcu_dereference(local->tx_consec);
+
+	if (!sta->tx_consec) {
+		pos += scnprintf(buf + pos, bufsz - pos,
+				 "Tx consecutive loss statistics are not enabled\n");
+		goto unlock;
+	}
+
+	pos = sta_tx_consec_loss_stat_header(tx_consec, buf, pos, bufsz);
+
+	pos += scnprintf(buf + pos, bufsz - pos, "%pM\n", sta->sta.addr);
+	for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
+		tx_csc = &sta->tx_consec[i];
+		pos = tx_consec_loss_stat_table(tx_consec, tx_csc->bin_count,
+						buf, pos, bufsz,
+						tx_csc->late_bins,
+						"late", i);
+		pos = tx_consec_loss_stat_table(tx_consec, tx_csc->bin_count,
+						buf, pos, bufsz,
+						tx_csc->loss_bins,
+						"lost", i);
+		pos = tx_consec_loss_stat_table(tx_consec, tx_csc->bin_count,
+						buf, pos, bufsz,
+						tx_csc->total_loss_bins,
+						"total", i);
+	}
+unlock:
+	rcu_read_unlock();
+
+	ret = simple_read_from_buffer(userbuf, count, ppos, buf, pos);
+	kfree(buf);
+
+	return ret;
+}
+STA_OPS(tx_consecutive_loss_stat);
+
+static int
 sta_tx_latency_stat_header(struct ieee80211_tx_latency_bin_ranges *tx_latency,
 			   char *buf, int pos, int bufsz)
 {
@@ -492,33 +594,49 @@ unlock:
 }
 STA_OPS(tx_latency_stat);
 
-static ssize_t sta_tx_latency_stat_reset_write(struct file *file,
+static ssize_t sta_tx_timing_stats_reset_write(struct file *file,
 					       const char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
 	u32 *bins;
 	int bin_count;
+	u32 *loss_bins;
+	u32 *late_bins;
+	u32 *total_loss_bins;
+	u32 csc_bin_cnt;
+
 	struct sta_info *sta = file->private_data;
 	int i;
 
-	if (!sta->tx_lat)
+	if (!sta->tx_lat && !sta->tx_consec)
 		return -EINVAL;
 
 	for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
-		bins = sta->tx_lat[i].bins;
-		bin_count = sta->tx_lat[i].bin_count;
+		if (sta->tx_lat) {  /* latency stats enabled */
+			bins = sta->tx_lat[i].bins;
+			bin_count = sta->tx_lat[i].bin_count;
+			sta->tx_lat[i].max = 0;
+			sta->tx_lat[i].sum = 0;
+			sta->tx_lat[i].counter = 0;
 
-		sta->tx_lat[i].max = 0;
-		sta->tx_lat[i].sum = 0;
-		sta->tx_lat[i].counter = 0;
+			if (bin_count)
+				memset(bins, 0, bin_count * sizeof(u32));
+		}
 
-		if (bin_count)
-			memset(bins, 0, bin_count * sizeof(u32));
+		if (sta->tx_consec) { /* consecutive loss stats enabled */
+			csc_bin_cnt = sta->tx_consec[i].bin_count;
+			late_bins = sta->tx_consec[i].late_bins;
+			loss_bins = sta->tx_consec[i].loss_bins;
+			total_loss_bins = sta->tx_consec[i].total_loss_bins;
+			memset(late_bins, 0, csc_bin_cnt * sizeof(u32));
+			memset(loss_bins, 0, csc_bin_cnt * sizeof(u32));
+			memset(total_loss_bins, 0, csc_bin_cnt * sizeof(u32));
+		}
 	}
 
 	return count;
 }
-STA_OPS_W(tx_latency_stat_reset);
+STA_OPS_W(tx_timing_stats_reset);
 
 #define DEBUGFS_ADD(name) \
 	debugfs_create_file(#name, 0400, \
@@ -573,8 +691,9 @@ void ieee80211_sta_debugfs_add(struct sta_info *sta)
 	DEBUGFS_ADD(last_ack_signal);
 	DEBUGFS_ADD(current_tx_rate);
 	DEBUGFS_ADD(last_rx_rate);
+	DEBUGFS_ADD(tx_consecutive_loss_stat);
 	DEBUGFS_ADD(tx_latency_stat);
-	DEBUGFS_ADD(tx_latency_stat_reset);
+	DEBUGFS_ADD(tx_timing_stats_reset);
 
 	DEBUGFS_ADD_COUNTER(rx_packets, rx_packets);
 	DEBUGFS_ADD_COUNTER(tx_packets, tx_packets);

@@ -237,6 +237,14 @@ void sta_info_free(struct ieee80211_local *local, struct sta_info *sta)
 			kfree(sta->tx_lat[i].bins);
 		kfree(sta->tx_lat);
 	}
+	if (sta->tx_consec) {
+		for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
+			kfree(sta->tx_consec[i].late_bins);
+			kfree(sta->tx_consec[i].loss_bins);
+			kfree(sta->tx_consec[i].total_loss_bins);
+		}
+		kfree(sta->tx_consec);
+	}
 
 	sta_dbg(sta->sdata, "Destroyed STA %pM\n", sta->sta.addr);
 
@@ -303,7 +311,8 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	struct sta_info *sta;
 	struct timespec uptime;
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
-	int i;
+	struct ieee80211_tx_consec_loss_ranges *tx_consec;
+	size_t i, size;
 
 	sta = kzalloc(sizeof(*sta) + local->hw.sta_data_size, gfp);
 	if (!sta)
@@ -336,6 +345,39 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 			}
 		}
 	}
+	tx_consec = rcu_dereference(local->tx_consec);
+	/* init stations Tx consecutive loss statistics */
+	if (tx_consec) {
+		size = sizeof(struct ieee80211_tx_consec_loss_stat);
+		sta->tx_consec = kzalloc(IEEE80211_NUM_TIDS * size,
+					 GFP_ATOMIC);
+		if (!sta->tx_consec) {
+			rcu_read_unlock();
+			goto free;
+		}
+
+		for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
+			sta->tx_consec[i].bin_count =
+				tx_consec->n_ranges;
+			sta->tx_consec[i].loss_bins =
+				kcalloc(sta->tx_consec[i].bin_count,
+					sizeof(u32), GFP_ATOMIC);
+			sta->tx_consec[i].late_bins =
+				kcalloc(sta->tx_consec[i].bin_count,
+					sizeof(u32), GFP_ATOMIC);
+			sta->tx_consec[i].total_loss_bins =
+				kcalloc(sta->tx_consec[i].bin_count,
+					sizeof(u32), GFP_ATOMIC);
+
+			if (!sta->tx_consec[i].loss_bins ||
+			    !sta->tx_consec[i].late_bins ||
+			    !sta->tx_consec[i].total_loss_bins) {
+				rcu_read_unlock();
+				goto free;
+			}
+		}
+	}
+
 	rcu_read_unlock();
 
 	spin_lock_init(&sta->lock);
@@ -417,6 +459,15 @@ free:
 			kfree(sta->tx_lat[i].bins);
 		kfree(sta->tx_lat);
 	}
+	if (sta->tx_consec) {
+		for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
+			kfree(sta->tx_consec[i].late_bins);
+			kfree(sta->tx_consec[i].loss_bins);
+			kfree(sta->tx_consec[i].total_loss_bins);
+		}
+		kfree(sta->tx_consec);
+	}
+
 	kfree(sta);
 	return NULL;
 }

@@ -1763,7 +1763,8 @@ fail:
 }
 
 /*
- * Measure Tx frame arrival time for Tx latency statistics calculation
+ * Measure Tx frame arrival time for Tx latency & Tx consecutive packet loss
+ * statistics calculation.
  * A single Tx frame latency should be measured from when it is entering the
  * Kernel until we receive Tx complete confirmation indication and the skb is
  * freed.
@@ -1773,9 +1774,11 @@ static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
 {
 	struct timespec skb_arv;
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
+	struct ieee80211_tx_consec_loss_ranges *tx_consec;
 
 	tx_latency = rcu_dereference(local->tx_latency);
-	if (!tx_latency)
+	tx_consec = rcu_dereference(local->tx_consec);
+	if (!tx_latency && !tx_consec)
 		return;
 
 	ktime_get_ts(&skb_arv);

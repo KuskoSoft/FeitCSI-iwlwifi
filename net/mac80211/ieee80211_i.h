@@ -923,6 +923,26 @@ struct tpt_led_trigger {
 #endif
 
 /*
+ * struct ieee80211_tx_consec_loss_ranges - Tx consecutive loss statistics
+ * bins ranges
+ *
+ * Measuring Tx consecutive loss  statistics.
+ * 1) Tx frames that were transmitted unsuccessfully.
+ * 2) Tx frames that were transmitted successfully, but there latency passed
+ * the late threshold, and therefor considered as transmitted unsuccessfully.
+ * The user can configure the ranges via debugfs.
+ *
+ * @late_threshold: the late threshold for the successful packets.
+ * @n_ranges: number of ranges that are taken in account
+ * @ranges: the ranges that the user requested or NULL if disabled.
+ */
+struct ieee80211_tx_consec_loss_ranges {
+	u32 late_threshold;
+	u32 n_ranges;
+	u32 ranges[];
+};
+
+/*
  * struct ieee80211_tx_latency_bin_ranges - Tx latency statistics bins ranges
  *
  * Measuring Tx latency statistics. Counts how many Tx frames transmitted in a
@@ -1098,9 +1118,11 @@ struct ieee80211_local {
 	int sta_generation;
 
 	/*
-	 * Tx latency statistics parameters for all stations.
+	 * Tx latency & consecutive loss statistics parameters for
+	 * all stations.
 	 * Can enable via debugfs (NULL when disabled).
 	 */
+	struct ieee80211_tx_consec_loss_ranges __rcu *tx_consec;
 	struct ieee80211_tx_latency_bin_ranges __rcu *tx_latency;
 
 	struct sk_buff_head pending[IEEE80211_MAX_QUEUES];

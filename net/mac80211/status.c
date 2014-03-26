@@ -463,53 +463,94 @@ static void ieee80211_report_used_skb(struct ieee80211_local *local,
 	}
 }
 
-/*
- * Measure Tx frame completion and removal time for Tx latency statistics
- * calculation. A single Tx frame latency should be measured from when it
- * is entering the Kernel until we receive Tx complete confirmation indication
- * and remove the skb.
- */
-static void ieee80211_tx_latency_end_msrmnt(struct ieee80211_local *local,
-					    struct sk_buff *skb,
-					    struct sta_info *sta,
-					    struct ieee80211_hdr *hdr)
+static void update_consec_bins(u32 *bins, u32 *bin_ranges, int bin_range_count,
+			       int msrmnt)
 {
-	ktime_t skb_dprt;
-	struct timespec dprt_time;
-	u32 msrmnt;
-	u16 tid;
-	u8 *qc;
-	int i, bin_range_count;
+	int i;
+
+	for (i = bin_range_count - 1; 0 <= i; i--) {
+		if (bin_ranges[i] <= msrmnt) {
+			bins[i]++;
+			break;
+		}
+	}
+}
+
+/*
+ * Measure how many tx frames that were consecutively lost
+ * or that were sent successfully but  there latency passed
+ * a certain thershold and therefor considered lost.
+ */
+static void
+tx_consec_loss_msrmnt(struct ieee80211_tx_consec_loss_ranges *tx_consec,
+		      struct sta_info *sta, int tid, u32 msrmnt,
+		      int pkt_loss, bool send_failed)
+{
+	u32 bin_range_count;
 	u32 *bin_ranges;
-	__le16 fc;
-	struct ieee80211_tx_latency_stat *tx_lat;
-	struct ieee80211_tx_latency_bin_ranges *tx_latency;
-	ktime_t skb_arv = skb->tstamp;
+	struct ieee80211_tx_consec_loss_stat *tx_csc;
 
-	tx_latency = rcu_dereference(local->tx_latency);
-
-	/* assert Tx latency stats are enabled & frame arrived when enabled */
-	if (!tx_latency || !ktime_to_ns(skb_arv))
+	/* assert Tx consecutive packet loss stats are enabled */
+	if (!tx_consec)
 		return;
 
-	fc = hdr->frame_control;
+	tx_csc = &sta->tx_consec[tid];
 
-	if (!ieee80211_is_data(fc)) /* make sure it is a data frame */
-		return;
+	bin_range_count = tx_consec->n_ranges;
+	bin_ranges = tx_consec->ranges;
 
-	/* get frame tid */
-	if (ieee80211_is_data_qos(hdr->frame_control)) {
-		qc = ieee80211_get_qos_ctl(hdr);
-		tid = qc[0] & IEEE80211_QOS_CTL_TID_MASK;
+	/*
+	 * count how many Tx frames were consecutively lost within the
+	 * appropriate range
+	 */
+
+	if (send_failed ||
+	    (!send_failed && tx_consec->late_threshold < msrmnt)) {
+		tx_csc->consec_total_loss++;
 	} else {
-		tid = 0;
+		update_consec_bins(tx_csc->total_loss_bins, bin_ranges,
+				   bin_range_count, tx_csc->consec_total_loss);
+		tx_csc->consec_total_loss = 0;
 	}
 
-	tx_lat = &sta->tx_lat[tid];
+	/* count sent successfully && before packets were lost */
+	if (!send_failed && pkt_loss)
+		update_consec_bins(tx_csc->loss_bins, bin_ranges,
+				   bin_range_count, pkt_loss);
 
-	ktime_get_ts(&dprt_time); /* time stamp completion time */
-	skb_dprt = ktime_set(dprt_time.tv_sec, dprt_time.tv_nsec);
-	msrmnt = ktime_to_ms(ktime_sub(skb_dprt, skb_arv));
+	/*
+	 * count how many consecutive Tx packet latencies were greater than
+	 * late threshold within the appropriate range
+	 * (and are considered lost even though they were sent successfully)
+	 */
+	if (send_failed) /* only count packets sent successfully */
+		return;
+
+	if (tx_consec->late_threshold < msrmnt) {
+		tx_csc->consec_late_loss++;
+	} else {
+		update_consec_bins(tx_csc->late_bins, bin_ranges,
+				   bin_range_count,
+				   tx_csc->consec_late_loss);
+		tx_csc->consec_late_loss = 0;
+	}
+}
+
+/*
+ * Measure Tx frames latency.
+ */
+static void
+tx_latency_msrmnt(struct ieee80211_tx_latency_bin_ranges *tx_latency,
+		  struct sta_info *sta, int tid, u32 msrmnt)
+{
+	int bin_range_count, i;
+	u32 *bin_ranges;
+	struct ieee80211_tx_latency_stat *tx_lat;
+
+	if (!tx_latency)
+		return;
+
+	tx_lat = &sta->tx_lat[tid];
 
 	if (tx_lat->max < msrmnt) /* update stats */
 		tx_lat->max = msrmnt;
@@ -531,6 +572,64 @@ static void ieee80211_tx_latency_end_msrmnt(struct ieee80211_local *local,
 	}
 	if (i == bin_range_count) /* msrmnt is bigger than the biggest range */
 		tx_lat->bins[i]++;
+}
+/*
+ * 1) Measure Tx frame completion and removal time for Tx latency statistics
+ * calculation. A single Tx frame latency should be measured from when it
+ * is entering the Kernel until we receive Tx complete confirmation indication
+ * and remove the skb.
+ * 2) Measure consecutive Tx frames that were lost or that there latency passed
+ * a certain thershold and therefor considered lost.
+ */
+static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
+					      struct sk_buff *skb,
+					      struct sta_info *sta,
+					      struct ieee80211_hdr *hdr,
+					      int pkt_loss, bool send_fail)
+{
+	ktime_t skb_dprt;
+	struct timespec dprt_time;
+	u32 msrmnt;
+	u16 tid;
+	u8 *qc;
+	__le16 fc;
+	struct ieee80211_tx_latency_bin_ranges *tx_latency;
+	struct ieee80211_tx_consec_loss_ranges *tx_consec;
+	ktime_t skb_arv = skb->tstamp;
+
+	tx_latency = rcu_dereference(local->tx_latency);
+	tx_consec = rcu_dereference(local->tx_consec);
+
+	/*
+	 * assert Tx latency or Tx consecutive packets loss stats are enabled
+	 * & frame arrived when enabled
+	 */
+	if ((!tx_latency && !tx_consec) || !ktime_to_ns(skb_arv))
+		return;
+
+	fc = hdr->frame_control;
+
+	if (!ieee80211_is_data(fc)) /* make sure it is a data frame */
+		return;
+
+	/* get frame tid */
+	if (ieee80211_is_data_qos(hdr->frame_control)) {
+		qc = ieee80211_get_qos_ctl(hdr);
+		tid = qc[0] & IEEE80211_QOS_CTL_TID_MASK;
+	} else {
+		tid = 0;
+	}
+
+	ktime_get_ts(&dprt_time); /* time stamp completion time */
+	skb_dprt = ktime_set(dprt_time.tv_sec, dprt_time.tv_nsec);
+	msrmnt = ktime_to_ms(ktime_sub(skb_dprt, skb_arv));
+
+	/* update statistic regarding consecutive lost packets */
+	tx_consec_loss_msrmnt(tx_consec, sta, tid, msrmnt, pkt_loss,
+			      send_fail);
+
+	/* update statistic regarding latency */
+	tx_latency_msrmnt(tx_latency, sta, tid, msrmnt);
 }
 
 /*
@@ -559,6 +658,8 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	bool acked;
 	struct ieee80211_bar *bar;
 	int rtap_len;
+	int prev_loss_pkt;
+	bool send_fail = true;
 	int shift = 0;
 
 	for (i = 0; i < IEEE80211_TX_MAX_RATES; i++) {
@@ -676,10 +777,19 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 		    (local->hw.flags & IEEE80211_HW_REPORTS_TX_ACK_STATUS))
 			ieee80211_sta_tx_notify(sta->sdata, (void *) skb->data, acked);
 
+		prev_loss_pkt = 0;
+
 		if (local->hw.flags & IEEE80211_HW_REPORTS_TX_ACK_STATUS) {
 			if (info->flags & IEEE80211_TX_STAT_ACK) {
-				if (sta->lost_packets)
+				send_fail = false;
+				if (sta->lost_packets) {
+					/*
+					 * need to keep track of the amount for
+					 * timing statistics later on
+					 */
+					prev_loss_pkt = sta->lost_packets;
 					sta->lost_packets = 0;
+				}
 			} else if (++sta->lost_packets >= STA_LOST_PKT_THRESHOLD) {
 				cfg80211_cqm_pktloss_notify(sta->sdata->dev,
 							    sta->sta.addr,
@@ -692,11 +802,9 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 		if (acked)
 			sta->last_ack_signal = info->status.ack_signal;
 
-		/*
-		 * Measure frame removal for tx latency
-		 * statistics calculation
-		 */
-		ieee80211_tx_latency_end_msrmnt(local, skb, sta, hdr);
+		/* Measure Tx latency & Tx consecutive loss statistics */
+		ieee80211_collect_tx_timing_stats(local, skb, sta, hdr,
+						  prev_loss_pkt, send_fail);
 	}
 
 	rcu_read_unlock();

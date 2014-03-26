@@ -221,6 +221,32 @@ struct sta_ampdu_mlme {
 };
 
 /*
+ * struct ieee80211_tx_consec_loss_stat - Tx consecutive loss statistics
+ *
+ * Measures TX consecutive loss for a station per TID.
+ *
+ * @consec_late_loss: number of consecutive frames that passed the late
+ *	threshold and are considered  lost
+ * @consec_total_loss: number of consecutive frames that passed the late
+ *	threshold and are considered lost or were actually lost.
+ * @late_bins: each bin counts how many consecutive frames latency is
+ *	greater than the threshold in a certain range, and considered lost.
+ * @loss_bins: each bin counts how many consecutive frames were lost in a
+ *	certain range.
+ * @total_loss_bins: counts how mant consecutive packets were lost & late
+ *	within a certain range.
+ * @bin_count: amount of bins.
+ */
+struct ieee80211_tx_consec_loss_stat {
+	u32 consec_late_loss;
+	u32 consec_total_loss;
+	u32 *late_bins;
+	u32 *loss_bins;
+	u32 *total_loss_bins;
+	u32 bin_count;
+};
+
+/*
  * struct ieee80211_tx_latency_stat - Tx latency statistics
  *
  * Measures TX latency and jitter for a station per TID.
@@ -298,6 +324,7 @@ struct ieee80211_tx_latency_stat {
  * @tid_seq: per-TID sequence numbers for sending to this STA
  * @ampdu_mlme: A-MPDU state machine state
  * @timer_to_tid: identity mapping to ID timers
+ * @tx_consec: Tx consecutive loss statistics
  * @tx_lat: Tx latency statistics
  * @llid: Local link ID
  * @plid: Peer link ID
@@ -407,6 +434,7 @@ struct sta_info {
 	struct sta_ampdu_mlme ampdu_mlme;
 	u8 timer_to_tid[IEEE80211_NUM_TIDS];
 
+	struct ieee80211_tx_consec_loss_stat *tx_consec;
 	struct ieee80211_tx_latency_stat *tx_lat;
 
 #ifdef CPTCFG_MAC80211_MESH
