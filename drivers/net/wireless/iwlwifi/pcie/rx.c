@@ -1208,10 +1208,8 @@ void iwl_pcie_reset_ict(struct iwl_trans *trans)
 void iwl_pcie_disable_ict(struct iwl_trans *trans)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-	bool old_use_ict;
 
 	spin_lock(&trans_pcie->irq_lock);
-	old_use_ict = trans_pcie->use_ict;
 	trans_pcie->use_ict = false;
 	spin_unlock(&trans_pcie->irq_lock);
 }
