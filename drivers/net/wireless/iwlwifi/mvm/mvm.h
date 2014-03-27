@@ -629,6 +629,7 @@ struct iwl_mvm {
 		spinlock_t lock; /* used when time elapsed */
 		unsigned long ts; /* timestamp when period ends */
 		unsigned long ll_ts;
+		bool paused;
 		struct {
 			struct {
 				u32 pkts[IEEE80211_NUM_ACS];
@@ -1093,6 +1094,8 @@ void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 void iwl_mvm_tcm_timer(unsigned long data);
 void iwl_mvm_tcm_work(struct work_struct *work);
 void iwl_mvm_recalc_tcm(struct iwl_mvm *mvm);
+void iwl_mvm_pause_tcm(struct iwl_mvm *mvm);
+void iwl_mvm_resume_tcm(struct iwl_mvm *mvm);
 #endif
 
 #endif /* __IWL_MVM_H__ */

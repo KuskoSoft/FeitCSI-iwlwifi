@@ -839,7 +839,7 @@ void iwl_mvm_recalc_tcm(struct iwl_mvm *mvm)
 
 	spin_lock(&mvm->tcm.lock);
 	/* re-check if somebody else won the recheck race */
-	if (time_after(ts, mvm->tcm.ts + MVM_TCM_PERIOD)) {
+	if (!mvm->tcm.paused && time_after(ts, mvm->tcm.ts + MVM_TCM_PERIOD)) {
 		/* calculate statistics */
 		unsigned long timer_delay = iwl_mvm_calc_tcm_stats(mvm, ts);
 
@@ -850,6 +850,38 @@ void iwl_mvm_recalc_tcm(struct iwl_mvm *mvm)
 			mod_timer(&mvm->tcm.timer,
 				  mvm->tcm.ts + timer_delay);
 	}
+	spin_unlock(&mvm->tcm.lock);
+}
+
+void iwl_mvm_pause_tcm(struct iwl_mvm *mvm)
+{
+	spin_lock(&mvm->tcm.lock);
+	del_timer(&mvm->tcm.timer);
+	mvm->tcm.paused = true;
+	spin_unlock(&mvm->tcm.lock);
+}
+
+void iwl_mvm_resume_tcm(struct iwl_mvm *mvm)
+{
+	int mac;
+
+	spin_lock(&mvm->tcm.lock);
+	mvm->tcm.ts = jiffies;
+	mvm->tcm.ll_ts = jiffies;
+	for (mac = 0; mac < NUM_MAC_INDEX_DRIVER; mac++) {
+		memset(&mvm->tcm.data[mac].rx.pkts, 0,
+		       sizeof(mvm->tcm.data[mac].rx.pkts));
+		memset(&mvm->tcm.data[mac].tx.pkts, 0,
+		       sizeof(mvm->tcm.data[mac].tx.pkts));
+
+		memset(&mvm->tcm.data[mac].rx.airtime, 0,
+		       sizeof(mvm->tcm.data[mac].rx.airtime));
+		memset(&mvm->tcm.data[mac].tx.airtime, 0,
+		       sizeof(mvm->tcm.data[mac].tx.airtime));
+	}
+	/* The TCM data needs to be reset before "paused" flag changes */
+	smp_mb();
+	mvm->tcm.paused = false;
 	spin_unlock(&mvm->tcm.lock);
 }
 #endif

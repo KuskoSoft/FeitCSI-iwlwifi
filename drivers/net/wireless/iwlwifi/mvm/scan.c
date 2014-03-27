@@ -455,6 +455,9 @@ int iwl_mvm_scan_request(struct iwl_mvm *mvm,
 		(cmd->channel_count * sizeof(struct iwl_scan_channel)));
 	hcmd.len[0] = le16_to_cpu(cmd->len);
 
+#ifdef CPTCFG_IWLMVM_TCM
+	iwl_mvm_pause_tcm(mvm);
+#endif
 	status = SCAN_RESPONSE_OK;
 	ret = iwl_mvm_send_cmd_status(mvm, &hcmd, &status);
 	if (!ret && status == SCAN_RESPONSE_OK) {
@@ -469,6 +472,9 @@ int iwl_mvm_scan_request(struct iwl_mvm *mvm,
 			status, ret);
 		mvm->scan_status = IWL_MVM_SCAN_NONE;
 		ret = -EIO;
+#ifdef CPTCFG_IWLMVM_TCM
+		iwl_mvm_resume_tcm(mvm);
+#endif
 	}
 	return ret;
 }
@@ -495,6 +501,9 @@ int iwl_mvm_rx_scan_complete(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 	IWL_DEBUG_SCAN(mvm, "Scan complete: status=0x%x scanned channels=%d\n",
 		       notif->status, notif->scanned_channels);
 
+#ifdef CPTCFG_IWLMVM_TCM
+	iwl_mvm_resume_tcm(mvm);
+#endif
 	if (mvm->scan_status == IWL_MVM_SCAN_OS)
 		mvm->scan_status = IWL_MVM_SCAN_NONE;
 	ieee80211_scan_completed(mvm->hw, notif->status != SCAN_COMP_STATUS_OK);

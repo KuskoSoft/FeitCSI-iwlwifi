@@ -295,7 +295,8 @@ int iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 	memset(&rx_status, 0, sizeof(rx_status));
 
 #ifdef CPTCFG_IWLMVM_TCM
-	if (len >= sizeof(*hdr) && !is_multicast_ether_addr(hdr->addr1) &&
+	if (!mvm->tcm.paused && len >= sizeof(*hdr) &&
+	    !is_multicast_ether_addr(hdr->addr1) &&
 	    ieee80211_is_data(hdr->frame_control)) {
 		int ac = IEEE80211_AC_BE; /* treat non-QoS as BE */
 		struct ieee80211_sta *sta;
