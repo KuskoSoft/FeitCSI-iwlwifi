@@ -494,8 +494,6 @@ static inline void __iwl_trans_pcie_set_bit(struct iwl_trans *trans,
 	__iwl_trans_pcie_set_bits_mask(trans, reg, mask, mask);
 }
 
-int iwl_pcie_napi_poll(struct napi_struct *napi, int budget);
-
 void iwl_trans_pcie_rf_kill(struct iwl_trans *trans, bool state);
 
 #endif /* __iwl_trans_int_pcie_h__ */
