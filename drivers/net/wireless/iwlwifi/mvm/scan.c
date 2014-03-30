@@ -272,11 +272,16 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 {
 	bool global_bound = false;
 	enum ieee80211_band band;
+	u8 frag_passive_dwell = 0;
 
 	ieee80211_iterate_active_interfaces_atomic(mvm->hw,
 					    IEEE80211_IFACE_ITER_NORMAL,
 					    iwl_mvm_scan_condition_iterator,
 					    &global_bound);
+
+	if (!global_bound)
+		goto not_bound;
+
 	/*
 	 * Under low latency traffic passive scan is fragmented meaning
 	 * that dwell on a particular channel will be fragmented. Each fragment
@@ -288,37 +293,38 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 	 * 70ms, so for active scanning operating channel will be left for 70ms
 	 * while for passive still for 20ms (fragment dwell).
 	 */
-	if (global_bound) {
-		if (!iwl_mvm_low_latency(mvm)) {
-			params->suspend_time = ieee80211_tu_to_usec(100);
-			params->max_out_time = ieee80211_tu_to_usec(600);
-		} else {
-			params->suspend_time = ieee80211_tu_to_usec(105);
-			/* P2P doesn't support fragmented passive scan, so
-			 * configure max_out_time to be at least longest dwell
-			 * time for passive scan.
-			 */
-			if (vif->type == NL80211_IFTYPE_STATION && !vif->p2p) {
-				params->max_out_time = ieee80211_tu_to_usec(70);
-				params->passive_fragmented = true;
-			} else {
-				u32 passive_dwell;
 
-				/*
-				 * Use band G so that passive channel dwell time
-				 * will be assigned with maximum value.
-				 */
-				band = IEEE80211_BAND_2GHZ;
-				passive_dwell = iwl_mvm_get_passive_dwell(band);
-				params->max_out_time =
+	if (iwl_mvm_low_latency(mvm)) {
+		params->suspend_time = ieee80211_tu_to_usec(105);
+		params->max_out_time = ieee80211_tu_to_usec(70);
+		frag_passive_dwell = 20;
+	} else {
+		params->suspend_time = ieee80211_tu_to_usec(100);
+		params->max_out_time = ieee80211_tu_to_usec(600);
+	}
+
+	if (frag_passive_dwell) {
+		/*
+		* P2P device scan should not be fragmented to avoid negative
+		* impact on P2P device discovery. Configure max_out_time to be
+		* equal to dwell time on passive channel. Take a longest
+		* possible value, one that corresponds to 2GHz band
+		*/
+		if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
+			u32 passive_dwell =
+				iwl_mvm_get_passive_dwell(IEEE80211_BAND_2GHZ);
+			params->max_out_time =
 					ieee80211_tu_to_usec(passive_dwell);
-			}
+		} else {
+			params->passive_fragmented = true;
 		}
 	}
 
+not_bound:
+
 	for (band = IEEE80211_BAND_2GHZ; band < IEEE80211_NUM_BANDS; band++) {
 		if (params->passive_fragmented)
-			params->dwell[band].passive = 20;
+			params->dwell[band].passive = frag_passive_dwell;
 		else
 			params->dwell[band].passive =
 				iwl_mvm_get_passive_dwell(band);
