@@ -367,7 +367,7 @@ int iwl_run_init_mvm_ucode(struct iwl_mvm *mvm, bool read_nvm)
 	iwl_dnt_start(mvm->trans);
 #endif
 
-	ret = iwl_send_bt_prio_tbl(mvm);
+	ret = iwl_send_bt_init_conf(mvm);
 	if (ret)
 		goto error;
 
@@ -504,10 +504,6 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 #endif
 
 	ret = iwl_send_tx_ant_cfg(mvm, mvm->fw->valid_tx_ant);
-	if (ret)
-		goto error;
-
-	ret = iwl_send_bt_prio_tbl(mvm);
 	if (ret)
 		goto error;
 
