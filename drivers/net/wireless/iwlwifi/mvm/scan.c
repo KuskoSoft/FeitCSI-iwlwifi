@@ -67,6 +67,9 @@
 #include "mvm.h"
 #include "iwl-eeprom-parse.h"
 #include "fw-api-scan.h"
+#ifdef CPTCFG_IWLMVM_TCM
+#include "vendor-cmd.h"
+#endif
 
 #define IWL_PLCP_QUIET_THRESH 1
 #define IWL_ACTIVE_QUIET_TIME 10
@@ -282,10 +285,11 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 	if (!global_bound)
 		goto not_bound;
 
+#ifdef CPTCFG_IWLMVM_TCM
 	/*
-	 * Under low latency traffic passive scan is fragmented meaning
+	 * Under low latency and high traffic passive scan is fragmented meaning
 	 * that dwell on a particular channel will be fragmented. Each fragment
-	 * dwell time is 20ms and fragments period is 105ms. Skipping to next
+	 * dwell time is 20/40ms and fragments period is 105ms. Skipping to next
 	 * channel will be delayed by the same period - 105ms. So suspend_time
 	 * parameter describing both fragments and channels skipping periods is
 	 * set to 105ms. This value is chosen so that overall passive scan
@@ -294,13 +298,36 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 	 * while for passive still for 20ms (fragment dwell).
 	 */
 
-	if (iwl_mvm_low_latency(mvm)) {
+	switch (mvm->tcm.result.global_load) {
+	case IWL_MVM_VENDOR_LOAD_HIGH:
 		params->suspend_time = ieee80211_tu_to_usec(105);
 		params->max_out_time = ieee80211_tu_to_usec(70);
-		frag_passive_dwell = 20;
-	} else {
+		frag_passive_dwell = 40;
+		break;
+	case IWL_MVM_VENDOR_LOAD_MEDIUM:
+		params->suspend_time = ieee80211_tu_to_usec(250);
+		params->max_out_time = ieee80211_tu_to_usec(250);
+		break;
+	default:
 		params->suspend_time = ieee80211_tu_to_usec(100);
 		params->max_out_time = ieee80211_tu_to_usec(600);
+	}
+#else
+	params->suspend_time = ieee80211_tu_to_usec(100);
+	params->max_out_time = ieee80211_tu_to_usec(600);
+#endif
+
+	if (iwl_mvm_low_latency(mvm)) {
+#ifdef CPTCFG_IWLMVM_TCM
+		/*
+		 * In case of low latency scan suspend time depends on
+		 * traffic load level
+		 */
+#else
+		params->suspend_time = ieee80211_tu_to_usec(105);
+#endif
+		params->max_out_time = ieee80211_tu_to_usec(70);
+		frag_passive_dwell = 20;
 	}
 
 	if (frag_passive_dwell) {
