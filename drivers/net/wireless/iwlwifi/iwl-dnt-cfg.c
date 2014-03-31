@@ -86,19 +86,19 @@ static ssize_t iwl_dnt_debugfs_log_read(struct file *file,
 {
 	struct iwl_trans *trans = file->private_data;
 	unsigned char *temp_buf;
-	ssize_t ret = 0;
+	int ret = 0;
 
 	temp_buf = kzalloc(count, GFP_KERNEL);
 	if (!temp_buf)
 		return -ENOMEM;
 
 	ret = iwl_dnt_dispatch_pull(trans, temp_buf, count, UCODE_MESSAGES);
-	if (ret) {
+	if (ret < 0) {
 		IWL_DEBUG_INFO(trans, "Failed to retrieve debug data\n");
 		goto free_buf;
 	}
 
-	ret = simple_read_from_buffer(user_buf, count, ppos, temp_buf, count);
+	ret = simple_read_from_buffer(user_buf, ret, ppos, temp_buf, count);
 free_buf:
 	kfree(temp_buf);
 	return ret;

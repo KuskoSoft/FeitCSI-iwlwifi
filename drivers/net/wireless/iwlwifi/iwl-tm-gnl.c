@@ -668,7 +668,8 @@ static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev *dev,
 static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev *dev,
 			     struct iwl_tm_data *data_out)
 {
-	int ret, buf_size;
+	int ret;
+	u32 buf_size;
 
 	if ((dev->dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED) &&
 	    dev->dnt->mon_buf_size == 0)
@@ -680,12 +681,15 @@ static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev *dev,
 	if (!data_out->data)
 		return -ENOMEM;
 
-	data_out->len = buf_size;
 	ret = iwl_dnt_dispatch_pull(dev->trans, data_out->data,
 				    buf_size, MONITOR);
-	if (ret)
+	if (ret < 0) {
 		kfree(data_out->data);
-	return ret;
+		return ret;
+	}
+	data_out->len = ret;
+
+	return 0;
 }
 
 /**

@@ -97,12 +97,11 @@ static void iwl_dnt_dispatch_free_collect_db(struct dnt_collect_db *db)
 	kfree(db);
 }
 
-static void iwl_dnt_dispatch_get_list_data(struct dnt_collect_db *db,
+static int iwl_dnt_dispatch_get_list_data(struct dnt_collect_db *db,
 					   u8 *buffer, u32 buffer_size)
 {
-	u32 data_offset = 0;
 	struct dnt_collect_entry *cur_entry;
-	int i, cur_index = 0;
+	int i, cur_index = 0, data_offset = 0;
 
 	spin_lock_bh(&db->db_lock);
 	for (i = 0; i < ARRAY_SIZE(db->collect_array); i++) {
@@ -119,6 +118,7 @@ static void iwl_dnt_dispatch_get_list_data(struct dnt_collect_db *db,
 
 	db->read_ptr = cur_index;
 	spin_unlock_bh(&db->db_lock);
+	return data_offset;
 }
 
 /**
@@ -151,8 +151,8 @@ static int iwl_dnt_dispatch_pull_monitor(struct iwl_dnt *dnt,
 	int ret = 0;
 
 	if (dnt->cur_mon_type == INTERFACE)
-		iwl_dnt_dispatch_get_list_data(dnt->dispatch.dbgm_db, buffer,
-					       buffer_size);
+		ret = iwl_dnt_dispatch_get_list_data(dnt->dispatch.dbgm_db,
+						     buffer, buffer_size);
 	else
 		ret = iwl_dnt_dev_if_retrieve_monitor_data(dnt, trans, buffer,
 							   buffer_size);
@@ -171,8 +171,8 @@ int iwl_dnt_dispatch_pull(struct iwl_trans *trans, u8 *buffer, u32 buffer_size,
 						    buffer_size);
 		break;
 	case UCODE_MESSAGES:
-		iwl_dnt_dispatch_get_list_data(dnt->dispatch.um_db, buffer,
-					       buffer_size);
+		ret = iwl_dnt_dispatch_get_list_data(dnt->dispatch.um_db,
+						     buffer, buffer_size);
 		break;
 	default:
 		WARN_ONCE(1, "Invalid input mode %d\n", input);

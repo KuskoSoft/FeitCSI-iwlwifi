@@ -243,7 +243,7 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 	memcpy(buffer + dnt->mon_buf_size - wr_ptr, temp_buf, wr_ptr);
 	kfree(temp_buf);
 
-	return 0;
+	return dnt->mon_buf_size;
 }
 
 static int iwl_dnt_dev_if_retrieve_iccm_monitor_data(struct iwl_dnt *dnt,
@@ -300,7 +300,7 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 	}
 	iwl_write_prph(trans, cfg->dbg_mon_dmarb_rd_ctl_addr, 0x00000000);
 
-	return 0;
+	return buf_size_in_dwords * sizeof(u32);
 }
 
 int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
