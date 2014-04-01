@@ -223,9 +223,6 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 	const char *name_pre = drv->cfg->fw_name_pre;
 	char tag[8];
 
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-	iwl_dbg_cfg_load_ini(drv->trans->dev, &drv->trans->dbg_cfg);
-#endif
 	if (first) {
 		drv->fw_index = drv->cfg->ucode_api_max;
 		sprintf(tag, "%d", drv->fw_index);
@@ -241,15 +238,6 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 
 	snprintf(drv->firmware_name, sizeof(drv->firmware_name), "%s%s.ucode",
 		 name_pre, tag);
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	/*
-	 * Check if different uCode is required, according to configuration.
-	 * If so - overwrite existing firmware_name.
-	 */
-	if (drv->trans->dbg_cfg.d0_is_usniffer)
-		snprintf(drv->firmware_name, sizeof(drv->firmware_name),
-			 "usniffer-%s%s.ucode", name_pre, tag);
-#endif
 
 	IWL_DEBUG_INFO(drv, "attempting to load firmware %s'%s'\n",
 		       (drv->fw_index == UCODE_EXPERIMENTAL_INDEX)
@@ -1007,6 +995,33 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 		IWL_ERR(drv, "File size way too small!\n");
 		goto try_again;
 	}
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	iwl_dbg_cfg_load_ini(drv->trans->dev, &drv->trans->dbg_cfg);
+
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	/*
+	* Check if different uCode is required, according to configuration.
+	* If so - overwrite existing firmware_name.
+	*/
+	if (drv->trans->dbg_cfg.d0_is_usniffer) {
+		char firmware_name[32];
+
+		release_firmware(ucode_raw);
+		snprintf(firmware_name, sizeof(firmware_name),
+			 "usniffer-%s", drv->firmware_name);
+		strcpy(drv->firmware_name, firmware_name);
+		IWL_DEBUG_INFO(drv, "attempting to load usniffer ucode %s\n",
+			       drv->firmware_name);
+		err = request_firmware(&ucode_raw, drv->firmware_name,
+				       drv->trans->dev);
+		if (err) {
+			IWL_ERR(drv, "Failed getting usniffer FW!\n");
+			goto out_unbind;
+		}
+	}
+#endif
+#endif
 
 	/* Data from ucode file:  header followed by uCode images */
 	ucode = (struct iwl_ucode_header *)ucode_raw->data;
