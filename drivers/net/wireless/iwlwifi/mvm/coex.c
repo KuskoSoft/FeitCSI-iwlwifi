@@ -667,6 +667,9 @@ static int iwl_mvm_bt_udpate_ctrl_kill_msk(struct iwl_mvm *mvm,
 	};
 	int ret = 0;
 
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_BT_COEX_SPLIT))
+		return 0;
+
 	lockdep_assert_held(&mvm->mutex);
 
 	if (reduced_tx_power) {
@@ -729,6 +732,9 @@ int iwl_mvm_bt_coex_reduced_txp(struct iwl_mvm *mvm, u8 sta_id, bool enable)
 	};
 	struct iwl_mvm_sta *mvmsta;
 	int ret;
+
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_BT_COEX_SPLIT))
+		return 0;
 
 	mvmsta = iwl_mvm_sta_from_staid_protected(mvm, sta_id);
 	if (!mvmsta)
@@ -1047,6 +1053,8 @@ int iwl_mvm_rx_bt_coex_notif(struct iwl_mvm *mvm,
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	struct iwl_bt_coex_profile_notif *notif = (void *)pkt->data;
 
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_BT_COEX_SPLIT))
+		return 0;
 
 	IWL_DEBUG_COEX(mvm, "BT Coex Notification received\n");
 	IWL_DEBUG_COEX(mvm, "\tBT status: %s\n",
@@ -1256,6 +1264,10 @@ u8 iwl_mvm_bt_coex_tx_prio(struct iwl_mvm *mvm, struct ieee80211_hdr *hdr,
 
 void iwl_mvm_bt_coex_vif_change(struct iwl_mvm *mvm)
 {
+
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_BT_COEX_SPLIT))
+		return;
+
 	iwl_mvm_bt_coex_notif_handle(mvm);
 }
 
@@ -1278,6 +1290,9 @@ int iwl_mvm_rx_ant_coupling_notif(struct iwl_mvm *mvm,
 	};
 
 	if (!IWL_MVM_BT_COEX_CORUNNING)
+		return 0;
+
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_BT_COEX_SPLIT))
 		return 0;
 
 	lockdep_assert_held(&mvm->mutex);
