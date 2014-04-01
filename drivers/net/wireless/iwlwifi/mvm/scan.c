@@ -300,21 +300,21 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 
 	switch (mvm->tcm.result.global_load) {
 	case IWL_MVM_VENDOR_LOAD_HIGH:
-		params->suspend_time = ieee80211_tu_to_usec(105);
-		params->max_out_time = ieee80211_tu_to_usec(70);
+		params->suspend_time = 105;
+		params->max_out_time = 70;
 		frag_passive_dwell = 40;
 		break;
 	case IWL_MVM_VENDOR_LOAD_MEDIUM:
-		params->suspend_time = ieee80211_tu_to_usec(250);
-		params->max_out_time = ieee80211_tu_to_usec(250);
+		params->suspend_time = 250;
+		params->max_out_time = 250;
 		break;
 	default:
-		params->suspend_time = ieee80211_tu_to_usec(100);
-		params->max_out_time = ieee80211_tu_to_usec(600);
+		params->suspend_time = 100;
+		params->max_out_time = 600;
 	}
 #else
-	params->suspend_time = ieee80211_tu_to_usec(100);
-	params->max_out_time = ieee80211_tu_to_usec(600);
+	params->suspend_time = 100;
+	params->max_out_time = 600;
 #endif
 
 	if (iwl_mvm_low_latency(mvm)) {
@@ -324,9 +324,9 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 		 * traffic load level
 		 */
 #else
-		params->suspend_time = ieee80211_tu_to_usec(105);
+		params->suspend_time = 105;
 #endif
-		params->max_out_time = ieee80211_tu_to_usec(70);
+		params->max_out_time = 70;
 		frag_passive_dwell = 20;
 	}
 
@@ -340,8 +340,7 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 		if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
 			u32 passive_dwell =
 				iwl_mvm_get_passive_dwell(IEEE80211_BAND_2GHZ);
-			params->max_out_time =
-					ieee80211_tu_to_usec(passive_dwell);
+			params->max_out_time = passive_dwell;
 		} else {
 			params->passive_fragmented = true;
 		}
