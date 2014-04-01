@@ -216,6 +216,11 @@ static int iwl_tm_validate_sram_write_req(struct iwl_tm_gnl_dev *dev,
 	struct iwl_tm_sram_write_request *cmd_in;
 	u32 data_buf_size;
 
+	if (!dev->trans->op_mode) {
+		IWL_ERR(dev->trans, "No op_mode!\n");
+		return -ENODEV;
+	}
+
 	if (!data_in->data ||
 	    data_in->len < sizeof(struct iwl_tm_sram_write_request))
 		return -EINVAL;
@@ -246,6 +251,11 @@ static int iwl_tm_validate_sram_read_req(struct iwl_tm_gnl_dev *dev,
 					 struct iwl_tm_data *data_in)
 {
 	struct iwl_tm_sram_read_request *cmd_in;
+
+	if (!dev->trans->op_mode) {
+		IWL_ERR(dev->trans, "No op_mode!\n");
+		return -ENODEV;
+	}
 
 	if (!data_in->data ||
 	    data_in->len < sizeof(struct iwl_tm_sram_read_request))
@@ -583,6 +593,11 @@ static int iwl_op_mode_tm_execute_cmd(struct iwl_tm_gnl_dev *dev,
 				      struct iwl_tm_data *data_out)
 {
 	const struct iwl_test_ops *test_ops;
+
+	if (!dev->trans->op_mode) {
+		IWL_ERR(dev->trans, "No op_mode!\n");
+		return -ENODEV;
+	}
 
 	test_ops = &dev->trans->op_mode->ops->test_ops;
 
