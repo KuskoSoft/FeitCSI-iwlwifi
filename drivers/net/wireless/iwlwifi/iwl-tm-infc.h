@@ -211,6 +211,14 @@ struct iwl_tm_sram_read_request {
 } __packed __aligned(4);
 
 /**
+ * struct iwl_tm_dev_info_req - Request data for get info request
+ * @read_sv: rather or not read sv_srop
+ */
+struct iwl_tm_dev_info_req {
+	__u32 read_sv;
+} __packed __aligned(4);
+
+/**
  * struct iwl_tm_dev_info - Result data for get info request
  * @dev_id:
  * @vendor_id:
