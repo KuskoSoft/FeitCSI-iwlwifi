@@ -156,6 +156,7 @@ enum {
 #define IWL_RATE_HIGH_TH		10880	/*  85% */
 #define IWL_RATE_INCREASE_TH		6400	/*  50% */
 #define RS_SR_FORCE_DECREASE		1920	/*  15% */
+#define RS_SR_NO_DECREASE		10880	/*  85% */
 
 #define TPC_SR_FORCE_INCREASE		9600	/* 75% */
 #define TPC_SR_NO_INCREASE		10880	/* 85% */
