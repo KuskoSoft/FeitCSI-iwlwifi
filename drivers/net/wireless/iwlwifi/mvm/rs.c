@@ -59,7 +59,7 @@
 /* max allowed rate miss before sync LQ cmd */
 #define IWL_MISSED_RATE_MAX		15
 #define RS_STAY_IN_COLUMN_TIMEOUT       (5*HZ)
-
+#define RS_IDLE_TIMEOUT                 (5*HZ)
 
 static u8 rs_ht_to_legacy[] = {
 	[IWL_RATE_MCS_0_INDEX] = IWL_RATE_6M_INDEX,
@@ -1072,6 +1072,18 @@ static void rs_tx_status(void *mvm_r, struct ieee80211_supported_band *sband,
 		if (mac_index >= (IWL_RATE_9M_INDEX - IWL_FIRST_OFDM_RATE))
 			mac_index++;
 	}
+
+	if (time_after(jiffies,
+		       (unsigned long)(lq_sta->last_tx + RS_IDLE_TIMEOUT))) {
+		int tid;
+		IWL_DEBUG_RATE(mvm, "Tx idle for too long. reinit rs\n");
+		for (tid = 0; tid < IWL_MAX_TID_COUNT; tid++)
+			ieee80211_stop_tx_ba_session(sta, tid);
+
+		iwl_mvm_rs_rate_init(mvm, sta, sband->band, false);
+		return;
+	}
+	lq_sta->last_tx = jiffies;
 
 	/* Here we actually compare this rate to the latest LQ command */
 	if ((mac_index < 0) ||
@@ -2587,6 +2599,7 @@ void iwl_mvm_rs_rate_init(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 		rs_rate_scale_clear_tbl_windows(mvm, &lq_sta->lq_info[j]);
 
 	lq_sta->flush_timer = 0;
+	lq_sta->last_tx = jiffies;
 
 	IWL_DEBUG_RATE(mvm,
 		       "LQ: *** rate scale station global init for station %d ***\n",
