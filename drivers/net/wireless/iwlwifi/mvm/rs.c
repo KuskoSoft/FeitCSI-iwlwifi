@@ -1798,16 +1798,17 @@ static void rs_get_adjacent_txp(struct iwl_mvm *mvm, int index,
 		*stronger = TPC_INVALID;
 }
 
-static bool rs_tpc_allowed(struct iwl_mvm *mvm, struct rs_rate *rate)
+static bool rs_tpc_allowed(struct iwl_mvm *mvm, struct rs_rate *rate,
+			   enum ieee80211_band band)
 {
 	int index = rate->index;
 
 	/*
 	 * allow tpc only if power management is enabled, or bt coex
-	 * activity grade allows it.
+	 * activity grade allows it and we are on 2.4Ghz.
 	 */
 	if (iwlmvm_mod_params.power_scheme == IWL_POWER_SCHEME_CAM &&
-	    !iwl_mvm_bt_coex_is_tpc_allowed(mvm))
+	    !iwl_mvm_bt_coex_is_tpc_allowed(mvm, band))
 		return false;
 
 	IWL_DEBUG_RATE(mvm, "check rate, table type: %d\n", rate->type);
@@ -1893,6 +1894,10 @@ static bool rs_tpc_perform(struct iwl_mvm *mvm,
 			   struct iwl_lq_sta *lq_sta,
 			   struct iwl_scale_tbl_info *tbl)
 {
+	struct iwl_mvm_sta *mvm_sta = (void *)sta->drv_priv;
+	struct ieee80211_vif *vif = mvm_sta->vif;
+	struct ieee80211_chanctx_conf *chanctx_conf;
+	enum ieee80211_band band;
 	struct iwl_rate_scale_data *window;
 	struct rs_rate *rate = &tbl->rate;
 	enum tpc_action action;
@@ -1911,7 +1916,15 @@ static bool rs_tpc_perform(struct iwl_mvm *mvm,
 	}
 #endif
 
-	if (!rs_tpc_allowed(mvm, rate)) {
+	rcu_read_lock();
+	chanctx_conf = rcu_dereference(vif->chanctx_conf);
+	if (WARN_ON(!chanctx_conf))
+		band = IEEE80211_NUM_BANDS;
+	else
+		band = chanctx_conf->def.chan->band;
+	rcu_read_unlock();
+
+	if (!rs_tpc_allowed(mvm, rate, band)) {
 		IWL_DEBUG_RATE(mvm,
 			       "tpc is not allowed. remove txp restrictions");
 		lq_sta->lq.reduced_tpc = TPC_NO_REDUCTION;
