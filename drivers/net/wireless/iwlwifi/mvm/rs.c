@@ -1031,6 +1031,13 @@ static void rs_tx_status(void *mvm_r, struct ieee80211_supported_band *sband,
 		return;
 	}
 
+#ifdef CPTCFG_MAC80211_DEBUGFS
+	/* Disable last tx check if we are debugging with fixed rate */
+	if (lq_sta->dbg_fixed_rate) {
+		IWL_DEBUG_RATE(mvm, "Fixed rate. avoid rate scaling\n");
+		return;
+	}
+#endif
 	if (!ieee80211_is_data(hdr->frame_control) ||
 	    info->flags & IEEE80211_TX_CTL_NO_ACK)
 		return;
