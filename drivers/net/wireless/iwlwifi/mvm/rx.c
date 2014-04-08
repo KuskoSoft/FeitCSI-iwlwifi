@@ -273,6 +273,7 @@ int iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 			ac = tid_to_mac80211_ac[tid];
 		}
 
+		rcu_read_lock();
 		/* This is fine since we don't support multiple AP interfaces */
 		sta = ieee80211_find_sta_by_ifaddr(mvm->hw, hdr->addr2, NULL);
 		if (sta) {
@@ -288,6 +289,7 @@ int iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 			mvm->tcm.data[mac].rx.airtime[ac] +=
 				le16_to_cpu(phy_info->frame_time);
 		}
+		rcu_read_unlock();
 	}
 #endif
 
