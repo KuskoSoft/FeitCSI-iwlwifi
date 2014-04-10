@@ -2934,6 +2934,12 @@ struct wiphy_vendor_command {
  *	(including P2P GO) or 0 to indicate no such limit is advertised. The
  *	driver is allowed to advertise a theoretical limit that it can reach in
  *	some cases, but may not always reach.
+ * @max_adj_channel_rssi_comp: max offset of between the channel on which the
+ *	frame was sent and the channel on which the frame was heard for which
+ *	the reported rssi is still valid. If a driver is able to compensate the
+ *	low rssi when a frame is heard on different channel, then it should set
+ *	this variable to the maximal offset for which it can compensate.
+ *	This value should be set in MHz.
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -3077,6 +3083,7 @@ struct wiphy {
 	 * csa counters. Default (0) means infinite.
 	 */
 	u8 max_num_csa_counters;
+	u8 max_adj_channel_rssi_comp;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };
