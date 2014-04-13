@@ -1370,6 +1370,7 @@ struct ieee80211_sta_rates {
  *	the station moves to associated state.
  * @smps_mode: current SMPS mode (off, static or dynamic)
  * @rates: rate control selection table
+ * @tdls: indicates whether the STA is a TDLS peer
  */
 struct ieee80211_sta {
 	u32 supp_rates[IEEE80211_NUM_BANDS];
@@ -1384,6 +1385,7 @@ struct ieee80211_sta {
 	enum ieee80211_sta_rx_bandwidth bandwidth;
 	enum ieee80211_smps_mode smps_mode;
 	struct ieee80211_sta_rates __rcu *rates;
+	bool tdls;
 
 	/* must be last */
 	u8 drv_priv[0] __aligned(sizeof(void *));
