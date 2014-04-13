@@ -618,7 +618,7 @@ int iwl_send_bt_init_conf(struct iwl_mvm *mvm)
 
 	if (IWL_MVM_BT_COEX_MPLUT) {
 		bt_cmd->flags |= cpu_to_le32(BT_COEX_MPLUT);
-		bt_cmd->valid_bit_msk = cpu_to_le32(BT_VALID_MULTI_PRIO_LUT);
+		bt_cmd->valid_bit_msk |= cpu_to_le32(BT_VALID_MULTI_PRIO_LUT);
 	}
 
 	if (mvm->cfg->bt_shared_single_ant)
