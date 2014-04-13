@@ -611,8 +611,8 @@ int iwl_send_bt_init_conf(struct iwl_mvm *mvm)
 		bt_cmd->flags |= cpu_to_le32(BT_COEX_SYNC2SCO);
 
 	if (IWL_MVM_BT_COEX_CORUNNING) {
-		bt_cmd->valid_bit_msk = cpu_to_le32(BT_VALID_CORUN_LUT_20 |
-						    BT_VALID_CORUN_LUT_40);
+		bt_cmd->valid_bit_msk |= cpu_to_le32(BT_VALID_CORUN_LUT_20 |
+						     BT_VALID_CORUN_LUT_40);
 		bt_cmd->flags |= cpu_to_le32(BT_COEX_CORUNNING);
 	}
 
