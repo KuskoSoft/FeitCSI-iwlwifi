@@ -122,6 +122,7 @@ enum {
 	IWL_XVT_CMD_ALLOC_DMA,
 	IWL_XVT_CMD_GET_DMA,
 	IWL_XVT_CMD_FREE_DMA,
+	IWL_XVT_CMD_GET_CHIP_ID,
 
 	/* Driver notifications */
 	IWL_XVT_CMD_SEND_REPLY_ALIVE = XVT_CMD_NOTIF_BASE,
@@ -352,6 +353,14 @@ struct iwl_xvt_alloc_dma {
 struct iwl_xvt_get_dma {
 	__u32 size;
 	__u8 data[];
+} __packed __aligned(4);
+
+/**
+ * struct iwl_xvt_chip_id - get the chip id from SCU
+ * @registers:	an array of registers to hold the chip id data
+ */
+struct iwl_xvt_chip_id {
+	__u32 registers[3];
 } __packed __aligned(4);
 
 #endif
