@@ -278,8 +278,16 @@ static char user_alpha2[2];
 module_param(ieee80211_regdom, charp, 0444);
 MODULE_PARM_DESC(ieee80211_regdom, "IEEE 802.11 regulatory domain code");
 
-static void reg_free_request(struct regulatory_request *lr)
+static void reg_free_request(struct regulatory_request *request)
 {
+	if (request != get_last_request())
+		kfree(request);
+}
+
+static void reg_free_last_request(void)
+{
+	struct regulatory_request *lr = get_last_request();
+
 	if (lr != &core_request_world && lr)
 		kfree_rcu(lr, rcu_head);
 }
@@ -292,7 +300,7 @@ static void reg_update_last_request(struct regulatory_request *request)
 	if (lr == request)
 		return;
 
-	reg_free_request(lr);
+	reg_free_last_request();
 	rcu_assign_pointer(last_request, request);
 }
 
@@ -1803,7 +1811,7 @@ reg_process_hint_user(struct regulatory_request *user_request)
 	if (treatment == REG_REQ_IGNORE ||
 	    treatment == REG_REQ_ALREADY_SET ||
 	    treatment == REG_REQ_USER_HINT_HANDLED) {
-		kfree(user_request);
+		reg_free_request(user_request);
 		return treatment;
 	}
 
@@ -1865,14 +1873,14 @@ reg_process_hint_driver(struct wiphy *wiphy,
 	case REG_REQ_IGNORE:
 	case REG_REQ_USER_HINT_HANDLED:
 	case REG_REQ_HANDLED:
-		kfree(driver_request);
+		reg_free_request(driver_request);
 		return treatment;
 	case REG_REQ_INTERSECT:
 		/* fall through */
 	case REG_REQ_ALREADY_SET:
 		regd = reg_copy_regd(get_cfg80211_regdom());
 		if (IS_ERR(regd)) {
-			kfree(driver_request);
+			reg_free_request(driver_request);
 			return REG_REQ_IGNORE;
 		}
 		rcu_assign_pointer(wiphy->regd, regd);
@@ -1968,10 +1976,10 @@ reg_process_hint_country_ie(struct wiphy *wiphy,
 	case REG_REQ_HANDLED:
 		/* fall through */
 	case REG_REQ_ALREADY_SET:
-		kfree(country_ie_request);
+		reg_free_request(country_ie_request);
 		return treatment;
 	case REG_REQ_INTERSECT:
-		kfree(country_ie_request);
+		reg_free_request(country_ie_request);
 		/*
 		 * This doesn't happen yet, not sure we
 		 * ever want to support it for this case.
@@ -2036,7 +2044,7 @@ static void reg_process_hint(struct regulatory_request *reg_request)
 	return;
 
 out_free:
-	kfree(reg_request);
+	reg_free_request(reg_request);
 }
 
 /*
