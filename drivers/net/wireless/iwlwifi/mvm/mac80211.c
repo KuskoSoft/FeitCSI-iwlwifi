@@ -419,6 +419,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	if (iwl_mvm_is_lar_supported(mvm)) {
 		hw->wiphy->get_regd = iwl_mvm_get_regdomain;
 		hw->wiphy->features |= NL80211_FEATURE_CELL_BASE_REG_HINTS;
+		hw->wiphy->regulatory_flags |= REGULATORY_COUNTRY_IE_IGNORE;
 	}
 
 	mvm->rts_threshold = IEEE80211_MAX_RTS_THRESHOLD;
