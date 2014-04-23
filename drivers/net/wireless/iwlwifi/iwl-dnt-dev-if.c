@@ -299,10 +299,12 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 	wr_ptr = wr_ptr - dnt->mon_base_addr;
 	iwl_write_prph(trans, cfg->dbg_mon_dmarb_rd_ctl_addr, 0x00000001);
 
-	buf_size_in_dwords = dnt->mon_end_addr - dnt->mon_base_addr;
+	/* buf size includes the end_addr as well */
+	buf_size_in_dwords = dnt->mon_end_addr - dnt->mon_base_addr + 1;
 	for (i = 0; i < buf_size_in_dwords; i++) {
 		/* reordering cyclic buffer */
-		buf_index = (wr_ptr + i) % buf_size_in_dwords;
+		buf_index = (i + (buf_size_in_dwords - wr_ptr)) %
+			    buf_size_in_dwords;
 		read_val = iwl_read_prph(trans,
 					 cfg->dbg_mon_dmarb_rd_data_addr);
 		memcpy(&buffer[buf_index * sizeof(u32)], &read_val,
