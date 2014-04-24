@@ -320,9 +320,11 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		    IEEE80211_HW_AMPDU_AGGREGATION |
 		    IEEE80211_HW_TIMING_BEACON_ONLY |
 		    IEEE80211_HW_CONNECTION_MONITOR |
-		    IEEE80211_HW_SUPPORTS_UAPSD |
 		    IEEE80211_HW_SUPPORTS_DYNAMIC_SMPS |
 		    IEEE80211_HW_SUPPORTS_STATIC_SMPS;
+
+	if (!iwlwifi_mod_params.uapsd_disable)
+		hw->flags |= IEEE80211_HW_SUPPORTS_UAPSD;
 
 	hw->queues = mvm->first_agg_queue;
 	hw->offchannel_tx_hw_queue = IWL_MVM_OFFCHANNEL_QUEUE;
