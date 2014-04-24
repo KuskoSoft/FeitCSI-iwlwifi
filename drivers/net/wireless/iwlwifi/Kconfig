@@ -3,10 +3,6 @@ config IWLWIFI
 	depends on m
 	depends on MAC80211
 	select BACKPORT_FW_LOADER
-	select BACKPORT_NEW_LEDS
-	select BACKPORT_LEDS_CLASS
-	select BACKPORT_LEDS_TRIGGERS
-	select MAC80211_LEDS
 	---help---
 	  Select to build the driver supporting the:
 
@@ -43,6 +39,14 @@ config IWLWIFI
 	  inserted in and removed from the running kernel whenever you want),
 	  say M here and read <file:Documentation/kbuild/modules.txt>.  The
 	  module will be called iwlwifi.
+
+config IWLWIFI_LEDS
+	bool
+	depends on IWLWIFI
+	depends on LEDS_CLASS
+	select BACKPORT_LEDS_TRIGGERS
+	select MAC80211_LEDS
+	default y
 
 config IWLMVM
 	tristate "Intel Wireless WiFi MVM Firmware support"
