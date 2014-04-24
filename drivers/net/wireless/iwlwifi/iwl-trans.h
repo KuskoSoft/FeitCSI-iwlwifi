@@ -466,6 +466,11 @@ struct iwl_trans;
  * @unref: release a reference previously taken with @ref. Note that
  *	initially the reference count is 1, making an initial @unref
  *	necessary to allow low power states.
+ * @dump_data: fill a data dump with debug data, maybe containing last
+ *	TX'ed commands and similar. When called with a NULL buffer and
+ *	zero buffer length, provide only the (estimated) required buffer
+ *	length. Return the used buffer length.
+ *	Note that the transport must fill in the proper file headers.
  */
 struct iwl_trans_ops {
 
@@ -514,6 +519,10 @@ struct iwl_trans_ops {
 			      u32 value);
 	void (*ref)(struct iwl_trans *trans);
 	void (*unref)(struct iwl_trans *trans);
+
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	u32 (*dump_data)(struct iwl_trans *trans, void *buf, u32 buflen);
+#endif
 };
 
 /**
@@ -670,6 +679,14 @@ static inline void iwl_trans_unref(struct iwl_trans *trans)
 {
 	if (trans->ops->unref)
 		trans->ops->unref(trans);
+}
+
+static inline u32 iwl_trans_dump_data(struct iwl_trans *trans,
+				      void *buf, u32 buflen)
+{
+	if (!trans->ops->dump_data)
+		return 0;
+	return trans->ops->dump_data(trans, buf, buflen);
 }
 
 static inline int iwl_trans_send_cmd(struct iwl_trans *trans,
