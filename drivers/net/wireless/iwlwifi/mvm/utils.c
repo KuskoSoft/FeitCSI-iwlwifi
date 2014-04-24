@@ -696,6 +696,25 @@ bool iwl_mvm_low_latency(struct iwl_mvm *mvm)
 	return result;
 }
 
+static void iwl_mvm_assoc_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
+{
+	bool *assoc = _data;
+
+	if (vif->bss_conf.assoc)
+		*assoc = true;
+}
+
+bool iwl_mvm_is_associated(struct iwl_mvm *mvm)
+{
+	bool assoc = false;
+
+	ieee80211_iterate_active_interfaces_atomic(
+			mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+			iwl_mvm_assoc_iter, &assoc);
+
+	return assoc;
+}
+
 #ifdef CPTCFG_IWLMVM_TCM
 static enum iwl_mvm_vendor_load
 iwl_mvm_tcm_load(struct iwl_mvm *mvm, u32 airtime, unsigned long elapsed)
