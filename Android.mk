@@ -29,9 +29,17 @@ INTEL_IWL_SRC_DIR := $(call my-dir)
 INTEL_IWL_OUT_DIR := $(ANDROID_BUILD_TOP)/$(PRODUCT_OUT)/iwlwifi
 INTEL_IWL_COMPAT_INSTALL_PATH ?= $(ANDROID_BUILD_TOP)/$(TARGET_OUT)
 
-ifeq ($(TARGET_ARCH),arm)
 ifeq ($(CROSS_COMPILE),)
+ifneq ($(TARGET_TOOLS_PREFIX),)
+CROSS_COMPILE := CROSS_COMPILE=$(notdir $(TARGET_TOOLS_PREFIX))
+endif
+endif
+
+ifeq ($(CROSS_COMPILE),)
+ifeq ($(TARGET_ARCH),arm)
 $(warning You are building for an ARM platform, but no CROSS_COMPILE is set. This is likely an error.)
+else
+$(warning CROSS_COMPILE variant is not set; Defaulting to host gcc.)
 endif
 endif
 
