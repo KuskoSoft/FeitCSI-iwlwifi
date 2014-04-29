@@ -335,6 +335,20 @@ static int iwl_tm_validate_get_chip_id(struct iwl_trans *trans)
 
 }
 
+/**
+ * iwl_tm_validate_apmg_pd_mode_req() - Validates apmg rx mode request
+ * @data_in:	Input to be validated
+ *
+ */
+static int iwl_tm_validate_apmg_pd_mode_req(struct iwl_tm_data *data_in)
+{
+	if (!data_in->data ||
+	    (data_in->len != sizeof(struct iwl_xvt_apmg_pd_mode_request)))
+		return -EINVAL;
+
+	return 0;
+}
+
 static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
 				    struct iwl_tm_data *data_in,
 				    struct iwl_tm_data *data_out)
@@ -625,6 +639,10 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 
 	case IWL_XVT_CMD_RX_HDRS_MODE:
 		ret =  iwl_tm_validate_rx_hdrs_mode_req(&cmd_data->data_in);
+		break;
+
+	case IWL_XVT_CMD_APMG_PD_MODE:
+		ret =  iwl_tm_validate_apmg_pd_mode_req(&cmd_data->data_in);
 		break;
 
 	case IWL_TM_USER_CMD_NOTIFICATIONS:

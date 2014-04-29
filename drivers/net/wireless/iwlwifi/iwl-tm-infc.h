@@ -104,6 +104,7 @@ enum {
 	IWL_TM_USER_CMD_NOTIF_DTS_MEASUREMENTS,
 	IWL_TM_USER_CMD_NOTIF_MONITOR_DATA,
 	IWL_TM_USER_CMD_NOTIF_UCODE_MSGS_DATA,
+	IWL_TM_USER_CMD_NOTIF_APMG_PD,
 	IWL_TM_USER_CMD_NOTIF_RETRIEVE_MONITOR,
 };
 
@@ -124,6 +125,7 @@ enum {
 	IWL_XVT_CMD_GET_DMA,
 	IWL_XVT_CMD_FREE_DMA,
 	IWL_XVT_CMD_GET_CHIP_ID,
+	IWL_XVT_CMD_APMG_PD_MODE,
 
 	/* Driver notifications */
 	IWL_XVT_CMD_SEND_REPLY_ALIVE = XVT_CMD_NOTIF_BASE,
@@ -333,6 +335,15 @@ struct iwl_tm_mod_tx_request {
  *        1 - start
  */
 struct iwl_xvt_rx_hdrs_mode_request {
+	__u32 mode;
+} __packed __aligned(4);
+
+/**
+ * struct iwl_xvt_apmg_pd_mode_request - Start/Stop gathering apmg_pd info.
+ * @mode: 0 - stop
+ *        1 - start
+ */
+struct iwl_xvt_apmg_pd_mode_request {
 	__u32 mode;
 } __packed __aligned(4);
 
