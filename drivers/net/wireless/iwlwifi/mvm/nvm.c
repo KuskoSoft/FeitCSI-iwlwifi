@@ -667,6 +667,9 @@ int iwl_mvm_init_mcc(struct iwl_mvm *mvm)
 	 * unknown-country "99" code. This will also clear the "custom reg"
 	 * flag and allow regdomain changes. It will happen after init since
 	 * RTNL is required.
+	 * Disallow scans that might crash the FW while the LAR regdomain
+	 * is not set.
 	 */
+	mvm->lar_regdom_set = false;
 	return regulatory_hint(mvm->hw->wiphy, "99");
 }
