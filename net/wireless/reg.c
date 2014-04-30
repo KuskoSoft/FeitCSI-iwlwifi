@@ -1515,7 +1515,7 @@ static void reg_call_notifier(struct wiphy *wiphy,
 static bool reg_wdev_chan_valid(struct wiphy *wiphy, struct wireless_dev *wdev)
 {
 	struct ieee80211_channel *ch;
-	bool ret = false;
+	bool ret = true;
 
 	wdev_lock(wdev);
 
