@@ -783,6 +783,9 @@ struct ieee80211_sub_if_data {
 	bool radar_required;
 	struct delayed_work dfs_cac_timer_work;
 
+	u8 tdls_peer[ETH_ALEN] __aligned(2);
+	struct delayed_work tdls_peer_del_work;
+
 	/*
 	 * AP this belongs to: self in AP mode and
 	 * corresponding AP in VLAN mode, NULL for
@@ -1870,6 +1873,7 @@ int ieee80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 			const u8 *extra_ies, size_t extra_ies_len);
 int ieee80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 			u8 *peer, enum nl80211_tdls_operation oper);
+void ieee80211_tdls_peer_del_work(struct work_struct *wk);
 
 #ifdef CPTCFG_MAC80211_NOINLINE
 #define debug_noinline noinline
