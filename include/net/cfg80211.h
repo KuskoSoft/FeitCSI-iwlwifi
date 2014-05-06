@@ -4637,13 +4637,15 @@ void cfg80211_ch_switch_notify(struct net_device *dev,
  * cfg80211_ch_switch_started_notify - notify channel switch start
  * @dev: the device on which the channel switch started
  * @chandef: the future channel definition
+ * @count: the number of TBTTs until the channel switch happens
  *
  * Inform the userspace about the channel switch that has just
  * started, so that it can take appropriate actions (eg. starting
  * channel switch on other vifs), if necessary.
  */
 void cfg80211_ch_switch_started_notify(struct net_device *dev,
-				       struct cfg80211_chan_def *chandef);
+				       struct cfg80211_chan_def *chandef,
+				       u8 count);
 
 /*
  * cfg80211_ch_switch_failed_notify - notify channel switch failure

@@ -11356,7 +11356,8 @@ static void nl80211_ch_switch_notify(struct cfg80211_registered_device *rdev,
 				     struct net_device *netdev,
 				     struct cfg80211_chan_def *chandef,
 				     gfp_t gfp,
-				     enum nl80211_commands notif)
+				     enum nl80211_commands notif,
+				     u8 count)
 {
 	struct sk_buff *msg;
 	void *hdr;
@@ -11376,6 +11377,10 @@ static void nl80211_ch_switch_notify(struct cfg80211_registered_device *rdev,
 
 	if (nl80211_send_chandef(msg, chandef))
 		goto nla_put_failure;
+
+	if ((notif == NL80211_CMD_CH_SWITCH_STARTED_NOTIFY) &&
+	    (nla_put_u32(msg, NL80211_ATTR_CH_SWITCH_COUNT, count)))
+			goto nla_put_failure;
 
 	genlmsg_end(msg, hdr);
 
@@ -11408,12 +11413,13 @@ void cfg80211_ch_switch_notify(struct net_device *dev,
 	wdev->chandef = *chandef;
 	wdev->preset_chandef = *chandef;
 	nl80211_ch_switch_notify(rdev, dev, chandef, GFP_KERNEL,
-				 NL80211_CMD_CH_SWITCH_NOTIFY);
+				 NL80211_CMD_CH_SWITCH_NOTIFY, 0);
 }
 EXPORT_SYMBOL(cfg80211_ch_switch_notify);
 
 void cfg80211_ch_switch_started_notify(struct net_device *dev,
-			       struct cfg80211_chan_def *chandef)
+				       struct cfg80211_chan_def *chandef,
+				       u8 count)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct wiphy *wiphy = wdev->wiphy;
@@ -11422,7 +11428,7 @@ void cfg80211_ch_switch_started_notify(struct net_device *dev,
 	trace_cfg80211_ch_switch_started_notify(dev, chandef);
 
 	nl80211_ch_switch_notify(rdev, dev, chandef, GFP_KERNEL,
-				 NL80211_CMD_CH_SWITCH_STARTED_NOTIFY);
+				 NL80211_CMD_CH_SWITCH_STARTED_NOTIFY, count);
 }
 EXPORT_SYMBOL(cfg80211_ch_switch_started_notify);
 

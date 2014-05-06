@@ -3363,7 +3363,8 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	sdata->csa_current_counter = params->count;
 	sdata->vif.csa_active = true;
 
-	cfg80211_ch_switch_started_notify(sdata->dev, &sdata->csa_chandef);
+	cfg80211_ch_switch_started_notify(sdata->dev, &sdata->csa_chandef,
+					  sdata->csa_current_counter);
 
 	if (changed) {
 		ieee80211_bss_info_change_notify(sdata, changed);
