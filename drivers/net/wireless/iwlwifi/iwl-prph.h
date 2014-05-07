@@ -360,4 +360,10 @@ enum secure_load_status_reg {
 #define RXF_LD_FENCE_OFFSET_ADDR	(0xa00c10)
 #define RXF_FIFO_RD_FENCE_ADDR		(0xa00c0c)
 
+/* enable the ID buf for read */
+#define WFPM_PS_CTL_CLR			0xA0300C
+#define LMPM_PMG_EN			0xA01CEC
+#define RADIO_REG_SYS_MANUAL_DFT_0	0xAD4078
+#define RFIC_REG_RD			0xAD0470
+
 #endif				/* __iwl_prph_h__ */
