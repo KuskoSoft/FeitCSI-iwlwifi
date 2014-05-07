@@ -681,6 +681,7 @@ static inline void iwl_trans_unref(struct iwl_trans *trans)
 		trans->ops->unref(trans);
 }
 
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
 static inline u32 iwl_trans_dump_data(struct iwl_trans *trans,
 				      void *buf, u32 buflen)
 {
@@ -688,6 +689,7 @@ static inline u32 iwl_trans_dump_data(struct iwl_trans *trans,
 		return 0;
 	return trans->ops->dump_data(trans, buf, buflen);
 }
+#endif
 
 static inline int iwl_trans_send_cmd(struct iwl_trans *trans,
 				     struct iwl_host_cmd *cmd)
