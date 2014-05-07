@@ -327,6 +327,14 @@ static int iwl_tm_validate_rx_hdrs_mode_req(struct iwl_tm_data *data_in)
 	return 0;
 }
 
+static int iwl_tm_validate_get_chip_id(struct iwl_trans *trans)
+{
+	if (strcmp(trans->dev->bus->name, BUS_TYPE_IDI))
+		return -EINVAL;
+	return 0;
+
+}
+
 static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
 				    struct iwl_tm_data *data_in,
 				    struct iwl_tm_data *data_out)
@@ -627,6 +635,9 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 	case IWL_TM_USER_CMD_GET_DEVICE_STATUS:
 		ret = iwl_tm_get_device_status(dev, &cmd_data->data_in,
 					       &cmd_data->data_out);
+		break;
+	case IWL_XVT_CMD_GET_CHIP_ID:
+		ret = iwl_tm_validate_get_chip_id(dev->trans);
 		break;
 	}
 	if (ret)
