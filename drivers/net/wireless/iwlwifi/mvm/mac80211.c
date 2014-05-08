@@ -2545,6 +2545,9 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 
 	.channel_switch_beacon = iwl_mvm_channel_switch_beacon,
 
+#ifdef CPTCFG_NL80211_TESTMODE
+	.testmode_retrieve_monitor = iwl_tm_mvm_retrieve_monitor,
+#endif
 	CFG80211_TESTMODE_CMD(iwl_mvm_mac_testmode_cmd)
 
 #ifdef CONFIG_PM_SLEEP

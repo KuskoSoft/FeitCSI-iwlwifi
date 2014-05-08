@@ -413,6 +413,20 @@ int iwl_mvm_tm_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
 	return -EOPNOTSUPP;
 }
 
+#ifdef CPTCFG_NL80211_TESTMODE
+/**
+ * iwl_tm_mvm_retrieve_monitor() - trigger monitor retrieve event
+ */
+int iwl_tm_mvm_retrieve_monitor(struct ieee80211_hw *hw)
+{
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+
+	return iwl_tm_gnl_send_msg(mvm->trans,
+				   IWL_TM_USER_CMD_NOTIF_RETRIEVE_MONITOR,
+				   true, NULL, 0, GFP_ATOMIC);
+}
+#endif
+
 /**
  * iwl_tm_mvm_send_rx() - Send a spontaneous rx message to user
  * @mvm:	mvm opmode pointer
