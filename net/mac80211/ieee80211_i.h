@@ -958,10 +958,12 @@ struct ieee80211_tx_consec_loss_ranges {
  * If ranges is NULL then Tx latency statistics bins are disabled for all
  * stations.
  *
+ * @late_threshold: the threshold for triggering usniffer log event for usc.
  * @n_ranges: number of ranges that are taken in account
  * @ranges: the ranges that the user requested or NULL if disabled.
  */
 struct ieee80211_tx_latency_bin_ranges {
+	u32 threshold;
 	int n_ranges;
 	u32 ranges[];
 };

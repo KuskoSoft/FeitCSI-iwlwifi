@@ -23,6 +23,86 @@
 #define TX_TIMING_STATS_DISABLED "disable\n"
 
 
+#ifdef CPTCFG_NL80211_TESTMODE
+/*
+ * Display Tx latency threshold for triggering usniffer logs event.
+ */
+static ssize_t sta_tx_latency_threshold_read(struct file *file,
+					char __user *userbuf,
+					size_t count, loff_t *ppos)
+{
+	struct ieee80211_local *local = file->private_data;
+	struct ieee80211_tx_latency_bin_ranges  *tx_latency;
+	char buf[sizeof(TX_TIMING_STATS_DISABLED) + 1];
+	int bufsz = sizeof(buf);
+	int pos = 0;
+
+	rcu_read_lock();
+
+	tx_latency = rcu_dereference(local->tx_latency);
+
+	if (tx_latency)
+		pos = scnprintf(buf, bufsz, "%u\n", tx_latency->threshold);
+	else
+		pos = scnprintf(buf + pos, bufsz - pos, "%s\n",
+				TX_TIMING_STATS_DISABLED);
+
+	rcu_read_unlock();
+
+	return simple_read_from_buffer(userbuf, count, ppos, buf, pos);
+}
+
+/*
+ * Configure Tx latency threshold for triggering usniffer logs event.
+ */
+static ssize_t sta_tx_latency_threshold_write(struct file *file,
+					      const char __user *userbuf,
+					      size_t count, loff_t *ppos)
+{
+	struct ieee80211_local *local = file->private_data;
+	struct ieee80211_tx_latency_bin_ranges  *tx_latency;
+	u32 thrshld;
+	char buf[8] = {};
+
+	if (sizeof(buf) <= count)
+		return -EINVAL;
+
+	if (copy_from_user(buf, userbuf, count))
+		return -EFAULT;
+
+	if (sscanf(buf, "%u", &thrshld) != 1)
+		return -EINVAL;
+
+	mutex_lock(&local->sta_mtx);
+
+	/* cannot change config once we have stations */
+	if (local->num_sta)
+		goto unlock;
+
+	tx_latency =
+		rcu_dereference_protected(local->tx_latency,
+					  lockdep_is_held(&local->sta_mtx));
+	/* Tx latency disabled */
+	if (!tx_latency)
+		goto unlock;
+
+	tx_latency->threshold = thrshld;
+
+	rcu_assign_pointer(local->tx_latency, tx_latency);
+unlock:
+	mutex_unlock(&local->sta_mtx);
+
+	return count;
+}
+
+static const struct file_operations stats_tx_latency_threshold_ops = {
+	.write = sta_tx_latency_threshold_write,
+	.read = sta_tx_latency_threshold_read,
+	.open = simple_open,
+	.llseek = generic_file_llseek,
+};
+#endif
+
 /*
  * Display if Tx latency statistics & bins are enabled/disabled
  */
@@ -670,5 +750,8 @@ void debugfs_hw_add(struct ieee80211_local *local)
 	DEBUGFS_DEVSTATS_ADD(dot11RTSSuccessCount);
 
 	DEBUGFS_DEVSTATS_ADD(tx_latency);
+#ifdef CPTCFG_NL80211_TESTMODE
+	DEBUGFS_DEVSTATS_ADD(tx_latency_threshold);
+#endif
 	DEBUGFS_DEVSTATS_ADD(tx_consecutive_loss);
 }

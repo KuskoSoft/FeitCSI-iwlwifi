@@ -629,6 +629,15 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 
 	/* update statistic regarding latency */
 	tx_latency_msrmnt(tx_latency, sta, tid, msrmnt);
+
+#ifdef CPTCFG_NL80211_TESTMODE
+	/*
+	 * trigger retrival of monitor logs
+	 * (if a threshold was configured & passed)
+	 */
+	if (tx_latency->threshold && tx_latency->threshold < msrmnt)
+		drv_retrieve_monitor_logs(local);
+#endif
 }
 
 /*
