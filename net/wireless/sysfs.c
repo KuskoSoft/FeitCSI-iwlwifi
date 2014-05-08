@@ -145,7 +145,7 @@ static int wiphy_resume(struct device *dev)
 #ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
 int __wiphy_suspend(struct wiphy *wiphy)
 {
-	struct cfg80211_registered_device *rdev = wiphy_to_dev(wiphy);
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
 
 	return wiphy_suspend(&rdev->wiphy.dev, PMSG_SUSPEND /* ignored */);
 }
@@ -153,7 +153,7 @@ EXPORT_SYMBOL_GPL(__wiphy_suspend);
 
 int __wiphy_resume(struct wiphy *wiphy)
 {
-	struct cfg80211_registered_device *rdev = wiphy_to_dev(wiphy);
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
 
 	return wiphy_resume(&rdev->wiphy.dev);
 }
@@ -161,14 +161,12 @@ EXPORT_SYMBOL_GPL(__wiphy_resume);
 #endif
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 static const void *wiphy_namespace(struct device *d)
 {
 	struct wiphy *wiphy = container_of(d, struct wiphy, dev);
 
 	return wiphy_net(wiphy);
 }
-#endif
 
 struct class ieee80211_class = {
 	.name = "ieee80211",
@@ -184,15 +182,15 @@ struct class ieee80211_class = {
 	.suspend = wiphy_suspend,
 	.resume = wiphy_resume,
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	.ns_type = &net_ns_type_operations,
 	.namespace = wiphy_namespace,
-#endif
 };
 
 int wiphy_sysfs_init(void)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 	init_ieee80211_attrs();
+#endif
 	return class_register(&ieee80211_class);
 }
 

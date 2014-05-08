@@ -693,8 +693,10 @@ struct ieee80211_chanctx {
 	struct list_head list;
 	struct rcu_head rcu_head;
 
+	struct list_head assigned_vifs;
+	struct list_head reserved_vifs;
+
 	enum ieee80211_chanctx_mode mode;
-	int refcount;
 	bool driver_present;
 
 	struct ieee80211_chanctx_conf conf;
@@ -758,9 +760,13 @@ struct ieee80211_sub_if_data {
 	bool csa_radar_required;
 	struct cfg80211_chan_def csa_chandef;
 
+	struct list_head assigned_chanctx_list; /* protected by chanctx_mtx */
+	struct list_head reserved_chanctx_list; /* protected by chanctx_mtx */
+
 	/* context reservation -- protected with chanctx_mtx */
 	struct ieee80211_chanctx *reserved_chanctx;
 	struct cfg80211_chan_def reserved_chandef;
+	bool reserved_radar_required;
 	u8 csa_current_counter;
 
 	/* used to reconfigure hardware SM PS */
@@ -1044,12 +1050,7 @@ struct ieee80211_local {
 	struct work_struct reconfig_filter;
 
 	/* aggregated multicast list */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	struct netdev_hw_addr_list mc_list;
-#else
-	struct dev_addr_list *mc_list;
-	int mc_count;
-#endif
 
 	bool tim_in_locked_section; /* see ieee80211_beacon_get() */
 
@@ -1811,7 +1812,8 @@ ieee80211_vif_use_channel(struct ieee80211_sub_if_data *sdata,
 int __must_check
 ieee80211_vif_reserve_chanctx(struct ieee80211_sub_if_data *sdata,
 			      const struct cfg80211_chan_def *chandef,
-			      enum ieee80211_chanctx_mode mode);
+			      enum ieee80211_chanctx_mode mode,
+			      bool radar_required);
 int __must_check
 ieee80211_vif_use_reserved_context(struct ieee80211_sub_if_data *sdata,
 				   u32 *changed);
@@ -1829,6 +1831,8 @@ void ieee80211_vif_release_channel(struct ieee80211_sub_if_data *sdata);
 void ieee80211_vif_vlan_copy_chanctx(struct ieee80211_sub_if_data *sdata);
 void ieee80211_vif_copy_chanctx_to_vlans(struct ieee80211_sub_if_data *sdata,
 					 bool clear);
+int ieee80211_chanctx_refcount(struct ieee80211_local *local,
+			       struct ieee80211_chanctx *ctx);
 
 void ieee80211_recalc_smps_chanctx(struct ieee80211_local *local,
 				   struct ieee80211_chanctx *chanctx);
@@ -1856,6 +1860,7 @@ int ieee80211_check_combinations(struct ieee80211_sub_if_data *sdata,
 				 const struct cfg80211_chan_def *chandef,
 				 enum ieee80211_chanctx_mode chanmode,
 				 u8 radar_detect);
+int ieee80211_max_num_channels(struct ieee80211_local *local);
 
 /* TDLS */
 int ieee80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,

@@ -35,12 +35,11 @@ config PCMCIA_RAYCS
 	  called ray_cs.  If unsure, say N.
 
 config LIBERTAS_THINFIRM
-	depends on !BACKPORT_KERNEL_2_6_27
 	depends on n
 	tristate "Marvell 8xxx Libertas WLAN driver support with thin firmware"
 	depends on m
 	depends on MAC80211
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	---help---
 	  A library for Marvell Libertas 8xxx devices using thinfirm.
 
@@ -86,7 +85,7 @@ config ATMEL
       depends on CFG80211 && (PCI || PCMCIA)
       depends on WIRELESS_EXT
       depends on WEXT_PRIV
-      select BACKPORT_FW_LOADER
+      depends on FW_LOADER
       depends on CRC32
        ---help---
         A driver 802.11b wireless cards based on the Atmel fast-vnet
@@ -114,7 +113,7 @@ config PCMCIA_ATMEL
 	depends on m
 	depends on ATMEL && PCMCIA
 	depends on WIRELESS_EXT
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	depends on CRC32
 	---help---
 	  Enable support for PCMCIA cards containing the
@@ -125,7 +124,7 @@ config AT76C50X_USB
         tristate "Atmel at76c503/at76c505/at76c505a USB cards"
         depends on m
         depends on MAC80211 && USB
-        select BACKPORT_FW_LOADER
+        depends on FW_LOADER
         ---help---
           Enable support for USB Wireless devices using Atmel at76c503,
           at76c505 or at76c505a chips.
@@ -174,7 +173,7 @@ config PRISM54
 	depends on WIRELESS_EXT
 	depends on WEXT_SPY
 	depends on WEXT_PRIV
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	---help---
 	  This enables support for FullMAC PCI/Cardbus prism54 devices. This
 	  driver is now deprecated in favor for the SoftMAC driver, p54pci.
@@ -195,7 +194,7 @@ config USB_ZD1201
 	depends on CFG80211 && USB
 	depends on WIRELESS_EXT
 	depends on WEXT_PRIV
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	---help---
 	  Say Y if you want to use wireless LAN adapters based on the ZyDAS
 	  ZD1201 chip.
@@ -210,7 +209,6 @@ config USB_ZD1201
 	  module will be called zd1201.
 
 config USB_NET_RNDIS_WLAN
-	depends on !BACKPORT_KERNEL_2_6_29
 	depends on n
 	tristate "Wireless RNDIS USB support"
 	depends on m
@@ -272,7 +270,6 @@ config ADM8211
 	  Thanks to Infineon-ADMtek for their support of this driver.
 
 config MAC80211_HWSIM
-	depends on !BACKPORT_KERNEL_2_6_31
 	tristate "Simulated radio testing tool for mac80211"
 	depends on m
 	depends on MAC80211

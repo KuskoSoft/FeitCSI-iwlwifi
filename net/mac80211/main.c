@@ -71,11 +71,7 @@ void ieee80211_configure_filter(struct ieee80211_local *local)
 	spin_lock_bh(&local->filter_lock);
 	changed_flags = local->filter_flags ^ new_flags;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	mc = drv_prepare_multicast(local, &local->mc_list);
-#else
-	mc = drv_prepare_multicast(local, local->mc_count, local->mc_list);
-#endif
 	spin_unlock_bh(&local->filter_lock);
 
 	/* be a bit nasty */
@@ -152,6 +148,8 @@ static u32 ieee80211_hw_conf_chan(struct ieee80211_local *local)
 	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
 		if (!rcu_access_pointer(sdata->vif.chanctx_conf))
 			continue;
+		if (sdata->vif.type == NL80211_IFTYPE_AP_VLAN)
+			continue;
 		power = min(power, sdata->vif.bss_conf.txpower);
 	}
 	rcu_read_unlock();
@@ -203,7 +201,7 @@ void ieee80211_bss_info_change_notify(struct ieee80211_sub_if_data *sdata,
 {
 	struct ieee80211_local *local = sdata->local;
 
-	if (!changed)
+	if (!changed || sdata->vif.type == NL80211_IFTYPE_AP_VLAN)
 		return;
 
 	drv_bss_info_changed(local, sdata, &sdata->vif.bss_conf, changed);
@@ -348,7 +346,7 @@ static int ieee80211_ifa_changed(struct notifier_block *nb,
 
 	sdata_unlock(sdata);
 
-	return NOTIFY_DONE;
+	return NOTIFY_OK;
 }
 #endif
 
@@ -385,7 +383,7 @@ static int ieee80211_ifa6_changed(struct notifier_block *nb,
 
 	drv_ipv6_addr_change(local, sdata, idev);
 
-	return NOTIFY_DONE;
+	return NOTIFY_OK;
 }
 #endif
 
@@ -460,7 +458,9 @@ static const struct ieee80211_ht_cap mac80211_ht_capa_mod_mask = {
 	.cap_info = cpu_to_le16(IEEE80211_HT_CAP_SUP_WIDTH_20_40 |
 				IEEE80211_HT_CAP_MAX_AMSDU |
 				IEEE80211_HT_CAP_SGI_20 |
-				IEEE80211_HT_CAP_SGI_40),
+				IEEE80211_HT_CAP_SGI_40 |
+				IEEE80211_HT_CAP_LDPC_CODING |
+				IEEE80211_HT_CAP_40MHZ_INTOLERANT),
 	.mcs = {
 		.rx_mask = { 0xff, 0xff, 0xff, 0xff, 0xff,
 			     0xff, 0xff, 0xff, 0xff, 0xff, },
@@ -602,11 +602,9 @@ struct ieee80211_hw *ieee80211_alloc_hw(size_t priv_data_len,
 	wiphy->vht_capa_mod_mask = &mac80211_vht_capa_mod_mask;
 
 	INIT_LIST_HEAD(&local->interfaces);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 
 	__hw_addr_init(&local->mc_list);
 
-#endif
 	mutex_init(&local->iflist_mtx);
 	mutex_init(&local->mtx);
 
@@ -1226,10 +1224,6 @@ static void __exit ieee80211_exit(void)
 	rc80211_pid_exit();
 	rc80211_minstrel_ht_exit();
 	rc80211_minstrel_exit();
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37))
-	flush_scheduled_work();
-#endif
 
 	ieee80211s_stop();
 

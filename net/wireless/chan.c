@@ -616,12 +616,14 @@ bool cfg80211_chandef_usable(struct wiphy *wiphy,
 		width = 5;
 		break;
 	case NL80211_CHAN_WIDTH_10:
+		prohibited_flags |= IEEE80211_CHAN_NO_10MHZ;
 		width = 10;
 		break;
 	case NL80211_CHAN_WIDTH_20:
 		if (!ht_cap->ht_supported)
 			return false;
 	case NL80211_CHAN_WIDTH_20_NOHT:
+		prohibited_flags |= IEEE80211_CHAN_NO_20MHZ;
 		width = 20;
 		break;
 	case NL80211_CHAN_WIDTH_40:
@@ -731,7 +733,7 @@ static bool cfg80211_go_permissive_chan(struct cfg80211_registered_device *rdev,
 
 		if (wdev_iter->iftype != NL80211_IFTYPE_STATION ||
 		    !netif_running(wdev_iter->netdev))
-				continue;
+			continue;
 
 		wdev_lock(wdev_iter);
 		if (wdev_iter->current_bss)
@@ -777,7 +779,7 @@ bool cfg80211_reg_can_beacon(struct wiphy *wiphy,
 			     struct cfg80211_chan_def *chandef,
 			     enum nl80211_iftype iftype)
 {
-	struct cfg80211_registered_device *rdev = wiphy_to_dev(wiphy);
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
 	bool res;
 	u32 prohibited_flags = IEEE80211_CHAN_DISABLED |
 			       IEEE80211_CHAN_RADAR;
@@ -900,6 +902,4 @@ cfg80211_get_chan_state(struct wireless_dev *wdev,
 	case NUM_NL80211_IFTYPES:
 		WARN_ON(1);
 	}
-
-	return;
 }

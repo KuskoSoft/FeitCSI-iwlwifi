@@ -8,35 +8,7 @@
  */
 #include <asm/unaligned.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,12)
-#define eth_hw_addr_random LINUX_BACKPORT(eth_hw_addr_random)
-static inline void eth_hw_addr_random(struct net_device *dev)
-{
-#error eth_hw_addr_random() needs to be implemented for < 2.6.12
-}
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-#define eth_hw_addr_random LINUX_BACKPORT(eth_hw_addr_random)
-static inline void eth_hw_addr_random(struct net_device *dev)
-{
-	get_random_bytes(dev->dev_addr, ETH_ALEN);
-	dev->dev_addr[0] &= 0xfe;       /* clear multicast bit */
-	dev->dev_addr[0] |= 0x02;       /* set local assignment bit (IEEE802) */
-}
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
-/* So this is 2.6.31..2.6.35 */
-
-/* Just have the flags present, they won't really mean anything though */
-#define NET_ADDR_PERM		0	/* address is permanent (default) */
-#define NET_ADDR_RANDOM		1	/* address is generated randomly */
-#define NET_ADDR_STOLEN		2	/* address is stolen from other device */
-
-#define eth_hw_addr_random LINUX_BACKPORT(eth_hw_addr_random)
-static inline void eth_hw_addr_random(struct net_device *dev)
-{
-	random_ether_addr(dev->dev_addr);
-}
-
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
 #define eth_hw_addr_random LINUX_BACKPORT(eth_hw_addr_random)
 static inline void eth_hw_addr_random(struct net_device *dev)
 {
@@ -73,7 +45,7 @@ static inline void eth_random_addr(u8 *addr)
 	addr[0] &= 0xfe;        /* clear multicast bit */
 	addr[0] |= 0x02;        /* set local assignment bit (IEEE802) */
 }
-#endif
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
 
@@ -100,24 +72,6 @@ static inline bool ether_addr_equal(const u8 *addr1, const u8 *addr2)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38)
-#define alloc_etherdev_mqs(sizeof_priv, tx_q, rx_q) alloc_etherdev_mq(sizeof_priv, tx_q)
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38)
-/**
- * is_unicast_ether_addr - Determine if the Ethernet address is unicast
- * @addr: Pointer to a six-byte array containing the Ethernet address
- *
- * Return true if the address is a unicast address.
- */
-#define is_unicast_ether_addr LINUX_BACKPORT(is_unicast_ether_addr)
-static inline int is_unicast_ether_addr(const u8 *addr)
-{
-	return !is_multicast_ether_addr(addr);
-}
-#endif
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
 #define eth_prepare_mac_addr_change LINUX_BACKPORT(eth_prepare_mac_addr_change)
 extern int eth_prepare_mac_addr_change(struct net_device *dev, void *p);
@@ -125,19 +79,6 @@ extern int eth_prepare_mac_addr_change(struct net_device *dev, void *p);
 #define eth_commit_mac_addr_change LINUX_BACKPORT(eth_commit_mac_addr_change)
 extern void eth_commit_mac_addr_change(struct net_device *dev, void *p);
 #endif /* < 3.9 */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
-#define eth_mac_addr LINUX_BACKPORT(eth_mac_addr)
-extern int eth_mac_addr(struct net_device *dev, void *p);
-#define eth_change_mtu LINUX_BACKPORT(eth_change_mtu)
-extern int eth_change_mtu(struct net_device *dev, int new_mtu);
-#define eth_validate_addr LINUX_BACKPORT(eth_validate_addr)
-extern int eth_validate_addr(struct net_device *dev);
-#endif /* < 2.6.29 */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
-#define netdev_hw_addr dev_mc_list
-#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
 /**
@@ -151,9 +92,7 @@ extern int eth_validate_addr(struct net_device *dev);
 static inline void eth_hw_addr_inherit(struct net_device *dst,
 				       struct net_device *src)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 	dst->addr_assign_type = src->addr_assign_type;
-#endif
 	memcpy(dst->dev_addr, src->dev_addr, ETH_ALEN);
 }
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) */

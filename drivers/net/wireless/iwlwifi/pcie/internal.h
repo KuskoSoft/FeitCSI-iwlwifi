@@ -312,9 +312,6 @@ struct iwl_trans_pcie {
 	/*protect hw register */
 	spinlock_t reg_lock;
 	bool cmd_in_flight;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-	struct compat_threaded_irq irq_compat;
-#endif
 };
 
 #define IWL_TRANS_GET_PCIE_TRANS(_iwl_trans) \

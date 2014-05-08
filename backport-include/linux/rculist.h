@@ -1,8 +1,6 @@
 #ifndef __BACKPORT_RCULIST_H
 #define __BACKPORT_RCULIST_H
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
 #include_next <linux/rculist.h>
-#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
 #include <backport/magic.h>
@@ -23,21 +21,6 @@
 #define hlist_for_each_entry_rcu(...) \
 	macro_dispatcher(hlist_for_each_entry_rcu, __VA_ARGS__)(__VA_ARGS__)
 #endif /* < 3.9 */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
-/**
- * backport:
- *
- * commit 67bdbffd696f29a0b68aa8daa285783a06651583
- * Author: Arnd Bergmann <arnd@arndb.de>
- * Date:   Thu Feb 25 16:55:13 2010 +0100
- *
- *     rculist: avoid __rcu annotations
- */
-#define hlist_first_rcu(head)	(*((struct hlist_node __rcu **)(&(head)->first)))
-#define hlist_next_rcu(node)	(*((struct hlist_node __rcu **)(&(node)->next)))
-
-#endif /* < 2.6.37 */
 
 #ifndef list_for_each_entry_continue_rcu
 #define list_for_each_entry_continue_rcu(pos, head, member) 		\

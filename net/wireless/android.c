@@ -40,7 +40,7 @@
 static int cfg80211_android_p2pdev_open(struct net_device *dev)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
-	struct cfg80211_registered_device *rdev = wiphy_to_dev(wdev->wiphy);
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wdev->wiphy);
 	int err;
 
 	if (!rdev->ops->start_p2p_device)
@@ -65,7 +65,7 @@ static int cfg80211_android_p2pdev_open(struct net_device *dev)
 static int cfg80211_android_p2pdev_stop(struct net_device *dev)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
-	struct cfg80211_registered_device *rdev = wiphy_to_dev(wdev->wiphy);
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wdev->wiphy);
 
 	if (!wdev->p2p_started)
 		return 0;

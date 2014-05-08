@@ -47,50 +47,11 @@
 #
 #
 # C) similarly, a kconfig symbol for an option, e.g.
-#    BACKPORT_OPTION_BT_SOCK_CREATE_NEEDS_KERN (see below)
+#    BACKPORT_OPTION_SOME_FIX (no examples provided) check git log
 #
 #
 # Variations are obviously possible.
 #
-
-config BACKPORT_BUILD_FW_LOADER
-	tristate
-	depends on m
-	# RHEL6, starting from 6.0, backports the FW loader already
-	depends on !BACKPORT_RHEL_KERNEL_6_0
-	depends on !FW_LOADER || BACKPORT_KERNEL_2_6_33
-	default m if BACKPORT_FW_LOADER
-	default m if BACKPORT_USERSEL_BUILD_ALL
-
-config BACKPORT_FW_LOADER
-	bool
-
-config BACKPORT_USERSEL_NET_SCH_CODEL
-	tristate "Controlled Delay AQM (CODEL)"
-	depends on m
-	depends on m
-	depends on !BACKPORT_KERNEL_2_6_25
-	default m if NET_SCH_CODEL=n
-	default m if BACKPORT_USERSEL_BUILD_ALL
-	#module-name sch_codel
-	#c-file net/sched/sch_codel.c
-
-config BACKPORT_USERSEL_NET_SCH_FQ_CODEL
-	tristate "Fair Queue Controlled Delay AQM (FQ_CODEL)"
-	depends on m
-	depends on m
-	depends on !BACKPORT_KERNEL_2_6_25
-	default m if NET_SCH_FQ_CODEL=n
-	default m if BACKPORT_USERSEL_BUILD_ALL
-	#module-name sch_fq_codel
-	#c-file net/sched/sch_fq_codel.c
-	#c-file net/core/flow_dissector.c
-
-config BACKPORT_BUILD_KFIFO
-	def_bool y
-	# RHEL6, starting from 6.1, backports kfifo already
-	depends on !BACKPORT_RHEL_KERNEL_6_1
-	depends on BACKPORT_KERNEL_2_6_36
 
 config BACKPORT_BUILD_CORDIC
 	depends on n
@@ -105,15 +66,6 @@ config BACKPORT_BUILD_CORDIC
 config BACKPORT_CORDIC
 	bool
 
-config BACKPORT_BUILD_GENERIC_ATOMIC64
-	bool
-	default y if !64BIT && !GENERIC_ATOMIC64
-
-config BACKPORT_OPTION_BT_SOCK_CREATE_NEEDS_KERN
-	bool
-	# in RHEL6 (starting from 6.0), the function needs the argument
-	default y if !BACKPORT_KERNEL_2_6_33 || BACKPORT_RHEL_KERNEL_6_0
-
 config BACKPORT_BUILD_AVERAGE
 	bool
 	depends on !AVERAGE
@@ -124,10 +76,6 @@ config BACKPORT_BUILD_AVERAGE
 
 config BACKPORT_AVERAGE
 	bool
-
-config BACKPORT_OPTION_USB_URB_THREAD_FIX
-	bool
-	default y if BACKPORT_KERNEL_2_6_36
 
 config BACKPORT_MII
 	bool
@@ -181,3 +129,12 @@ config BACKPORT_USERSEL_BUILD_ALL
 
 	  It's only really useful for compat testing, so
 	  you probably shouldn't enable it.
+
+config BACKPORT_CRYPTO_CCM
+	bool
+
+config BACKPORT_BUILD_CRYPTO_CCM
+	bool
+	default n if CRYPTO_CCM
+	default y if BACKPORT_CRYPTO_CCM
+	#c-file crypto/ccm.c

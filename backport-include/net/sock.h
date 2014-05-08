@@ -38,39 +38,4 @@
 #define SOCK_SELECT_ERR_QUEUE (SOCK_QUEUE_SHRUNK + 14)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
-static inline wait_queue_head_t *sk_sleep(struct sock *sk)
-{
-	return sk->sk_sleep;
-}
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
-static inline struct sock *sk_entry(const struct hlist_node *node)
-{
-	return hlist_entry(node, struct sock, sk_node);
-}
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
-#define sock_recv_ts_and_drops(msg, sk, skb) sock_recv_timestamp(msg, sk, skb)
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-static inline int sk_rmem_alloc_get(const struct sock *sk)
-{
-	return atomic_read(&sk->sk_rmem_alloc);
-}
-
-static inline int sk_wmem_alloc_get(const struct sock *sk)
-{
-	return atomic_read(&sk->sk_wmem_alloc) - 1;
-}
-
-static inline bool sk_has_allocations(const struct sock *sk)
-{
-	return sk_wmem_alloc_get(sk) || sk_rmem_alloc_get(sk);
-}
-#endif
-
 #endif /* __BACKPORT_NET_SOCK_H */

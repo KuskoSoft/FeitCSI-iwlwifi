@@ -3,8 +3,27 @@
 #include_next <net/ipv6.h>
 #include <linux/version.h>
 #include <net/addrconf.h>
+#include <net/inet_frag.h>
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)) && (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,25))
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+/*
+ *	Equivalent of ipv4 struct ip
+ */
+struct frag_queue {
+	struct inet_frag_queue  q;
+
+	__be32                  id;             /* fragment id          */
+	u32                     user;
+	struct in6_addr         saddr;
+	struct in6_addr         daddr;
+
+	int                     iif;
+	unsigned int            csum;
+	__u16                   nhoffset;
+};
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
 #define ipv6_addr_hash LINUX_BACKPORT(ipv6_addr_hash)
 static inline u32 ipv6_addr_hash(const struct in6_addr *a)
 {

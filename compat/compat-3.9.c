@@ -15,6 +15,8 @@
 #include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/etherdevice.h>
+#include <net/inet_frag.h>
+#include <net/sock.h>
 
 void __iomem *devm_ioremap_resource(struct device *dev, struct resource *res)
 {
@@ -56,3 +58,15 @@ void eth_commit_mac_addr_change(struct net_device *dev, void *p)
 	memcpy(dev->dev_addr, addr->sa_data, ETH_ALEN);
 }
 EXPORT_SYMBOL_GPL(eth_commit_mac_addr_change);
+
+void inet_frag_maybe_warn_overflow(struct inet_frag_queue *q,
+				   const char *prefix)
+{
+	static const char msg[] = "inet_frag_find: Fragment hash bucket"
+		" list length grew over limit " __stringify(INETFRAGS_MAXDEPTH)
+		". Dropping fragment.\n";
+
+	if (PTR_ERR(q) == -ENOBUFS)
+		LIMIT_NETDEBUG(KERN_WARNING "%s%s", prefix, msg);
+}
+EXPORT_SYMBOL_GPL(inet_frag_maybe_warn_overflow);

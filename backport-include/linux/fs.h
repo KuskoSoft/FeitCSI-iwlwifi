@@ -29,15 +29,6 @@ static inline struct inode *file_inode(struct file *f)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
-#define noop_llseek LINUX_BACKPORT(noop_llseek)
-extern loff_t noop_llseek(struct file *file, loff_t offset, int origin);
-
-#define simple_write_to_buffer LINUX_BACKPORT(simple_write_to_buffer)
-extern ssize_t simple_write_to_buffer(void *to, size_t available, loff_t *ppos,
-		const void __user *from, size_t count);
-#endif
-
 #ifndef replace_fops
 /*
  * This one is to be used *ONLY* from ->open() instances.

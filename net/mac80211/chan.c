@@ -9,6 +9,170 @@
 #include "ieee80211_i.h"
 #include "driver-ops.h"
 
+static int ieee80211_chanctx_num_assigned(struct ieee80211_local *local,
+					  struct ieee80211_chanctx *ctx)
+{
+	struct ieee80211_sub_if_data *sdata;
+	int num = 0;
+
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	list_for_each_entry(sdata, &ctx->assigned_vifs, assigned_chanctx_list)
+		num++;
+
+	return num;
+}
+
+static int ieee80211_chanctx_num_reserved(struct ieee80211_local *local,
+					  struct ieee80211_chanctx *ctx)
+{
+	struct ieee80211_sub_if_data *sdata;
+	int num = 0;
+
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	list_for_each_entry(sdata, &ctx->reserved_vifs, reserved_chanctx_list)
+		num++;
+
+	return num;
+}
+
+int ieee80211_chanctx_refcount(struct ieee80211_local *local,
+			       struct ieee80211_chanctx *ctx)
+{
+	return ieee80211_chanctx_num_assigned(local, ctx) +
+	       ieee80211_chanctx_num_reserved(local, ctx);
+}
+
+static int ieee80211_num_chanctx(struct ieee80211_local *local)
+{
+	struct ieee80211_chanctx *ctx;
+	int num = 0;
+
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	list_for_each_entry(ctx, &local->chanctx_list, list)
+		num++;
+
+	return num;
+}
+
+static bool ieee80211_can_create_new_chanctx(struct ieee80211_local *local)
+{
+	lockdep_assert_held(&local->chanctx_mtx);
+	return ieee80211_num_chanctx(local) < ieee80211_max_num_channels(local);
+}
+
+static const struct cfg80211_chan_def *
+ieee80211_chanctx_reserved_chandef(struct ieee80211_local *local,
+				   struct ieee80211_chanctx *ctx,
+				   const struct cfg80211_chan_def *compat)
+{
+	struct ieee80211_sub_if_data *sdata;
+
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	list_for_each_entry(sdata, &ctx->reserved_vifs,
+			    reserved_chanctx_list) {
+		if (!compat)
+			compat = &sdata->reserved_chandef;
+
+		compat = cfg80211_chandef_compatible(&sdata->reserved_chandef,
+						     compat);
+		if (!compat)
+			break;
+	}
+
+	return compat;
+}
+
+static const struct cfg80211_chan_def *
+ieee80211_chanctx_non_reserved_chandef(struct ieee80211_local *local,
+				       struct ieee80211_chanctx *ctx,
+				       const struct cfg80211_chan_def *compat)
+{
+	struct ieee80211_sub_if_data *sdata;
+
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	list_for_each_entry(sdata, &ctx->assigned_vifs,
+			    assigned_chanctx_list) {
+		if (sdata->reserved_chanctx != NULL)
+			continue;
+
+		if (!compat)
+			compat = &sdata->vif.bss_conf.chandef;
+
+		compat = cfg80211_chandef_compatible(
+				&sdata->vif.bss_conf.chandef, compat);
+		if (!compat)
+			break;
+	}
+
+	return compat;
+}
+
+static const struct cfg80211_chan_def *
+ieee80211_chanctx_combined_chandef(struct ieee80211_local *local,
+				   struct ieee80211_chanctx *ctx,
+				   const struct cfg80211_chan_def *compat)
+{
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	compat = ieee80211_chanctx_reserved_chandef(local, ctx, compat);
+	if (!compat)
+		return NULL;
+
+	compat = ieee80211_chanctx_non_reserved_chandef(local, ctx, compat);
+	if (!compat)
+		return NULL;
+
+	return compat;
+}
+
+static bool
+ieee80211_chanctx_can_reserve_chandef(struct ieee80211_local *local,
+				      struct ieee80211_chanctx *ctx,
+				      const struct cfg80211_chan_def *def)
+{
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	if (ieee80211_chanctx_combined_chandef(local, ctx, def))
+		return true;
+
+	if (!list_empty(&ctx->reserved_vifs) &&
+	    ieee80211_chanctx_reserved_chandef(local, ctx, def))
+		return true;
+
+	return false;
+}
+
+static struct ieee80211_chanctx *
+ieee80211_find_reservation_chanctx(struct ieee80211_local *local,
+				   const struct cfg80211_chan_def *chandef,
+				   enum ieee80211_chanctx_mode mode)
+{
+	struct ieee80211_chanctx *ctx;
+
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	if (mode == IEEE80211_CHANCTX_EXCLUSIVE)
+		return NULL;
+
+	list_for_each_entry(ctx, &local->chanctx_list, list) {
+		if (ctx->mode == IEEE80211_CHANCTX_EXCLUSIVE)
+			continue;
+
+		if (!ieee80211_chanctx_can_reserve_chandef(local, ctx,
+							   chandef))
+			continue;
+
+		return ctx;
+	}
+
+	return NULL;
+}
+
 static enum nl80211_chan_width ieee80211_get_sta_bw(struct ieee80211_sta *sta)
 {
 	switch (sta->bandwidth) {
@@ -216,6 +380,11 @@ ieee80211_find_chanctx(struct ieee80211_local *local,
 		if (!compat)
 			continue;
 
+		compat = ieee80211_chanctx_reserved_chandef(local, ctx,
+							    compat);
+		if (!compat)
+			continue;
+
 		ieee80211_change_chanctx(local, ctx, compat);
 
 		return ctx;
@@ -243,61 +412,90 @@ static bool ieee80211_is_radar_required(struct ieee80211_local *local)
 }
 
 static struct ieee80211_chanctx *
-ieee80211_new_chanctx(struct ieee80211_local *local,
-		      const struct cfg80211_chan_def *chandef,
-		      enum ieee80211_chanctx_mode mode)
+ieee80211_alloc_chanctx(struct ieee80211_local *local,
+			const struct cfg80211_chan_def *chandef,
+			enum ieee80211_chanctx_mode mode)
 {
 	struct ieee80211_chanctx *ctx;
-	u32 changed;
-	int err;
 
 	lockdep_assert_held(&local->chanctx_mtx);
 
 	ctx = kzalloc(sizeof(*ctx) + local->hw.chanctx_data_size, GFP_KERNEL);
 	if (!ctx)
-		return ERR_PTR(-ENOMEM);
+		return NULL;
 
+	INIT_LIST_HEAD(&ctx->assigned_vifs);
+	INIT_LIST_HEAD(&ctx->reserved_vifs);
 	ctx->conf.def = *chandef;
 	ctx->conf.rx_chains_static = 1;
 	ctx->conf.rx_chains_dynamic = 1;
 	ctx->mode = mode;
 	ctx->conf.radar_enabled = ieee80211_is_radar_required(local);
 	ieee80211_recalc_chanctx_min_def(local, ctx);
+
+	return ctx;
+}
+
+static int ieee80211_add_chanctx(struct ieee80211_local *local,
+				 struct ieee80211_chanctx *ctx)
+{
+	u32 changed;
+	int err;
+
+	lockdep_assert_held(&local->mtx);
+	lockdep_assert_held(&local->chanctx_mtx);
+
 	if (!local->use_chanctx)
 		local->hw.conf.radar_enabled = ctx->conf.radar_enabled;
 
-	/* we hold the mutex to prevent idle from changing */
-	lockdep_assert_held(&local->mtx);
 	/* turn idle off *before* setting channel -- some drivers need that */
 	changed = ieee80211_idle_off(local);
 	if (changed)
 		ieee80211_hw_config(local, changed);
 
 	if (!local->use_chanctx) {
-		local->_oper_chandef = *chandef;
-		ieee80211_hw_config(local, 0);
+		local->_oper_chandef = ctx->conf.def;
+		ieee80211_hw_config(local, IEEE80211_CONF_CHANGE_CHANNEL);
 	} else {
 		err = drv_add_chanctx(local, ctx);
 		if (err) {
-			kfree(ctx);
 			ieee80211_recalc_idle(local);
-			return ERR_PTR(err);
+			return err;
 		}
 	}
 
-	/* and keep the mutex held until the new chanctx is on the list */
-	list_add_rcu(&ctx->list, &local->chanctx_list);
+	return 0;
+}
 
+static struct ieee80211_chanctx *
+ieee80211_new_chanctx(struct ieee80211_local *local,
+		      const struct cfg80211_chan_def *chandef,
+		      enum ieee80211_chanctx_mode mode)
+{
+	struct ieee80211_chanctx *ctx;
+	int err;
+
+	lockdep_assert_held(&local->mtx);
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	ctx = ieee80211_alloc_chanctx(local, chandef, mode);
+	if (!ctx)
+		return ERR_PTR(-ENOMEM);
+
+	err = ieee80211_add_chanctx(local, ctx);
+	if (err) {
+		kfree(ctx);
+		return ERR_PTR(err);
+	}
+
+	list_add_rcu(&ctx->list, &local->chanctx_list);
 	return ctx;
 }
 
-static void ieee80211_free_chanctx(struct ieee80211_local *local,
-				   struct ieee80211_chanctx *ctx)
+static void ieee80211_del_chanctx(struct ieee80211_local *local,
+				  struct ieee80211_chanctx *ctx)
 {
-	bool check_single_channel = false;
 	lockdep_assert_held(&local->chanctx_mtx);
-
-	WARN_ON_ONCE(ctx->refcount != 0);
 
 	if (!local->use_chanctx) {
 		struct cfg80211_chan_def *chandef = &local->_oper_chandef;
@@ -308,22 +506,29 @@ static void ieee80211_free_chanctx(struct ieee80211_local *local,
 		/* NOTE: Disabling radar is only valid here for
 		 * single channel context. To be sure, check it ...
 		 */
-		if (local->hw.conf.radar_enabled)
-			check_single_channel = true;
+		WARN_ON(local->hw.conf.radar_enabled &&
+			!list_empty(&local->chanctx_list));
+
 		local->hw.conf.radar_enabled = false;
 
-		ieee80211_hw_config(local, 0);
+		ieee80211_hw_config(local, IEEE80211_CONF_CHANGE_CHANNEL);
 	} else {
 		drv_remove_chanctx(local, ctx);
 	}
 
-	list_del_rcu(&ctx->list);
-	kfree_rcu(ctx, rcu_head);
-
-	/* throw a warning if this wasn't the only channel context. */
-	WARN_ON(check_single_channel && !list_empty(&local->chanctx_list));
-
 	ieee80211_recalc_idle(local);
+}
+
+static void ieee80211_free_chanctx(struct ieee80211_local *local,
+				   struct ieee80211_chanctx *ctx)
+{
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	WARN_ON_ONCE(ieee80211_chanctx_refcount(local, ctx) != 0);
+
+	list_del_rcu(&ctx->list);
+	ieee80211_del_chanctx(local, ctx);
+	kfree_rcu(ctx, rcu_head);
 }
 
 static void ieee80211_recalc_chanctx_chantype(struct ieee80211_local *local,
@@ -398,9 +603,9 @@ static int ieee80211_assign_vif_chanctx(struct ieee80211_sub_if_data *sdata,
 	if (conf) {
 		curr_ctx = container_of(conf, struct ieee80211_chanctx, conf);
 
-		curr_ctx->refcount--;
 		drv_unassign_vif_chanctx(local, sdata, curr_ctx);
 		conf = NULL;
+		list_del(&sdata->assigned_chanctx_list);
 	}
 
 	if (new_ctx) {
@@ -408,8 +613,9 @@ static int ieee80211_assign_vif_chanctx(struct ieee80211_sub_if_data *sdata,
 		if (ret)
 			goto out;
 
-		new_ctx->refcount++;
 		conf = &new_ctx->conf;
+		list_add(&sdata->assigned_chanctx_list,
+			 &new_ctx->assigned_vifs);
 	}
 
 out:
@@ -417,14 +623,14 @@ out:
 
 	sdata->vif.bss_conf.idle = !conf;
 
-	if (curr_ctx && curr_ctx->refcount > 0) {
+	if (curr_ctx && ieee80211_chanctx_num_assigned(local, curr_ctx) > 0) {
 		ieee80211_recalc_chanctx_chantype(local, curr_ctx);
 		ieee80211_recalc_smps_chanctx(local, curr_ctx);
 		ieee80211_recalc_radar_chanctx(local, curr_ctx);
 		ieee80211_recalc_chanctx_min_def(local, curr_ctx);
 	}
 
-	if (new_ctx && new_ctx->refcount > 0) {
+	if (new_ctx && ieee80211_chanctx_num_assigned(local, new_ctx) > 0) {
 		ieee80211_recalc_txpower(sdata);
 		ieee80211_recalc_chanctx_min_def(local, new_ctx);
 	}
@@ -456,7 +662,7 @@ static void __ieee80211_vif_release_channel(struct ieee80211_sub_if_data *sdata)
 		ieee80211_vif_unreserve_chanctx(sdata);
 
 	ieee80211_assign_vif_chanctx(sdata, NULL);
-	if (ctx->refcount == 0)
+	if (ieee80211_chanctx_refcount(local, ctx) == 0)
 		ieee80211_free_chanctx(local, ctx);
 }
 
@@ -595,7 +801,7 @@ int ieee80211_vif_use_channel(struct ieee80211_sub_if_data *sdata,
 	ret = ieee80211_assign_vif_chanctx(sdata, ctx);
 	if (ret) {
 		/* if assign fails refcount stays the same */
-		if (ctx->refcount == 0)
+		if (ieee80211_chanctx_refcount(local, ctx) == 0)
 			ieee80211_free_chanctx(local, ctx);
 		goto out;
 	}
@@ -619,7 +825,7 @@ static int __ieee80211_vif_change_channel(struct ieee80211_sub_if_data *sdata,
 				     IEEE80211_CHAN_DISABLED))
 		return -EINVAL;
 
-	if (ctx->refcount != 1)
+	if (ieee80211_chanctx_refcount(local, ctx) != 1)
 		return -EINVAL;
 
 	if (sdata->vif.bss_conf.chandef.width != chandef->width) {
@@ -715,22 +921,26 @@ void ieee80211_vif_copy_chanctx_to_vlans(struct ieee80211_sub_if_data *sdata,
 
 int ieee80211_vif_unreserve_chanctx(struct ieee80211_sub_if_data *sdata)
 {
+	struct ieee80211_chanctx *ctx = sdata->reserved_chanctx;
+
 	lockdep_assert_held(&sdata->local->chanctx_mtx);
 
-	if (WARN_ON(!sdata->reserved_chanctx))
+	if (WARN_ON(!ctx))
 		return -EINVAL;
 
-	if (--sdata->reserved_chanctx->refcount == 0)
-		ieee80211_free_chanctx(sdata->local, sdata->reserved_chanctx);
-
+	list_del(&sdata->reserved_chanctx_list);
 	sdata->reserved_chanctx = NULL;
+
+	if (ieee80211_chanctx_refcount(sdata->local, ctx) == 0)
+		ieee80211_free_chanctx(sdata->local, ctx);
 
 	return 0;
 }
 
 int ieee80211_vif_reserve_chanctx(struct ieee80211_sub_if_data *sdata,
 				  const struct cfg80211_chan_def *chandef,
-				  enum ieee80211_chanctx_mode mode)
+				  enum ieee80211_chanctx_mode mode,
+				  bool radar_required)
 {
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_chanctx_conf *conf;
@@ -748,29 +958,32 @@ int ieee80211_vif_reserve_chanctx(struct ieee80211_sub_if_data *sdata,
 
 	curr_ctx = container_of(conf, struct ieee80211_chanctx, conf);
 
-	/* try to find another context with the chandef we want */
-	new_ctx = ieee80211_find_chanctx(local, chandef, mode);
+	new_ctx = ieee80211_find_reservation_chanctx(local, chandef, mode);
 	if (!new_ctx) {
-		if (curr_ctx->refcount == 1 &&
+		if (ieee80211_chanctx_refcount(local, curr_ctx) == 1 &&
 		    (local->hw.flags & IEEE80211_HW_CHANGE_RUNNING_CHANCTX)) {
 			/* if we're the only users of the chanctx and
 			 * the driver supports changing a running
 			 * context, reserve our current context
 			 */
 			new_ctx = curr_ctx;
-		} else {
+		} else if (ieee80211_can_create_new_chanctx(local)) {
 			/* create a new context and reserve it */
 			new_ctx = ieee80211_new_chanctx(local, chandef, mode);
 			if (IS_ERR(new_ctx)) {
 				ret = PTR_ERR(new_ctx);
 				goto out;
 			}
+		} else {
+			ret = -EBUSY;
+			goto out;
 		}
 	}
 
-	new_ctx->refcount++;
+	list_add(&sdata->reserved_chanctx_list, &new_ctx->reserved_vifs);
 	sdata->reserved_chanctx = new_ctx;
 	sdata->reserved_chandef = *chandef;
+	sdata->reserved_radar_required = radar_required;
 out:
 	mutex_unlock(&local->chanctx_mtx);
 	return ret;
@@ -813,8 +1026,9 @@ int ieee80211_vif_use_reserved_context(struct ieee80211_sub_if_data *sdata,
 	sdata->vif.bss_conf.chandef = sdata->reserved_chandef;
 
 	/* unref our reservation */
-	ctx->refcount--;
 	sdata->reserved_chanctx = NULL;
+	sdata->radar_required = sdata->reserved_radar_required;
+	list_del(&sdata->reserved_chanctx_list);
 
 	if (old_ctx == ctx) {
 		/* This is our own context, just change it */
@@ -824,11 +1038,11 @@ int ieee80211_vif_use_reserved_context(struct ieee80211_sub_if_data *sdata,
 			goto out;
 	} else {
 		ret = ieee80211_assign_vif_chanctx(sdata, ctx);
-		if (old_ctx->refcount == 0)
+		if (ieee80211_chanctx_refcount(local, old_ctx) == 0)
 			ieee80211_free_chanctx(local, old_ctx);
 		if (ret) {
 			/* if assign fails refcount stays the same */
-			if (ctx->refcount == 0)
+			if (ieee80211_chanctx_refcount(local, ctx) == 0)
 				ieee80211_free_chanctx(local, ctx);
 			goto out;
 		}

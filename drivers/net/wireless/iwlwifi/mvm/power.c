@@ -290,7 +290,6 @@ static bool iwl_mvm_power_allow_uapsd(struct iwl_mvm *mvm,
 		return false;
 
 	return true;
-
 }
 
 static void iwl_mvm_power_build_cmd(struct iwl_mvm *mvm,

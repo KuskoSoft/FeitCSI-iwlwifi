@@ -23,12 +23,8 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->transport_header	= old->transport_header;
 	new->network_header	= old->network_header;
 	new->mac_header		= old->mac_header;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	skb_dst_copy(new, old);
 	new->rxhash		= old->rxhash;
-#else
-	skb_dst_set(new, dst_clone(skb_dst(old)));
-#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0))
 	new->ooo_okay		= old->ooo_okay;
 #endif
@@ -50,9 +46,7 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 #endif
 	new->protocol		= old->protocol;
 	new->mark		= old->mark;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33))
 	new->skb_iif		= old->skb_iif;
-#endif
 	__nf_copy(new, old);
 #if IS_ENABLED(CONFIG_NETFILTER_XT_TARGET_TRACE)
 	new->nf_trace		= old->nf_trace;
@@ -63,9 +57,7 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 	new->tc_verd		= old->tc_verd;
 #endif
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
 	new->vlan_tci		= old->vlan_tci;
-#endif
 
 	skb_copy_secmark(new, old);
 }
@@ -198,15 +190,7 @@ backport_alloc_workqueue(const char *fmt, unsigned int flags,
 	vsnprintf(n->name, sizeof(n->name), fmt, args);
 	va_end(args);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
-	wq = __create_workqueue_key(n->name, max_active == 1, 0,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)
-				    0,
-#endif
-				    key, lock_name);
-#else
 	wq = __alloc_workqueue_key(n->name, flags, max_active, key, lock_name);
-#endif
 	if (!wq) {
 		kfree(n);
 		return NULL;

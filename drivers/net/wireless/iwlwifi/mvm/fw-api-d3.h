@@ -63,8 +63,6 @@
 #ifndef __fw_api_d3_h__
 #define __fw_api_d3_h__
 
-#include <linux/in6.h>
-
 /**
  * enum iwl_d3_wakeup_flags - D3 manager wakeup flags
  * @IWL_WAKEUP_D3_CONFIG_FW_ERROR: wake up on firmware sysassert

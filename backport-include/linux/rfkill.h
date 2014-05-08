@@ -5,7 +5,6 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #include_next <linux/rfkill.h>
 #else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 /* API only slightly changed since then */
 #define rfkill_type old_rfkill_type
 #define RFKILL_TYPE_ALL OLD_RFKILL_TYPE_ALL
@@ -31,17 +30,6 @@
 #undef RFKILL_TYPE_NFC
 #undef NUM_RFKILL_TYPES
 #define HAVE_OLD_RFKILL
-#else
-#undef HAVE_OLD_RFKILL
-#include <linux/device.h>
-struct rfkill;
-
-struct rfkill_ops {
-	void	(*poll)(struct rfkill *rfkill, void *data);
-	void	(*query)(struct rfkill *rfkill, void *data);
-	int	(*set_block)(void *data, bool blocked);
-};
-#endif
 
 /* this changes infrequently, backport manually */
 enum rfkill_type {

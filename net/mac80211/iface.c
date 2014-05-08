@@ -427,7 +427,7 @@ int ieee80211_add_virtual_monitor(struct ieee80211_local *local)
 	mutex_unlock(&local->mtx);
 	if (ret) {
 		mutex_lock(&local->iflist_mtx);
-		rcu_assign_pointer(local->monitor_sdata, NULL);
+		RCU_INIT_POINTER(local->monitor_sdata, NULL);
 		mutex_unlock(&local->iflist_mtx);
 		synchronize_net();
 		drv_remove_interface(local, sdata);
@@ -456,7 +456,7 @@ void ieee80211_del_virtual_monitor(struct ieee80211_local *local)
 		return;
 	}
 
-	rcu_assign_pointer(local->monitor_sdata, NULL);
+	RCU_INIT_POINTER(local->monitor_sdata, NULL);
 	mutex_unlock(&local->iflist_mtx);
 
 	synchronize_net();
@@ -827,13 +827,8 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 	if (sdata->dev) {
 		netif_addr_lock_bh(sdata->dev);
 		spin_lock_bh(&local->filter_lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 		__hw_addr_unsync(&local->mc_list, &sdata->dev->mc,
 				 sdata->dev->addr_len);
-#else
-		__dev_addr_unsync(&local->mc_list, &local->mc_count,
-				  &sdata->dev->mc_list, &sdata->dev->mc_count);
-#endif
 		spin_unlock_bh(&local->filter_lock);
 		netif_addr_unlock_bh(sdata->dev);
 	}
@@ -892,7 +887,7 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 		mutex_lock(&local->mtx);
 		list_del(&sdata->u.vlan.list);
 		mutex_unlock(&local->mtx);
-		rcu_assign_pointer(sdata->vif.chanctx_conf, NULL);
+		RCU_INIT_POINTER(sdata->vif.chanctx_conf, NULL);
 		/* no need to tell driver */
 		break;
 	case NL80211_IFTYPE_MONITOR:
@@ -911,7 +906,7 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 		break;
 	case NL80211_IFTYPE_P2P_DEVICE:
 		/* relies on synchronize_rcu() below */
-		rcu_assign_pointer(local->p2p_sdata, NULL);
+		RCU_INIT_POINTER(local->p2p_sdata, NULL);
 		/* fall through */
 	default:
 		cancel_work_sync(&sdata->work);
@@ -1037,12 +1032,7 @@ static void ieee80211_set_multicast_list(struct net_device *dev)
 		sdata->flags ^= IEEE80211_SDATA_PROMISC;
 	}
 	spin_lock_bh(&local->filter_lock);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	__hw_addr_sync(&local->mc_list, &dev->mc, dev->addr_len);
-#else
-	__dev_addr_sync(&local->mc_list, &local->mc_count,
-			&dev->mc_list, &dev->mc_count);
-#endif
 	spin_unlock_bh(&local->filter_lock);
 	ieee80211_queue_work(&local->hw, &local->reconfig_filter);
 }
@@ -1073,7 +1063,7 @@ static void ieee80211_uninit(struct net_device *dev)
 	ieee80211_teardown_sdata(IEEE80211_DEV_TO_SUB_IF(dev));
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,15,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 static u16 ieee80211_netdev_select_queue(struct net_device *dev,
 					 struct sk_buff *skb,
 					 void *accel_priv,
@@ -1101,7 +1091,7 @@ static const struct net_device_ops ieee80211_dataif_ops = {
 	.ndo_select_queue	= ieee80211_netdev_select_queue,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,15,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 static u16 ieee80211_monitor_select_queue(struct net_device *dev,
 					  struct sk_buff *skb,
 					  void *accel_priv,
@@ -1147,7 +1137,7 @@ static void ieee80211_if_setup(struct net_device *dev)
 {
 	ether_setup(dev);
 	dev->priv_flags &= ~IFF_TX_SKB_SHARING;
-	netdev_attach_ops(dev, &ieee80211_dataif_ops);
+	dev->netdev_ops = &ieee80211_dataif_ops;
 	dev->destructor = free_netdev;
 }
 
@@ -1311,7 +1301,7 @@ static void ieee80211_setup_sdata(struct ieee80211_sub_if_data *sdata,
 
 	/* only monitor/p2p-device differ */
 	if (sdata->dev) {
-		netdev_attach_ops(sdata->dev, &ieee80211_dataif_ops);
+		sdata->dev->netdev_ops = &ieee80211_dataif_ops;
 		sdata->dev->type = ARPHRD_ETHER;
 	}
 
@@ -1319,6 +1309,8 @@ static void ieee80211_setup_sdata(struct ieee80211_sub_if_data *sdata,
 	INIT_WORK(&sdata->work, ieee80211_iface_work);
 	INIT_WORK(&sdata->recalc_smps, ieee80211_recalc_smps_work);
 	INIT_WORK(&sdata->csa_finalize_work, ieee80211_csa_finalize_work);
+	INIT_LIST_HEAD(&sdata->assigned_chanctx_list);
+	INIT_LIST_HEAD(&sdata->reserved_chanctx_list);
 
 	switch (type) {
 	case NL80211_IFTYPE_P2P_GO:
@@ -1353,7 +1345,7 @@ static void ieee80211_setup_sdata(struct ieee80211_sub_if_data *sdata,
 		break;
 	case NL80211_IFTYPE_MONITOR:
 		sdata->dev->type = ARPHRD_IEEE80211_RADIOTAP;
-		netdev_attach_ops(sdata->dev, &ieee80211_monitorif_ops);
+		sdata->dev->netdev_ops = &ieee80211_monitorif_ops;
 		sdata->u.mntr_flags = MONITOR_FLAG_CONTROL |
 				      MONITOR_FLAG_OTHER_BSS;
 		break;
@@ -1647,7 +1639,6 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 			return -ENOMEM;
 		dev_net_set(ndev, wiphy_net(local->hw.wiphy));
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26))
 		ndev->needed_headroom = local->tx_headroom +
 					4*6 /* four MAC addresses */
 					+ 2 + 2 + 2 + 2 /* ctl, dur, seq, qos */
@@ -1656,7 +1647,6 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 					- ETH_HLEN /* ethernet hard_header_len */
 					+ IEEE80211_ENCRYPT_HEADROOM;
 		ndev->needed_tailroom = IEEE80211_ENCRYPT_TAILROOM;
-#endif
 
 		ret = dev_alloc_name(ndev, ndev->name);
 		if (ret < 0) {
@@ -1771,7 +1761,6 @@ void ieee80211_sdata_stop(struct ieee80211_sub_if_data *sdata)
  * Remove all interfaces, may only be called at hardware unregistration
  * time because it doesn't do RCU-safe list removals.
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33))
 void ieee80211_remove_interfaces(struct ieee80211_local *local)
 {
 	struct ieee80211_sub_if_data *sdata, *tmp;
@@ -1808,22 +1797,6 @@ void ieee80211_remove_interfaces(struct ieee80211_local *local)
 		kfree(sdata);
 	}
 }
-#else
-void ieee80211_remove_interfaces(struct ieee80211_local *local)
-{
-	struct ieee80211_sub_if_data *sdata, *tmp;
-
-	ASSERT_RTNL();
-
-	list_for_each_entry_safe(sdata, tmp, &local->interfaces, list) {
-		mutex_lock(&local->iflist_mtx);
-		list_del(&sdata->list);
-		mutex_unlock(&local->iflist_mtx);
-
-		unregister_netdevice(sdata->dev);
-	}
-}
-#endif
 
 static int netdev_notify(struct notifier_block *nb,
 			 unsigned long state, void *ptr)
@@ -1832,20 +1805,19 @@ static int netdev_notify(struct notifier_block *nb,
 	struct ieee80211_sub_if_data *sdata;
 
 	if (state != NETDEV_CHANGENAME)
-		return 0;
+		return NOTIFY_DONE;
 
 	if (!dev->ieee80211_ptr || !dev->ieee80211_ptr->wiphy)
-		return 0;
+		return NOTIFY_DONE;
 
 	if (dev->ieee80211_ptr->wiphy->privid != mac80211_wiphy_privid)
-		return 0;
+		return NOTIFY_DONE;
 
 	sdata = IEEE80211_DEV_TO_SUB_IF(dev);
-
 	memcpy(sdata->name, dev->name, IFNAMSIZ);
-
 	ieee80211_debugfs_rename_netdev(sdata);
-	return 0;
+
+	return NOTIFY_OK;
 }
 
 static struct notifier_block mac80211_netdev_notifier = {

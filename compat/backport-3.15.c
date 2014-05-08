@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014  Hauke Mehrtens <hauke@hauke-m.de>
+ * Copyright (c) 2015  Luis R. Rodriguez <mcgrof@do-not-panic.com>
  *
  * Backport functionality introduced in Linux 3.15.
  *
@@ -11,6 +12,21 @@
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/of.h>
+#include <net/net_namespace.h>
+
+#ifdef CPTCFG_IEEE802154_6LOWPAN
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
+/* the above kernel dependency is set to match the dependencies file */
+struct netns_ieee802154_lowpan ieee802154_lowpan;
+EXPORT_SYMBOL_GPL(ieee802154_lowpan);
+
+struct netns_ieee802154_lowpan *net_ieee802154_lowpan(struct net *net)
+{
+	return &ieee802154_lowpan;
+}
+EXPORT_SYMBOL_GPL(net_ieee802154_lowpan);
+#endif
+#endif /* CPTCFG_IEEE802154_6LOWPAN */
 
 /**
  * devm_kstrdup - Allocate resource managed space and

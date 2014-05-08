@@ -1577,7 +1577,7 @@ static int ieee80211_change_station(struct wiphy *wiphy,
 
 		if (sta->sdata->vif.type == NL80211_IFTYPE_AP_VLAN &&
 		    sta->sdata->u.vlan.sta) {
-			rcu_assign_pointer(sta->sdata->u.vlan.sta, NULL);
+			RCU_INIT_POINTER(sta->sdata->u.vlan.sta, NULL);
 			prev_4addr = true;
 		}
 
@@ -3147,7 +3147,8 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 		/* todo: should we handle !local->use_chanctx case here?*/
 		mutex_lock(&local->mtx);
 		err = ieee80211_vif_reserve_chanctx(sdata, &params->chandef,
-						    IEEE80211_CHANCTX_SHARED);
+						    IEEE80211_CHANCTX_SHARED,
+						    params->radar_required);
 		mutex_unlock(&local->mtx);
 		if (err)
 			return -EBUSY;
@@ -3213,7 +3214,8 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 		/* don't handle for multi-VIF cases */
 		chanctx = container_of(chanctx_conf, struct ieee80211_chanctx,
 				       conf);
-		if (chanctx->refcount > 1) {
+
+		if (ieee80211_chanctx_refcount(local, chanctx) > 1) {
 			rcu_read_unlock();
 			return -EBUSY;
 		}
@@ -3318,7 +3320,9 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = sdata->local;
-	int err, changed = 0;
+	struct ieee80211_chanctx_conf *conf;
+	struct ieee80211_chanctx *chanctx;
+	int err, num_chanctx, changed = 0;
 
 	sdata_assert_lock(sdata);
 
@@ -3331,6 +3335,28 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	if (cfg80211_chandef_identical(&params->chandef,
 				       &sdata->vif.bss_conf.chandef))
 		return -EINVAL;
+
+	mutex_lock(&local->chanctx_mtx);
+	conf = rcu_dereference_protected(sdata->vif.chanctx_conf,
+					 lockdep_is_held(&local->chanctx_mtx));
+	if (!conf) {
+		mutex_unlock(&local->chanctx_mtx);
+		return -EBUSY;
+	}
+
+	/* don't handle for multi-VIF cases */
+	chanctx = container_of(conf, struct ieee80211_chanctx, conf);
+	if (ieee80211_chanctx_refcount(local, chanctx) > 1) {
+		mutex_unlock(&local->chanctx_mtx);
+		return -EBUSY;
+	}
+	num_chanctx = 0;
+	list_for_each_entry_rcu(chanctx, &local->chanctx_list, list)
+		num_chanctx++;
+	mutex_unlock(&local->chanctx_mtx);
+
+	if (num_chanctx > 1)
+		return -EBUSY;
 
 	/* don't allow another channel switch if one is already active. */
 	if (sdata->vif.csa_active)
@@ -3348,7 +3374,6 @@ int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 				IEEE80211_QUEUE_STOP_REASON_CSA);
 
 	sdata->csa_chandef = params->chandef;
-	sdata->csa_current_counter = params->count;
 	sdata->vif.csa_active = true;
 
 	cfg80211_ch_switch_started_notify(sdata->dev, &sdata->csa_chandef);
@@ -3729,6 +3754,21 @@ static int ieee80211_set_qos_map(struct wiphy *wiphy,
 	return 0;
 }
 
+static int ieee80211_set_ap_chanwidth(struct wiphy *wiphy,
+				      struct net_device *dev,
+				      struct cfg80211_chan_def *chandef)
+{
+	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
+	int ret;
+	u32 changed = 0;
+
+	ret = ieee80211_vif_change_bandwidth(sdata, chandef, &changed);
+	if (ret == 0)
+		ieee80211_bss_info_change_notify(sdata, changed);
+
+	return ret;
+}
+
 const struct cfg80211_ops mac80211_config_ops = {
 	.add_virtual_intf = ieee80211_add_iface,
 	.del_virtual_intf = ieee80211_del_iface,
@@ -3809,4 +3849,5 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.start_radar_detection = ieee80211_start_radar_detection,
 	.channel_switch = ieee80211_channel_switch,
 	.set_qos_map = ieee80211_set_qos_map,
+	.set_ap_chanwidth = ieee80211_set_ap_chanwidth,
 };

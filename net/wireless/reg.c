@@ -1008,7 +1008,7 @@ freq_reg_info_regd(struct wiphy *wiphy, u32 center_freq,
 		if (!band_rule_found)
 			band_rule_found = freq_in_rule_band(fr, center_freq);
 
-		bw_fits = reg_does_bw_fit(fr, center_freq, MHZ_TO_KHZ(20));
+		bw_fits = reg_does_bw_fit(fr, center_freq, MHZ_TO_KHZ(5));
 
 		if (band_rule_found && bw_fits)
 			return rr;
@@ -1092,10 +1092,10 @@ static void chan_reg_rule_print_dbg(const struct ieee80211_regdomain *regd,
 }
 #endif
 
-/*
- * Note that right now we assume the desired channel bandwidth
- * is always 20 MHz for each individual channel (HT40 uses 20 MHz
- * per channel, the primary and the extension channel).
+/* Find an ieee80211_reg_rule such that a 5MHz channel with frequency
+ * chan->center_freq fits there.
+ * If there is no such reg_rule, disable the channel, otherwise set the
+ * flags corresponding to the bandwidths allowed in the particular reg_rule
  */
 static void handle_channel(struct wiphy *wiphy,
 			   enum nl80211_reg_initiator initiator,
@@ -1156,8 +1156,12 @@ static void handle_channel(struct wiphy *wiphy,
 	if (reg_rule->flags & NL80211_RRF_AUTO_BW)
 		max_bandwidth_khz = reg_get_max_bandwidth(regd, reg_rule);
 
+	if (max_bandwidth_khz < MHZ_TO_KHZ(10))
+		bw_flags = IEEE80211_CHAN_NO_10MHZ;
+	if (max_bandwidth_khz < MHZ_TO_KHZ(20))
+		bw_flags |= IEEE80211_CHAN_NO_20MHZ;
 	if (max_bandwidth_khz < MHZ_TO_KHZ(40))
-		bw_flags = IEEE80211_CHAN_NO_HT40;
+		bw_flags |= IEEE80211_CHAN_NO_HT40;
 	if (max_bandwidth_khz < MHZ_TO_KHZ(80))
 		bw_flags |= IEEE80211_CHAN_NO_80MHZ;
 	if (max_bandwidth_khz < MHZ_TO_KHZ(160))
@@ -1177,6 +1181,13 @@ static void handle_channel(struct wiphy *wiphy,
 			(int) MBI_TO_DBI(power_rule->max_antenna_gain);
 		chan->max_reg_power = chan->max_power = chan->orig_mpwr =
 			(int) MBM_TO_DBM(power_rule->max_eirp);
+
+		if (chan->flags & IEEE80211_CHAN_RADAR) {
+			chan->dfs_cac_ms = IEEE80211_DFS_MIN_CAC_TIME_MS;
+			if (reg_rule->dfs_cac_ms)
+				chan->dfs_cac_ms = reg_rule->dfs_cac_ms;
+		}
+
 		return;
 	}
 
@@ -1554,7 +1565,7 @@ out:
 static void reg_leave_invalid_chans(struct wiphy *wiphy)
 {
 	struct wireless_dev *wdev;
-	struct cfg80211_registered_device *rdev = wiphy_to_dev(wiphy);
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
 
 	ASSERT_RTNL();
 
@@ -1660,8 +1671,12 @@ static void handle_channel_custom(struct wiphy *wiphy,
 	if (reg_rule->flags & NL80211_RRF_AUTO_BW)
 		max_bandwidth_khz = reg_get_max_bandwidth(regd, reg_rule);
 
+	if (max_bandwidth_khz < MHZ_TO_KHZ(10))
+		bw_flags = IEEE80211_CHAN_NO_10MHZ;
+	if (max_bandwidth_khz < MHZ_TO_KHZ(20))
+		bw_flags |= IEEE80211_CHAN_NO_20MHZ;
 	if (max_bandwidth_khz < MHZ_TO_KHZ(40))
-		bw_flags = IEEE80211_CHAN_NO_HT40;
+		bw_flags |= IEEE80211_CHAN_NO_HT40;
 	if (max_bandwidth_khz < MHZ_TO_KHZ(80))
 		bw_flags |= IEEE80211_CHAN_NO_80MHZ;
 	if (max_bandwidth_khz < MHZ_TO_KHZ(160))
@@ -2811,7 +2826,7 @@ void wiphy_regulatory_deregister(struct wiphy *wiphy)
 		reg_num_devs_support_basehint--;
 
 	rcu_free_regdom(get_wiphy_regdom(wiphy));
-	rcu_assign_pointer(wiphy->regd, NULL);
+	RCU_INIT_POINTER(wiphy->regd, NULL);
 
 	if (wiphy == regd_info_wiphy)
 		regd_info_wiphy = NULL;

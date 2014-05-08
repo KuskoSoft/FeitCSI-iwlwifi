@@ -32,6 +32,11 @@ usedefconfig:
 	@$(MAKE) -C kconf conf
 	@./kconf/conf --defconfig=defconfig Kconfig
 
+.PHONY: savedefconfig
+savedefconfig:
+	@$(MAKE) -C kconf conf
+	@./kconf/conf --savedefconfig=defconfig Kconfig
+
 defconfig-%::
 	@$(MAKE) -C kconf conf
 	@./kconf/conf --defconfig=defconfigs/$(@:defconfig-%=%) Kconfig
@@ -90,7 +95,6 @@ install: modules
 	@./scripts/blacklist.sh $(KLIB)/ $(KLIB)/$(KMODDIR)
 	@./scripts/compress_modules.sh $(KLIB)/$(KMODDIR)
 	@./scripts/check_depmod.sh
-	@./scripts/backport_firmware_install.sh
 	@/sbin/depmod -a
 	@./scripts/update-initramfs.sh $(KLIB)
 	@echo

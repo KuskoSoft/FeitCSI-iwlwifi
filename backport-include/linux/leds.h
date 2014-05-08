@@ -24,22 +24,7 @@
  *   Signed-off-by: Bryan Wu <bryan.wu@canonical.com>
  */
 #define led_set_brightness(_dev, _switch) led_brightness_set(_dev, _switch)
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37) && \
-    !defined(CPTCFG_BACKPORT_BUILD_LEDS)
-#define led_blink_set LINUX_BACKPORT(led_blink_set)
-extern void led_blink_set(struct led_classdev *led_cdev,
-			  unsigned long *delay_on,
-			  unsigned long *delay_off);
-
-#define led_classdev_unregister compat_led_classdev_unregister
-extern void compat_led_classdev_unregister(struct led_classdev *led_cdev);
-
-#define led_brightness_set compat_led_brightness_set
-extern void compat_led_brightness_set(struct led_classdev *led_cdev,
-				      enum led_brightness brightness);
-#endif
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0) */
 
 #include <backport/leds-disabled.h>
 

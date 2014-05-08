@@ -2,6 +2,11 @@
 #define __BACKPORT_IF_ETHER_H
 #include_next <linux/if_ether.h>
 
+/* See commit b62faf3c in next-20140311 */
+#ifndef ETH_P_80221
+#define ETH_P_80221	0x8917	/* IEEE 802.21 Media Independent Handover Protocol */
+#endif
+
 /*
  * backport of:
  * commit e5c5d22e8dcf7c2d430336cbf8e180bd38e8daf1
@@ -20,11 +25,6 @@
 
 #ifndef ETH_P_LINK_CTL
 #define ETH_P_LINK_CTL	0x886c
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
-#define mac_pton LINUX_BACKPORT(mac_pton)
-int mac_pton(const char *s, u8 *mac);
 #endif
 
 #ifndef ETH_P_PAE

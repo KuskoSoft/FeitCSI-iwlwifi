@@ -41,11 +41,4 @@
 #define rcu_dereference_raw(p)	rcu_dereference(p)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
-static inline int rcu_read_lock_held(void)
-{
-	return 1;
-}
-#endif
-
 #endif /* __BACKPORT_LINUX_RCUPDATE_H */

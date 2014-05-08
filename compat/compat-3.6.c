@@ -14,6 +14,7 @@
 #include <linux/bug.h>
 #include <linux/bitmap.h>
 #include <linux/i2c.h>
+#include <linux/clk.h>
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0))
 /**
@@ -146,3 +147,17 @@ int sg_alloc_table_from_pages(struct sg_table *sgt,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(sg_alloc_table_from_pages);
+
+/* whoopsie ! */
+#ifndef CONFIG_COMMON_CLK
+int clk_enable(struct clk *clk)
+{
+	return 0;
+}
+EXPORT_SYMBOL_GPL(clk_enable);
+
+void clk_disable(struct clk *clk)
+{
+}
+EXPORT_SYMBOL_GPL(clk_disable);
+#endif

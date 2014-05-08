@@ -320,6 +320,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		    IEEE80211_HW_AMPDU_AGGREGATION |
 		    IEEE80211_HW_TIMING_BEACON_ONLY |
 		    IEEE80211_HW_CONNECTION_MONITOR |
+		    IEEE80211_HW_SUPPORTS_UAPSD |
 		    IEEE80211_HW_SUPPORTS_DYNAMIC_SMPS |
 		    IEEE80211_HW_SUPPORTS_STATIC_SMPS;
 
@@ -343,6 +344,10 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	if (mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_MFP &&
 	    !iwlwifi_mod_params.sw_crypto)
 		hw->flags |= IEEE80211_HW_MFP_CAPABLE;
+
+	/* Disable uAPSD due to firmware issues */
+	if (true)
+		hw->flags &= ~IEEE80211_HW_SUPPORTS_UAPSD;
 
 	hw->sta_data_size = sizeof(struct iwl_mvm_sta);
 	hw->vif_data_size = sizeof(struct iwl_mvm_vif);
@@ -1105,21 +1110,12 @@ static void iwl_mvm_recalc_multicast(struct iwl_mvm *mvm)
 }
 
 static u64 iwl_mvm_prepare_multicast(struct ieee80211_hw *hw,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 				     struct netdev_hw_addr_list *mc_list)
-#else
-				     int addr_count,
-				     struct dev_addr_list *mc_list)
-#endif
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	struct iwl_mcast_filter_cmd *cmd;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	struct netdev_hw_addr *addr;
 	int addr_count = netdev_hw_addr_list_count(mc_list);
-#else
-	struct dev_mc_list *addr;
-#endif
 	bool pass_all = false;
 	int len;
 
@@ -1138,15 +1134,11 @@ static u64 iwl_mvm_prepare_multicast(struct ieee80211_hw *hw,
 		return (u64)(unsigned long)cmd;
 	}
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	netdev_hw_addr_list_for_each(addr, mc_list) {
-#else
-	for (addr = mc_list; addr; addr = addr->next) {
-#endif
 		IWL_DEBUG_MAC80211(mvm, "mcast addr (%d): %pM\n",
-				   cmd->count, mc_addr(addr));
+				   cmd->count, addr->addr);
 		memcpy(&cmd->addr_list[cmd->count * ETH_ALEN],
-		       mc_addr(addr), ETH_ALEN);
+		       addr->addr, ETH_ALEN);
 		cmd->count++;
 	}
 

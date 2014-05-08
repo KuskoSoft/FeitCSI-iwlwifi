@@ -33,10 +33,4 @@ module_exit(__platform_driver##_exit);
                         platform_driver_unregister)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
-#define platform_device_register_data LINUX_BACKPORT(platform_device_register_data)
-extern struct platform_device *platform_device_register_data(struct device *,
-		const char *, int, const void *, size_t);
-#endif
-
 #endif /* __BACKPORT_PLATFORM_DEVICE_H */

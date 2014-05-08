@@ -2,12 +2,7 @@
 #define _COMPAT_LINUX_OF_H 1
 
 #include <linux/version.h>
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34) || defined(CONFIG_OF)
 #include_next <linux/of.h>
-#else
-struct device_node;
-#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
 #ifdef CONFIG_OF

@@ -71,95 +71,10 @@
 	.bInterfaceClass = (cl)
 #endif /* USB_DEVICE_INTERFACE_CLASS */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
-#ifdef CPTCFG_BACKPORT_OPTION_USB_URB_THREAD_FIX
-#define usb_scuttle_anchored_urbs LINUX_BACKPORT(usb_scuttle_anchored_urbs)
-#define usb_get_from_anchor LINUX_BACKPORT(usb_get_from_anchor)
-
-extern struct urb *usb_get_from_anchor(struct usb_anchor *anchor);
-extern void usb_scuttle_anchored_urbs(struct usb_anchor *anchor);
-#endif
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
-/* mask usb_pipe_endpoint as RHEL6 backports this */
-#define usb_pipe_endpoint LINUX_BACKPORT(usb_pipe_endpoint)
-
-static inline struct usb_host_endpoint *
-usb_pipe_endpoint(struct usb_device *dev, unsigned int pipe)
-{
-	struct usb_host_endpoint **eps;
-	eps = usb_pipein(pipe) ? dev->ep_in : dev->ep_out;
-	return eps[usb_pipeendpoint(pipe)];
-}
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34)
-#define usb_alloc_coherent(dev, size, mem_flags, dma) usb_buffer_alloc(dev, size, mem_flags, dma)
-#define usb_free_coherent(dev, size, addr, dma) usb_buffer_free(dev, size, addr, dma)
-
-/* USB autosuspend and autoresume */
-static inline int usb_enable_autosuspend(struct usb_device *udev)
-{ return 0; }
-static inline int usb_disable_autosuspend(struct usb_device *udev)
-{ return 0; }
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
-#define usb_autopm_get_interface_no_resume LINUX_BACKPORT(usb_autopm_get_interface_no_resume)
-#define usb_autopm_put_interface_no_suspend LINUX_BACKPORT(usb_autopm_put_interface_no_suspend)
-#ifdef CONFIG_USB_SUSPEND
-extern void usb_autopm_get_interface_no_resume(struct usb_interface *intf);
-extern void usb_autopm_put_interface_no_suspend(struct usb_interface *intf);
-#else
-static inline void usb_autopm_get_interface_no_resume(struct usb_interface *intf)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
-	atomic_inc(&intf->pm_usage_cnt);
-#else
-	intf->pm_usage_cnt++;
-#endif
-}
-static inline void usb_autopm_put_interface_no_suspend(struct usb_interface *intf)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
-	atomic_dec(&intf->pm_usage_cnt);
-#else
-	intf->pm_usage_cnt--;
-#endif
-}
-#endif /* CONFIG_USB_SUSPEND */
-#endif /* < 2.6.33 */
-
 #ifndef USB_SUBCLASS_VENDOR_SPEC
 /* this is defined in usb/ch9.h, but we only need it through here */
 #define USB_SUBCLASS_VENDOR_SPEC	0xff
 #endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
-static inline void usb_autopm_put_interface_async(struct usb_interface *intf)
-{ }
-static inline int usb_autopm_get_interface_async(struct usb_interface *intf)
-{ return 0; }
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29) && \
-    LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23)
-#if defined(CONFIG_USB) || defined(CONFIG_USB_MODULE)
-#define usb_unpoison_anchored_urbs LINUX_BACKPORT(usb_unpoison_anchored_urbs)
-extern void usb_unpoison_anchored_urbs(struct usb_anchor *anchor);
-#endif /* CONFIG_USB */
-#endif /* 2.6.23 - 2.6.28 */
-
-/* USB anchors were added as of 2.6.23 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28) && \
-    LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23)
-#define usb_unpoison_urb LINUX_BACKPORT(usb_unpoison_urb)
-extern void usb_unpoison_urb(struct urb *urb);
-
-#define usb_anchor_empty LINUX_BACKPORT(usb_anchor_empty)
-extern int usb_anchor_empty(struct usb_anchor *anchor);
-#endif /* 2.6.23-2.6.27 */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
 #define usb_translate_errors LINUX_BACKPORT(usb_translate_errors)
@@ -175,6 +90,6 @@ static inline int usb_translate_errors(int error_code)
 		return -EIO;
 	}
 }
-#endif /* < 2.6.39 */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0) */
 
 #endif /* __BACKPORT_USB_H */

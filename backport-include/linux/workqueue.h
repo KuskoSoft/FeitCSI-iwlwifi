@@ -14,15 +14,7 @@ bool mod_delayed_work(struct workqueue_struct *wq, struct delayed_work *dwork,
 #define create_freezable_workqueue create_freezeable_workqueue
 #endif
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
-#define WQ_HIGHPRI 0
-#define WQ_MEM_RECLAIM 0
-#endif
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
-#define WQ_UNBOUND	0
-#endif
 #define __WQ_ORDERED	0
 /*
  * commit b196be89cdc14a88cc637cdad845a75c5886c82d
@@ -60,61 +52,6 @@ backport_alloc_workqueue(const char *fmt, unsigned int flags,
 	alloc_workqueue(fmt, WQ_UNBOUND | __WQ_ORDERED | (flags), 1, ##args)
 #define destroy_workqueue backport_destroy_workqueue
 void backport_destroy_workqueue(struct workqueue_struct *wq);
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
-#define system_wq LINUX_BACKPORT(system_wq)
-extern struct workqueue_struct *system_wq;
-#define system_long_wq LINUX_BACKPORT(system_long_wq)
-extern struct workqueue_struct *system_long_wq;
-#define system_nrt_wq LINUX_BACKPORT(system_nrt_wq)
-extern struct workqueue_struct *system_nrt_wq;
-
-void backport_system_workqueue_create(void);
-void backport_system_workqueue_destroy(void);
-
-#define schedule_work LINUX_BACKPORT(schedule_work)
-int schedule_work(struct work_struct *work);
-#define schedule_delayed_work LINUX_BACKPORT(schedule_delayed_work)
-int schedule_delayed_work(struct delayed_work *dwork,
-			  unsigned long delay);
-#define flush_scheduled_work LINUX_BACKPORT(flush_scheduled_work)
-void flush_scheduled_work(void);
-
-#else
-
-static inline void backport_system_workqueue_create(void)
-{
-}
-
-static inline void backport_system_workqueue_destroy(void)
-{
-}
-#endif /* < 2.6.36 */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
-/* I can't find a more suitable replacement... */
-#define flush_work(work) cancel_work_sync(work)
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32)
-static inline void flush_delayed_work(struct delayed_work *dwork)
-{
-	if (del_timer_sync(&dwork->timer)) {
-		/*
-		 * This is what would happen on 2.6.32 but since we don't have
-		 * access to the singlethread_cpu we can't really backport this,
-		 * so avoid really *flush*ing the work... Oh well. Any better ideas?
-
-		struct cpu_workqueue_struct *cwq;
-		cwq = wq_per_cpu(keventd_wq, get_cpu());
-		__queue_work(cwq, &dwork->work);
-		put_cpu();
-
-		*/
-	}
-	flush_work(&dwork->work);
-}
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)

@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2013  Hauke Mehrtens <hauke@hauke-m.de>
+ * Copyright (c) 2013  Hannes Frederic Sowa <hannes@stressinduktion.org>
+ * Copyright (c) 2014  Luis R. Rodriguez <mcgrof@do-not-panic.com>
  *
  * Backport functionality introduced in Linux 3.13.
  *
@@ -16,6 +18,7 @@
 #include <linux/module.h>
 #include <linux/regulator/driver.h>
 #include <linux/device.h>
+#include <linux/static_key.h>
 
 static void devm_rdev_release(struct device *dev, void *res)
 {
@@ -90,62 +93,6 @@ EXPORT_SYMBOL_GPL(devm_regulator_unregister);
 #undef genl_register_family
 #undef genl_unregister_family
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
-#undef genl_info
-static LIST_HEAD(backport_nl_fam);
-
-static struct genl_ops *genl_get_cmd(u8 cmd, struct genl_family *family)
-{
-	struct genl_ops *ops;
-
-	list_for_each_entry(ops, &family->family.ops_list, ops.ops_list)
-		if (ops->cmd == cmd)
-			return ops;
-
-	return NULL;
-}
-
-static int nl_doit_wrapper(struct sk_buff *skb, struct genl_info *info)
-{
-	struct backport_genl_info backport_info;
-	struct genl_family *family;
-	struct genl_ops *ops;
-	int err;
-
-	list_for_each_entry(family, &backport_nl_fam, list) {
-		if (family->id == info->nlhdr->nlmsg_type)
-			goto found;
-	}
-	return -ENOENT;
-
-found:
-	ops = genl_get_cmd(info->genlhdr->cmd, family);
-	if (!ops)
-		return -ENOENT;
-
-	memset(&backport_info.user_ptr, 0, sizeof(backport_info.user_ptr));
-	backport_info.info = info;
-#define __copy(_field) backport_info._field = info->_field
-	__copy(snd_seq);
-	__copy(snd_pid);
-	__copy(genlhdr);
-	__copy(attrs);
-#undef __copy
-	if (family->pre_doit) {
-		err = family->pre_doit(ops, skb, &backport_info);
-		if (err)
-			return err;
-	}
-
-	err = ops->doit(skb, &backport_info);
-
-	if (family->post_doit)
-		family->post_doit(ops, skb, &backport_info);
-
-	return err;
-}
-#endif /* < 2.6.37 */
-
 int __backport_genl_register_family(struct genl_family *family)
 {
 	int i, ret;
@@ -156,13 +103,9 @@ int __backport_genl_register_family(struct genl_family *family)
 	__copy(version);
 	__copy(maxattr);
 	strncpy(family->family.name, family->name, sizeof(family->family.name));
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
 	__copy(netnsok);
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 	__copy(pre_doit);
 	__copy(post_doit);
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	__copy(parallel_ops);
 #endif
@@ -179,26 +122,10 @@ int __backport_genl_register_family(struct genl_family *family)
 	family->id = family->family.id;
 
 	for (i = 0; i < family->n_ops; i++) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
-#define __copy(_field) family->ops[i].ops._field = family->ops[i]._field
-		__copy(cmd);
-		__copy(flags);
-		__copy(policy);
-		__copy(dumpit);
-		__copy(done);
-#undef __copy
-		if (family->ops[i].doit)
-			family->ops[i].ops.doit = nl_doit_wrapper;
-		ret = genl_register_ops(&family->family, &family->ops[i].ops);
-#else
 		ret = genl_register_ops(&family->family, &family->ops[i]);
-#endif
 		if (ret < 0)
 			goto error;
 	}
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
-	list_add(&family->list, &backport_nl_fam);
-#endif
 
 	for (i = 0; i < family->n_mcgrps; i++) {
 		ret = genl_register_mc_group(&family->family,
@@ -219,9 +146,57 @@ int backport_genl_unregister_family(struct genl_family *family)
 {
 	int err;
 	err = genl_unregister_family(&family->family);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
-	list_del(&family->list);
-#endif
 	return err;
 }
 EXPORT_SYMBOL_GPL(backport_genl_unregister_family);
+
+#ifdef __BACKPORT_NET_GET_RANDOM_ONCE
+struct __net_random_once_work {
+	struct work_struct work;
+	struct static_key *key;
+};
+
+static void __net_random_once_deferred(struct work_struct *w)
+{
+	struct __net_random_once_work *work =
+		container_of(w, struct __net_random_once_work, work);
+	if (!static_key_enabled(work->key))
+		static_key_slow_inc(work->key);
+	kfree(work);
+}
+
+static void __net_random_once_disable_jump(struct static_key *key)
+{
+	struct __net_random_once_work *w;
+
+	w = kmalloc(sizeof(*w), GFP_ATOMIC);
+	if (!w)
+		return;
+
+	INIT_WORK(&w->work, __net_random_once_deferred);
+	w->key = key;
+	schedule_work(&w->work);
+}
+
+bool __net_get_random_once(void *buf, int nbytes, bool *done,
+			   struct static_key *done_key)
+{
+	static DEFINE_SPINLOCK(lock);
+	unsigned long flags;
+
+	spin_lock_irqsave(&lock, flags);
+	if (*done) {
+		spin_unlock_irqrestore(&lock, flags);
+		return false;
+	}
+
+	get_random_bytes(buf, nbytes);
+	*done = true;
+	spin_unlock_irqrestore(&lock, flags);
+
+	__net_random_once_disable_jump(done_key);
+
+	return true;
+}
+EXPORT_SYMBOL_GPL(__net_get_random_once);
+#endif /* __BACKPORT_NET_GET_RANDOM_ONCE */

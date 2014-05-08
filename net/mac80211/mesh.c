@@ -366,20 +366,15 @@ int mesh_add_rsn_ie(struct ieee80211_sub_if_data *sdata, struct sk_buff *skb)
 		return 0;
 
 	/* find RSN IE */
-	data = ifmsh->ie;
-	while (data < ifmsh->ie + ifmsh->ie_len) {
-		if (*data == WLAN_EID_RSN) {
-			len = data[1] + 2;
-			break;
-		}
-		data++;
-	}
+	data = cfg80211_find_ie(WLAN_EID_RSN, ifmsh->ie, ifmsh->ie_len);
+	if (!data)
+		return 0;
 
-	if (len) {
-		if (skb_tailroom(skb) < len)
-			return -ENOMEM;
-		memcpy(skb_put(skb, len), data, len);
-	}
+	len = data[1] + 2;
+
+	if (skb_tailroom(skb) < len)
+		return -ENOMEM;
+	memcpy(skb_put(skb, len), data, len);
 
 	return 0;
 }
@@ -829,7 +824,7 @@ void ieee80211_stop_mesh(struct ieee80211_sub_if_data *sdata)
 	ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_BEACON_ENABLED);
 	bcn = rcu_dereference_protected(ifmsh->beacon,
 					lockdep_is_held(&sdata->wdev.mtx));
-	rcu_assign_pointer(ifmsh->beacon, NULL);
+	RCU_INIT_POINTER(ifmsh->beacon, NULL);
 	kfree_rcu(bcn, rcu_head);
 
 	/* flush STAs and mpaths on this iface */
@@ -1069,7 +1064,7 @@ int ieee80211_mesh_finish_csa(struct ieee80211_sub_if_data *sdata)
 
 	/* Remove the CSA and MCSP elements from the beacon */
 	tmp_csa_settings = rcu_dereference(ifmsh->csa);
-	rcu_assign_pointer(ifmsh->csa, NULL);
+	RCU_INIT_POINTER(ifmsh->csa, NULL);
 	if (tmp_csa_settings)
 		kfree_rcu(tmp_csa_settings, rcu_head);
 	ret = ieee80211_mesh_rebuild_beacon(sdata);
@@ -1103,7 +1098,7 @@ int ieee80211_mesh_csa_beacon(struct ieee80211_sub_if_data *sdata,
 	ret = ieee80211_mesh_rebuild_beacon(sdata);
 	if (ret) {
 		tmp_csa_settings = rcu_dereference(ifmsh->csa);
-		rcu_assign_pointer(ifmsh->csa, NULL);
+		RCU_INIT_POINTER(ifmsh->csa, NULL);
 		kfree_rcu(tmp_csa_settings, rcu_head);
 		return ret;
 	}

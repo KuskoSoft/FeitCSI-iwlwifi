@@ -3,74 +3,6 @@
 #include_next <linux/pci.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29)
-#define compat_pci_suspend(fn)						\
-	int fn##_compat(struct pci_dev *pdev, pm_message_t state) 	\
-	{								\
-		int r;							\
-									\
-		r = fn(&pdev->dev);					\
-		if (r)							\
-			return r;					\
-									\
-		pci_save_state(pdev);					\
-		pci_disable_device(pdev);				\
-		pci_set_power_state(pdev, PCI_D3hot);			\
-									\
-		return 0;						\
-	}
-
-#define compat_pci_resume(fn)						\
-	int fn##_compat(struct pci_dev *pdev)				\
-	{								\
-		int r;							\
-									\
-		pci_set_power_state(pdev, PCI_D0);			\
-		r = pci_enable_device(pdev);				\
-		if (r)							\
-			return r;					\
-		pci_restore_state(pdev);				\
-									\
-		return fn(&pdev->dev);					\
-	}
-#elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,29) || \
-      defined(CPTCFG_IWLWIFI_PCIE_SUSPEND_RESUME)
-#define compat_pci_suspend(fn)						\
-	int fn##_compat(struct device *dev)			 	\
-	{								\
-		struct pci_dev *pdev = to_pci_dev(dev);			\
-		int r;							\
-									\
-		r = fn(&pdev->dev);					\
-		if (r)							\
-			return r;					\
-									\
-		pci_save_state(pdev);					\
-		pci_disable_device(pdev);				\
-		pci_set_power_state(pdev, PCI_D3hot);			\
-									\
-		return 0;						\
-	}
-
-#define compat_pci_resume(fn)						\
-	int fn##_compat(struct device *dev)				\
-	{								\
-		struct pci_dev *pdev = to_pci_dev(dev);			\
-		int r;							\
-									\
-		pci_set_power_state(pdev, PCI_D0);			\
-		r = pci_enable_device(pdev);				\
-		if (r)							\
-			return r;					\
-		pci_restore_state(pdev);				\
-									\
-		return fn(&pdev->dev);					\
-	}
-#else
-#define compat_pci_suspend(fn)
-#define compat_pci_resume(fn)
-#endif
-
 #ifndef module_pci_driver
 /**
  * module_pci_driver() - Helper macro for registering a PCI driver
@@ -128,39 +60,6 @@ static inline int pcie_capability_clear_dword(struct pci_dev *dev, int pos,
 {
 	return pcie_capability_clear_and_set_dword(dev, pos, clear, 0);
 }
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
-/* mask pci_pcie_cap as debian squeeze also backports this */
-#define pci_pcie_cap LINUX_BACKPORT(pci_pcie_cap)
-static inline int pci_pcie_cap(struct pci_dev *dev)
-{
-	return pci_find_capability(dev, PCI_CAP_ID_EXP);
-}
-
-/* mask pci_is_pcie as RHEL6 backports this */
-#define pci_is_pcie LINUX_BACKPORT(pci_is_pcie)
-static inline bool pci_is_pcie(struct pci_dev *dev)
-{
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-	return dev->is_pcie;
-#else
-	return !!pci_pcie_cap(dev);
-#endif
-}
-#endif /* < 2.6.33 */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
-#define pci_ioremap_bar LINUX_BACKPORT(pci_ioremap_bar)
-void __iomem *pci_ioremap_bar(struct pci_dev *pdev, int bar);
-
-#define pci_wake_from_d3 LINUX_BACKPORT(pci_wake_from_d3)
-int pci_wake_from_d3(struct pci_dev *dev, bool enable);
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,27)
-#define pci_pme_capable LINUX_BACKPORT(pci_pme_capable)
-bool pci_pme_capable(struct pci_dev *dev, pci_power_t state);
 #endif
 
 #ifndef PCI_DEVICE_SUB
@@ -235,7 +134,7 @@ static inline int pci_vfs_assigned(struct pci_dev *dev)
 
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) */
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0))
 #define pci_enable_msi_range LINUX_BACKPORT(pci_enable_msi_range)
 #ifdef CONFIG_PCI_MSI
 int pci_enable_msi_range(struct pci_dev *dev, int minvec, int maxvec);

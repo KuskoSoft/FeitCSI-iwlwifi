@@ -96,7 +96,6 @@ unsigned int get_random_int(void)
 }
 EXPORT_SYMBOL_GPL(get_random_int);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28))
 #ifdef CONFIG_TTY
 /**
  * tty_port_tty_wakeup - helper to wake up a tty
@@ -173,8 +172,6 @@ int pci_vfs_assigned(struct pci_dev *dev)
 }
 EXPORT_SYMBOL_GPL(pci_vfs_assigned);
 #endif /* CONFIG_PCI_IOV */
-
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)) */
 
 #ifdef CONFIG_OF
 /**
