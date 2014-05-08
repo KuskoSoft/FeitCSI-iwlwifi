@@ -4033,10 +4033,6 @@ void cfg80211_notify_new_peer_candidate(struct net_device *dev,
  */
 void wiphy_rfkill_set_hw_state(struct wiphy *wiphy, bool blocked);
 
-#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
-void wiphy_sync_rfkill(struct wiphy *wiphy);
-#endif
-
 /**
  * wiphy_rfkill_start_polling - start polling rfkill
  * @wiphy: the wiphy
@@ -4894,10 +4890,5 @@ void cfg80211_shutdown_all_interfaces(struct wiphy *wiphy);
  */
 #define wiphy_WARN(wiphy, format, args...)			\
 	WARN(1, "wiphy: %s\n" format, wiphy_name(wiphy), ##args);
-
-#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
-int __wiphy_suspend(struct wiphy *wiphy);
-int __wiphy_resume(struct wiphy *wiphy);
-#endif
 
 #endif /* __NET_CFG80211_H */

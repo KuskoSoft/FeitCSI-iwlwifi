@@ -142,23 +142,6 @@ static int wiphy_resume(struct device *dev)
 	return ret;
 }
 
-#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
-int __wiphy_suspend(struct wiphy *wiphy)
-{
-	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
-
-	return wiphy_suspend(&rdev->wiphy.dev, PMSG_SUSPEND /* ignored */);
-}
-EXPORT_SYMBOL_GPL(__wiphy_suspend);
-
-int __wiphy_resume(struct wiphy *wiphy)
-{
-	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
-
-	return wiphy_resume(&rdev->wiphy.dev);
-}
-EXPORT_SYMBOL_GPL(__wiphy_resume);
-#endif
 #endif
 
 static const void *wiphy_namespace(struct device *d)
@@ -178,7 +161,7 @@ struct class ieee80211_class = {
 	.dev_attrs = ieee80211_dev_attrs,
 #endif
 	.dev_uevent = wiphy_uevent,
-#if defined(CONFIG_PM) && !defined(CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME)
+#if defined(CONFIG_PM)
 	.suspend = wiphy_suspend,
 	.resume = wiphy_resume,
 #endif

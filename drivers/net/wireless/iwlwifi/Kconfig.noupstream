@@ -36,26 +36,6 @@ config IWLWIFI_PCIE_SUSPEND_RESUME
 	  or if you need the driver to store and restore the PCIe
 	  configuration for other reasons.
 
-config IWLWIFI_INTEGRATE_SUSPEND_RESUME
-	bool "integrate suspend/resume into the driver"
-	depends on IWLMVM && PM_SLEEP
-	help
-	  Enable this option if for some reason you cannot rely on
-	  the kernel calling the wiphy's suspend/resume function at
-	  the right place. Don't enable this unless you need it.
-
-config IWLWIFI_MVM_RFKILL_ON_SUSPEND
-	bool "pretend device is in RF-kill during suspend"
-	depends on IWLMVM && IWLWIFI_PCIE
-	select IWLWIFI_INTEGRATE_SUSPEND_RESUME
-	help
-	  Enable this option if for some reason you require the
-	  device to pretend it's in RF-kill while suspended. This
-	  should normally not be necessary.
-
-	  Note that selecting this option will disable WoWLAN and
-	  actually remove the feature completely.
-
 config IWLWIFI_MINI_PM_RUNTIME
 	bool "internal mini-runtime PM implementation"
 	depends on IWLWIFI

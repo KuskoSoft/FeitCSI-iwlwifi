@@ -1034,49 +1034,6 @@ static ssize_t iwl_dbgfs_d0i3_refs_write(struct iwl_mvm *mvm, char *buf,
 	return count;
 }
 
-#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
-static int iwl_drv_pm_suspend_open(struct inode *inode, struct file *file)
-{
-	struct device *dev = inode->i_private;
-
-	file->private_data = dev;
-	pm_generic_suspend(dev);
-
-	return 0;
-}
-
-static ssize_t iwl_drv_pm_suspend_read(struct file *file, char __user *user_buf,
-				       size_t count, loff_t *ppos)
-{
-	static const char initial[] = "suspended, Ctrl-C to abort\n";
-
-	if (*ppos < sizeof(initial))
-		return simple_read_from_buffer(user_buf, count, ppos,
-					       initial, sizeof(initial));
-	msleep(1000);
-	(*ppos)++;
-	if (copy_to_user(user_buf, ".", 1))
-		return -EFAULT;
-	return 1;
-}
-
-static int iwl_drv_pm_suspend_release(struct inode *inode, struct file *file)
-{
-	struct device *dev = file->private_data;
-
-	pm_generic_resume(dev);
-
-	return 0;
-}
-
-static const struct file_operations iwl_drv_pm_suspend_ops = {
-	.llseek = no_llseek,
-	.read = iwl_drv_pm_suspend_read,
-	.open = iwl_drv_pm_suspend_open,
-	.release = iwl_drv_pm_suspend_release,
-};
-#endif /* CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND */
-
 #define MVM_DEBUGFS_WRITE_FILE_OPS(name, bufsz) \
 	_MVM_DEBUGFS_WRITE_FILE_OPS(name, bufsz, struct iwl_mvm)
 #define MVM_DEBUGFS_READ_WRITE_FILE_OPS(name, bufsz) \
@@ -1215,12 +1172,6 @@ int iwl_mvm_dbgfs_register(struct iwl_mvm *mvm, struct dentry *dbgfs_dir)
 	MVM_DEBUGFS_ADD_FILE(d3_test, mvm->debugfs_dir, S_IRUSR);
 	if (!debugfs_create_bool("d3_wake_sysassert", S_IRUSR | S_IWUSR,
 				 mvm->debugfs_dir, &mvm->d3_wake_sysassert))
-		goto err;
-#endif
-#ifdef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
-	if (debugfs_create_file("pm_suspend", S_IRUSR | S_IWUSR,
-				mvm->debugfs_dir, mvm->trans->dev,
-				&iwl_drv_pm_suspend_ops))
 		goto err;
 #endif
 

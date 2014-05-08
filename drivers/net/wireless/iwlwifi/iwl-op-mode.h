@@ -209,10 +209,6 @@ struct iwl_op_mode_ops {
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	struct iwl_test_ops test_ops;
 #endif
-#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
-	int (*suspend)(struct iwl_op_mode *op_mode);
-	int (*resume)(struct iwl_op_mode *op_mode);
-#endif
 	int (*enter_d0i3)(struct iwl_op_mode *op_mode);
 	int (*exit_d0i3)(struct iwl_op_mode *op_mode);
 };
@@ -292,25 +288,6 @@ static inline void iwl_op_mode_wimax_active(struct iwl_op_mode *op_mode)
 	op_mode->ops->wimax_active(op_mode);
 }
 
-#ifdef CPTCFG_IWLWIFI_INTEGRATE_SUSPEND_RESUME
-static inline int iwl_op_mode_suspend(struct iwl_op_mode *op_mode)
-{
-	might_sleep();
-
-	if (!op_mode->ops->suspend)
-		return 0;
-	return op_mode->ops->suspend(op_mode);
-}
-
-static inline int iwl_op_mode_resume(struct iwl_op_mode *op_mode)
-{
-	might_sleep();
-
-	if (!op_mode->ops->resume)
-		return 0;
-	return op_mode->ops->resume(op_mode);
-}
-#endif
 static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode *op_mode)
 {
 	might_sleep();

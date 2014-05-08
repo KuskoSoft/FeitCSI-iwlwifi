@@ -438,7 +438,6 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	}
 
 #ifdef CONFIG_PM_SLEEP
-#ifndef CPTCFG_IWLWIFI_MVM_RFKILL_ON_SUSPEND
 	if (iwl_mvm_is_d0i3_supported(mvm) &&
 	    device_can_wakeup(mvm->trans->dev)) {
 		mvm->wowlan.flags = WIPHY_WOWLAN_ANY;
@@ -462,7 +461,6 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		mvm->wowlan.tcp = &iwl_mvm_wowlan_tcp_support;
 		hw->wiphy->wowlan = &mvm->wowlan;
 	}
-#endif
 #endif
 
 #ifdef CPTCFG_IWLWIFI_BCAST_FILTERING
