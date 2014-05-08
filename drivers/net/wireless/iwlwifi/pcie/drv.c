@@ -350,6 +350,13 @@ static int iwl_pci_suspend(struct device *device)
 	 * whether WoWLAN is enabled or not, and your code will run even if
 	 * WoWLAN is enabled - don't kill the NIC, someone may need it in Sx.
 	 */
+#ifdef CPTCFG_IWLWIFI_PCIE_SUSPEND_RESUME
+	struct pci_dev *pdev = to_pci_dev(dev);
+
+	pci_save_state(pdev);
+	pci_disable_device(pdev);
+	pci_set_power_state(pdev, PCI_D3hot);
+#endif
 
 	return 0;
 }
@@ -360,6 +367,16 @@ static int iwl_pci_resume(struct device *device)
 	struct iwl_trans *trans = pci_get_drvdata(pdev);
 	bool hw_rfkill;
 
+#ifdef CPTCFG_IWLWIFI_PCIE_SUSPEND_RESUME
+	struct pci_dev *pdev = to_pci_dev(dev);
+	int r;
+
+	pci_set_power_state(pdev, PCI_D0);
+	r = pci_enable_device(pdev);
+	if (r)
+		return r;
+	pci_restore_state(pdev);
+#endif
 	/* Before you put code here, think about WoWLAN. You cannot check here
 	 * whether WoWLAN is enabled or not, and your code will run even if
 	 * WoWLAN is enabled - the NIC may be alive.
