@@ -290,8 +290,6 @@ void cfg80211_sched_scan_stopped_rtnl(struct wiphy *wiphy)
 
 	ASSERT_RTNL();
 
-	ASSERT_RTNL();
-
 	trace_cfg80211_sched_scan_stopped(wiphy);
 
 	__cfg80211_stop_sched_scan(rdev, true);
@@ -957,6 +955,7 @@ cfg80211_inform_bss_width_frame(struct wiphy *wiphy,
 	struct ieee80211_channel *channel;
 	size_t ielen = len - offsetof(struct ieee80211_mgmt,
 				      u.probe_resp.variable);
+
 	BUILD_BUG_ON(offsetof(struct ieee80211_mgmt, u.probe_resp.variable) !=
 			offsetof(struct ieee80211_mgmt, u.beacon.variable));
 

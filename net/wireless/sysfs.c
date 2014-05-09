@@ -141,7 +141,6 @@ static int wiphy_resume(struct device *dev)
 
 	return ret;
 }
-
 #endif
 
 static const void *wiphy_namespace(struct device *d)
@@ -161,7 +160,7 @@ struct class ieee80211_class = {
 	.dev_attrs = ieee80211_dev_attrs,
 #endif
 	.dev_uevent = wiphy_uevent,
-#if defined(CONFIG_PM)
+#ifdef CONFIG_PM
 	.suspend = wiphy_suspend,
 	.resume = wiphy_resume,
 #endif

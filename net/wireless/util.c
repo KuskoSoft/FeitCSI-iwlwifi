@@ -1328,7 +1328,7 @@ int cfg80211_iter_combinations(struct wiphy *wiphy,
 		 */
 
 		(*iter)(c, data);
-cont:
+ cont:
 		kfree(limits);
 	}
 
