@@ -171,9 +171,7 @@ struct class ieee80211_class = {
 
 int wiphy_sysfs_init(void)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 	init_ieee80211_attrs();
-#endif
 	return class_register(&ieee80211_class);
 }
 
