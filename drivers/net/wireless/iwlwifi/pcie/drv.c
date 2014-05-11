@@ -351,7 +351,7 @@ static int iwl_pci_suspend(struct device *device)
 	 * WoWLAN is enabled - don't kill the NIC, someone may need it in Sx.
 	 */
 #ifdef CPTCFG_IWLWIFI_PCIE_SUSPEND_RESUME
-	struct pci_dev *pdev = to_pci_dev(dev);
+	struct pci_dev *pdev = to_pci_dev(device);
 
 	pci_save_state(pdev);
 	pci_disable_device(pdev);
@@ -368,7 +368,6 @@ static int iwl_pci_resume(struct device *device)
 	bool hw_rfkill;
 
 #ifdef CPTCFG_IWLWIFI_PCIE_SUSPEND_RESUME
-	struct pci_dev *pdev = to_pci_dev(dev);
 	int r;
 
 	pci_set_power_state(pdev, PCI_D0);
