@@ -505,6 +505,8 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	if (ret)
 		return ret;
 
+	hw->wiphy->flags |= WIPHY_FLAG_SUPPORTS_TDLS;
+
 	ret = ieee80211_register_hw(mvm->hw);
 	if (ret)
 		iwl_mvm_leds_exit(mvm);
