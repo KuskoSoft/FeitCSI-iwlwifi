@@ -75,6 +75,12 @@
 #define NVM_WRITE_OPCODE 1
 #define NVM_READ_OPCODE 0
 
+/* load nvm chunk response */
+enum {
+	READ_NVM_CHUNK_SUCCEED = 0,
+	READ_NVM_CHUNK_NOT_VALID_ADDRESS = 1
+};
+
 /*
  * prepare the NVM host command w/ the pointers to the nvm buffer
  * and send it to fw
@@ -140,10 +146,26 @@ static int iwl_nvm_read_chunk(struct iwl_mvm *mvm, u16 section,
 	offset_read = le16_to_cpu(nvm_resp->offset);
 	resp_data = nvm_resp->data;
 	if (ret) {
-		IWL_ERR(mvm,
-			"NVM access command failed with status %d (device: %s)\n",
-			ret, mvm->cfg->name);
-		ret = -EINVAL;
+		if ((offset != 0) &&
+		    (ret == READ_NVM_CHUNK_NOT_VALID_ADDRESS)) {
+			/*
+			 * meaning of NOT_VALID_ADDRESS:
+			 * driver try to read chunk from address that is
+			 * multiple of 2K and got an error since addr is empty.
+			 * meaning of (offset != 0): driver already
+			 * read valid data from another chunk so this case
+			 * is not an error.
+			 */
+			IWL_DEBUG_EEPROM(mvm->trans->dev,
+					 "NVM access command failed on offset 0x%x since that section size is multiple 2K\n",
+					 offset);
+			ret = 0;
+		} else {
+			IWL_ERR(mvm,
+				"NVM access command failed with status %d (device: %s)\n",
+				ret, mvm->cfg->name);
+			ret = -EINVAL;
+		}
 		goto exit;
 	}
 
