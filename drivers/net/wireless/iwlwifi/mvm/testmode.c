@@ -142,7 +142,6 @@ static int iwl_mvm_tm_send_hcmd(struct iwl_mvm *mvm,
 		.data[0] = hcmd_req->data,
 		.len[0] = hcmd_req->len,
 		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
-		.flags = CMD_SYNC,
 	};
 	int ret;
 
