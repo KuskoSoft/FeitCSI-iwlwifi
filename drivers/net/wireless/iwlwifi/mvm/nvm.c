@@ -161,10 +161,10 @@ static int iwl_nvm_read_chunk(struct iwl_mvm *mvm, u16 section,
 					 offset);
 			ret = 0;
 		} else {
-			IWL_ERR(mvm,
-				"NVM access command failed with status %d (device: %s)\n",
-				ret, mvm->cfg->name);
-			ret = -EINVAL;
+			IWL_DEBUG_EEPROM(mvm->trans->dev,
+					 "NVM access command failed with status %d (device: %s)\n",
+					 ret, mvm->cfg->name);
+			ret = -EIO;
 		}
 		goto exit;
 	}
@@ -234,9 +234,9 @@ static int iwl_nvm_read_section(struct iwl_mvm *mvm, u16 section,
 	while (ret == length) {
 		ret = iwl_nvm_read_chunk(mvm, section, offset, length, data);
 		if (ret < 0) {
-			IWL_ERR(mvm,
-				"Cannot read NVM from section %d offset %d, length %d\n",
-				section, offset, length);
+			IWL_DEBUG_EEPROM(mvm->trans->dev,
+					 "Cannot read NVM from section %d offset %d, length %d\n",
+					 section, offset, length);
 			return ret;
 		}
 		offset += ret;
@@ -460,32 +460,14 @@ int iwl_mvm_load_nvm_to_nic(struct iwl_mvm *mvm)
 
 int iwl_nvm_init(struct iwl_mvm *mvm, bool read_nvm_from_nic)
 {
-	int ret, i, section;
+	int ret, section;
 	u8 *nvm_buffer, *temp;
-	int nvm_to_read[NVM_MAX_NUM_SECTIONS];
-	int num_of_sections_to_read;
 
 	if (WARN_ON_ONCE(mvm->cfg->nvm_hw_section_num >= NVM_MAX_NUM_SECTIONS))
 		return -EINVAL;
 
 	/* load NVM values from nic */
 	if (read_nvm_from_nic) {
-		/* list of NVM sections we are allowed/need to read */
-		if (mvm->trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) {
-			nvm_to_read[0] = mvm->cfg->nvm_hw_section_num;
-			nvm_to_read[1] = NVM_SECTION_TYPE_SW;
-			nvm_to_read[2] = NVM_SECTION_TYPE_CALIBRATION;
-			nvm_to_read[3] = NVM_SECTION_TYPE_PRODUCTION;
-			num_of_sections_to_read = 4;
-		} else {
-			nvm_to_read[0] = NVM_SECTION_TYPE_SW;
-			nvm_to_read[1] = NVM_SECTION_TYPE_CALIBRATION;
-			nvm_to_read[2] = NVM_SECTION_TYPE_PRODUCTION;
-			nvm_to_read[3] = NVM_SECTION_TYPE_REGULATORY;
-			nvm_to_read[4] = NVM_SECTION_TYPE_MAC_OVERRIDE;
-			num_of_sections_to_read = 5;
-		}
-
 		/* Read From FW NVM */
 		IWL_DEBUG_EEPROM(mvm->trans->dev, "Read from NVM\n");
 
@@ -493,12 +475,11 @@ int iwl_nvm_init(struct iwl_mvm *mvm, bool read_nvm_from_nic)
 				     GFP_KERNEL);
 		if (!nvm_buffer)
 			return -ENOMEM;
-		for (i = 0; i < num_of_sections_to_read; i++) {
-			section = nvm_to_read[i];
+		for (section = 0; section < NVM_MAX_NUM_SECTIONS; section++) {
 			/* we override the constness for initial read */
 			ret = iwl_nvm_read_section(mvm, section, nvm_buffer);
 			if (ret < 0)
-				break;
+				continue;
 			temp = kmemdup(nvm_buffer, ret, GFP_KERNEL);
 			if (!temp) {
 				ret = -ENOMEM;
@@ -527,13 +508,10 @@ int iwl_nvm_init(struct iwl_mvm *mvm, bool read_nvm_from_nic)
 					mvm->nvm_hw_blob.size = ret;
 					break;
 				}
-				WARN(1, "section: %d", section);
 			}
 #endif
 		}
 		kfree(nvm_buffer);
-		if (ret < 0)
-			return ret;
 	}
 
 	/* load external NVM if configured */
