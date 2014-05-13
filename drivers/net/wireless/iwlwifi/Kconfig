@@ -43,7 +43,7 @@ config IWLWIFI
 config IWLWIFI_LEDS
 	bool
 	depends on IWLWIFI
-	depends on LEDS_CLASS
+	depends on LEDS_CLASS=y || LEDS_CLASS=IWLWIFI
 	select BACKPORT_LEDS_TRIGGERS
 	select MAC80211_LEDS
 	default y
