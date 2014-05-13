@@ -4647,17 +4647,6 @@ void cfg80211_ch_switch_started_notify(struct net_device *dev,
 				       struct cfg80211_chan_def *chandef,
 				       u8 count);
 
-/*
- * cfg80211_ch_switch_failed_notify - notify channel switch failure
- * @dev: the device on which the channel switch has failed
- * @chandef: the channel definition to which we failed to switch
- *
- * Inform the userspace that a channel switch has failed after the
- * channel switch started notification has been sent.
- */
-void cfg80211_ch_switch_failed_notify(struct net_device *dev,
-				      struct cfg80211_chan_def *chandef);
-
 /**
  * ieee80211_operating_class_to_band - convert operating class to band
  *
