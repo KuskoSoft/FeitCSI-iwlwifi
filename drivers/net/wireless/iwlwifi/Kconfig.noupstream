@@ -19,10 +19,12 @@ config IWLMVM_POWER_SCHEME
 
 config IWLWIFI_DEVICE_TESTMODE
 	bool "enable generic netlink testmode support"
+	depends on IWLWIFI
 	default y if IWLMVM
 	select IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 
 config IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	depends on IWLWIFI
 	bool "enable default value override (for debugging)"
 
 config IWLWIFI_PCIE_SUSPEND_RESUME
