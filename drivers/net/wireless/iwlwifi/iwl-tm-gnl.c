@@ -417,16 +417,6 @@ enum iwl_tm_gnl_cmd_attr_t {
 	IWL_TM_GNL_MSG_ATTR_MAX
 };
 
-/*
- * Testmode GNL family command.
- * There is only one NL command, not to be
- * confused with testmode commands
- */
-enum iwl_tm_gnl_cmd_t {
-	IWL_TM_GNL_CMD_EXECUTE = 0,
-	IWL_TM_GNL_CMD_MAX
-};
-
 /* TM GNL family definition */
 static struct genl_family iwl_tm_gnl_family = {
 	.id		= GENL_ID_GENERATE,

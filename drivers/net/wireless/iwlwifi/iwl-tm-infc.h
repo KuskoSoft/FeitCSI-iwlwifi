@@ -65,6 +65,16 @@
 
 #include <linux/types.h>
 
+/*
+ * Testmode GNL family command.
+ * There is only one NL command, not to be
+ * confused with testmode commands
+ */
+enum iwl_tm_gnl_cmd_t {
+	IWL_TM_GNL_CMD_EXECUTE = 0,
+};
+
+
 /* uCode trace buffer */
 #define TRACE_BUFF_SIZE_MAX	0x200000
 #define TRACE_BUFF_SIZE_MIN	0x1000
