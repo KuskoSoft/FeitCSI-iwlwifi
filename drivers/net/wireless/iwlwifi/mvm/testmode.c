@@ -422,7 +422,7 @@ int iwl_tm_mvm_retrieve_monitor(struct ieee80211_hw *hw)
 
 	return iwl_tm_gnl_send_msg(mvm->trans,
 				   IWL_TM_USER_CMD_NOTIF_RETRIEVE_MONITOR,
-				   true, NULL, 0, GFP_ATOMIC);
+				   false, NULL, 0, GFP_ATOMIC);
 }
 #endif
 
