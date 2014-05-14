@@ -292,7 +292,7 @@ static struct ieee80211_regdomain *iwl_mvm_get_regdomain(struct wiphy *wiphy,
 	kfree(resp);
 	if (IS_ERR_OR_NULL(regd)) {
 		IWL_DEBUG_LAR(mvm, "Could not get parse update from FW %d\n",
-			      PTR_RET(resp));
+			      PTR_RET(regd));
 		goto out_unlock;
 	}
 
