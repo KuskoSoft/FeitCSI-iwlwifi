@@ -1116,6 +1116,9 @@ int iwl_mvm_sf_update(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy);
 
+/* TDLS */
+int iwl_mvm_tdls_sta_count(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
+
 #ifdef CPTCFG_IWLMVM_TCM
 #define MVM_TCM_PERIOD_MSEC 500
 #define MVM_TCM_PERIOD (HZ * MVM_TCM_PERIOD_MSEC / 1000)
