@@ -709,7 +709,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	iwl_mvm_send_tcm_event(mvm, vif);
 #endif
 
-	return iwl_mvm_power_update_mac(mvm, vif);
+	return iwl_mvm_power_update_mac(mvm);
 }
 
 static void iwl_mvm_ll_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
