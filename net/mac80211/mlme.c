@@ -3601,9 +3601,9 @@ void ieee80211_mgd_quiesce(struct ieee80211_sub_if_data *sdata)
 	sdata_lock(sdata);
 
 	if (ifmgd->auth_data || ifmgd->assoc_data) {
-		const u8 *bssid =
-			ifmgd->auth_data ? ifmgd->auth_data->bss->bssid :
-					   ifmgd->assoc_data->bss->bssid;
+		const u8 *bssid = ifmgd->auth_data ?
+				ifmgd->auth_data->bss->bssid :
+				ifmgd->assoc_data->bss->bssid;
 
 		/*
 		 * If we are trying to authenticate / associate while suspending,
