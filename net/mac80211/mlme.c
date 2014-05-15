@@ -984,7 +984,6 @@ static void ieee80211_chswitch_work(struct work_struct *work)
 
  out:
 	sdata->vif.csa_active = false;
-	ifmgd->flags &= ~IEEE80211_STA_CSA_RECEIVED;
 	sdata_unlock(sdata);
 }
 
@@ -1035,7 +1034,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 		return;
 
 	/* disregard subsequent announcements if we are already processing */
-	if (ifmgd->flags & IEEE80211_STA_CSA_RECEIVED)
+	if (sdata->vif.csa_active)
 		return;
 
 	current_band = cbss->channel->band;
@@ -1061,8 +1060,6 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 				     &ifmgd->csa_connection_drop_work);
 		return;
 	}
-
-	ifmgd->flags |= IEEE80211_STA_CSA_RECEIVED;
 
 	mutex_lock(&local->chanctx_mtx);
 	if (local->use_chanctx) {
@@ -2059,7 +2056,6 @@ static void __ieee80211_disconnect(struct ieee80211_sub_if_data *sdata)
 	ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH,
 			       WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY,
 			       true, frame_buf);
-	ifmgd->flags &= ~IEEE80211_STA_CSA_RECEIVED;
 	sdata->vif.csa_active = false;
 	ieee80211_wake_queues_by_reason(&sdata->local->hw,
 					IEEE80211_MAX_QUEUE_MAP,
