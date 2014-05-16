@@ -3392,6 +3392,7 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = sdata->local;
+	struct ieee80211_channel_switch ch_switch;
 	int err, changed = 0;
 
 	sdata_assert_lock(sdata);
@@ -3410,6 +3411,15 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	/* don't allow another channel switch if one is already active. */
 	if (sdata->vif.csa_active)
 		return -EBUSY;
+
+	ch_switch.timestamp = 0;
+	ch_switch.block_tx = params->block_tx;
+	ch_switch.chandef = params->chandef;
+	ch_switch.count = params->count;
+
+	err = drv_pre_channel_switch(sdata, &ch_switch);
+	if (err)
+		return err;
 
 	err = ieee80211_set_csa_beacon(sdata, params, &changed);
 	if (err)
