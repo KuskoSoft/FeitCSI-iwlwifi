@@ -340,15 +340,14 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 							end_addr);
 		break;
 	case MIPI:
-		base_addr = 0;
-		end_addr = 0;
-
 		/* If not working with DBGC... */
 		if (trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) {
 			iwl_dnt_dev_if_configure_mipi(trans);
 			break;
 		}
 	case SMEM:
+		base_addr = 0;
+		end_addr = 0;
 		iwl_dnt_dev_if_configure_dbgm_registers(trans, base_addr,
 							end_addr);
 		break;
