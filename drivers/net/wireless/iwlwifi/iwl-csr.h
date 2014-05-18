@@ -145,6 +145,9 @@
 #define CSR_MONITOR_STATUS_REG		(CSR_BASE+0x228)
 #define CSR_MONITOR_XTAL_RESOURCES	(0x00000010)
 
+/* SDIO read optimization depends on the SDTM CSR register */
+#define CSR_SDTM_REG		(CSR_BASE+0x21C)
+
 /*
  * CSR Hardware Revision Workaround Register.  Indicates hardware rev;
  * "step" determines CCK backoff for txpower calculation.  Used for 4965 only.
