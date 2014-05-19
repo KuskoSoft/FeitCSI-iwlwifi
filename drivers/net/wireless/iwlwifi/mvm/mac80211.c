@@ -340,6 +340,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		hw->flags |= IEEE80211_HW_MFP_CAPABLE;
 
 	if (mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_UAPSD_SUPPORT &&
+	    IWL_UCODE_API(mvm->fw->ucode_ver) >= 9 &&
 	    !iwlwifi_mod_params.uapsd_disable) {
 		hw->flags |= IEEE80211_HW_SUPPORTS_UAPSD;
 		hw->uapsd_queues = IWL_UAPSD_AC_INFO;
