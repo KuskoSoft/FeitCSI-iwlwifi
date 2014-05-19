@@ -2359,7 +2359,6 @@ static void iwl_mvm_unassign_vif_chanctx(struct ieee80211_hw *hw,
 
 		mvmvif->ap_ibss_active = false;
 		iwl_mvm_update_quotas(mvm, NULL);
-		/*TODO: bt_coex notification here? */
 	default:
 		break;
 	}
