@@ -1142,4 +1142,6 @@ void iwl_mvm_pause_tcm(struct iwl_mvm *mvm);
 void iwl_mvm_resume_tcm(struct iwl_mvm *mvm);
 #endif
 
+void iwl_mvm_nic_restart(struct iwl_mvm *mvm, bool fw_error);
+
 #endif /* __IWL_MVM_H__ */
