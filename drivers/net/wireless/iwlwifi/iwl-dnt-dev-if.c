@@ -256,14 +256,6 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 	return dnt->mon_buf_size;
 }
 
-static int iwl_dnt_dev_if_retrieve_iccm_monitor_data(struct iwl_dnt *dnt,
-						     struct iwl_trans *trans,
-						     void *buffer,
-						     u32 buffer_size)
-{
-	return 0;
-}
-
 static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 						      struct iwl_trans *trans,
 						      u8 *buffer,
@@ -325,7 +317,8 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		IWL_INFO(trans, "Monitor is disabled\n");
 		dnt->iwl_dnt_status &= ~IWL_DNT_STATUS_MON_CONFIGURED;
 		break;
-	case MARBH:
+	case MARBH_ADC:
+	case MARBH_DBG:
 		iwl_dnt_dev_if_configure_marbh(trans);
 		break;
 	case DMA:
@@ -357,7 +350,6 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		iwl_dnt_dev_if_configure_dbgm_registers(trans, base_addr,
 							end_addr);
 		break;
-	case ICCM:
 	default:
 		dnt->iwl_dnt_status &= ~IWL_DNT_STATUS_MON_CONFIGURED;
 		IWL_INFO(trans, "Invalid monitor type\n");
@@ -464,14 +456,11 @@ int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt *dnt,
 		return iwl_dnt_dev_if_retrieve_dma_monitor_data(dnt, trans,
 								buffer,
 								buffer_size);
-	case MARBH:
+	case MARBH_ADC:
+	case MARBH_DBG:
 		return iwl_dnt_dev_if_retrieve_marbh_monitor_data(dnt, trans,
 								  buffer,
 								  buffer_size);
-	case ICCM:
-		return iwl_dnt_dev_if_retrieve_iccm_monitor_data(dnt, trans,
-								 buffer,
-								 buffer_size);
 	case INTERFACE:
 	default:
 		WARN_ONCE(1, "invalid option: %d\n", dnt->cur_mon_type);

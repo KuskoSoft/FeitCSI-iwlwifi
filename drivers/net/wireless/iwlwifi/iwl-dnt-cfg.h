@@ -115,8 +115,8 @@ enum {
 	MIPI = BIT(0),
 	INTERFACE = BIT(1),
 	DMA = BIT(2),
-	MARBH = BIT(3),
-	ICCM = BIT(4),
+	MARBH_ADC = BIT(3),
+	MARBH_DBG = BIT(4),
 	SMEM = BIT(5)
 };
 

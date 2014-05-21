@@ -356,7 +356,8 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
 	}
 
 	switch (dnt->cur_mon_type) {
-	case MARBH:
+	case MARBH_ADC:
+	case MARBH_DBG:
 		buf_size = 0x2000 * sizeof(u32);
 		break;
 	case INTERFACE:

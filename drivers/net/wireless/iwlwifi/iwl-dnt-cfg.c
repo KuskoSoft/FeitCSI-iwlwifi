@@ -154,13 +154,16 @@ static bool iwl_dnt_validate_configuration(struct iwl_trans *trans)
 
 	if (!strcmp(trans->dev->bus->name, BUS_TYPE_PCI))
 		return dbg_cfg->dbm_destination_path == DMA ||
-		       dbg_cfg->dbm_destination_path == MARBH;
+		       dbg_cfg->dbm_destination_path == MARBH_ADC ||
+		       dbg_cfg->dbm_destination_path == MARBH_DBG;
 	else if (!strcmp(trans->dev->bus->name, BUS_TYPE_IDI))
 		return dbg_cfg->dbm_destination_path == INTERFACE ||
-		       dbg_cfg->dbm_destination_path == MARBH ||
+		       dbg_cfg->dbm_destination_path == MARBH_ADC ||
+		       dbg_cfg->dbm_destination_path == MARBH_DBG ||
 		       dbg_cfg->dbm_destination_path == MIPI;
 	else if (!strcmp(trans->dev->bus->name, BUS_TYPE_SDIO))
-		return dbg_cfg->dbm_destination_path == MARBH ||
+		return dbg_cfg->dbm_destination_path == MARBH_ADC ||
+		       dbg_cfg->dbm_destination_path == MARBH_DBG ||
 		       dbg_cfg->dbm_destination_path == MIPI;
 
 	return false;
@@ -201,7 +204,7 @@ static int iwl_dnt_conf_monitor(struct iwl_trans *trans, u32 output,
 		 * was given value as MARBH, it should be interpreted as SMEM
 		 */
 		if ((trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) &&
-		    (monitor_type == MARBH))
+		    (monitor_type == MARBH_ADC || monitor_type == MARBH_DBG))
 			dnt->cur_mon_type = SMEM;
 	}
 	return iwl_dnt_dev_if_configure_monitor(dnt, trans);
@@ -329,8 +332,8 @@ void iwl_dnt_configure(struct iwl_trans *trans, const struct fw_img *image)
 	case NO_MONITOR:
 	case MIPI:
 	case INTERFACE:
-	case ICCM:
-	case MARBH:
+	case MARBH_ADC:
+	case MARBH_DBG:
 		iwl_dnt_conf_monitor(trans, dbg_cfg->dnt_out_mode,
 				     dbg_cfg->dbm_destination_path,
 				     dbg_cfg->dbgm_enable_mode);
