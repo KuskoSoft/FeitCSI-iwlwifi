@@ -961,10 +961,10 @@ int ieee80211_vif_reserve_chanctx(struct ieee80211_sub_if_data *sdata,
 	new_ctx = ieee80211_find_reservation_chanctx(local, chandef, mode);
 	if (!new_ctx) {
 		if (ieee80211_chanctx_refcount(local, curr_ctx) == 1 &&
-		    (local->hw.flags & IEEE80211_HW_CHANGE_RUNNING_CHANCTX)) {
+		    local->ops->switch_vif_chanctx) {
 			/* if we're the only users of the chanctx and
-			 * the driver supports changing a running
-			 * context, reserve our current context
+			 * the driver supports chanctx switches
+			 * reserve our current context.
 			 */
 			new_ctx = curr_ctx;
 		} else if (ieee80211_can_create_new_chanctx(local)) {
@@ -987,6 +987,64 @@ int ieee80211_vif_reserve_chanctx(struct ieee80211_sub_if_data *sdata,
 out:
 	mutex_unlock(&local->chanctx_mtx);
 	return ret;
+}
+
+static int
+ieee80211_vif_change_reserved_context(struct ieee80211_sub_if_data *sdata,
+				      struct ieee80211_chanctx *old_ctx)
+{
+	struct ieee80211_local *local = sdata->local;
+	const struct cfg80211_chan_def *chandef = &sdata->reserved_chandef;
+	struct ieee80211_chanctx *new_ctx;
+	struct ieee80211_vif_chanctx_switch vifs[1];
+	int err, changed;
+
+	lockdep_assert_held(&local->mtx);
+	lockdep_assert_held(&local->chanctx_mtx);
+
+	new_ctx = ieee80211_alloc_chanctx(local, chandef, old_ctx->mode);
+	if (!new_ctx) {
+		err = -ENOMEM;
+		goto err;
+	}
+
+	vifs[0].vif = &sdata->vif;
+	vifs[0].old_ctx = &old_ctx->conf;
+	vifs[0].new_ctx = &new_ctx->conf;
+
+	/* turn idle off *before* setting channel -- some drivers need that */
+	changed = ieee80211_idle_off(local);
+	ieee80211_hw_config(local, changed);
+
+	err = drv_switch_vif_chanctx(local, vifs, 1,
+				     CHANCTX_SWMODE_SWAP_CONTEXTS);
+	if (err)
+		goto err_idle;
+
+	rcu_assign_pointer(sdata->vif.chanctx_conf, &new_ctx->conf);
+
+	list_del_rcu(&old_ctx->list);
+
+	if (sdata->vif.type == NL80211_IFTYPE_AP)
+		__ieee80211_vif_copy_chanctx_to_vlans(sdata, false);
+
+	list_add_rcu(&new_ctx->list, &local->chanctx_list);
+	kfree_rcu(old_ctx, rcu_head);
+
+	ieee80211_recalc_txpower(sdata);
+	ieee80211_recalc_chanctx_chantype(local, new_ctx);
+	ieee80211_recalc_smps_chanctx(local, new_ctx);
+	ieee80211_recalc_radar_chanctx(local, new_ctx);
+	ieee80211_recalc_chanctx_min_def(local, new_ctx);
+	ieee80211_recalc_idle(local);
+
+	return 0;
+
+err_idle:
+	ieee80211_recalc_idle(local);
+	kfree_rcu(new_ctx, rcu_head);
+err:
+	return err;
 }
 
 int ieee80211_vif_use_reserved_context(struct ieee80211_sub_if_data *sdata,
@@ -1032,8 +1090,7 @@ int ieee80211_vif_use_reserved_context(struct ieee80211_sub_if_data *sdata,
 
 	if (old_ctx == ctx) {
 		/* This is our own context, just change it */
-		ret = __ieee80211_vif_change_channel(sdata, old_ctx,
-						     &tmp_changed);
+		ret = ieee80211_vif_change_reserved_context(sdata, old_ctx);
 		if (ret)
 			goto out;
 	} else {
@@ -1049,14 +1106,14 @@ int ieee80211_vif_use_reserved_context(struct ieee80211_sub_if_data *sdata,
 
 		if (sdata->vif.type == NL80211_IFTYPE_AP)
 			__ieee80211_vif_copy_chanctx_to_vlans(sdata, false);
+
+		ieee80211_recalc_chanctx_chantype(local, ctx);
+		ieee80211_recalc_smps_chanctx(local, ctx);
+		ieee80211_recalc_radar_chanctx(local, ctx);
+		ieee80211_recalc_chanctx_min_def(local, ctx);
 	}
 
 	*changed = tmp_changed;
-
-	ieee80211_recalc_chanctx_chantype(local, ctx);
-	ieee80211_recalc_smps_chanctx(local, ctx);
-	ieee80211_recalc_radar_chanctx(local, ctx);
-	ieee80211_recalc_chanctx_min_def(local, ctx);
 out:
 	mutex_unlock(&local->chanctx_mtx);
 	return ret;
