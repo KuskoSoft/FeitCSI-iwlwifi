@@ -131,6 +131,8 @@ config BACKPORT_USERSEL_BUILD_ALL
 	  you probably shouldn't enable it.
 
 config BACKPORT_CRYPTO_CCM
+	depends on CRYPTO_AEAD
+	depends on CRYPTO_CTR
 	bool
 
 config BACKPORT_BUILD_CRYPTO_CCM
