@@ -1113,7 +1113,9 @@ enum ieee80211_vif_flags {
  * @addr: address of this interface
  * @p2p: indicates whether this AP or STA interface is a p2p
  *	interface, i.e. a GO or p2p-sta respectively
- * @csa_active: marks whether a channel switch is going on
+ * @csa_active: marks whether a channel switch is going on. Internally it is
+ *	write-protected by sdata_lock and local->mtx so holding either is fine
+ *	for read access.
  * @driver_flags: flags/capabilities the driver has for this interface,
  *	these need to be set (or cleared) when the interface is added
  *	or, if supported by the driver, the interface type is changed
@@ -2767,6 +2769,10 @@ enum ieee80211_roc_type {
  *	information in bss_conf is set up and the beacon can be retrieved. A
  *	channel context is bound before this is called.
  * @leave_ibss: Leave the IBSS again.
+ *
+ * @get_expected_throughput: extract the expected throughput towards the
+ *	specified station. The returned value is expressed in Kbps. It returns 0
+ *	if the RC algorithm does not have proper data to provide.
  */
 struct ieee80211_ops {
 	void (*tx)(struct ieee80211_hw *hw,
@@ -2961,6 +2967,7 @@ struct ieee80211_ops {
 
 	int (*join_ibss)(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
 	void (*leave_ibss)(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
+	u32 (*get_expected_throughput)(struct ieee80211_sta *sta);
 };
 
 /**
@@ -3416,8 +3423,9 @@ void ieee80211_report_low_ack(struct ieee80211_sta *sta, u32 num_packets);
  * struct ieee80211_mutable_offsets - mutable beacon offsets
  * @tim_offset: position of TIM element
  * @tim_length: size of TIM element
- * @csa_offs: array of IEEE80211_MAX_CSA_COUNTERS_NUM offsets to CSA counters.
- *	This array can contain zero values which should be ignored.
+ * @csa_counter_offs: array of IEEE80211_MAX_CSA_COUNTERS_NUM offsets
+ *	to CSA counters.  This array can contain zero values which
+ *	should be ignored.
  */
 struct ieee80211_mutable_offsets {
 	u16 tim_offset;
@@ -4533,6 +4541,8 @@ struct rate_control_ops {
 	void (*add_sta_debugfs)(void *priv, void *priv_sta,
 				struct dentry *dir);
 	void (*remove_sta_debugfs)(void *priv, void *priv_sta);
+
+	u32 (*get_expected_throughput)(void *priv_sta);
 };
 
 static inline int rate_supported(struct ieee80211_sta *sta,

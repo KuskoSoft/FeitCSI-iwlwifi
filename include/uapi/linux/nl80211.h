@@ -1942,11 +1942,10 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_TDLS_PEER_CAPABILITY,
 
-	NL80211_ATTR_CSA_C_OFFSETS_TX,
-	NL80211_ATTR_MAX_CSA_COUNTERS,
-
 	NL80211_ATTR_IFACE_SOCKET_OWNER,
 
+	NL80211_ATTR_CSA_C_OFFSETS_TX,
+	NL80211_ATTR_MAX_CSA_COUNTERS,
 	NL80211_ATTR_TDLS_INITIATOR,
 
 	/* add attributes here, update the policy in nl80211.c */
@@ -2217,6 +2216,8 @@ enum nl80211_sta_bss_param {
  *	Contains a nested array of signal strength attributes (u8, dBm)
  * @NL80211_STA_INFO_CHAIN_SIGNAL_AVG: per-chain signal strength average
  *	Same format as NL80211_STA_INFO_CHAIN_SIGNAL.
+ * @NL80211_STA_EXPECTED_THROUGHPUT: expected throughput considering also the
+ *	802.11 header (u32, kbps)
  * @__NL80211_STA_INFO_AFTER_LAST: internal
  * @NL80211_STA_INFO_MAX: highest possible station info attribute
  */
@@ -2248,6 +2249,7 @@ enum nl80211_sta_info {
 	NL80211_STA_INFO_TX_BYTES64,
 	NL80211_STA_INFO_CHAIN_SIGNAL,
 	NL80211_STA_INFO_CHAIN_SIGNAL_AVG,
+	NL80211_STA_INFO_EXPECTED_THROUGHPUT,
 
 	/* keep last */
 	__NL80211_STA_INFO_AFTER_LAST,
@@ -3729,6 +3731,8 @@ enum nl80211_iface_limit_attrs {
  *	different channels may be used within this group.
  * @NL80211_IFACE_COMB_RADAR_DETECT_WIDTHS: u32 attribute containing the bitmap
  *	of supported channel widths for radar detection.
+ * @NL80211_IFACE_COMB_RADAR_DETECT_REGIONS: u32 attribute containing the bitmap
+ *	of supported regulatory regions for radar detection.
  * @NUM_NL80211_IFACE_COMB: number of attributes
  * @MAX_NL80211_IFACE_COMB: highest attribute number
  *
@@ -3762,6 +3766,7 @@ enum nl80211_if_combination_attrs {
 	NL80211_IFACE_COMB_STA_AP_BI_MATCH,
 	NL80211_IFACE_COMB_NUM_CHANNELS,
 	NL80211_IFACE_COMB_RADAR_DETECT_WIDTHS,
+	NL80211_IFACE_COMB_RADAR_DETECT_REGIONS,
 
 	/* keep last */
 	NUM_NL80211_IFACE_COMB,

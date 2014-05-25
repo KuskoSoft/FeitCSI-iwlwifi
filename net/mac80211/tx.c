@@ -2465,8 +2465,7 @@ static void ieee80211_set_csa(struct ieee80211_sub_if_data *sdata,
 			rcu_read_lock();
 			resp = rcu_dereference(sdata->u.ap.probe_resp);
 
-			/*
-			 * If nl80211 accepted the offset, this should
+			/* If nl80211 accepted the offset, this should
 			 * not happen.
 			 */
 			if (WARN_ON(!resp)) {
@@ -2652,8 +2651,7 @@ __ieee80211_beacon_get(struct ieee80211_hw *hw,
 
 		if (sdata->vif.csa_active) {
 			if (!is_template)
-				/*
-				 * TODO: For mesh csa_counter is in TU, so
+				/* TODO: For mesh csa_counter is in TU, so
 				 * decrementing it by one isn't correct, but
 				 * for now we leave it consistent with overall
 				 * mac80211's behavior.

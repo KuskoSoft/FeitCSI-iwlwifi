@@ -979,8 +979,10 @@ static int nl80211_put_iface_combinations(struct wiphy *wiphy,
 				c->max_interfaces))
 			goto nla_put_failure;
 		if (large &&
-		    nla_put_u32(msg, NL80211_IFACE_COMB_RADAR_DETECT_WIDTHS,
-				c->radar_detect_widths))
+		    (nla_put_u32(msg, NL80211_IFACE_COMB_RADAR_DETECT_WIDTHS,
+				c->radar_detect_widths) ||
+		     nla_put_u32(msg, NL80211_IFACE_COMB_RADAR_DETECT_REGIONS,
+				c->radar_detect_regions)))
 			goto nla_put_failure;
 
 		nla_nest_end(msg, nl_combi);
@@ -1676,6 +1678,13 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 			}
 			nla_nest_end(msg, nested);
 		}
+		state->split_start++;
+		break;
+	case 12:
+		if (rdev->wiphy.flags & WIPHY_FLAG_HAS_CHANNEL_SWITCH &&
+		    nla_put_u8(msg, NL80211_ATTR_MAX_CSA_COUNTERS,
+			       rdev->wiphy.max_num_csa_counters))
+			goto nla_put_failure;
 
 		if (rdev->wiphy.flags & WIPHY_FLAG_HAS_CHANNEL_SWITCH &&
 		    nla_put_u8(msg, NL80211_ATTR_MAX_CSA_COUNTERS,
@@ -3674,6 +3683,10 @@ static int nl80211_send_station(struct sk_buff *msg, u32 portid, u32 seq,
 	if ((sinfo->filled & STATION_INFO_TX_FAILED) &&
 	    nla_put_u32(msg, NL80211_STA_INFO_TX_FAILED,
 			sinfo->tx_failed))
+		goto nla_put_failure;
+	if ((sinfo->filled & STATION_INFO_EXPECTED_THROUGHPUT) &&
+	    nla_put_u32(msg, NL80211_STA_INFO_EXPECTED_THROUGHPUT,
+			sinfo->expected_throughput))
 		goto nla_put_failure;
 	if ((sinfo->filled & STATION_INFO_BEACON_LOSS_COUNT) &&
 	    nla_put_u32(msg, NL80211_STA_INFO_BEACON_LOSS,
@@ -5857,7 +5870,7 @@ static int nl80211_start_radar_detection(struct sk_buff *skb,
 		return -EBUSY;
 
 	err = cfg80211_chandef_dfs_required(wdev->wiphy, &chandef,
-					    NL80211_IFTYPE_UNSPECIFIED);
+					    wdev->iftype);
 	if (err < 0)
 		return err;
 
@@ -5978,7 +5991,7 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 	params.counter_offsets_beacon =
 		nla_data(csa_attrs[NL80211_ATTR_CSA_C_OFF_BEACON]);
 
-	/* sanity checks -counters should fit and be the same */
+	/* sanity checks - counters should fit and be the same */
 	for (i = 0; i < params.n_counter_offsets_beacon; i++) {
 		u16 offset = params.counter_offsets_beacon[i];
 
@@ -6003,7 +6016,7 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 		params.counter_offsets_presp =
 			nla_data(csa_attrs[NL80211_ATTR_CSA_C_OFF_PRESP]);
 
-		/* sanity checks -counters should fit and be the same */
+		/* sanity checks - counters should fit and be the same */
 		for (i = 0; i < params.n_counter_offsets_presp; i++) {
 			u16 offset = params.counter_offsets_presp[i];
 
@@ -8604,6 +8617,8 @@ static int nl80211_set_wowlan(struct sk_buff *skb, struct genl_info *info)
 
 		nla_for_each_nested(pat, tb[NL80211_WOWLAN_TRIG_PKT_PATTERN],
 				    rem) {
+			u8 *mask_pat;
+
 			nla_parse(pat_tb, MAX_NL80211_PKTPAT, nla_data(pat),
 				  nla_len(pat), NULL);
 			err = -EINVAL;
@@ -8627,19 +8642,18 @@ static int nl80211_set_wowlan(struct sk_buff *skb, struct genl_info *info)
 				goto error;
 			new_triggers.patterns[i].pkt_offset = pkt_offset;
 
-			new_triggers.patterns[i].mask =
-				kmalloc(mask_len + pat_len, GFP_KERNEL);
-			if (!new_triggers.patterns[i].mask) {
+			mask_pat = kmalloc(mask_len + pat_len, GFP_KERNEL);
+			if (!mask_pat) {
 				err = -ENOMEM;
 				goto error;
 			}
-			new_triggers.patterns[i].pattern =
-				new_triggers.patterns[i].mask + mask_len;
-			memcpy(new_triggers.patterns[i].mask,
-			       nla_data(pat_tb[NL80211_PKTPAT_MASK]),
+			new_triggers.patterns[i].mask = mask_pat;
+			memcpy(mask_pat, nla_data(pat_tb[NL80211_PKTPAT_MASK]),
 			       mask_len);
+			mask_pat += mask_len;
+			new_triggers.patterns[i].pattern = mask_pat;
 			new_triggers.patterns[i].pattern_len = pat_len;
-			memcpy(new_triggers.patterns[i].pattern,
+			memcpy(mask_pat,
 			       nla_data(pat_tb[NL80211_PKTPAT_PATTERN]),
 			       pat_len);
 			i++;
@@ -8832,6 +8846,8 @@ static int nl80211_parse_coalesce_rule(struct cfg80211_registered_device *rdev,
 
 	nla_for_each_nested(pat, tb[NL80211_ATTR_COALESCE_RULE_PKT_PATTERN],
 			    rem) {
+		u8 *mask_pat;
+
 		nla_parse(pat_tb, MAX_NL80211_PKTPAT, nla_data(pat),
 			  nla_len(pat), NULL);
 		if (!pat_tb[NL80211_PKTPAT_MASK] ||
@@ -8853,17 +8869,19 @@ static int nl80211_parse_coalesce_rule(struct cfg80211_registered_device *rdev,
 			return -EINVAL;
 		new_rule->patterns[i].pkt_offset = pkt_offset;
 
-		new_rule->patterns[i].mask =
-			kmalloc(mask_len + pat_len, GFP_KERNEL);
-		if (!new_rule->patterns[i].mask)
+		mask_pat = kmalloc(mask_len + pat_len, GFP_KERNEL);
+		if (!mask_pat)
 			return -ENOMEM;
-		new_rule->patterns[i].pattern =
-			new_rule->patterns[i].mask + mask_len;
-		memcpy(new_rule->patterns[i].mask,
-		       nla_data(pat_tb[NL80211_PKTPAT_MASK]), mask_len);
+
+		new_rule->patterns[i].mask = mask_pat;
+		memcpy(mask_pat, nla_data(pat_tb[NL80211_PKTPAT_MASK]),
+		       mask_len);
+
+		mask_pat += mask_len;
+		new_rule->patterns[i].pattern = mask_pat;
 		new_rule->patterns[i].pattern_len = pat_len;
-		memcpy(new_rule->patterns[i].pattern,
-		       nla_data(pat_tb[NL80211_PKTPAT_PATTERN]), pat_len);
+		memcpy(mask_pat, nla_data(pat_tb[NL80211_PKTPAT_PATTERN]),
+		       pat_len);
 		i++;
 	}
 
