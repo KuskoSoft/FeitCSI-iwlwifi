@@ -107,8 +107,10 @@ backport_device_release_driver(struct device *dev)
 #define DEVICE_ATTR_RO(_name) \
 struct device_attribute dev_attr_ ## _name = __ATTR_RO(_name);
 #endif
+#ifndef DEVICE_ATTR_RW
 #define DEVICE_ATTR_RW(_name) \
 struct device_attribute dev_attr_ ## _name = __ATTR_RW(_name)
+#endif
 #endif
 
 #define ATTRIBUTE_GROUPS_BACKPORT(_name) \
