@@ -635,7 +635,8 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	 * trigger retrival of monitor logs
 	 * (if a threshold was configured & passed)
 	 */
-	if (tx_latency->threshold && tx_latency->threshold < msrmnt)
+	if (tx_latency && tx_latency->threshold &&
+	    tx_latency->threshold < msrmnt)
 		drv_retrieve_monitor_logs(local);
 #endif
 }
