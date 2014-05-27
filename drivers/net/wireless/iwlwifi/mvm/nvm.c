@@ -607,6 +607,13 @@ iwl_mvm_update_mcc(struct iwl_mvm *mvm, const char *alpha2)
 	}
 
 	mcc = le16_to_cpu(mcc_resp->mcc);
+
+	/* W/A for a FW/NVM issue - returns 0x00 for the world domain */
+	if (mcc == 0) {
+		mcc = 0x3030;  /* "00" - world */
+		mcc_resp->mcc = cpu_to_le16(mcc);
+	}
+
 	n_channels =  __le32_to_cpu(mcc_resp->n_channels);
 	IWL_DEBUG_LAR(mvm,
 		"MCC response status: 0x%x. new MCC: 0x%x ('%c%c') change: %d n_chans: %d\n",
