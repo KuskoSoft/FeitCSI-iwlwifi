@@ -3086,10 +3086,8 @@ static int ieee80211_set_after_csa_beacon(struct ieee80211_sub_if_data *sdata,
 
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP:
-		mutex_lock(&local->mtx);
 		sdata->radar_required = sdata->csa_radar_required;
 		err = ieee80211_vif_use_reserved_context(sdata, changed);
-		mutex_unlock(&local->mtx);
 		if (WARN_ON(err < 0))
 			return err;
 
@@ -3103,10 +3101,8 @@ static int ieee80211_set_after_csa_beacon(struct ieee80211_sub_if_data *sdata,
 		*changed |= err;
 		break;
 	case NL80211_IFTYPE_ADHOC:
-		mutex_lock(&local->mtx);
 		sdata->radar_required = sdata->csa_radar_required;
 		err = ieee80211_vif_change_channel(sdata, changed);
-		mutex_unlock(&local->mtx);
 		if (WARN_ON(err < 0))
 			return err;
 
@@ -3238,11 +3234,9 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP:
 		/* todo: should we handle !local->use_chanctx case here?*/
-		mutex_lock(&local->mtx);
 		err = ieee80211_vif_reserve_chanctx(sdata, &params->chandef,
 						    IEEE80211_CHANCTX_SHARED,
 						    params->radar_required);
-		mutex_unlock(&local->mtx);
 		if (err)
 			return -EBUSY;
 
@@ -3293,9 +3287,7 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 		if (err < 0) {
 			kfree(sdata->u.ap.next_beacon);
 
-			mutex_lock(&local->mtx);
 			ieee80211_vif_unreserve_chanctx(sdata);
-			mutex_unlock(&local->mtx);
 
 			return err;
 		}
