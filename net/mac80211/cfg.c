@@ -3083,6 +3083,7 @@ static int ieee80211_set_after_csa_beacon(struct ieee80211_sub_if_data *sdata,
 	int err;
 
 	sdata_assert_lock(sdata);
+	lockdep_assert_held(&local->mtx);
 
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP:
@@ -3216,6 +3217,7 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 	int err, num_chanctx;
 
 	sdata_assert_lock(sdata);
+	lockdep_assert_held(&local->mtx);
 
 	if (!list_empty(&local->roc_list) || local->scanning)
 		return -EBUSY;
