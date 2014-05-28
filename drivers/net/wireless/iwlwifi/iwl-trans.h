@@ -954,8 +954,15 @@ static inline void iwl_pci_unregister_driver(void)
 #endif /* CPTCFG_IWLWIFI_PCIE */
 
 /* SDIO */
+static inline int __must_check iwl_sdio_register_driver(void) { return 0; }
+static inline void iwl_sdio_unregister_driver(void) {}
 
 /* IDI */
+static inline int __must_check iwl_idi_register_driver(void) { return 0; }
+static inline void iwl_idi_unregister_driver(void) {}
+
+static inline int __must_check iwl_slv_register_drivers(void) {return 0; }
+static inline void iwl_slv_unregister_drivers(void) {}
 
 static inline void trans_lockdep_init(struct iwl_trans *trans)
 {

@@ -1570,7 +1570,15 @@ static int iwl_register_bus_drivers(void)
 	if (ret)
 		return ret;
 
+	ret = iwl_slv_register_drivers();
+	if (ret)
+		goto unregister_pci_driver;
+
 	return 0;
+
+unregister_pci_driver:
+	iwl_pci_unregister_driver();
+	return ret;
 }
 
 /*
@@ -1582,6 +1590,7 @@ static int iwl_register_bus_drivers(void)
 static void iwl_unregister_bus_drivers(void)
 {
 	iwl_pci_unregister_driver();
+	iwl_slv_unregister_drivers();
 }
 
 static int __init iwl_drv_init(void)
