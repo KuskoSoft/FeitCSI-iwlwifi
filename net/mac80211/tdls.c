@@ -374,6 +374,7 @@ ieee80211_tdls_mgmt_teardown(struct wiphy *wiphy, struct net_device *dev,
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = sdata->local;
+	struct sta_info *sta;
 	int ret;
 
 	/*
@@ -395,8 +396,15 @@ ieee80211_tdls_mgmt_teardown(struct wiphy *wiphy, struct net_device *dev,
 		sdata_err(sdata, "Failed sending TDLS teardown packet %d\n",
 			  ret);
 
-	/* remove the peer STA to force traffic through the AP */
-	sta_info_destroy_addr(sdata, peer);
+	/*
+	 * Remove the STA AUTH flag to force further traffic through the AP. If
+	 * the STA was unreachable, it was already removed.
+	 */
+	rcu_read_lock();
+	sta = sta_info_get(sdata, peer);
+	if (sta)
+		clear_sta_flag(sta, WLAN_STA_TDLS_PEER_AUTH);
+	rcu_read_unlock();
 
 	ieee80211_wake_queues_by_reason(&local->hw,
 			IEEE80211_MAX_QUEUE_MAP,
@@ -512,6 +520,9 @@ int ieee80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 		ret = 0;
 		break;
 	case NL80211_TDLS_DISABLE_LINK:
+		/* flush a potentially queued teardown packet */
+		ieee80211_flush_queues(local, sdata);
+
 		ret = sta_info_destroy_addr(sdata, peer);
 		break;
 	default:
