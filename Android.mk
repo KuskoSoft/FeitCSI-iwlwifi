@@ -119,6 +119,9 @@ iwlwifi_rm_mac_cfg: iwlwifi_build
 	@find $(KERNEL_OUT_MODINSTALL)/lib/modules/ -name "mac80211.ko" | xargs rm -f
 	@find $(KERNEL_OUT_MODINSTALL)/lib/modules/ -name "cfg80211.ko" | xargs rm -f
 
+.PHONY: iwlwifi_clean
+iwlwifi_clean:
+	rm -rf $(INTEL_IWL_OUT_DIR)
 endif
 endif
 endif
