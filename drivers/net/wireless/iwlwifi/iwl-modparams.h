@@ -104,6 +104,7 @@ enum iwl_disable_11n {
  * @debug_level: levels are IWL_DL_*
  * @ant_coupling: antenna coupling in dB, default = 0
  * @xvt_default_mode: xVT is the default operation mode, default = false
+ * @fw_monitor: allow to use firmware monitor
  */
 struct iwl_mod_params {
 	int sw_crypto;
@@ -121,6 +122,7 @@ struct iwl_mod_params {
 	int ant_coupling;
 	char *nvm_file;
 	bool uapsd_disable;
+	bool fw_monitor;
 };
 
 #endif /* #__iwl_modparams_h__ */
