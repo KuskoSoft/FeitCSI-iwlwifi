@@ -128,6 +128,12 @@ static int reg_num_devs_support_basehint;
  * State variable indicating if the platform on which the devices
  * are attached is operating in an indoor environment. The state variable
  * is relevant for all registered devices.
+ * If the NO_IR relaxation is enabled, and a device driver supports the
+ * relaxation, operation in an indoor environment allows instantiation of a P2P
+ * GO on channels that have %IEEE80211_CHAN_INDOOR_ONLY set, and in addition
+ * allows a P2P GO to continue operation on a channel that has
+ * %IEEE80211_CHAN_GO_CONCURRENT set even if there is no longer a station
+ * interface connection that enables the NO_IR relaxation.
  * (protected by RTNL)
  */
 static bool reg_is_indoor;
@@ -1543,6 +1549,25 @@ static bool reg_wdev_chan_valid(struct wiphy *wiphy, struct wireless_dev *wdev)
 
 		ret = cfg80211_reg_can_beacon(wiphy,
 					      &wdev->chandef, wdev->iftype);
+
+		if (ret || wdev->iftype == NL80211_IFTYPE_AP)
+			break;
+
+		/* if the NO_IR relaxation is enabled and supported by the
+		 * device driver, allow a P2P GO to continue operating on its
+		 * current operating channel as long as the indoor operation is
+		 * asserted. This is done under the assumption that although
+		 * there is no station interface connected, since the device is
+		 * operating in an indoor environment the regulatory
+		 * restrictions are the same.
+		 */
+		ch = wdev->chandef.chan;
+		if (config_enabled(CPTCFG_CFG80211_REG_RELAX_NO_IR) &&
+		    (wiphy->regulatory_flags & REGULATORY_ENABLE_RELAX_NO_IR) &&
+		    (ch->flags & IEEE80211_CHAN_GO_CONCURRENT) &&
+		    regulatory_indoor_allowed())
+			ret = true;
+
 		break;
 	case NL80211_IFTYPE_STATION:
 	case NL80211_IFTYPE_P2P_CLIENT:
