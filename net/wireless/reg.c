@@ -1771,7 +1771,11 @@ __reg_process_hint_user(struct regulatory_request *user_request)
 	struct regulatory_request *lr = get_last_request();
 
 	if (reg_request_indoor(user_request)) {
-		reg_is_indoor = true;
+		reg_is_indoor = user_request->is_indoor;
+
+		if (!reg_is_indoor)
+			reg_check_channels();
+
 		return REG_REQ_USER_HINT_HANDLED;
 	}
 
@@ -2183,7 +2187,7 @@ int regulatory_hint_user(const char *alpha2,
 	return 0;
 }
 
-int regulatory_hint_indoor_user(void)
+int regulatory_hint_indoor_user(bool is_indoor)
 {
 	struct regulatory_request *request;
 
@@ -2194,6 +2198,7 @@ int regulatory_hint_indoor_user(void)
 	request->wiphy_idx = WIPHY_IDX_INVALID;
 	request->initiator = NL80211_REGDOM_SET_BY_USER;
 	request->user_reg_hint_type = NL80211_USER_REG_HINT_INDOOR;
+	request->is_indoor = is_indoor;
 	queue_regulatory_request(request);
 
 	return 0;
@@ -2366,7 +2371,8 @@ static void restore_regulatory_settings(bool reset_user)
 
 	ASSERT_RTNL();
 
-	reg_is_indoor = false;
+	if (reset_user)
+		reg_is_indoor = false;
 
 	reset_regdomains(true, &world_regdom);
 	restore_alpha2(alpha2, reset_user);

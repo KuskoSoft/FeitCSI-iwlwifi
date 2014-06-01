@@ -67,6 +67,8 @@ enum environment_cap {
  *	CRDA and can be used by other regulatory requests. When a
  *	the last request is not yet processed we must yield until it
  *	is processed before processing any new requests.
+ * @is_indoor: indicates if the device is operating in an indoor environment
+ *      or not
  * @country_ie_checksum: checksum of the last processed and accepted
  *	country IE
  * @country_ie_env: lets us know if the AP is telling us we are outdoor,
@@ -82,6 +84,7 @@ struct regulatory_request {
 	enum nl80211_dfs_regions dfs_region;
 	bool intersect;
 	bool processed;
+	bool is_indoor;
 	enum environment_cap country_ie_env;
 	struct list_head list;
 };
