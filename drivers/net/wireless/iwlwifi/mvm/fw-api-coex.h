@@ -76,6 +76,9 @@
  * @BT_COEX_2W:
  * @BT_COEX_3W:
  * @BT_COEX_NW:
+ * @BT_COEX_AUTO:
+ * @BT_COEX_BT: Antenna is for BT (manufacuring tests)
+ * @BT_COEX_WIFI: Antenna is for BT (manufacuring tests)
  * @BT_COEX_SYNC2SCO:
  * @BT_COEX_CORUNNING:
  * @BT_COEX_MPLUT:
