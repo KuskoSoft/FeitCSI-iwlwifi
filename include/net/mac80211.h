@@ -2820,20 +2820,21 @@ enum ieee80211_roc_type {
  *	Currently, this is only called for managed or P2P client interfaces.
  *	This callback is optional; it must not sleep.
  *
- * @channel_switch_beacon: Starts a channel switch to a new channel.
- *	Beacons are modified to include CSA or ECSA IEs before calling this
- *	function. The corresponding count fields in these IEs must be
- *	decremented, and when they reach 1 the driver must call
- *	ieee80211_csa_finish(). Drivers which use ieee80211_beacon_get()
- *	get the csa counter decremented by mac80211, but must check if it is
- *	1 using ieee80211_csa_is_complete() after the beacon has been
- *	transmitted and then call ieee80211_csa_finish().
- *	If the CSA count starts as zero or 1, this function will not be called,
- *	since there won't be any time to beacon before the switch anyway.
  * @pre_channel_switch: This is an optional callback that is called
  *	before a channel switch procedure is started (ie. when a STA
  *	gets a CSA or an userspace initiated channel-switch), allowing
- *	the driver to prepare for the channel switch.
+ *	the driver to prepare for the channel switch.  For beaconing
+ *	interfaces, the beacons will be modified to include CSA or
+ *	ECSA IEs after this function is called. The corresponding
+ *	count fields in these IEs must be decremented, and when they
+ *	reach 1 the driver must call ieee80211_csa_finish(). Drivers
+ *	which use ieee80211_beacon_get() get the csa counter
+ *	decremented by mac80211, but must check if it is 1 using
+ *	ieee80211_csa_is_complete() after the beacon has been
+ *	transmitted and then call ieee80211_csa_finish().  If the CSA
+ *	count starts as zero or 1, this function will not be called,
+ *	since there won't be any time to beacon before the switch
+ *	anyway.
  *
  * @join_ibss: Join an IBSS (on an IBSS interface); this is called after all
  *	information in bss_conf is set up and the beacon can be retrieved. A
@@ -3038,9 +3039,6 @@ struct ieee80211_ops {
 				 struct ieee80211_vif *vif,
 				 struct inet6_dev *idev);
 #endif
-	void (*channel_switch_beacon)(struct ieee80211_hw *hw,
-				      struct ieee80211_vif *vif,
-				      struct cfg80211_chan_def *chandef);
 	int (*pre_channel_switch)(struct ieee80211_hw *hw,
 				  struct ieee80211_vif *vif,
 				  struct ieee80211_channel_switch *ch_switch);
