@@ -968,6 +968,27 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 			if (tlv_len != sizeof(u32))
 				goto invalid_tlv_len;
 			drv->fw.phy_config = le32_to_cpup((__le32 *)tlv_data);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+			if (drv->trans->dbg_cfg.valid_ants & ~ANT_ABC)
+				IWL_ERR(drv,
+					"Invalid value for antennas: 0x%x\n",
+					drv->trans->dbg_cfg.valid_ants);
+			/* Make sure value stays in range */
+			drv->trans->dbg_cfg.valid_ants &= ANT_ABC;
+			if (drv->trans->dbg_cfg.valid_ants) {
+				u32 phy_config = ~(FW_PHY_CFG_TX_CHAIN |
+						   FW_PHY_CFG_RX_CHAIN);
+
+				phy_config |=
+					(drv->trans->dbg_cfg.valid_ants <<
+					 FW_PHY_CFG_TX_CHAIN_POS);
+				phy_config |=
+					(drv->trans->dbg_cfg.valid_ants <<
+					 FW_PHY_CFG_RX_CHAIN_POS);
+
+				drv->fw.phy_config &= phy_config;
+			}
+#endif
 			drv->fw.valid_tx_ant = (drv->fw.phy_config &
 						FW_PHY_CFG_TX_CHAIN) >>
 						FW_PHY_CFG_TX_CHAIN_POS;
