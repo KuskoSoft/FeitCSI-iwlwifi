@@ -992,9 +992,11 @@ static void ieee80211_chswitch_work(struct work_struct *work)
 	mutex_lock(&local->mtx);
 	sdata->vif.csa_active = false;
 	/* XXX: wait for a beacon first? */
-	if (!ieee80211_csa_needs_block_tx(local))
+	if (sdata->csa_block_tx) {
 		ieee80211_wake_vif_queues(local, sdata,
 					  IEEE80211_QUEUE_STOP_REASON_CSA);
+		sdata->csa_block_tx = false;
+	}
 	mutex_unlock(&local->mtx);
 
 	ieee80211_bss_info_change_notify(sdata, changed);
@@ -1835,9 +1837,11 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	ieee80211_vif_release_channel(sdata);
 
 	sdata->vif.csa_active = false;
-	if (!ieee80211_csa_needs_block_tx(local))
+	if (sdata->csa_block_tx) {
 		ieee80211_wake_vif_queues(local, sdata,
 					  IEEE80211_QUEUE_STOP_REASON_CSA);
+		sdata->csa_block_tx = false;
+	}
 	mutex_unlock(&local->mtx);
 
 	sdata->encrypt_headroom = IEEE80211_ENCRYPT_HEADROOM;
@@ -2082,9 +2086,11 @@ static void __ieee80211_disconnect(struct ieee80211_sub_if_data *sdata)
 
 	mutex_lock(&local->mtx);
 	sdata->vif.csa_active = false;
-	if (!ieee80211_csa_needs_block_tx(local))
+	if (sdata->csa_block_tx) {
 		ieee80211_wake_vif_queues(local, sdata,
 					  IEEE80211_QUEUE_STOP_REASON_CSA);
+		sdata->csa_block_tx = false;
+	}
 	mutex_unlock(&local->mtx);
 
 	cfg80211_tx_mlme_mgmt(sdata->dev, frame_buf,
