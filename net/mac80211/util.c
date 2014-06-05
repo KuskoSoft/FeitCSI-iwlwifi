@@ -529,13 +529,10 @@ void ieee80211_wake_queues(struct ieee80211_hw *hw)
 }
 EXPORT_SYMBOL(ieee80211_wake_queues);
 
-void ieee80211_flush_queues(struct ieee80211_local *local,
-			    struct ieee80211_sub_if_data *sdata)
+static int ieee80211_get_vif_queues(struct ieee80211_local *local,
+				    struct ieee80211_sub_if_data *sdata)
 {
 	u32 queues;
-
-	if (!local->ops->flush)
-		return;
 
 	if (sdata && local->hw.flags & IEEE80211_HW_QUEUE_CONTROL) {
 		int ac;
@@ -551,6 +548,19 @@ void ieee80211_flush_queues(struct ieee80211_local *local,
 		queues = BIT(local->hw.queues) - 1;
 	}
 
+	return queues;
+}
+
+void ieee80211_flush_queues(struct ieee80211_local *local,
+			    struct ieee80211_sub_if_data *sdata)
+{
+	u32 queues;
+
+	if (!local->ops->flush)
+		return;
+
+	queues = ieee80211_get_vif_queues(local, sdata);
+
 	ieee80211_stop_queues_by_reason(&local->hw, queues,
 					IEEE80211_QUEUE_STOP_REASON_FLUSH);
 
@@ -558,6 +568,24 @@ void ieee80211_flush_queues(struct ieee80211_local *local,
 
 	ieee80211_wake_queues_by_reason(&local->hw, queues,
 					IEEE80211_QUEUE_STOP_REASON_FLUSH);
+}
+
+void ieee80211_stop_vif_queues(struct ieee80211_local *local,
+			       struct ieee80211_sub_if_data *sdata,
+			       enum queue_stop_reason reason)
+{
+	ieee80211_stop_queues_by_reason(&local->hw,
+					ieee80211_get_vif_queues(local, sdata),
+					reason);
+}
+
+void ieee80211_wake_vif_queues(struct ieee80211_local *local,
+			       struct ieee80211_sub_if_data *sdata,
+			       enum queue_stop_reason reason)
+{
+	ieee80211_wake_queues_by_reason(&local->hw,
+					ieee80211_get_vif_queues(local, sdata),
+					IEEE80211_QUEUE_STOP_REASON_DRIVER);
 }
 
 static void __iterate_active_interfaces(struct ieee80211_local *local,
