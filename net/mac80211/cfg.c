@@ -3434,7 +3434,8 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	if (sdata->csa_block_tx)
 		ieee80211_stop_queues_by_reason(&local->hw,
 					IEEE80211_MAX_QUEUE_MAP,
-					IEEE80211_QUEUE_STOP_REASON_CSA);
+					IEEE80211_QUEUE_STOP_REASON_CSA,
+					false);
 
 	cfg80211_ch_switch_started_notify(sdata->dev, &sdata->csa_chandef,
 					  sdata->csa_current_counter);
