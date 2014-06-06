@@ -699,8 +699,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	mvmvif->low_latency = value;
 
-	res = iwl_mvm_update_quotas(mvm, NULL,
-				    IWL_MVM_QUOTA_UPDATE_TYPE_REGULAR);
+	res = iwl_mvm_update_quotas(mvm, NULL);
 	if (res)
 		return res;
 
@@ -795,8 +794,7 @@ static void iwl_mvm_tcm_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
 		iwl_mvm_update_low_latency(mvm, vif, low_latency);
 	} else {
 		iwl_mvm_send_tcm_event(mvm, vif);
-		iwl_mvm_update_quotas(mvm, NULL,
-				      IWL_MVM_QUOTA_UPDATE_TYPE_REGULAR);
+		iwl_mvm_update_quotas(mvm, NULL);
 	}
 
 	data->any_sent = true;
