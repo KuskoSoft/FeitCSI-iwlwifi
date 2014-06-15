@@ -678,7 +678,13 @@ unsigned int reg_get_max_bandwidth(const struct ieee80211_regdomain *rd,
 		bw = min_t(unsigned int, bw, MHZ_TO_KHZ(80));
 	if (rule->flags & NL80211_RRF_NO_80MHZ)
 		bw = min_t(unsigned int, bw, MHZ_TO_KHZ(40));
-	if (rule->flags & NL80211_RRF_NO_HT40)
+
+	/*
+	 * HT40+/HT40- limits are handled per-channel. Only limit BW if both
+	 * are not allowed.
+	 */
+	if (rule->flags & NL80211_RRF_NO_HT40MINUS &&
+	    rule->flags & NL80211_RRF_NO_HT40PLUS)
 		bw = min_t(unsigned int, bw, MHZ_TO_KHZ(20));
 
 	return bw;
