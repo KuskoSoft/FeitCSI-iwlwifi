@@ -677,3 +677,26 @@ int iwl_mvm_init_mcc(struct iwl_mvm *mvm)
 	mvm->lar_regdom_set = false;
 	return regulatory_hint(mvm->hw->wiphy, "99");
 }
+
+int iwl_mvm_rx_chub_update_mcc(struct iwl_mvm *mvm,
+			       struct iwl_rx_cmd_buffer *rxb,
+			       struct iwl_device_cmd *cmd)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_mcc_chub_notif *notif = (void *)pkt->data;
+	char mcc[3];
+
+	if (WARN_ON_ONCE(!iwl_mvm_is_lar_supported(mvm)))
+		return -EOPNOTSUPP;
+
+	mcc[0] = notif->mcc >> 8;
+	mcc[1] = notif->mcc & 0xff;
+	mcc[2] = '\0';
+
+	IWL_DEBUG_LAR(mvm,
+		      "RX: received chub update mcc command (mcc 0x%x '%s')\n",
+		      notif->mcc, mcc);
+
+	return regulatory_hint_force_policy(mvm->hw->wiphy, mcc,
+					    DRIVER_REG_HINT_OVERRIDE);
+}
