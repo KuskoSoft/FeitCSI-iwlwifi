@@ -332,27 +332,6 @@ static void ieee80211_change_chanctx(struct ieee80211_local *local,
 	}
 }
 
-static bool ieee80211_chanctx_is_reserved(struct ieee80211_local *local,
-					  struct ieee80211_chanctx *ctx)
-{
-	struct ieee80211_sub_if_data *sdata;
-	bool ret = false;
-
-	lockdep_assert_held(&local->chanctx_mtx);
-	rcu_read_lock();
-	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
-		if (!ieee80211_sdata_running(sdata))
-			continue;
-		if (sdata->reserved_chanctx == ctx) {
-			ret = true;
-			break;
-		}
-	}
-
-	rcu_read_unlock();
-	return ret;
-}
-
 static struct ieee80211_chanctx *
 ieee80211_find_chanctx(struct ieee80211_local *local,
 		       const struct cfg80211_chan_def *chandef,
@@ -368,12 +347,7 @@ ieee80211_find_chanctx(struct ieee80211_local *local,
 	list_for_each_entry(ctx, &local->chanctx_list, list) {
 		const struct cfg80211_chan_def *compat;
 
-		/* We don't support chanctx reservation for multiple
-		 * vifs yet, so don't allow reserved chanctxs to be
-		 * reused.
-		 */
-		if ((ctx->mode == IEEE80211_CHANCTX_EXCLUSIVE) ||
-		    ieee80211_chanctx_is_reserved(local, ctx))
+		if (ctx->mode == IEEE80211_CHANCTX_EXCLUSIVE)
 			continue;
 
 		compat = cfg80211_chandef_compatible(&ctx->conf.def, chandef);
