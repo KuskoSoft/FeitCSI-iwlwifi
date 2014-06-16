@@ -349,6 +349,7 @@ enum {
 	IWL_D0I3_DBG_DISABLE		= BIT(0),
 	IWL_D0I3_DBG_KEEP_BUS		= BIT(1),
 	IWL_D0I3_DBG_KEEP_WAKE_LOCK	= BIT(2),
+	IWL_D0I3_DBG_IGNORE_RX		= BIT(3),
 };
 extern unsigned int d0i3_debug;
 

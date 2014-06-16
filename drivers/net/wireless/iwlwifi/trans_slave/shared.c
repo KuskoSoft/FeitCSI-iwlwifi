@@ -1723,6 +1723,9 @@ void iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 			take_ref = false;
 		}
 
+		if (d0i3_debug & IWL_D0I3_DBG_IGNORE_RX)
+			take_ref = false;
+
 #ifdef CONFIG_HAS_WAKELOCK
 		/* let the packet propagate up the stack before suspend */
 		if (take_ref)
