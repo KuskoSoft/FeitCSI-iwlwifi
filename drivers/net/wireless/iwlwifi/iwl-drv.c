@@ -827,6 +827,7 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 				goto invalid_tlv_len;
 			capa->n_scan_channels =
 				le32_to_cpup((__le32 *)tlv_data);
+			break;
 		default:
 			IWL_DEBUG_INFO(drv, "unknown TLV: %d\n", tlv_type);
 			break;
