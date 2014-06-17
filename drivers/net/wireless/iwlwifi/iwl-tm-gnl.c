@@ -377,6 +377,34 @@ static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
 	return 0;
 }
 
+#if IS_ENABLED(CPTCFG_IWLXVT)
+static int iwl_tm_switch_op_mode(struct iwl_tm_gnl_dev *dev,
+				 struct iwl_tm_data *data_in)
+{
+	struct iwl_switch_op_mode *switch_cmd = data_in->data;
+	struct iwl_drv *drv;
+	int ret = 0;
+
+	if (data_in->len < sizeof(*switch_cmd))
+		return -EINVAL;
+
+	drv = iwl_drv_get_dev_container(dev->trans->dev);
+	if (!drv) {
+		IWL_ERR(dev->trans, "Couldn't retrieve device information\n");
+		return -ENODEV;
+	}
+
+	/* Executing switch command */
+	ret = iwl_drv_switch_op_mode(drv, switch_cmd->new_op_mode);
+
+	if (ret < 0)
+		IWL_ERR(dev->trans, "Failed to switch op mode to %s (err:%d)\n",
+			switch_cmd->new_op_mode, ret);
+
+	return ret;
+}
+#endif
+
 /*
  * Testmode GNL family types (This NL family
  * will eventually replace nl80211 support in
@@ -661,6 +689,12 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 		ret = iwl_tm_get_device_status(dev, &cmd_data->data_in,
 					       &cmd_data->data_out);
 		break;
+#if IS_ENABLED(CPTCFG_IWLXVT)
+	case IWL_TM_USER_CMD_SWITCH_OP_MODE:
+		ret = iwl_tm_switch_op_mode(dev, &cmd_data->data_in);
+		common_op = true;
+		break;
+#endif
 	case IWL_XVT_CMD_GET_CHIP_ID:
 		ret = iwl_tm_validate_get_chip_id(dev->trans);
 		break;

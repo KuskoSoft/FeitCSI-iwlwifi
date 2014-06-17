@@ -5,7 +5,7 @@
  *
  * GPL LICENSE SUMMARY
  *
- * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -30,7 +30,7 @@
  *
  * BSD LICENSE
  *
- * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,72 +60,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_modparams_h__
-#define __iwl_modparams_h__
+#ifndef __XVT_CONSTANTS_H
+#define __XVT_CONSTANTS_H
 
-#include <linux/types.h>
-#include <linux/spinlock.h>
-#include <linux/gfp.h>
-#include <net/mac80211.h>
+#ifndef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#define IWL_XVT_DEFAULT_DBGM_MEM_POWER	0
+#define IWL_XVT_DEFAULT_DBGM_LMAC_MASK	0
+#define IWL_XVT_DEFAULT_DBGM_PRPH_MASK	0
 
-extern struct iwl_mod_params iwlwifi_mod_params;
+#else /* CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES */
+#define IWL_XVT_DEFAULT_DBGM_MEM_POWER	(xvt->trans->dbg_cfg.XVT_DEFAULT_DBGM_MEM_POWER)
+#define IWL_XVT_DEFAULT_DBGM_LMAC_MASK	(xvt->trans->dbg_cfg.XVT_DEFAULT_DBGM_LMAC_MASK)
+#define IWL_XVT_DEFAULT_DBGM_PRPH_MASK	(xvt->trans->dbg_cfg.XVT_DEFAULT_DBGM_PRPH_MASK)
 
-enum iwl_power_level {
-	IWL_POWER_INDEX_1,
-	IWL_POWER_INDEX_2,
-	IWL_POWER_INDEX_3,
-	IWL_POWER_INDEX_4,
-	IWL_POWER_INDEX_5,
-	IWL_POWER_NUM
-};
+#endif /* CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES */
 
-enum iwl_disable_11n {
-	IWL_DISABLE_HT_ALL	 = BIT(0),
-	IWL_DISABLE_HT_TXAGG	 = BIT(1),
-	IWL_DISABLE_HT_RXAGG	 = BIT(2),
-	IWL_ENABLE_HT_TXAGG	 = BIT(3),
-};
-
-/**
- * struct iwl_mod_params
- *
- * Holds the module parameters
- *
- * @sw_crypto: using hardware encryption, default = 0
- * @disable_11n: disable 11n capabilities, default = 0,
- *	use IWL_[DIS,EN]ABLE_HT_* constants
- * @amsdu_size_8K: enable 8K amsdu size, default = 0
- * @restart_fw: restart firmware, default = 1
- * @wd_disable: disable stuck queue check, default = 1
- * @bt_coex_active: enable bt coex, default = true
- * @led_mode: system default, default = 0
- * @power_save: disable power save, default = false
- * @power_level: power level, default = 1
- * @debug_level: levels are IWL_DL_*
- * @ant_coupling: antenna coupling in dB, default = 0
- * @xvt_default_mode: xVT is the default operation mode, default = false
- * @fw_monitor: allow to use firmware monitor
- */
-struct iwl_mod_params {
-	int sw_crypto;
-	unsigned int disable_11n;
-	int amsdu_size_8K;
-	bool restart_fw;
-	int  wd_disable;
-	bool bt_coex_active;
-	int led_mode;
-	bool power_save;
-	int power_level;
-#ifdef CPTCFG_IWLWIFI_DEBUG
-	u32 debug_level;
-#endif
-	int ant_coupling;
-#if IS_ENABLED(CPTCFG_IWLXVT)
-	bool xvt_default_mode;
-#endif
-	char *nvm_file;
-	bool uapsd_disable;
-	bool fw_monitor;
-};
-
-#endif /* #__iwl_modparams_h__ */
+#endif /* __XVT_CONSTANTS_H */

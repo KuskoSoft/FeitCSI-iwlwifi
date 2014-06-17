@@ -21,5 +21,6 @@ iwlwifi-$(CPTCFG_IWLWIFI_DEVICE_TESTMODE) += iwl-tm-gnl.o iwl-dnt-cfg.o iwl-dnt-
 ccflags-y += -D__CHECK_ENDIAN__ -I$(src)
 
 obj-$(CPTCFG_IWLMVM)	+= mvm/
+obj-$(CPTCFG_IWLXVT)	+= xvt/
 
 CFLAGS_iwl-devtrace.o := -I$(src)

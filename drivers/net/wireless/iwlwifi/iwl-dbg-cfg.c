@@ -69,6 +69,9 @@
 
 /* grab default values */
 #undef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#if IS_ENABLED(CPTCFG_IWLXVT)
+#include "xvt/constants.h"
+#endif
 #if IS_ENABLED(CPTCFG_IWLMVM)
 #include "mvm/constants.h"
 #endif

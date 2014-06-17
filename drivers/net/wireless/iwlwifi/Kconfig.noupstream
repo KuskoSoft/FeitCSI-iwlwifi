@@ -1,3 +1,22 @@
+config IWLXVT
+	tristate "Enable XVT op_mode"
+	depends on IWLWIFI
+	select IWLWIFI_DEVICE_TESTMODE
+	select IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	help
+	  This option enables the xVT operation mode. xVT mode supports
+	  special debug and testing operations that are not supported in
+	  the standard operation modes, and is used for verification
+	  purposes.
+	  xVT mode does not support the standard WiFi operations, and
+	  does not communicate with the user mode through the nl80211.
+
+	  Enabling this options allows to fully control the HW using
+	  an external tool in user space.
+
+	  Say Y if you have the user space application and want
+	  to execute debug and testing flows on the HW.
+
 config IWLWIFI_NUM_CHANNELS
 	int "number of supported concurrent channels"
 	range 1 2

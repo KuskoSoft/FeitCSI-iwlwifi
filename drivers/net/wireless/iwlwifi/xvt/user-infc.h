@@ -60,72 +60,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_modparams_h__
-#define __iwl_modparams_h__
 
-#include <linux/types.h>
-#include <linux/spinlock.h>
-#include <linux/gfp.h>
-#include <net/mac80211.h>
+#ifndef __user_infc_h__
+#define __user_infc_h__
 
-extern struct iwl_mod_params iwlwifi_mod_params;
+#include "iwl-tm-gnl.h"
+#include "iwl-tm-infc.h"
+#include "xvt.h"
 
-enum iwl_power_level {
-	IWL_POWER_INDEX_1,
-	IWL_POWER_INDEX_2,
-	IWL_POWER_INDEX_3,
-	IWL_POWER_INDEX_4,
-	IWL_POWER_INDEX_5,
-	IWL_POWER_NUM
-};
-
-enum iwl_disable_11n {
-	IWL_DISABLE_HT_ALL	 = BIT(0),
-	IWL_DISABLE_HT_TXAGG	 = BIT(1),
-	IWL_DISABLE_HT_RXAGG	 = BIT(2),
-	IWL_ENABLE_HT_TXAGG	 = BIT(3),
-};
-
-/**
- * struct iwl_mod_params
- *
- * Holds the module parameters
- *
- * @sw_crypto: using hardware encryption, default = 0
- * @disable_11n: disable 11n capabilities, default = 0,
- *	use IWL_[DIS,EN]ABLE_HT_* constants
- * @amsdu_size_8K: enable 8K amsdu size, default = 0
- * @restart_fw: restart firmware, default = 1
- * @wd_disable: disable stuck queue check, default = 1
- * @bt_coex_active: enable bt coex, default = true
- * @led_mode: system default, default = 0
- * @power_save: disable power save, default = false
- * @power_level: power level, default = 1
- * @debug_level: levels are IWL_DL_*
- * @ant_coupling: antenna coupling in dB, default = 0
- * @xvt_default_mode: xVT is the default operation mode, default = false
- * @fw_monitor: allow to use firmware monitor
+/*
+ * iwl_xvt_user_send_notif masks the usage of iwl-tm-gnl
+ * If there is a need in replacing the interface, it
+ * should be done only here.
  */
-struct iwl_mod_params {
-	int sw_crypto;
-	unsigned int disable_11n;
-	int amsdu_size_8K;
-	bool restart_fw;
-	int  wd_disable;
-	bool bt_coex_active;
-	int led_mode;
-	bool power_save;
-	int power_level;
-#ifdef CPTCFG_IWLWIFI_DEBUG
-	u32 debug_level;
-#endif
-	int ant_coupling;
-#if IS_ENABLED(CPTCFG_IWLXVT)
-	bool xvt_default_mode;
-#endif
-	char *nvm_file;
-	bool uapsd_disable;
-	bool fw_monitor;
-};
+static inline int iwl_xvt_user_send_notif(struct iwl_xvt *xvt, u32 cmd,
+					  void *data, u32 size, gfp_t flags)
+{
+	return iwl_tm_gnl_send_msg(xvt->trans, cmd, false, data, size, flags);
+}
 
-#endif /* #__iwl_modparams_h__ */
+int iwl_xvt_send_user_rx_notif(struct iwl_xvt *xvt,
+			       struct iwl_rx_cmd_buffer *rxb);
+
+int iwl_xvt_user_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
+			     struct iwl_tm_data *data_in,
+			     struct iwl_tm_data *data_out);
+
+#endif
