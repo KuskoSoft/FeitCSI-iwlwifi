@@ -516,7 +516,7 @@ static void iwl_set_hw_address_family_8000(struct device *dev,
 		data->hw_addr[4] = hw_addr[5];
 		data->hw_addr[5] = hw_addr[4];
 
-		if (is_valid_ether_addr(hw_addr))
+		if (is_valid_ether_addr(data->hw_addr))
 			return;
 
 		IWL_ERR_DEV(dev,
