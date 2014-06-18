@@ -2472,7 +2472,7 @@ static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm *mvm,
 
 	/* Handle binding during CSA */
 	if ((vif->type == NL80211_IFTYPE_AP) ||
-	    (switching_chanctx && (vif->type == NL80211_IFTYPE_STATION))) {
+	    (vif->csa_active && (vif->type == NL80211_IFTYPE_STATION))) {
 		iwl_mvm_update_quotas(mvm, NULL);
 		iwl_mvm_mac_ctxt_changed(mvm, vif, false);
 	}
@@ -2541,7 +2541,7 @@ static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm *mvm,
 		mvmvif->ap_ibss_active = false;
 		break;
 	case NL80211_IFTYPE_STATION:
-		if (!switching_chanctx)
+		if (!vif->csa_active)
 			break;
 
 		disabled_vif = vif;
