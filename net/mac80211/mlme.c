@@ -999,8 +999,6 @@ static void ieee80211_chswitch_work(struct work_struct *work)
 	}
 	mutex_unlock(&local->mtx);
 
-	ieee80211_bss_info_change_notify(sdata, changed);
-
 	cfg80211_ch_switch_notify(sdata->dev, &sdata->reserved_chandef);
 
 	ieee80211_sta_reset_beacon_monitor(sdata);
