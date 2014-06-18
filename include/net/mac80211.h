@@ -2843,6 +2843,9 @@ enum ieee80211_roc_type {
  *	count starts as zero or 1, this function will not be called,
  *	since there won't be any time to beacon before the switch
  *	anyway.
+ * @post_channel_switch: This is an optional callback that is called
+ *	after a channel switch procedure is completed, allowing the
+ *	driver to go back to a normal configuration.
  *
  * @join_ibss: Join an IBSS (on an IBSS interface); this is called after all
  *	information in bss_conf is set up and the beacon can be retrieved. A
@@ -3050,6 +3053,9 @@ struct ieee80211_ops {
 	int (*pre_channel_switch)(struct ieee80211_hw *hw,
 				  struct ieee80211_vif *vif,
 				  struct ieee80211_channel_switch *ch_switch);
+
+	int (*post_channel_switch)(struct ieee80211_hw *hw,
+				   struct ieee80211_vif *vif);
 
 	int (*join_ibss)(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
 	void (*leave_ibss)(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
