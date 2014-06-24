@@ -38,4 +38,9 @@ extern int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 			i2c_del_driver)
 #endif
 
+#ifndef I2C_CLIENT_SCCB
+#define I2C_CLIENT_SCCB	0x9000		/* Use Omnivision SCCB protocol */
+					/* Must match I2C_M_STOP|IGNORE_NAK */
+#endif
+
 #endif /* __BACKPORT_LINUX_I2C_H */

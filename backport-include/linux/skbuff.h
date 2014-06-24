@@ -373,4 +373,14 @@ skb_set_hash(struct sk_buff *skb, __u32 hash, enum pkt_hash_types type)
 }
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
+#define __pskb_copy_fclone LINUX_BACKPORT(__pskb_copy_fclone)
+static inline struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb,
+						 int headroom, gfp_t gfp_mask,
+						 bool fclone)
+{
+	return __pskb_copy(skb, headroom, gfp_mask);
+}
+#endif
+
 #endif /* __BACKPORT_SKBUFF_H */

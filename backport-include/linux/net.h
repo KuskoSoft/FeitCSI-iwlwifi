@@ -64,7 +64,7 @@ do {								\
  * may affect tracing. My recommendation is that if you have a need for
  * static keys you just require at least 3.5 to remain sane.
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0) && !defined(net_get_random_once)
 #define __BACKPORT_NET_GET_RANDOM_ONCE 1
 #endif
 #endif /* ___NET_RANDOM_STATIC_KEY_INIT */

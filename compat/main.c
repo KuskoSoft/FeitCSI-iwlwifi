@@ -57,8 +57,6 @@ static int __init backport_init(void)
 	if (ret)
 		return ret;
 
-	dma_buf_init();
-
 	printk(KERN_INFO "Loading modules backported from " BACKPORTED_KERNEL_NAME
 #ifndef BACKPORTS_GIT_TRACKED
 		" version " BACKPORTED_KERNEL_VERSION

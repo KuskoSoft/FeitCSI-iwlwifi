@@ -10,11 +10,13 @@
  * asm-generic/atomic64_t.
  * Detect and handle this here.
  */
-#include <asm/atomic.h>
-
 #if (!defined(ATOMIC64_INIT) && !defined(CONFIG_X86) && !(defined(CONFIG_ARM) && !defined(CONFIG_GENERIC_ATOMIC64)))
 #include <asm-generic/atomic64.h>
 #endif
+#endif
+
+#ifndef smp_mb__after_atomic
+#define smp_mb__after_atomic smp_mb__after_clear_bit
 #endif
 
 #endif /* __BACKPORT_ASM_ATOMIC_H */

@@ -20,4 +20,8 @@
 #define VLAN_PRIO_SHIFT		13
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
+#define __vlan_find_dev_deep_rcu(real_dev, vlan_proto, vlan_id) __vlan_find_dev_deep(real_dev, vlan_proto, vlan_id)
+#endif
+
 #endif /* __BACKPORT_LINUX_IF_VLAN_H_ */

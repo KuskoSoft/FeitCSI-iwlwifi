@@ -12,10 +12,11 @@
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/of.h>
+#include <linux/string.h>
 #include <net/net_namespace.h>
 
-#ifdef CPTCFG_IEEE802154_6LOWPAN
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
+#if IS_ENABLED(CPTCFG_IEEE802154_6LOWPAN)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)
 /* the above kernel dependency is set to match the dependencies file */
 struct netns_ieee802154_lowpan ieee802154_lowpan;
 EXPORT_SYMBOL_GPL(ieee802154_lowpan);
