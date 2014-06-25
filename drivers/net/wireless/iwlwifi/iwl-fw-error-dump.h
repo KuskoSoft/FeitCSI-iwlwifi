@@ -133,12 +133,14 @@ enum iwl_fw_error_dump_family {
 /**
  * struct iwl_fw_error_dump_info - info on the device / firmware
  * @device_family: the family of the device (7 / 8)
+ * @hw_step: the step of the device
  * @fw_human_readable: human readable FW version
  * @dev_human_readable: name of the device
  * @bus_human_readable: name of the bus used
  */
 struct iwl_fw_error_dump_info {
 	__le32 device_family;
+	__le32 hw_step;
 	u8 fw_human_readable[FW_VER_HUMAN_READABLE_SZ];
 	u8 dev_human_readable[64];
 	u8 bus_human_readable[8];
