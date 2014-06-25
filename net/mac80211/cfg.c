@@ -3117,16 +3117,34 @@ static int __ieee80211_csa_finalize(struct ieee80211_sub_if_data *sdata)
 
 	sdata_assert_lock(sdata);
 	lockdep_assert_held(&local->mtx);
+	lockdep_assert_held(&local->chanctx_mtx);
 
-	sdata->radar_required = sdata->csa_radar_required;
-	err = ieee80211_vif_use_reserved_context(sdata);
-	if (err < 0)
-		return err;
+	/*
+	 * using reservation isn't immediate as it may be deferred until later
+	 * with multi-vif. once reservation is complete it will re-schedule the
+	 * work with no reserved_chanctx so verify chandef to check if it
+	 * completed successfully
+	 */
 
-	if (!local->use_chanctx) {
-		local->_oper_chandef = sdata->csa_chandef;
-		ieee80211_hw_config(local, 0);
+	if (sdata->reserved_chanctx) {
+		/*
+		 * with multi-vif csa driver may call ieee80211_csa_finish()
+		 * many times while waiting for other interfaces to use their
+		 * reservations
+		 */
+		if (sdata->reserved_ready)
+			return 0;
+
+		err = ieee80211_vif_use_reserved_context(sdata);
+		if (err)
+			return err;
+
+		return 0;
 	}
+
+	if (!cfg80211_chandef_identical(&sdata->vif.bss_conf.chandef,
+					&sdata->csa_chandef))
+		return -EINVAL;
 
 	sdata->vif.csa_active = false;
 
@@ -3164,6 +3182,7 @@ void ieee80211_csa_finalize_work(struct work_struct *work)
 
 	sdata_lock(sdata);
 	mutex_lock(&local->mtx);
+	mutex_lock(&local->chanctx_mtx);
 
 	/* AP might have been stopped while waiting for the lock. */
 	if (!sdata->vif.csa_active)
@@ -3175,6 +3194,7 @@ void ieee80211_csa_finalize_work(struct work_struct *work)
 	ieee80211_csa_finalize(sdata);
 
 unlock:
+	mutex_unlock(&local->chanctx_mtx);
 	mutex_unlock(&local->mtx);
 	sdata_unlock(sdata);
 }
@@ -3185,10 +3205,8 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 {
 	struct ieee80211_csa_settings csa = {};
 	struct ieee80211_local *local = sdata->local;
-	struct ieee80211_chanctx_conf *chanctx_conf;
-	struct ieee80211_chanctx *chanctx;
 	struct ieee80211_if_mesh __maybe_unused *ifmsh;
-	int err, num_chanctx;
+	int err;
 
 	sdata_assert_lock(sdata);
 	lockdep_assert_held(&local->mtx);
@@ -3209,13 +3227,6 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP:
-		/* todo: should we handle !local->use_chanctx case here?*/
-		err = ieee80211_vif_reserve_chanctx(sdata, &params->chandef,
-						    IEEE80211_CHANCTX_SHARED,
-						    params->radar_required);
-		if (err)
-			return -EBUSY;
-
 		sdata->u.ap.next_beacon =
 			cfg80211_beacon_dup(&params->beacon_after);
 		if (!sdata->u.ap.next_beacon)
@@ -3255,38 +3266,12 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 		err = ieee80211_assign_beacon(sdata, &params->beacon_csa, &csa);
 		if (err < 0) {
 			kfree(sdata->u.ap.next_beacon);
-
-			ieee80211_vif_unreserve_chanctx(sdata);
-
 			return err;
 		}
 		*changed |= err;
 
 		break;
 	case NL80211_IFTYPE_ADHOC:
-		rcu_read_lock();
-		chanctx_conf = rcu_dereference(sdata->vif.chanctx_conf);
-		if (!chanctx_conf) {
-			rcu_read_unlock();
-			return -EBUSY;
-		}
-
-		/* don't handle for multi-VIF cases */
-		chanctx = container_of(chanctx_conf, struct ieee80211_chanctx,
-				       conf);
-
-		if (ieee80211_chanctx_refcount(local, chanctx) > 1) {
-			rcu_read_unlock();
-			return -EBUSY;
-		}
-		num_chanctx = 0;
-		list_for_each_entry_rcu(chanctx, &local->chanctx_list, list)
-			num_chanctx++;
-		rcu_read_unlock();
-
-		if (num_chanctx > 1)
-			return -EBUSY;
-
 		if (!sdata->vif.bss_conf.ibss_joined)
 			return -EINVAL;
 
@@ -3326,13 +3311,6 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 #ifdef CPTCFG_MAC80211_MESH
 	case NL80211_IFTYPE_MESH_POINT: {
 		struct ieee80211_if_mesh *ifmsh = &sdata->u.mesh;
-
-		/*
-		 * TODO: mesh CSA implementation doesn't look correct now,
-		 * so disable it meanwhile.
-		 */
-		if (true)
-			return -EOPNOTSUPP;
 
 		ifmsh = &sdata->u.mesh;
 
@@ -3382,6 +3360,8 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_channel_switch ch_switch;
+	struct ieee80211_chanctx_conf *conf;
+	struct ieee80211_chanctx *chanctx;
 	int err, changed = 0;
 
 	sdata_assert_lock(sdata);
@@ -3401,20 +3381,48 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	if (sdata->vif.csa_active)
 		return -EBUSY;
 
+	mutex_lock(&local->chanctx_mtx);
+	conf = rcu_dereference_protected(sdata->vif.chanctx_conf,
+					 lockdep_is_held(&local->chanctx_mtx));
+	if (!conf) {
+		err = -EBUSY;
+		goto out;
+	}
+
 	ch_switch.timestamp = 0;
 	ch_switch.block_tx = params->block_tx;
 	ch_switch.chandef = params->chandef;
 	ch_switch.count = params->count;
 
+	chanctx = container_of(conf, struct ieee80211_chanctx, conf);
+	if (!chanctx) {
+		err = -EBUSY;
+		goto out;
+	}
+
 	err = drv_pre_channel_switch(sdata, &ch_switch);
 	if (err)
 		return err;
 
-	err = ieee80211_set_csa_beacon(sdata, params, &changed);
+	err = ieee80211_vif_reserve_chanctx(sdata, &params->chandef,
+					    chanctx->mode,
+					    params->radar_required);
 	if (err)
-		return err;
+		goto out;
 
-	sdata->csa_radar_required = params->radar_required;
+	/* if reservation is invalid then this will fail */
+	err = ieee80211_check_combinations(sdata, NULL, chanctx->mode, 0);
+	if (err) {
+		ieee80211_vif_unreserve_chanctx(sdata);
+		goto out;
+	}
+
+	err = ieee80211_set_csa_beacon(sdata, params, &changed);
+	if (err) {
+		ieee80211_vif_unreserve_chanctx(sdata);
+		goto out;
+	}
+
 	sdata->csa_chandef = params->chandef;
 	sdata->csa_block_tx = params->block_tx;
 	sdata->vif.csa_active = true;
@@ -3433,7 +3441,9 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 		ieee80211_csa_finalize(sdata);
 	}
 
-	return 0;
+out:
+	mutex_unlock(&local->chanctx_mtx);
+	return err;
 }
 
 int ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
