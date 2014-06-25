@@ -3119,7 +3119,7 @@ static int __ieee80211_csa_finalize(struct ieee80211_sub_if_data *sdata)
 	lockdep_assert_held(&local->mtx);
 
 	sdata->radar_required = sdata->csa_radar_required;
-	err = ieee80211_vif_use_reserved_context(sdata, &changed);
+	err = ieee80211_vif_use_reserved_context(sdata);
 	if (err < 0)
 		return err;
 

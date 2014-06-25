@@ -973,7 +973,7 @@ static void ieee80211_chswitch_work(struct work_struct *work)
 			local->hw.conf.chandef = local->_oper_chandef;
 	} else {
 		mutex_lock(&local->mtx);
-		ret = ieee80211_vif_use_reserved_context(sdata, &changed);
+		ret = ieee80211_vif_use_reserved_context(sdata);
 		mutex_unlock(&local->mtx);
 		if (ret) {
 			sdata_info(sdata,
