@@ -4460,8 +4460,6 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 			const struct ieee80211_tim_ie *tim;
 			tim = (void *)(tim_ie + 2);
 			ifmgd->dtim_period = tim->dtim_period;
-			sdata->vif.bss_conf.dtim_period =
-				ifmgd->dtim_period ? : 1;
 			dtim_count = tim->dtim_count;
 		}
 		ifmgd->have_beacon = true;
