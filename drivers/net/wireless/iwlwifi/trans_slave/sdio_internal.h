@@ -133,6 +133,16 @@ struct iwl_sdio_txq {
 };
 
 /*
+ * struct iwl_sdio_plat_data - sdio OOB irq platform data
+ * @gpio: gpio used for OOB interrupt
+ * @irq: the actual irq (e.g. mapped from the gpio) used for OOB interrupt.
+ */
+struct iwl_sdio_plat_data {
+	int gpio;
+	int irq;
+};
+
+/*
  * SDIO specific transport structure.
  *
  * @bc_table_dword: true if the BC table expects DWORD (as opposed to bytes)
@@ -184,6 +194,8 @@ struct iwl_trans_sdio {
 	bool rx_buf_size_8k;
 	bool bc_table_dword;
 	const char *const *command_names;
+
+	struct iwl_sdio_plat_data plat_data;
 
 	/* Debug variables */
 	bool print_rx_hex_dump;

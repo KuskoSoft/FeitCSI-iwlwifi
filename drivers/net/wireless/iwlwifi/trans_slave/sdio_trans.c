@@ -69,6 +69,8 @@
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
 #include <linux/mmc/sdhci.h>
+#include <linux/gpio.h>
+#include <linux/platform_device.h>
 
 #include "sdio_internal.h"
 #include "sdio_tx.h"
@@ -1900,6 +1902,140 @@ exit_err:
 }
 
 /*
+ * Use static pointer to pass our trans to the platform driver.
+ * This means we won't be able to have more than one such
+ * platform device, which seems correct anyway (we can't really
+ * tell what platform device correlates to each card).
+ * TODO: is there any better way to do it?
+ */
+static struct iwl_trans *iwl_sdio_plat_trans;
+
+static irqreturn_t sdio_irq_handler(int irq, void *data)
+{
+	struct iwl_trans *trans = (struct iwl_trans *)data;
+
+	IWL_DEBUG_ISR(trans, "IRQ handler\n");
+
+	iwl_trans_slv_ref(trans);
+	iwl_trans_slv_unref(trans);
+
+	return IRQ_WAKE_THREAD;
+}
+
+static irqreturn_t sdio_irq_thread(int irq, void *data)
+{
+	struct iwl_trans *trans = (struct iwl_trans *)data;
+
+	IWL_DEBUG_ISR(trans, "IRQ thread was called\n");
+
+	iwl_write_direct32(trans, CSR_SDIO_WAKE, 1);
+
+	return IRQ_HANDLED;
+}
+
+static int iwl_setup_wifi_gpio(struct iwl_trans *trans, int gpio)
+{
+	int ret;
+
+	ret = gpio_request(gpio, "wifi_gpio");
+	if (ret < 0) {
+		IWL_ERR(trans, "Unable to request gpio %d\n", gpio);
+		return ret;
+	}
+
+	ret = gpio_direction_input(gpio);
+	if (ret < 0) {
+		IWL_ERR(trans, "Unable to set direction for gpio %d\n", gpio);
+		gpio_free(gpio);
+	}
+
+	return ret;
+}
+
+static int iwl_setup_oob_irq(struct iwl_trans *trans, int gpio)
+{
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	int wlan_irq, ret;
+
+	/* request gpio and set its direction */
+	ret = iwl_setup_wifi_gpio(trans, gpio);
+	if (ret)
+		return ret;
+
+	wlan_irq = gpio_to_irq(gpio);
+	if (wlan_irq < 0) {
+		IWL_ERR(trans, "Error getting irq from gpio %d\n", gpio);
+		ret = wlan_irq;
+		goto free_gpio;
+	}
+
+	IWL_DEBUG_INFO(trans, "request irq %d\n", wlan_irq);
+	ret = request_threaded_irq(wlan_irq, sdio_irq_handler,
+				   sdio_irq_thread,
+				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				   DRV_NAME, trans);
+	if (ret)
+		goto free_gpio;
+
+	trans_sdio->plat_data.irq = wlan_irq;
+	return 0;
+
+free_gpio:
+	gpio_free(gpio);
+	return ret;
+}
+
+static int iwlwifi_plat_probe(struct platform_device *pdev)
+{
+	struct iwl_trans *trans = iwl_sdio_plat_trans;
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	int wlan_gpio, ret;
+
+	/*
+	 * The "wlan_irq" name is misleading - the resource
+	 * actually describes the wlan gpio!
+	 */
+	wlan_gpio = platform_get_irq_byname(pdev, "wlan_irq");
+	if (wlan_gpio < 0)
+		return wlan_gpio;
+
+	IWL_DEBUG_INFO(trans, "wlan_gpio=%d\n", wlan_gpio);
+
+	ret = iwl_setup_oob_irq(trans, wlan_gpio);
+	if (ret) {
+		IWL_ERR(trans, "Failed setting oob irq\n");
+		return ret;
+	}
+
+	trans_sdio->plat_data.gpio = wlan_gpio;
+	platform_set_drvdata(pdev, trans);
+
+	return ret;
+}
+
+static int iwlwifi_plat_remove(struct platform_device *pdev)
+{
+	struct iwl_trans *trans = platform_get_drvdata(pdev);
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+
+	IWL_DEBUG_INFO(trans, "remove OOB IRQ\n");
+
+	gpio_free(trans_sdio->plat_data.gpio);
+	free_irq(trans_sdio->plat_data.irq, trans);
+
+	return 0;
+}
+
+static struct platform_driver iwlwifi_plat_driver = {
+	.probe		= iwlwifi_plat_probe,
+	.remove		= iwlwifi_plat_remove,
+	.driver = {
+		.name	= "wlan",
+		.owner	= THIS_MODULE,
+	}
+};
+
+/*
  * SDIO start fw.
  * Performs fw download.
  */
@@ -1914,9 +2050,24 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 	if (ret)
 		goto exit_err;
 
+	/* verify we have only a single trans */
+	if (WARN_ON(iwl_sdio_plat_trans))
+		goto free_slv;
+
+	/* set the global plat_trans. make sure to clear on failure */
+	iwl_sdio_plat_trans = trans;
+
+	/* register the platform driver (used to extract the OOB irq info) */
+	ret = platform_driver_register(&iwlwifi_plat_driver);
+	if (ret) {
+		IWL_ERR(trans, "Failed registering iwlwifi plat driver, %d\n",
+			ret);
+		goto clear_plat;
+	}
+
 	ret = iwl_sdio_tx_init(trans);
 	if (ret)
-		goto free_slv;
+		goto free_plat;
 
 	/* Claim Host */
 	mutex_lock(&trans_sdio->target_access_mtx);
@@ -1976,6 +2127,10 @@ free_tx:
 	mutex_unlock(&trans_sdio->target_access_mtx);
 	iwl_sdio_tx_free(trans);
 
+free_plat:
+	platform_driver_unregister(&iwlwifi_plat_driver);
+clear_plat:
+	iwl_sdio_plat_trans = NULL;
 free_slv:
 	iwl_slv_free(trans);
 
@@ -2104,6 +2259,8 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans)
 		iwl_slv_tx_stop(trans);
 		iwl_sdio_tx_stop(trans);
 
+		platform_driver_unregister(&iwlwifi_plat_driver);
+		iwl_sdio_plat_trans = NULL;
 		iwl_slv_free(trans);
 		iwl_sdio_tx_free(trans);
 	}
