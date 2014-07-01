@@ -461,6 +461,10 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 			       NL80211_FEATURE_LOW_PRIORITY_SCAN |
 			       NL80211_FEATURE_P2P_GO_OPPPS;
 
+	if (mvm->fw->ucode_capa.capa[0] &
+	    IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT)
+		hw->wiphy->features |= NL80211_FEATURE_TX_POWER_INSERTION;
+
 	if (iwl_mvm_is_lar_supported(mvm)) {
 		hw->wiphy->get_regd = iwl_mvm_get_regdomain;
 		hw->wiphy->features |= NL80211_FEATURE_CELL_BASE_REG_HINTS;

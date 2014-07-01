@@ -145,6 +145,7 @@ enum iwl_ucode_tlv_api {
 enum iwl_ucode_tlv_capa {
 	IWL_UCODE_TLV_CAPA_D0I3_SUPPORT		= BIT(0),
 	IWL_UCODE_TLV_CAPA_LAR_SUPPORT		= BIT(1),
+	IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT = BIT(8),
 };
 
 /* The default calibrate table size if not specified by firmware file */
