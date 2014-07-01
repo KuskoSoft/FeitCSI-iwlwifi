@@ -482,7 +482,7 @@ int ieee80211_key_link(struct ieee80211_key *key,
 	int idx, ret;
 	bool pairwise;
 
-	if (WARN_ON(!sdata || !key))
+	if (WARN_ON(!key))
 		return -EINVAL;
 
 	pairwise = key->conf.flags & IEEE80211_KEY_FLAG_PAIRWISE;
