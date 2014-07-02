@@ -76,6 +76,14 @@
 
 static void iwl_dnt_dev_if_configure_mipi(struct iwl_trans *trans)
 {
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
+		iwl_trans_set_bits_mask(trans,
+					trans->dbg_cfg.dbg_mipi_conf_reg,
+					trans->dbg_cfg.dbg_mipi_conf_mask,
+					trans->dbg_cfg.dbg_mipi_conf_mask);
+		return;
+	}
+
 	/* ABB_CguDTClkCtrl - set system trace and mtm clock souce as PLLA */
 	iowrite32(0x30303, (void __iomem *)0xe640110c);
 
@@ -140,13 +148,6 @@ static void iwl_dnt_dev_if_configure_dbgc_registers(struct iwl_trans *trans,
 	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 
 	switch (trans->tmdev->dnt->cur_mon_type) {
-	case MIPI:
-		iwl_write_prph(trans, cfg->dbgc_hb_base_addr,
-			       cfg->dbgc_hb_base_val_mipi);
-		iwl_write_prph(trans, cfg->dbgc_hb_end_addr,
-			       cfg->dbgc_hb_end_val_mipi);
-		break;
-
 	case SMEM:
 		iwl_write_prph(trans, cfg->dbgc_hb_base_addr,
 			       cfg->dbgc_hb_base_val_smem);
@@ -356,11 +357,8 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 							end_addr);
 		break;
 	case MIPI:
-		/* If not working with DBGC... */
-		if (trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) {
-			iwl_dnt_dev_if_configure_mipi(trans);
-			break;
-		}
+		iwl_dnt_dev_if_configure_mipi(trans);
+		break;
 	case SMEM:
 		base_addr = 0;
 		end_addr = 0;
