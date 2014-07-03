@@ -141,6 +141,68 @@ static void iwl_pcie_alloc_fw_monitor(struct iwl_trans *trans)
 	trans_pcie->fw_mon_size = size;
 }
 
+static void iwl_pcie_free_fw_monitor(struct iwl_trans *trans)
+{
+	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+
+	if (!trans_pcie->fw_mon_page)
+		return;
+
+	dma_unmap_page(trans->dev, trans_pcie->fw_mon_phys,
+		       trans_pcie->fw_mon_size, DMA_FROM_DEVICE);
+	__free_pages(trans_pcie->fw_mon_page,
+		     get_order(trans_pcie->fw_mon_size));
+	trans_pcie->fw_mon_page = NULL;
+	trans_pcie->fw_mon_phys = 0;
+	trans_pcie->fw_mon_size = 0;
+}
+
+static void iwl_pcie_alloc_fw_monitor(struct iwl_trans *trans)
+{
+	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+	struct page *page;
+	dma_addr_t phys;
+	u32 size;
+	u8 power;
+
+	if (trans_pcie->fw_mon_page) {
+		dma_sync_single_for_device(trans->dev, trans_pcie->fw_mon_phys,
+					   trans_pcie->fw_mon_size,
+					   DMA_FROM_DEVICE);
+		return;
+	}
+
+	phys = 0;
+	for (power = 26; power >= 11; power--) {
+		int order;
+
+		size = BIT(power);
+		order = get_order(size);
+		page = alloc_pages(__GFP_COMP | __GFP_NOWARN | __GFP_ZERO,
+				   order);
+		if (!page)
+			continue;
+
+		phys = dma_map_page(trans->dev, page, 0, PAGE_SIZE << order,
+				    DMA_FROM_DEVICE);
+		if (dma_mapping_error(trans->dev, phys)) {
+			__free_pages(page, order);
+			continue;
+		}
+		IWL_INFO(trans,
+			 "Allocated 0x%08x bytes (order %d) for firmware monitor.\n",
+			 size, order);
+		break;
+	}
+
+	if (!page)
+		return;
+
+	trans_pcie->fw_mon_page = page;
+	trans_pcie->fw_mon_phys = phys;
+	trans_pcie->fw_mon_size = size;
+}
+
 static u32 iwl_trans_pcie_read_shr(struct iwl_trans *trans, u32 reg)
 {
 	iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_CTRL_REG,
@@ -1579,10 +1641,12 @@ static ssize_t iwl_dbgfs_tx_queue_read(struct file *file,
 		txq = &trans_pcie->txq[cnt];
 		q = &txq->q;
 		pos += scnprintf(buf + pos, bufsz - pos,
-				"hwq %.2d: read=%u write=%u use=%d stop=%d\n",
+				"hwq %.2d: read=%u write=%u use=%d stop=%d need_update=%d%s\n",
 				cnt, q->read_ptr, q->write_ptr,
 				!!test_bit(cnt, trans_pcie->queue_used),
-				!!test_bit(cnt, trans_pcie->queue_stopped));
+				 !!test_bit(cnt, trans_pcie->queue_stopped),
+				 txq->need_update,
+				 (cnt == trans_pcie->cmd_queue ? " HCMD" : ""));
 	}
 	ret = simple_read_from_buffer(user_buf, count, ppos, buf, pos);
 	kfree(buf);
@@ -1604,6 +1668,10 @@ static ssize_t iwl_dbgfs_rx_queue_read(struct file *file,
 						rxq->read);
 	pos += scnprintf(buf + pos, bufsz - pos, "write: %u\n",
 						rxq->write);
+	pos += scnprintf(buf + pos, bufsz - pos, "write_actual: %u\n",
+						rxq->write_actual);
+	pos += scnprintf(buf + pos, bufsz - pos, "need_update: %d\n",
+						rxq->need_update);
 	pos += scnprintf(buf + pos, bufsz - pos, "free_count: %u\n",
 						rxq->free_count);
 	if (rxq->rb_stts) {

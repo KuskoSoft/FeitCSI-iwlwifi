@@ -304,6 +304,45 @@ static int iwl_init_channel_map(struct device *dev, const struct iwl_cfg *cfg,
 			ieee80211_channel_to_frequency(
 				channel->hw_value, channel->band);
 
+		/* TODO: Need to be dependent to the NVM */
+		channel->flags = IEEE80211_CHAN_NO_HT40;
+		if (ch_idx < num_2ghz_channels &&
+		    (ch_flags & NVM_CHANNEL_40MHZ)) {
+			if (nvm_chan[ch_idx] <= LAST_2GHZ_HT_PLUS)
+				channel->flags &= ~IEEE80211_CHAN_NO_HT40PLUS;
+			if (nvm_chan[ch_idx] >= FIRST_2GHZ_HT_MINUS)
+				channel->flags &= ~IEEE80211_CHAN_NO_HT40MINUS;
+		} else if (nvm_chan[ch_idx] <= LAST_5GHZ_HT &&
+			   (ch_flags & NVM_CHANNEL_40MHZ)) {
+			if ((ch_idx - num_2ghz_channels) % 2 == 0)
+				channel->flags &= ~IEEE80211_CHAN_NO_HT40PLUS;
+			else
+				channel->flags &= ~IEEE80211_CHAN_NO_HT40MINUS;
+		}
+		if (!(ch_flags & NVM_CHANNEL_80MHZ))
+			channel->flags |= IEEE80211_CHAN_NO_80MHZ;
+		if (!(ch_flags & NVM_CHANNEL_160MHZ))
+			channel->flags |= IEEE80211_CHAN_NO_160MHZ;
+
+		if (!(ch_flags & NVM_CHANNEL_IBSS))
+			channel->flags |= IEEE80211_CHAN_NO_IR;
+
+		if (!(ch_flags & NVM_CHANNEL_ACTIVE))
+			channel->flags |= IEEE80211_CHAN_NO_IR;
+
+		if (ch_flags & NVM_CHANNEL_RADAR)
+			channel->flags |= IEEE80211_CHAN_RADAR;
+
+		if (ch_flags & NVM_CHANNEL_INDOOR_ONLY)
+			channel->flags |= IEEE80211_CHAN_INDOOR_ONLY;
+
+		/* Set the GO concurrent flag only in case that NO_IR is set.
+		 * Otherwise it is meaningless
+		 */
+		if ((ch_flags & NVM_CHANNEL_GO_CONCURRENT) &&
+		    (channel->flags & IEEE80211_CHAN_NO_IR))
+			channel->flags |= IEEE80211_CHAN_GO_CONCURRENT;
+
 		/* Initialize regulatory-based run-time data */
 
 		/*

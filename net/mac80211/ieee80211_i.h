@@ -1922,6 +1922,8 @@ int ieee80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 			const u8 *peer, enum nl80211_tdls_operation oper);
 void ieee80211_tdls_peer_del_work(struct work_struct *wk);
 
+extern const struct ethtool_ops ieee80211_ethtool_ops;
+
 #ifdef CPTCFG_MAC80211_NOINLINE
 #define debug_noinline noinline
 #else
@@ -1929,3 +1931,4 @@ void ieee80211_tdls_peer_del_work(struct work_struct *wk);
 #endif
 
 #endif /* IEEE80211_I_H */
+void ieee80211_tdls_peer_del_work(struct work_struct *wk);

@@ -1264,6 +1264,24 @@ int iwl_mvm_rx_beacon_notif(struct iwl_mvm *mvm,
 		     mvm->ap_last_beacon_gp2,
 		     le32_to_cpu(beacon_notify_hdr->initial_rate));
 
+		beacon_notify_hdr = &beacon->beacon_notify_hdr;
+		tsf = le64_to_cpu(beacon->tsf);
+		mvm->ap_last_beacon_gp2 = le32_to_cpu(beacon->gp2);
+	} else {
+		struct iwl_beacon_notif *beacon = (void *)pkt->data;
+
+		beacon_notify_hdr = &beacon->beacon_notify_hdr;
+		tsf = le64_to_cpu(beacon->tsf);
+	}
+
+	IWL_DEBUG_RX(mvm,
+		     "beacon status %#x retries:%d tsf:0x%16llX gp2:0x%X rate:%d\n",
+		     le16_to_cpu(beacon_notify_hdr->status.status) &
+								TX_STATUS_MSK,
+		     beacon_notify_hdr->failure_frame, tsf,
+		     mvm->ap_last_beacon_gp2,
+		     le32_to_cpu(beacon_notify_hdr->initial_rate));
+
 	csa_vif = rcu_dereference_protected(mvm->csa_vif,
 					    lockdep_is_held(&mvm->mutex));
 	if (unlikely(csa_vif && csa_vif->csa_active))

@@ -1948,6 +1948,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_MAX_CSA_COUNTERS,
 	NL80211_ATTR_TDLS_INITIATOR,
 
+	NL80211_ATTR_TDLS_INITIATOR,
+
 	/* add attributes here, update the policy in nl80211.c */
 
 	__NL80211_ATTR_AFTER_LAST,
