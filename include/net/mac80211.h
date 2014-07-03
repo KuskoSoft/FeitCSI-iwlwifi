@@ -1767,7 +1767,7 @@ struct ieee80211_hw {
 };
 
 /**
- * struct ieee80211_scan_request - hw scan request
+ * ieee80211_scan_request - hw scan request
  *
  * @ies: pointers different parts of IEs (in req.ie)
  * @req: cfg80211 request.

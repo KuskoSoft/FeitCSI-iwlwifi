@@ -1128,9 +1128,6 @@ u16 iwl_mvm_coex_agg_time_limit(struct iwl_mvm *mvm,
 		return LINK_QUAL_AGG_TIME_LIMIT_DEF;
 */
 
-	if (mvm->last_bt_notif.ttc_enabled)
-		return LINK_QUAL_AGG_TIME_LIMIT_DEF;
-
 	lut_type = iwl_get_coex_type(mvm, mvmsta->vif);
 
 	if (lut_type == BT_COEX_LOOSE_LUT || lut_type == BT_COEX_INVALID_LUT)

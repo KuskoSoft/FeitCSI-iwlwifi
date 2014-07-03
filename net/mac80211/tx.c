@@ -1621,12 +1621,12 @@ netdev_tx_t ieee80211_monitor_start_xmit(struct sk_buff *skb,
 {
 	struct ieee80211_local *local = wdev_priv(dev->ieee80211_ptr);
 	struct ieee80211_chanctx_conf *chanctx_conf;
+	struct ieee80211_channel *chan;
 	struct ieee80211_radiotap_header *prthdr =
 		(struct ieee80211_radiotap_header *)skb->data;
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct ieee80211_hdr *hdr;
 	struct ieee80211_sub_if_data *tmp_sdata, *sdata;
-	struct cfg80211_chan_def *chandef;
 	u16 len_rthdr;
 	int hdrlen;
 
@@ -1724,9 +1724,9 @@ netdev_tx_t ieee80211_monitor_start_xmit(struct sk_buff *skb,
 	}
 
 	if (chanctx_conf)
-		chandef = &chanctx_conf->def;
+		chan = chanctx_conf->def.chan;
 	else if (!local->use_chanctx)
-		chandef = &local->_oper_chandef;
+		chan = local->_oper_chandef.chan;
 	else
 		goto fail_rcu;
 
@@ -1746,11 +1746,10 @@ netdev_tx_t ieee80211_monitor_start_xmit(struct sk_buff *skb,
 	 * radar detection by itself. We can do that later by adding a
 	 * monitor flag interfaces used for AP support.
 	 */
-	if (!cfg80211_reg_can_beacon(local->hw.wiphy, chandef,
-				     sdata->vif.type))
+	if ((chan->flags & (IEEE80211_CHAN_NO_IR | IEEE80211_CHAN_RADAR)))
 		goto fail_rcu;
 
-	ieee80211_xmit(sdata, skb, chandef->chan->band);
+	ieee80211_xmit(sdata, skb, chan->band);
 	rcu_read_unlock();
 
 	return NETDEV_TX_OK;
@@ -1772,6 +1771,7 @@ fail:
 static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
 					      struct sk_buff *skb)
 {
+	struct timespec skb_arv;
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
 
@@ -1779,7 +1779,9 @@ static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
 	tx_consec = rcu_dereference(local->tx_consec);
 	if (!tx_latency && !tx_consec)
 		return;
-	skb->tstamp = ktime_get();
+
+	ktime_get_ts(&skb_arv);
+	skb->tstamp = ktime_set(skb_arv.tv_sec, skb_arv.tv_nsec);
 }
 
 /**

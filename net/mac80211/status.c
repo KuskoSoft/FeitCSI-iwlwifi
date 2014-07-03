@@ -586,6 +586,8 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 					      struct ieee80211_hdr *hdr,
 					      int pkt_loss, bool send_fail)
 {
+	ktime_t skb_dprt;
+	struct timespec dprt_time;
 	u32 msrmnt;
 	u16 tid;
 	u8 *qc;
@@ -617,8 +619,9 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 		tid = 0;
 	}
 
-	/* Calculate the latency */
-	msrmnt = ktime_to_ms(ktime_sub(ktime_get(), skb_arv));
+	ktime_get_ts(&dprt_time); /* time stamp completion time */
+	skb_dprt = ktime_set(dprt_time.tv_sec, dprt_time.tv_nsec);
+	msrmnt = ktime_to_ms(ktime_sub(skb_dprt, skb_arv));
 
 	/* update statistic regarding consecutive lost packets */
 	tx_consec_loss_msrmnt(tx_consec, sta, tid, msrmnt, pkt_loss,

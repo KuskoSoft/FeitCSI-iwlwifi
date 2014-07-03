@@ -551,30 +551,11 @@ static void mesh_plink_timer(unsigned long data)
 		return;
 
 	spin_lock_bh(&sta->lock);
-
-	/* If a timer fires just before a state transition on another CPU,
-	 * we may have already extended the timeout and changed state by the
-	 * time we've acquired the lock and arrived  here.  In that case,
-	 * skip this timer and wait for the new one.
-	 */
-	if (time_before(jiffies, sta->plink_timer.expires)) {
-		mpl_dbg(sta->sdata,
-			"Ignoring timer for %pM in state %s (timer adjusted)",
-			sta->sta.addr, mplstates[sta->plink_state]);
+	if (sta->ignore_plink_timer) {
+		sta->ignore_plink_timer = false;
 		spin_unlock_bh(&sta->lock);
 		return;
 	}
-
-	/* del_timer() and handler may race when entering these states */
-	if (sta->plink_state == NL80211_PLINK_LISTEN ||
-	    sta->plink_state == NL80211_PLINK_ESTAB) {
-		mpl_dbg(sta->sdata,
-			"Ignoring timer for %pM in state %s (timer deleted)",
-			sta->sta.addr, mplstates[sta->plink_state]);
-		spin_unlock_bh(&sta->lock);
-		return;
-	}
-
 	mpl_dbg(sta->sdata,
 		"Mesh plink timer for %pM fired on state %s\n",
 		sta->sta.addr, mplstates[sta->plink_state]);
@@ -792,7 +773,9 @@ static u32 mesh_plink_fsm(struct ieee80211_sub_if_data *sdata,
 			break;
 		case CNF_ACPT:
 			sta->plink_state = NL80211_PLINK_CNF_RCVD;
-			mod_plink_timer(sta, mshcfg->dot11MeshConfirmTimeout);
+			if (!mod_plink_timer(sta,
+					     mshcfg->dot11MeshConfirmTimeout))
+				sta->ignore_plink_timer = true;
 			break;
 		default:
 			break;
@@ -851,7 +834,8 @@ static u32 mesh_plink_fsm(struct ieee80211_sub_if_data *sdata,
 	case NL80211_PLINK_HOLDING:
 		switch (event) {
 		case CLS_ACPT:
-			del_timer(&sta->plink_timer);
+			if (del_timer(&sta->plink_timer))
+				sta->ignore_plink_timer = 1;
 			mesh_plink_fsm_restart(sta);
 			break;
 		case OPN_ACPT:
