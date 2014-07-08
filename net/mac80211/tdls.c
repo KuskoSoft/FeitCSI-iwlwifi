@@ -497,9 +497,8 @@ ieee80211_tdls_mgmt_teardown(struct wiphy *wiphy, struct net_device *dev,
 	 * During teardown, we prevent direct transmissions by stopping the
 	 * queues and flushing all direct packets.
 	 */
-	ieee80211_stop_queues_by_reason(&local->hw,
-			IEEE80211_MAX_QUEUE_MAP,
-			IEEE80211_QUEUE_STOP_REASON_TDLS_TEARDOWN, false);
+	ieee80211_stop_vif_queues(local, sdata,
+				  IEEE80211_QUEUE_STOP_REASON_TDLS_TEARDOWN);
 	ieee80211_flush_queues(local, sdata);
 
 	ret = ieee80211_tdls_prep_mgmt_packet(wiphy, dev, peer, action_code,
@@ -520,9 +519,8 @@ ieee80211_tdls_mgmt_teardown(struct wiphy *wiphy, struct net_device *dev,
 		clear_sta_flag(sta, WLAN_STA_TDLS_PEER_AUTH);
 	rcu_read_unlock();
 
-	ieee80211_wake_queues_by_reason(&local->hw,
-			IEEE80211_MAX_QUEUE_MAP,
-			IEEE80211_QUEUE_STOP_REASON_TDLS_TEARDOWN, false);
+	ieee80211_wake_vif_queues(local, sdata,
+				  IEEE80211_QUEUE_STOP_REASON_TDLS_TEARDOWN);
 
 	return 0;
 }
