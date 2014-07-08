@@ -1842,3 +1842,17 @@ void iwl_trans_slv_unref(struct iwl_trans *trans)
 	pm_runtime_put_autosuspend(trans_slv->d0i3_dev);
 #endif
 }
+
+void iwl_trans_slv_suspend(struct iwl_trans *trans)
+{
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+
+	trans_slv->wowlan_enabled = true;
+}
+
+void iwl_trans_slv_resume(struct iwl_trans *trans)
+{
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+
+	trans_slv->wowlan_enabled = false;
+}

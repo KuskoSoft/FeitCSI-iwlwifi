@@ -175,6 +175,7 @@ enum iwl_slv_rpm_flags {
  * @rpm_suspend_work	rpm suspend work
  * @suspended		indicate whether the bus is suspended
  * @rpm_config		rpm configuration
+ * @wowlan_enabled	wowlan is enabled
  */
 struct iwl_trans_slv {
 	struct iwl_slv_tx_queue *txqs;
@@ -198,6 +199,8 @@ struct iwl_trans_slv {
 
 	struct device *d0i3_dev;
 	wait_queue_head_t d0i3_waitq;
+
+	bool wowlan_enabled;
 
 #ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	/* protects rpm data (refcount, suspended) */
@@ -416,6 +419,8 @@ int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans,
 				 struct dentry *dir);
 void iwl_trans_slv_ref(struct iwl_trans *trans);
 void iwl_trans_slv_unref(struct iwl_trans *trans);
+void iwl_trans_slv_suspend(struct iwl_trans *trans);
+void iwl_trans_slv_resume(struct iwl_trans *trans);
 int iwl_slv_get_next_queue(struct iwl_trans_slv *trans_slv);
 /* mini runtime pm */
 #ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME

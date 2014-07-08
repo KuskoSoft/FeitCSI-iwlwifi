@@ -2342,6 +2342,8 @@ static const struct iwl_trans_ops trans_ops_sdio = {
 
 	.ref = iwl_trans_slv_ref,
 	.unref = iwl_trans_slv_unref,
+	.suspend = iwl_trans_slv_suspend,
+	.resume = iwl_trans_slv_resume,
 	.test_mode_cmd = iwl_trans_sdio_test_mode_cmd,
 };
 

@@ -66,6 +66,7 @@
 #include <linux/module.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
+#include <linux/mmc/host.h>
 #include <linux/pm_runtime.h>
 
 #ifdef CONFIG_X86_MRFLD
@@ -101,6 +102,47 @@ static const struct sdio_device_id iwl_sdio_device_ids[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(sdio, iwl_sdio_device_ids);
+
+#ifdef CONFIG_PM_SLEEP
+/*
+ * Suspend flow function for SDIO.
+ *
+ * @dev - Device to suspend.
+ */
+static int iwl_sdio_suspend(struct device *dev)
+{
+	struct sdio_func *func = dev_to_sdio_func(dev);
+	struct iwl_trans *trans = sdio_get_drvdata(func);
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+	int ret;
+
+	if (trans_slv->wowlan_enabled) {
+		ret = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
+		if (ret) {
+			IWL_WARN_DEV(dev, "Unable to set MMC_PM_KEEP_POWER\n");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Resume flow function for SDIO.
+ *
+ * @dev - Device to resume.
+ */
+static int iwl_sdio_resume(struct device *dev)
+{
+	struct sdio_func *func = dev_to_sdio_func(dev);
+	struct mmc_host *host;
+
+	host = func->card->host;
+	host->pm_flags &= ~MMC_PM_KEEP_POWER;
+
+	return 0;
+}
+#endif
 
 /*
  * Probe flow function for SDIO.
@@ -188,11 +230,24 @@ static void iwl_sdio_remove(struct sdio_func *func)
  * iwl sdio driver
  * API to sdio bus driver stack.
  */
+
+#ifdef CONFIG_PM_SLEEP
+static const struct dev_pm_ops iwl_pm_ops = {
+	.suspend	= iwl_sdio_suspend,
+	.resume		= iwl_sdio_resume,
+};
+#endif
+
 static struct sdio_driver iwl_sdio_driver = {
 	.name = INTEL_SDIO_DRIVER_NAME,
 	.probe = iwl_sdio_probe,
 	.remove = iwl_sdio_remove,
 	.id_table = iwl_sdio_device_ids,
+	.drv = {
+#ifdef CONFIG_PM_SLEEP
+	.pm     = &iwl_pm_ops,
+#endif
+	},
 };
 
 #ifdef CONFIG_X86_MRFLD
