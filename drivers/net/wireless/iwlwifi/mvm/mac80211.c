@@ -468,6 +468,15 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	    IWL_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT)
 		hw->wiphy->features |= NL80211_FEATURE_QUIET;
 
+	if (mvm->fw->ucode_capa.capa[0] &
+	    IWL_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT)
+		hw->wiphy->features |=
+			NL80211_FEATURE_DS_PARAM_SET_IE_IN_PROBES;
+
+	if (mvm->fw->ucode_capa.capa[0] &
+	    IWL_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT)
+		hw->wiphy->features |= NL80211_FEATURE_WFA_TPC_IE_IN_PROBES;
+
 	if (iwl_mvm_is_lar_supported(mvm)) {
 		hw->wiphy->get_regd = iwl_mvm_get_regdomain;
 		hw->wiphy->features |= NL80211_FEATURE_CELL_BASE_REG_HINTS;
