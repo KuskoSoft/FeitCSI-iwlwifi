@@ -390,39 +390,26 @@ int iwl_mvm_tm_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
 			   struct iwl_tm_data *data_out)
 {
 	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
-	int ret;
 
 	if (WARN_ON_ONCE(!op_mode || !data_in))
 		return -EINVAL;
 
-	ret = iwl_mvm_ref_sync(mvm, IWL_MVM_REF_TM_CMD);
-	if (ret)
-		return ret;
-
 	switch (cmd) {
 	case IWL_TM_USER_CMD_HCMD:
-		ret = iwl_mvm_tm_send_hcmd(mvm, data_in, data_out);
-		break;
+		return iwl_mvm_tm_send_hcmd(mvm, data_in, data_out);
 	case IWL_TM_USER_CMD_REG_ACCESS:
-		ret = iwl_mvm_tm_reg_ops(mvm->trans, data_in, data_out);
-		break;
+		return iwl_mvm_tm_reg_ops(mvm->trans, data_in, data_out);
 	case IWL_TM_USER_CMD_SRAM_WRITE:
-		ret = iwl_tm_indirect_write(mvm, data_in);
-		break;
+		return iwl_tm_indirect_write(mvm, data_in);
 	case IWL_TM_USER_CMD_SRAM_READ:
-		ret = iwl_tm_indirect_read(mvm, data_in, data_out);
-		break;
+		return iwl_tm_indirect_read(mvm, data_in, data_out);
 	case IWL_TM_USER_CMD_GET_DEVICE_INFO:
-		ret = iwl_tm_get_dev_info(mvm, data_out);
-		break;
+		return iwl_tm_get_dev_info(mvm, data_out);
 	default:
-		ret = -EOPNOTSUPP;
 		break;
 	}
 
-	iwl_mvm_unref(mvm, IWL_MVM_REF_TM_CMD);
-
-	return ret;
+	return -EOPNOTSUPP;
 }
 
 #ifdef CPTCFG_NL80211_TESTMODE
