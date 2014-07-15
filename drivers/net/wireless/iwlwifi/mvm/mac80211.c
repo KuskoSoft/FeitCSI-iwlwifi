@@ -231,8 +231,8 @@ void iwl_mvm_unref(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref_type)
 	iwl_trans_unref(mvm->trans);
 }
 
-static void
-iwl_mvm_unref_all_except(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref)
+static void iwl_mvm_unref_all_except(struct iwl_mvm *mvm,
+				     enum iwl_mvm_ref_type except_ref)
 {
 	int i, j;
 
@@ -241,14 +241,14 @@ iwl_mvm_unref_all_except(struct iwl_mvm *mvm, enum iwl_mvm_ref_type ref)
 
 	spin_lock_bh(&mvm->refs_lock);
 	for (i = 0; i < IWL_MVM_REF_COUNT; i++) {
-		if (ref == i || !mvm->refs[ref])
+		if (except_ref == i || !mvm->refs[i])
 			continue;
 
 		IWL_DEBUG_RPM(mvm, "Cleanup: remove mvm ref type %d (%d)\n",
-			      i, mvm->refs[ref]);
-		for (j = 0; j < mvm->refs[ref]; j++)
+			      i, mvm->refs[i]);
+		for (j = 0; j < mvm->refs[i]; j++)
 			iwl_trans_unref(mvm->trans);
-		mvm->refs[ref] = 0;
+		mvm->refs[i] = 0;
 	}
 	spin_unlock_bh(&mvm->refs_lock);
 }
