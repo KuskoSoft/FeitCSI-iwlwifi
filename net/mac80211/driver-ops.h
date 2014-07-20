@@ -640,10 +640,11 @@ static inline int drv_conf_tx(struct ieee80211_local *local,
 }
 
 #ifdef CPTCFG_NL80211_TESTMODE
-static inline int drv_retrieve_monitor_logs(struct ieee80211_local *local)
+static inline int drv_retrieve_monitor_logs(struct ieee80211_local *local,
+					    struct ieee80211_tx_thrshld_md *md)
 {
 	if (local->ops->testmode_retrieve_monitor)
-		return local->ops->testmode_retrieve_monitor(&local->hw);
+		return local->ops->testmode_retrieve_monitor(&local->hw, md);
 	return 0;
 }
 #endif

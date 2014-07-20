@@ -431,7 +431,8 @@ int iwl_mvm_tm_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
 /**
  * iwl_tm_mvm_retrieve_monitor() - trigger monitor retrieve event
  */
-int iwl_tm_mvm_retrieve_monitor(struct ieee80211_hw *hw)
+int iwl_tm_mvm_retrieve_monitor(struct ieee80211_hw *hw,
+				struct ieee80211_tx_thrshld_md *md)
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 

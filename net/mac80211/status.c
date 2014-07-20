@@ -593,6 +593,7 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	__le16 fc;
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
+	struct ieee80211_tx_thrshld_md md;
 	ktime_t skb_arv = skb->tstamp;
 
 	tx_latency = rcu_dereference(local->tx_latency);
@@ -635,7 +636,7 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	 */
 	if (tx_latency && tx_latency->threshold &&
 	    tx_latency->threshold < msrmnt)
-		drv_retrieve_monitor_logs(local);
+		drv_retrieve_monitor_logs(local, &md);
 #endif
 }
 

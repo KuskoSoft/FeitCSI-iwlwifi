@@ -1639,6 +1639,27 @@ enum ieee80211_hw_flags {
 	IEEE80211_SINGLE_HW_SCAN_ON_ALL_BANDS		= 1<<30,
 };
 
+/*
+ * struct ieee80211_tx_thrshld_md - tx packet metadata that crosses a thrshld
+ *
+ * @mode: recording mode (Internal buffer or continues recording)
+ * @monitor_collec_wind: the size of the window to collect the logs
+ * @seq: packet sequence
+ * @pkt_start: start time of triggering pkt
+ * @pkt_end: end time of triggering pkt
+ * @msrmnt: the tx latency of the pkt
+ * @tid: tid of the pkt
+ */
+struct ieee80211_tx_thrshld_md {
+	u8 mode;
+	u16 monitor_collec_wind;
+	u16 seq;
+	u32 pkt_start;
+	u32 pkt_end;
+	u32 msrmnt;
+	u16 tid;
+};
+
 /**
  * struct ieee80211_hw - hardware information and state
  *
@@ -2961,7 +2982,8 @@ struct ieee80211_ops {
 	int (*testmode_dump)(struct ieee80211_hw *hw, struct sk_buff *skb,
 			     struct netlink_callback *cb,
 			     void *data, int len);
-	int (*testmode_retrieve_monitor)(struct ieee80211_hw *hw);
+	int (*testmode_retrieve_monitor)(struct ieee80211_hw *hw,
+					 struct ieee80211_tx_thrshld_md *md);
 #endif
 	void (*flush)(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		      u32 queues, bool drop);
