@@ -240,6 +240,7 @@ void sta_info_free(struct ieee80211_local *local, struct sta_info *sta)
 			kfree(sta->tx_lat[i].bins);
 		kfree(sta->tx_lat);
 	}
+
 	if (sta->tx_consec) {
 		for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
 			kfree(sta->tx_consec[i].late_bins);
@@ -338,6 +339,11 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 				}
 			}
 		}
+
+		if (!sdata->vif.p2p)
+			sta->tx_lat_thrshld = tx_latency->thresholds_bss;
+		else
+			sta->tx_lat_thrshld = tx_latency->thresholds_p2p;
 	}
 	tx_consec = rcu_dereference(local->tx_consec);
 	/* init stations Tx consecutive loss statistics */

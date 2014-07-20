@@ -331,6 +331,7 @@ struct ieee80211_tx_latency_stat {
  * @timer_to_tid: identity mapping to ID timers
  * @tx_consec: Tx consecutive loss statistics
  * @tx_lat: Tx latency statistics
+ * @tx_lat_threshold: Tx threshold information
  * @llid: Local link ID
  * @plid: Peer link ID
  * @reason: Cancel reason on PLINK_HOLDING state
@@ -439,6 +440,7 @@ struct sta_info {
 
 	struct ieee80211_tx_consec_loss_stat *tx_consec;
 	struct ieee80211_tx_latency_stat *tx_lat;
+	u32 *tx_lat_thrshld;
 
 #ifdef CPTCFG_MAC80211_MESH
 	/*

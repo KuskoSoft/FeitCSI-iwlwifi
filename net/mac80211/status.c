@@ -573,6 +573,36 @@ tx_latency_msrmnt(struct ieee80211_tx_latency_bin_ranges *tx_latency,
 	if (i == bin_range_count) /* msrmnt is bigger than the biggest range */
 		tx_lat->bins[i]++;
 }
+
+static void
+tx_latency_threshold(struct ieee80211_local *local, struct sk_buff *skb,
+		     struct ieee80211_tx_latency_bin_ranges *tx_latency,
+		     struct sta_info *sta, int tid, u32 msrmnt)
+{
+	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
+	struct ieee80211_tx_thrshld_md md;
+
+	/*
+	 * Make sure that tx_latency && threshold are enabled
+	 * for this iface && tid
+	 */
+	if (!tx_latency || !sta->tx_lat_thrshld ||
+	    !sta->tx_lat_thrshld[tid])
+		return;
+
+	if (sta->tx_lat_thrshld[tid] < msrmnt) {
+		md.mode = tx_latency->monitor_record_mode;
+		md.monitor_collec_wind = tx_latency->monitor_collec_wind;
+		md.pkt_start = ktime_to_ms(skb->tstamp);
+		md.pkt_end = ktime_to_ms(skb->tstamp) + msrmnt;
+		md.msrmnt = msrmnt;
+		md.tid = tid;
+		md.seq = (le16_to_cpu(hdr->seq_ctrl) &
+			  IEEE80211_SCTL_SEQ) >> 4;
+		drv_retrieve_monitor_logs(local, &md);
+	}
+}
+
 /*
  * 1) Measure Tx frame completion and removal time for Tx latency statistics
  * calculation. A single Tx frame latency should be measured from when it
@@ -593,7 +623,6 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	__le16 fc;
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
-	struct ieee80211_tx_thrshld_md md;
 	ktime_t skb_arv = skb->tstamp;
 
 	tx_latency = rcu_dereference(local->tx_latency);
@@ -634,9 +663,7 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	 * trigger retrival of monitor logs
 	 * (if a threshold was configured & passed)
 	 */
-	if (tx_latency && tx_latency->threshold &&
-	    tx_latency->threshold < msrmnt)
-		drv_retrieve_monitor_logs(local, &md);
+	tx_latency_threshold(local, skb, tx_latency, sta, tid, msrmnt);
 #endif
 }
 

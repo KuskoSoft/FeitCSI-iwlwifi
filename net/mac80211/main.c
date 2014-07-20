@@ -1169,6 +1169,7 @@ static int ieee80211_free_ack_frame(int id, void *p, void *data)
 void ieee80211_free_hw(struct ieee80211_hw *hw)
 {
 	struct ieee80211_local *local = hw_to_local(hw);
+	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 
 	mutex_destroy(&local->iflist_mtx);
 	mutex_destroy(&local->mtx);
@@ -1181,6 +1182,12 @@ void ieee80211_free_hw(struct ieee80211_hw *hw)
 	idr_destroy(&local->ack_status_frames);
 
 	kfree(rcu_access_pointer(local->tx_consec));
+
+	tx_latency = rcu_dereference(local->tx_latency);
+	if (tx_latency) {
+		kfree(tx_latency->thresholds_bss);
+		kfree(tx_latency->thresholds_p2p);
+	}
 	kfree(rcu_access_pointer(local->tx_latency));
 
 	wiphy_free(local->hw.wiphy);

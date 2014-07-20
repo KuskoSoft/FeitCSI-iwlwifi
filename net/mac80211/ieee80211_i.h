@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2002-2005, Instant802 Networks, Inc.
  * Copyright 2005, Devicescape Software, Inc.
@@ -994,6 +995,16 @@ struct ieee80211_tx_consec_loss_ranges {
 };
 
 /*
+ * enum ieee80211_tx_latency_iface - ifaces that can have a latency threshold
+ */
+enum ieee80211_tx_latency_iface {
+	IEEE80211_TX_LATENCY_BSS,
+	IEEE80211_TX_LATENCY_P2P
+};
+
+#define IEEE80211_IF_DISABLE_THSHLD -1
+
+/*
  * struct ieee80211_tx_latency_bin_ranges - Tx latency statistics bins ranges
  *
  * Measuring Tx latency statistics. Counts how many Tx frames transmitted in a
@@ -1003,12 +1014,20 @@ struct ieee80211_tx_consec_loss_ranges {
  * If ranges is NULL then Tx latency statistics bins are disabled for all
  * stations.
  *
- * @late_threshold: the threshold for triggering usniffer log event for usc.
+ * @thresholds_bss: list of thresholds for each tid in a bss interface
+ * @thresholds_p2p: list of thresholds for each tid in a p2p interface
+ * @monitor_record_mode: recording mode.
+ *	(0) Internal  buffer - recording using the ucodes internal buffer
+ *	(1) Continues recording - recording using MIPI
+ * @monitor_collec_wind: collection window for monitor logs
  * @n_ranges: number of ranges that are taken in account
  * @ranges: the ranges that the user requested or NULL if disabled.
  */
 struct ieee80211_tx_latency_bin_ranges {
-	u32 threshold;
+	u32 *thresholds_bss;
+	u32 *thresholds_p2p;
+	u8 monitor_record_mode;
+	u16 monitor_collec_wind;
 	int n_ranges;
 	u32 ranges[];
 };
