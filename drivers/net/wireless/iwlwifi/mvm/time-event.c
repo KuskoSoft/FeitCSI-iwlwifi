@@ -107,9 +107,9 @@ void iwl_mvm_roc_done_wk(struct work_struct *wk)
 	 * (which is handled in iwl_mvm_te_handle_notif).
 	 */
 	if (test_and_clear_bit(IWL_MVM_STATUS_ROC_RUNNING, &mvm->status))
-		queues |= BITS(IWL_MVM_OFFCHANNEL_QUEUE);
+		queues |= BIT(IWL_MVM_OFFCHANNEL_QUEUE);
 	if (test_and_clear_bit(IWL_MVM_STATUS_ROC_AUX_RUNNING, &mvm->status))
-		queues |= BITS(mvm->aux_queue);
+		queues |= BIT(mvm->aux_queue);
 
 	iwl_mvm_unref(mvm, IWL_MVM_REF_ROC);
 
