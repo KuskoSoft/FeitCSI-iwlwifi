@@ -284,6 +284,7 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 {
 	bool global_bound = false;
 	enum ieee80211_band band;
+	u8 frag_passive_dwell = 0;
 
 	ieee80211_iterate_active_interfaces_atomic(mvm->hw,
 					    IEEE80211_IFACE_ITER_NORMAL,
@@ -294,8 +295,27 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 		goto not_bound;
 
 #ifdef CPTCFG_IWLMVM_TCM
+	/*
+	 * Under low latency and high traffic passive scan is fragmented meaning
+	 * that dwell on a particular channel will be fragmented. Each fragment
+	 * dwell time is 20/40ms and fragments period is 105ms. Skipping to next
+	 * channel will be delayed by the same period - 105ms. So suspend_time
+	 * parameter describing both fragments and channels skipping periods is
+	 * set to 105ms. This value is chosen so that overall passive scan
+	 * duration will not be too long. Max_out_time in this case is set to
+	 * 70ms, so for active scanning operating channel will be left for 70ms
+	 * while for passive still for 20ms (fragment dwell).
+	 */
+
 	switch (mvm->tcm.result.global_load) {
 	case IWL_MVM_VENDOR_LOAD_HIGH:
+		if (mvm->fw->ucode_capa.api[0] &
+		    IWL_UCODE_TLV_API_FRAGMENTED_SCAN) {
+			params->suspend_time = 105;
+			params->max_out_time = 70;
+			frag_passive_dwell = 40;
+			break;
+		}
 	case IWL_MVM_VENDOR_LOAD_MEDIUM:
 		params->suspend_time = 250;
 		params->max_out_time = 250;
@@ -310,8 +330,39 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 #endif
 
 	if (iwl_mvm_low_latency(mvm)) {
-		params->suspend_time = 250;
-		params->max_out_time = 250;
+		if (mvm->fw->ucode_capa.api[0] &
+		    IWL_UCODE_TLV_API_FRAGMENTED_SCAN) {
+#ifdef CPTCFG_IWLMVM_TCM
+			/*
+			 * In case of low latency scan, suspend time depends on
+			 * traffic load level.
+			 */
+#else
+			params->suspend_time = 105;
+#endif
+			params->max_out_time = 70;
+			frag_passive_dwell = 20;
+		} else {
+			params->suspend_time = 250;
+			params->max_out_time = 250;
+		}
+	}
+
+	if (frag_passive_dwell && (mvm->fw->ucode_capa.api[0] &
+				   IWL_UCODE_TLV_API_FRAGMENTED_SCAN)) {
+		/*
+		 * P2P device scan should not be fragmented to avoid negative
+		 * impact on P2P device discovery. Configure max_out_time to be
+		 * equal to dwell time on passive channel. Take a longest
+		 * possible value, one that corresponds to 2GHz band
+		 */
+		if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
+			u32 passive_dwell =
+				iwl_mvm_get_passive_dwell(IEEE80211_BAND_2GHZ);
+			params->max_out_time = passive_dwell;
+		} else {
+			params->passive_fragmented = true;
+		}
 	}
 
 	if (flags & NL80211_SCAN_FLAG_LOW_PRIORITY)
@@ -320,7 +371,11 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 not_bound:
 
 	for (band = IEEE80211_BAND_2GHZ; band < IEEE80211_NUM_BANDS; band++) {
-		params->dwell[band].passive = iwl_mvm_get_passive_dwell(band);
+		if (params->passive_fragmented)
+			params->dwell[band].passive = frag_passive_dwell;
+		else
+			params->dwell[band].passive =
+				iwl_mvm_get_passive_dwell(band);
 		params->dwell[band].active = iwl_mvm_get_active_dwell(band,
 								      n_ssids);
 	}
@@ -1127,10 +1182,11 @@ iwl_mvm_build_generic_unified_scan_cmd(struct iwl_mvm *mvm,
 				       struct iwl_mvm_scan_params *params)
 {
 	memset(cmd, 0, ksize(cmd));
-	cmd->active_dwell = (u8)params->dwell[IEEE80211_BAND_2GHZ].active;
-	cmd->passive_dwell = (u8)params->dwell[IEEE80211_BAND_2GHZ].passive;
-	/* TODO: Use params; now fragmented isn't used. */
-	cmd->fragmented_dwell = 0;
+	cmd->active_dwell = params->dwell[IEEE80211_BAND_2GHZ].active;
+	cmd->passive_dwell = params->dwell[IEEE80211_BAND_2GHZ].passive;
+	if (params->passive_fragmented)
+		cmd->fragmented_dwell =
+				params->dwell[IEEE80211_BAND_2GHZ].passive;
 	cmd->rx_chain_select = iwl_mvm_scan_rx_chain(mvm);
 	cmd->max_out_time = cpu_to_le32(params->max_out_time);
 	cmd->suspend_time = cpu_to_le32(params->suspend_time);
