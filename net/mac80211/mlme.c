@@ -1126,6 +1126,8 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 			   "preparing for channel switch failed, disconnecting\n");
 		ieee80211_queue_work(&local->hw,
 				     &ifmgd->csa_connection_drop_work);
+		mutex_unlock(&local->chanctx_mtx);
+		mutex_unlock(&local->mtx);
 		return;
 	}
 

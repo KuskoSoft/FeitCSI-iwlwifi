@@ -3104,7 +3104,7 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 
 	err = drv_pre_channel_switch(sdata, &ch_switch);
 	if (err)
-		return err;
+		goto out;
 
 	err = ieee80211_vif_reserve_chanctx(sdata, &params->chandef,
 					    chanctx->mode,
