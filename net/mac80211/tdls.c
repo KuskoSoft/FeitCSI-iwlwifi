@@ -114,6 +114,7 @@ static enum ieee80211_ac_numbers ieee80211_ac_from_wmm(int ac)
 static u8 ieee80211_wmm_aci_aifsn(int aifsn, bool acm, int aci)
 {
 	u8 ret;
+
 	ret = aifsn & 0x0f;
 	if (acm)
 		ret |= 0x10;
