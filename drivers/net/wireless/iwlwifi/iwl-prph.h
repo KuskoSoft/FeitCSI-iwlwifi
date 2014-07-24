@@ -287,6 +287,7 @@
 #define SCD_INTERRUPT_MASK	(SCD_BASE + 0x108)
 #define SCD_CB_SIZE		(SCD_BASE + 0x1a4)
 #define SCD_GP_CTRL		(SCD_BASE + 0x1a8)
+#define SCD_EN_CTRL		(SCD_BASE + 0x254)
 
 static inline unsigned int SCD_QUEUE_WRPTR(unsigned int chnl)
 {
