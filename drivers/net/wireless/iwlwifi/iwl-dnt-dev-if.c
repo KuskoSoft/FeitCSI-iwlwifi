@@ -504,7 +504,7 @@ int iwl_dnt_dev_if_read_sram(struct iwl_dnt *dnt, struct iwl_trans *trans)
 		return -ENOMEM;
 
 	crash->sram_buf_size = len;
-	return iwl_trans_read_mem(trans, ofs, crash->sram, len);
+	return iwl_trans_read_mem(trans, ofs, crash->sram, len / sizeof(u32));
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_read_sram);
 

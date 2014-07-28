@@ -382,7 +382,7 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
 		ret = iwl_dnt_dev_if_retrieve_monitor_data(dnt, trans,
 							   crash->dbgm,
 							   buf_size);
-		if (ret) {
+		if (ret != buf_size) {
 			IWL_ERR(dnt, "Failed to read DBGM\n");
 			kfree(crash->dbgm);
 			return;
