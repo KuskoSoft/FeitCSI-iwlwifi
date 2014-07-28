@@ -263,8 +263,6 @@ static void iwl_xvt_nic_error(struct iwl_op_mode *op_mode)
 	struct iwl_xvt *xvt = IWL_OP_MODE_GET_XVT(op_mode);
 	int err;
 
-	iwl_dnt_dispatch_handle_nic_err(xvt->trans);
-
 	xvt->fw_error = true;
 	wake_up_interruptible(&xvt->mod_tx_wq);
 

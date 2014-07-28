@@ -86,6 +86,10 @@
 #include "iwl-nvm-parse.h"
 #include "iwl-fw-error-dump.h"
 #include "iwl-prph.h"
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+#include "iwl-dnt-cfg.h"
+#include "iwl-dnt-dispatch.h"
+#endif
 
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
 	{
@@ -831,6 +835,10 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 
 	/* notify the userspace about the error we had */
 	kobject_uevent_env(&mvm->hw->wiphy->dev.kobj, KOBJ_CHANGE, env);
+#endif
+
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	iwl_dnt_dispatch_handle_nic_err(mvm->trans);
 #endif
 
 	iwl_trans_stop_device(mvm->trans);

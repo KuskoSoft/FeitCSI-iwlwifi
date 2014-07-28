@@ -302,9 +302,12 @@ void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans)
 		dma_free_coherent(trans->dev, dnt->mon_buf_size,
 				  dnt->mon_buf_cpu_addr, dnt->mon_dma_addr);
 
-	kfree(crash->sram);
-	kfree(crash->rx);
-	kfree(crash->dbgm);
+	if (crash->sram)
+		vfree(crash->sram);
+	if (crash->rx)
+		vfree(crash->rx);
+	if (crash->dbgm)
+		vfree(crash->dbgm);
 
 	memset(dispatch, 0, sizeof(*dispatch));
 }
@@ -317,7 +320,7 @@ static void iwl_dnt_dispatch_retrieve_crash_sram(struct iwl_dnt *dnt,
 
 	if (crash->sram) {
 		crash->sram_buf_size = 0;
-		kfree(crash->sram);
+		vfree(crash->sram);
 	}
 
 	ret = iwl_dnt_dev_if_read_sram(dnt, trans);
@@ -335,7 +338,7 @@ static void iwl_dnt_dispatch_retrieve_crash_rx(struct iwl_dnt *dnt,
 
 	if (crash->rx) {
 		crash->rx_buf_size = 0;
-		kfree(crash->rx);
+		vfree(crash->rx);
 	}
 
 	ret = iwl_dnt_dev_if_read_rx(dnt, trans);
@@ -354,7 +357,7 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
 
 	if (crash->dbgm) {
 		crash->dbgm_buf_size = 0;
-		kfree(crash->dbgm);
+		vfree(crash->dbgm);
 	}
 
 	switch (dnt->cur_mon_type) {
@@ -370,7 +373,7 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
 	default:
 		return;
 	}
-	crash->dbgm = kzalloc(buf_size, GFP_ATOMIC);
+	crash->dbgm = vmalloc(buf_size);
 	if (!crash->dbgm)
 		return;
 
@@ -384,7 +387,7 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
 							   buf_size);
 		if (ret != buf_size) {
 			IWL_ERR(dnt, "Failed to read DBGM\n");
-			kfree(crash->dbgm);
+			vfree(crash->dbgm);
 			return;
 		}
 	}

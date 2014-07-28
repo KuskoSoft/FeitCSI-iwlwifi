@@ -499,7 +499,7 @@ int iwl_dnt_dev_if_read_sram(struct iwl_dnt *dnt, struct iwl_trans *trans)
 	ofs = dnt->image->sec[IWL_UCODE_SECTION_DATA].offset;
 	len = dnt->image->sec[IWL_UCODE_SECTION_DATA].len;
 
-	crash->sram =  kzalloc(len , GFP_ATOMIC);
+	crash->sram =  vmalloc(len);
 	if (!crash->sram)
 		return -ENOMEM;
 
@@ -529,14 +529,14 @@ int iwl_dnt_dev_if_read_rx(struct iwl_dnt *dnt, struct iwl_trans *trans)
 
 	buf32_size = crash->rx_buf_size / sizeof(u32);
 
-	crash->rx =  kzalloc(crash->rx_buf_size , GFP_ATOMIC);
+	crash->rx =  vmalloc(crash->rx_buf_size);
 	if (!crash->rx)
 		return -ENOMEM;
 
 	buf32 = (u32 *)crash->rx;
 
 	if (!iwl_trans_grab_nic_access(trans, false, &flags)) {
-		kfree(crash->rx);
+		vfree(crash->rx);
 		return -EBUSY;
 	}
 	for (i = 0; i < buf32_size; i++) {

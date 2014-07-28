@@ -922,10 +922,6 @@ static void iwl_mvm_nic_error(struct iwl_op_mode *op_mode)
 
 	iwl_mvm_dump_nic_error_log(mvm);
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_dispatch_handle_nic_err(mvm->trans);
-#endif
-
 	iwl_mvm_nic_restart(mvm, true);
 }
 
