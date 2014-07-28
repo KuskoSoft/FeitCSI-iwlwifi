@@ -361,6 +361,9 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt *dnt,
 	}
 
 	switch (dnt->cur_mon_type) {
+	case DMA:
+		buf_size = dnt->mon_buf_size;
+		break;
 	case MARBH_ADC:
 	case MARBH_DBG:
 		buf_size = 0x2000 * sizeof(u32);
