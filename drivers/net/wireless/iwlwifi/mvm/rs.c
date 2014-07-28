@@ -2811,6 +2811,8 @@ static void rs_fill_lq_cmd(struct iwl_mvm *mvm,
 			   struct iwl_lq_sta *lq_sta,
 			   const struct rs_rate *initial_rate)
 {
+	struct iwl_mvm_sta *mvmsta = iwl_mvm_sta_from_mac80211(sta);
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
 	struct iwl_lq_cmd *lq_cmd = &lq_sta->lq;
 	u8 ant = initial_rate->ant;
 
@@ -2829,7 +2831,16 @@ static void rs_fill_lq_cmd(struct iwl_mvm *mvm,
 	if (num_of_ant(ant) == 1)
 		lq_cmd->single_stream_ant_msk = ant;
 
-	lq_cmd->agg_frame_cnt_limit = LINK_QUAL_AGG_FRAME_LIMIT_DEF;
+	lq_cmd->agg_frame_cnt_limit = mvmsta->max_agg_bufsize;
+
+	/*
+	 * In case of low latency, tell the firwmare to leave a frame in the
+	 * Tx Fifo so that it can start a transaction in the same TxOP. This
+	 * basically allows the firmware to send bursts.
+	 */
+	if (iwl_mvm_vif_low_latency(mvmvif))
+		lq_cmd->agg_frame_cnt_limit--;
+
 	lq_cmd->agg_disable_start_th = LINK_QUAL_AGG_DISABLE_START_DEF;
 
 	lq_cmd->agg_time_limit =
