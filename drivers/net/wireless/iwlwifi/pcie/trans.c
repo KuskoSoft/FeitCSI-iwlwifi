@@ -69,6 +69,7 @@
 #include <linux/sched.h>
 #include <linux/bitops.h>
 #include <linux/gfp.h>
+#include <linux/vmalloc.h>
 
 #include "iwl-drv.h"
 #include "iwl-trans.h"
