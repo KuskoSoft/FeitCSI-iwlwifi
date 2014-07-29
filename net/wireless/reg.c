@@ -1889,6 +1889,9 @@ __reg_process_hint_driver(struct regulatory_request *driver_request)
 	    !regdom_changes(driver_request->alpha2))
 		return REG_REQ_ALREADY_SET;
 
+	if (driver_request->driver_reg_hint_type == DRIVER_REG_HINT_OVERRIDE)
+		return REG_REQ_OK;
+
 	return REG_REQ_INTERSECT;
 }
 
@@ -2230,8 +2233,8 @@ int regulatory_hint_indoor_user(bool is_indoor)
 	return 0;
 }
 
-/* Driver hints */
-int regulatory_hint(struct wiphy *wiphy, const char *alpha2)
+int regulatory_hint_force_policy(struct wiphy *wiphy, const char *alpha2,
+				 enum driver_reg_hint_type intersect_type)
 {
 	struct regulatory_request *request;
 
@@ -2240,7 +2243,7 @@ int regulatory_hint(struct wiphy *wiphy, const char *alpha2)
 
 	wiphy->regulatory_flags &= ~REGULATORY_CUSTOM_REG;
 
-	request = kzalloc(sizeof(struct regulatory_request), GFP_KERNEL);
+	request = kzalloc(sizeof(struct regulatory_request), GFP_ATOMIC);
 	if (!request)
 		return -ENOMEM;
 
@@ -2249,12 +2252,13 @@ int regulatory_hint(struct wiphy *wiphy, const char *alpha2)
 	request->alpha2[0] = alpha2[0];
 	request->alpha2[1] = alpha2[1];
 	request->initiator = NL80211_REGDOM_SET_BY_DRIVER;
+	request->driver_reg_hint_type = intersect_type;
 
 	queue_regulatory_request(request);
 
 	return 0;
 }
-EXPORT_SYMBOL(regulatory_hint);
+EXPORT_SYMBOL(regulatory_hint_force_policy);
 
 void regulatory_hint_country_ie(struct wiphy *wiphy, enum ieee80211_band band,
 				const u8 *country_ie, u8 country_ie_len)
@@ -2694,7 +2698,9 @@ static int reg_set_rd_driver(const struct ieee80211_regdomain *rd,
 	}
 
 	if (!driver_request->intersect) {
-		if (request_wiphy->regd)
+		if (request_wiphy->regd &&
+		    driver_request->driver_reg_hint_type !=
+		    DRIVER_REG_HINT_OVERRIDE)
 			return -EALREADY;
 
 		regd = reg_copy_regd(rd);
