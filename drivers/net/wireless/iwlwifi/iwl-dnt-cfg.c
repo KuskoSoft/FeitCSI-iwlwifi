@@ -157,7 +157,8 @@ static bool iwl_dnt_validate_configuration(struct iwl_trans *trans)
 	if (!strcmp(trans->dev->bus->name, BUS_TYPE_PCI))
 		return dbg_cfg->dbm_destination_path == DMA ||
 		       dbg_cfg->dbm_destination_path == MARBH_ADC ||
-		       dbg_cfg->dbm_destination_path == MARBH_DBG;
+		       dbg_cfg->dbm_destination_path == MARBH_DBG ||
+		       dbg_cfg->dbm_destination_path == MIPI;
 	else if (!strcmp(trans->dev->bus->name, BUS_TYPE_IDI))
 		return dbg_cfg->dbm_destination_path == INTERFACE ||
 		       dbg_cfg->dbm_destination_path == MARBH_ADC ||
