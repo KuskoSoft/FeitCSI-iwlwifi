@@ -1050,6 +1050,18 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_AP ||
 	    vif->type == NL80211_IFTYPE_ADHOC) {
 		u32 qmask = iwl_mvm_mac_get_queues_mask(mvm, vif);
+
+		/*
+		 * There appears to be a firmware bug - if we add the mcast
+		 * queue to the broadcast station, which seems like it should
+		 * be done, then multicast frames will never go out.
+		 * We do, however, actually transmit those frames with the
+		 * broadcast station ID, so it's a bit confusing to have to
+		 * not assign it here.
+		 */
+		if (vif->type == NL80211_IFTYPE_AP)
+			qmask &= ~BIT(vif->cab_queue);
+
 		ret = iwl_mvm_allocate_int_sta(mvm, &mvmvif->bcast_sta,
 					       qmask,
 					       ieee80211_vif_type_p2p(vif));
@@ -1141,14 +1153,7 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 static void iwl_mvm_prepare_mac_removal(struct iwl_mvm *mvm,
 					struct ieee80211_vif *vif)
 {
-	u32 tfd_msk = 0, ac;
-
-	for (ac = 0; ac < IEEE80211_NUM_ACS; ac++)
-		if (vif->hw_queue[ac] != IEEE80211_INVAL_HW_QUEUE)
-			tfd_msk |= BIT(vif->hw_queue[ac]);
-
-	if (vif->cab_queue != IEEE80211_INVAL_HW_QUEUE)
-		tfd_msk |= BIT(vif->cab_queue);
+	u32 tfd_msk = iwl_mvm_mac_get_queues_mask(mvm, vif);
 
 	if (tfd_msk) {
 		mutex_lock(&mvm->mutex);
