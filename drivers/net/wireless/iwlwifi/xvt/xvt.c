@@ -189,7 +189,8 @@ static void iwl_xvt_stop(struct iwl_op_mode *op_mode)
 	if (xvt->state != IWL_XVT_STATE_UNINITIALIZED) {
 		if (xvt->fw_running) {
 			iwl_trans_txq_disable(xvt->trans,
-					      IWL_XVT_DEFAULT_TX_QUEUE);
+					      IWL_XVT_DEFAULT_TX_QUEUE,
+					      true);
 			xvt->fw_running = false;
 		}
 		iwl_trans_stop_device(xvt->trans);

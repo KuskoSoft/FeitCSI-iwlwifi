@@ -701,7 +701,8 @@ static void iwl_xvt_stop_op_mode(struct iwl_xvt *xvt)
 		return;
 
 	if (xvt->fw_running) {
-		iwl_trans_txq_disable(xvt->trans, IWL_XVT_DEFAULT_TX_QUEUE);
+		iwl_trans_txq_disable(xvt->trans, IWL_XVT_DEFAULT_TX_QUEUE,
+				      true);
 		xvt->fw_running = false;
 	}
 	iwl_trans_stop_device(xvt->trans);
@@ -757,7 +758,7 @@ static int iwl_xvt_continue_init(struct iwl_xvt *xvt)
 
 error:
 	xvt->state = IWL_XVT_STATE_UNINITIALIZED;
-	iwl_trans_txq_disable(xvt->trans, IWL_XVT_DEFAULT_TX_QUEUE);
+	iwl_trans_txq_disable(xvt->trans, IWL_XVT_DEFAULT_TX_QUEUE, true);
 	iwl_trans_stop_device(xvt->trans);
 
 cont_init_end:
