@@ -402,6 +402,7 @@ struct iwl_mvm_vif {
 
 	/* FW identified misbehaving AP */
 	u8 uapsd_misbehaving_bssid[ETH_ALEN];
+
 };
 
 static inline struct iwl_mvm_vif *
