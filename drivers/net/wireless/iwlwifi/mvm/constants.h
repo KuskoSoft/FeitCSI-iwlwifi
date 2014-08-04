@@ -87,6 +87,7 @@
 #define IWL_MVM_BT_COEX_SYNC2SCO		1
 #define IWL_MVM_BT_COEX_CORUNNING		1
 #define IWL_MVM_BT_COEX_MPLUT			1
+#define IWL_MVM_FW_MCAST_FILTER_PASS_ALL	0
 #ifdef CPTCFG_IWLMVM_TCM
 #define IWL_MVM_TCM_LOAD_MEDIUM_THRESH		10 /* percentage */
 #define IWL_MVM_TCM_LOAD_HIGH_THRESH		50 /* percentage */
@@ -116,6 +117,7 @@
 #define IWL_MVM_BT_COEX_SYNC2SCO		(mvm->trans->dbg_cfg.MVM_BT_COEX_SYNC2SCO)
 #define IWL_MVM_BT_COEX_CORUNNING		(mvm->trans->dbg_cfg.MVM_BT_COEX_CORUNNING)
 #define IWL_MVM_BT_COEX_MPLUT			(mvm->trans->dbg_cfg.MVM_BT_COEX_MPLUT)
+#define IWL_MVM_FW_MCAST_FILTER_PASS_ALL	(mvm->trans->dbg_cfg.MVM_FW_MCAST_FILTER_PASS_ALL)
 #ifdef CPTCFG_IWLMVM_TCM
 #define IWL_MVM_TCM_LOAD_MEDIUM_THRESH		(mvm->trans->dbg_cfg.MVM_TCM_LOAD_MEDIUM_THRESH)
 #define IWL_MVM_TCM_LOAD_HIGH_THRESH		(mvm->trans->dbg_cfg.MVM_TCM_LOAD_HIGH_THRESH)
