@@ -207,6 +207,11 @@ static void iwl_mvm_power_configure_uapsd(struct iwl_mvm *mvm,
 			cmd->flags |=
 				cpu_to_le16(POWER_FLAGS_ADVANCE_PM_ENA_MSK);
 #endif
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+		if (mvm->trans->dbg_cfg.MVM_USE_PS_POLL)
+			cmd->flags |=
+				cpu_to_le16(POWER_FLAGS_ADVANCE_PM_ENA_MSK);
+#endif
 		return;
 	}
 
