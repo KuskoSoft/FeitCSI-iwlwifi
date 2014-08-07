@@ -1052,12 +1052,9 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 		u32 qmask = iwl_mvm_mac_get_queues_mask(mvm, vif);
 
 		/*
-		 * There appears to be a firmware bug - if we add the mcast
-		 * queue to the broadcast station, which seems like it should
-		 * be done, then multicast frames will never go out.
-		 * We do, however, actually transmit those frames with the
-		 * broadcast station ID, so it's a bit confusing to have to
-		 * not assign it here.
+		 * The firmware defines the TFD queue mask to only be relevant
+		 * for *unicast* queues, so the multicast (CAB) queue should
+		 * be excluded.
 		 */
 		if (vif->type == NL80211_IFTYPE_AP)
 			qmask &= ~BIT(vif->cab_queue);
