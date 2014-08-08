@@ -3182,7 +3182,7 @@ static int iwl_mvm_pre_channel_switch(struct ieee80211_hw *hw,
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	struct ieee80211_vif *csa_vif;
-	struct iwl_mvm_vif *mvmvif;
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	int ret;
 
 	mutex_lock(&mvm->mutex);
@@ -3203,7 +3203,6 @@ static int iwl_mvm_pre_channel_switch(struct ieee80211_hw *hw,
 
 		rcu_assign_pointer(mvm->csa_vif, vif);
 
-		mvmvif = iwl_mvm_vif_from_mac80211(vif);
 		if (WARN_ONCE(mvmvif->csa_countdown,
 			      "Previous CSA countdown didn't complete")) {
 			ret = -EBUSY;
@@ -3215,11 +3214,34 @@ static int iwl_mvm_pre_channel_switch(struct ieee80211_hw *hw,
 		break;
 	}
 
+	mvmvif->ps_disabled = true;
+
+	ret = iwl_mvm_power_update_ps(mvm);
+	if (ret)
+		goto out_unlock;
+
 	/* we won't be on this channel any longer */
 	iwl_mvm_teardown_tdls_peers(mvm);
-	ret = 0;
 
 out_unlock:
+	mutex_unlock(&mvm->mutex);
+
+	return ret;
+}
+
+static int iwl_mvm_post_channel_switch(struct ieee80211_hw *hw,
+				       struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	int ret;
+
+	mutex_lock(&mvm->mutex);
+
+	mvmvif->ps_disabled = false;
+
+	ret = iwl_mvm_power_update_ps(mvm);
+
 	mutex_unlock(&mvm->mutex);
 
 	return ret;
@@ -3299,6 +3321,7 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 	.set_tim = iwl_mvm_set_tim,
 
 	.pre_channel_switch = iwl_mvm_pre_channel_switch,
+	.post_channel_switch = iwl_mvm_post_channel_switch,
 
 #ifdef CPTCFG_NL80211_TESTMODE
 	.testmode_retrieve_monitor = iwl_tm_mvm_retrieve_monitor,
