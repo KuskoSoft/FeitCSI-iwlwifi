@@ -333,6 +333,96 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 	return buf_size_in_dwords * sizeof(u32);
 }
 
+static int iwl_dnt_dev_if_retrieve_smem_monitor_data(struct iwl_dnt *dnt,
+						     struct iwl_trans *trans,
+						     u8 *buffer,
+						     u32 buffer_size)
+{
+	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
+	u32 i, bytes_to_end, calc_size;
+	u32 base_addr, end_addr, wr_ptr_addr, wr_ptr_shift;
+	u32 base, end, wr_ptr, pos, chunks_num, wr_ptr_offset;
+	u8 *temp_buffer;
+
+	if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_B_STEP) {
+		base_addr = cfg->dbg_mon_buff_base_addr_reg_addr_b_step;
+		end_addr = cfg->dbg_mon_buff_end_addr_reg_addr_b_step;
+		wr_ptr_addr = cfg->dbg_mon_wr_ptr_addr_b_step;
+		wr_ptr_shift = 2;
+	} else {
+		/* assuming A-step */
+		base_addr = cfg->dbg_mon_buff_base_addr_reg_addr;
+		end_addr = cfg->dbg_mon_buff_end_addr_reg_addr;
+		wr_ptr_addr = cfg->dbg_mon_wr_ptr_addr;
+		wr_ptr_shift = 0;
+	}
+
+	base = iwl_read_prph(trans, base_addr);
+	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
+	if (base == 0x5a5a5a5a) {
+		IWL_ERR(trans, "Can't read base addr\n");
+		return -ENODEV;
+	}
+
+	end = iwl_read_prph(trans, end_addr);
+	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
+	if (end == 0x5a5a5a5a) {
+		IWL_ERR(trans, "Can't read end addr\n");
+		return -ENODEV;
+	}
+
+	if (base == end) {
+		IWL_ERR(trans, "Invalid base and end values\n");
+		return -ENODEV;
+	}
+
+	wr_ptr = iwl_read_prph(trans, wr_ptr_addr);
+	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
+	if (wr_ptr == 0x5a5a5a5a) {
+		IWL_ERR(trans, "Can't read write pointer, not re-aligning\n");
+		wr_ptr = base << 8;
+	}
+
+	pos = base << 8;
+	calc_size = (end - base + 1) << 8;
+	wr_ptr <<= wr_ptr_shift;
+	bytes_to_end = ((end + 1) << 8) - wr_ptr;
+	chunks_num = calc_size / DNT_CHUNK_SIZE;
+	wr_ptr_offset = wr_ptr - pos;
+
+	if (wr_ptr_offset > calc_size) {
+		IWL_ERR(trans, "Invalid wr_ptr value, not re-aligning\n");
+		wr_ptr_offset = 0;
+	}
+
+	if (calc_size > buffer_size) {
+		IWL_ERR(trans, "Invalid buffer size\n");
+		return -EINVAL;
+	}
+
+	temp_buffer = kzalloc(calc_size, GFP_KERNEL);
+	if (!temp_buffer)
+		return -ENOMEM;
+
+	for (i = 0; i < chunks_num; i++)
+		iwl_trans_read_mem(trans, pos + (i * DNT_CHUNK_SIZE),
+				   temp_buffer + (i * DNT_CHUNK_SIZE),
+				   DNT_CHUNK_SIZE / sizeof(u32));
+
+	if (calc_size % DNT_CHUNK_SIZE)
+		iwl_trans_read_mem(trans, pos + (chunks_num * DNT_CHUNK_SIZE),
+				   temp_buffer + (chunks_num * DNT_CHUNK_SIZE),
+				   (calc_size - (chunks_num * DNT_CHUNK_SIZE)) /
+				   sizeof(u32));
+
+	memcpy(buffer, temp_buffer + wr_ptr_offset, bytes_to_end);
+	memcpy(buffer + bytes_to_end, temp_buffer, wr_ptr_offset);
+
+	kfree(temp_buffer);
+
+	return calc_size;
+}
+
 int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 				     struct iwl_trans *trans)
 {
@@ -486,6 +576,10 @@ int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt *dnt,
 		return iwl_dnt_dev_if_retrieve_marbh_monitor_data(dnt, trans,
 								  buffer,
 								  buffer_size);
+	case SMEM:
+		return iwl_dnt_dev_if_retrieve_smem_monitor_data(dnt, trans,
+								 buffer,
+								 buffer_size);
 	case INTERFACE:
 	default:
 		WARN_ONCE(1, "invalid option: %d\n", dnt->cur_mon_type);

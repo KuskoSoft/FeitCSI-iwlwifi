@@ -76,6 +76,8 @@ struct iwl_dnt;
 #define DNT_MARBH_BUF_SIZE	(0x3cff * sizeof(u32))
 #define DNT_SMEM_BUF_SIZE	(0x18004)
 
+#define DNT_CHUNK_SIZE 512
+
 /* marbh access types */
 enum {
 	ACCESS_TYPE_DIRECT = 0,
