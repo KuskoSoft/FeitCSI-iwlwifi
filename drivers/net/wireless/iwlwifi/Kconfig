@@ -83,6 +83,19 @@ config IWLWIFI_PCIE
 
 	  If unsure, select Y.
 
+config IWLWIFI_SDIO
+	bool "iwlwifi SDIO bus support"
+	depends on IWLMVM
+	depends on MMC
+	# 64-bit has compiler warnings that probably point to issues
+	---help---
+	  This option enables support for devices which use the SDIO bus.
+
+	  You must select either the IWLWIFI_PCIE option or this option (or both)
+	  in order to use this device driver with your actual NIC.
+
+	  If unsure, select Y.
+
 endmenu
 
 config IWLWIFI_BCAST_FILTERING
