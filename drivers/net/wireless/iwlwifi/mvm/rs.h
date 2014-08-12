@@ -368,6 +368,8 @@ struct iwl_lq_sta {
 		u32 dbg_fixed_rate;
 		u8 dbg_fixed_txp_reduction;
 #endif
+		u8 chains;
+		s8 chain_signal[IEEE80211_MAX_CHAINS];
 		struct iwl_mvm *drv;
 	} pers;
 };
