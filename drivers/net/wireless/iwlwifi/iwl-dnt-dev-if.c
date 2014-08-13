@@ -221,6 +221,7 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	u32 wr_ptr;
 	u8 *temp_buf = NULL;
+	bool dont_reorder = false;
 	/* FIXME send stop command to FW */
 	if (WARN_ON_ONCE(!dnt->mon_buf_cpu_addr)) {
 		IWL_ERR(trans, "Can't retrieve data - DMA wasn't allocated\n");
@@ -234,8 +235,9 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 		wr_ptr = iwl_read_prph(trans, cfg->dbg_mon_wr_ptr_addr);
 	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
 	if (wr_ptr == 0x5a5a5a5a) {
-		IWL_ERR(trans, "Can't read write pointer\n");
-		return -ENODEV;
+		IWL_ERR(trans,
+			"Can't read write pointer - not reordering buffer\n");
+		dont_reorder = true;
 	}
 
 	/* If we're running a device that supports DBGC.... */
@@ -265,9 +267,13 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 	/* Misunderstanding wr_ptr can cause a page fault, so validate it... */
 	if (wr_ptr > dnt->mon_buf_size) {
 		IWL_ERR(trans,
-			"Write pointer DMA monitor register points to invalid data\n");
-		return -EIO;
+			"Write pointer DMA monitor register points to invalid data - setting to 0\n");
+		dont_reorder = true;
 	}
+
+	/* We have a problem with the wr_ptr, so just return the memory as-is */
+	if (dont_reorder)
+		wr_ptr = 0;
 
 	temp_buf = kmemdup(dnt->mon_buf_cpu_addr, dnt->mon_buf_size,
 			   GFP_KERNEL);
