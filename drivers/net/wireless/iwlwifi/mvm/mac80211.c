@@ -2907,7 +2907,6 @@ static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm *mvm,
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct ieee80211_vif *disabled_vif = NULL;
-	struct iwl_mvm_sta *mvmsta;
 
 	lockdep_assert_held(&mvm->mutex);
 
@@ -2940,12 +2939,6 @@ static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm *mvm,
 			break;
 
 		disabled_vif = vif;
-
-		mvmsta = iwl_mvm_sta_from_staid_protected(mvm,
-							  mvmvif->ap_sta_id);
-
-		if (!WARN_ON(!mvmsta))
-			iwl_mvm_sta_modify_disable_tx(mvm, mvmsta, true);
 
 		iwl_mvm_mac_ctxt_changed(mvm, vif, true, NULL);
 		break;
@@ -3183,6 +3176,7 @@ static int iwl_mvm_pre_channel_switch(struct ieee80211_hw *hw,
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	struct ieee80211_vif *csa_vif;
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	u32 apply_time;
 	int ret;
 
 	mutex_lock(&mvm->mutex);
@@ -3209,6 +3203,17 @@ static int iwl_mvm_pre_channel_switch(struct ieee80211_hw *hw,
 			goto out_unlock;
 		}
 
+		break;
+	case NL80211_IFTYPE_STATION:
+		apply_time = chsw->timestamp +
+			(vif->bss_conf.beacon_int * chsw->count * 1024);
+
+		if (chsw->block_tx)
+			iwl_mvm_csa_client_absent(mvm, vif);
+
+		iwl_mvm_schedule_csa_period(mvm, vif,
+					    IWL_MVM_CHANNEL_SWITCH_TIME_CLIENT,
+					    apply_time);
 		break;
 	default:
 		break;
