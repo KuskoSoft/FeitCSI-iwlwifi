@@ -74,6 +74,7 @@ struct iwl_dnt;
 
 #define DNT_LDBG_CMD_SIZE	80
 #define DNT_MARBH_BUF_SIZE	(0x3cff * sizeof(u32))
+#define DNT_SMEM_BUF_SIZE	(0x18004)
 
 /* marbh access types */
 enum {

@@ -346,6 +346,7 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 	case MARBH_ADC:
 	case MARBH_DBG:
 		iwl_dnt_dev_if_configure_marbh(trans);
+		dnt->mon_buf_size = DNT_MARBH_BUF_SIZE;
 		break;
 	case DMA:
 		if (!dnt->mon_buf_cpu_addr) {
@@ -366,6 +367,7 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt *dnt,
 		end_addr = 0;
 		iwl_dnt_dev_if_configure_dbgm_registers(trans, base_addr,
 							end_addr);
+		dnt->mon_buf_size = DNT_SMEM_BUF_SIZE;
 		break;
 	case INTERFACE:
 		base_addr = 0;

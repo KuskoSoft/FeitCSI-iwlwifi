@@ -749,12 +749,17 @@ static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev *dev,
 	int ret;
 	u32 buf_size;
 
-	if ((dev->dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED) &&
-	    dev->dnt->mon_buf_size == 0)
-		buf_size = DEFAULT_BUF_SIZE;
-	else
-		buf_size = dev->dnt->mon_buf_size;
+	if (!(dev->dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED)) {
+		IWL_ERR(dev->trans, "Invalid monitor status\n");
+		return -EINVAL;
+	}
 
+	if (dev->dnt->mon_buf_size == 0) {
+		IWL_ERR(dev->trans, "No available monitor buffer\n");
+		return -ENOMEM;
+	}
+
+	buf_size = dev->dnt->mon_buf_size;
 	data_out->data =  kmalloc(buf_size, GFP_KERNEL);
 	if (!data_out->data)
 		return -ENOMEM;
