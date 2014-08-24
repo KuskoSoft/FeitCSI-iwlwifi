@@ -2365,14 +2365,15 @@ static void rs_get_initial_rate(struct iwl_mvm *mvm,
 	rate->ldpc = false;
 	rate->bw = RATE_MCS_CHAN_WIDTH_20;
 
+	rate->index = find_first_bit(&lq_sta->active_legacy_rate,
+				     BITS_PER_LONG);
+
 	if (band == IEEE80211_BAND_5GHZ) {
 		rate->type = LQ_LEGACY_A;
-		rate->index = IWL_RATE_6M_INDEX;
 		initial_rates = rs_init_rates_5ghz;
 		nentries = ARRAY_SIZE(rs_init_rates_5ghz);
 	} else {
 		rate->type = LQ_LEGACY_G;
-		rate->index = IWL_RATE_1M_INDEX;
 		initial_rates = rs_init_rates_24ghz;
 		nentries = ARRAY_SIZE(rs_init_rates_24ghz);
 	}
