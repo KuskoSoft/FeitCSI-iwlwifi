@@ -764,6 +764,7 @@ struct iwl_mvm {
 	u32 ap_last_beacon_gp2;
 
 	bool lar_regdom_set;
+	u8 low_latency_agg_frame_limit;
 };
 
 /* Extract MVM priv from op_mode and _hw */
