@@ -86,6 +86,7 @@ enum iwl_tm_gnl_cmd_t {
 #define TM_CMD_NOTIF_BASE	0x200
 #define XVT_CMD_BASE		0x300
 #define XVT_CMD_NOTIF_BASE	0x400
+#define XVT_BUS_TESTER_BASE	0x500
 
 /*
  * Periphery registers absolute lower bound. This is used in order to
@@ -144,6 +145,15 @@ enum {
 	IWL_XVT_CMD_SEND_REPLY_ALIVE = XVT_CMD_NOTIF_BASE,
 	IWL_XVT_CMD_SEND_RFKILL,
 	IWL_XVT_CMD_SEND_NIC_ERROR,
+
+	/* Bus Tester Commands*/
+	IWL_TM_USER_CMD_SV_BUS_CONFIG = XVT_BUS_TESTER_BASE,
+	IWL_TM_USER_CMD_SV_BUS_RESET,
+	IWL_TM_USER_CMD_SV_IO_TOGGLE,
+	IWL_TM_USER_CMD_SV_GET_STATUS,
+	IWL_TM_USER_CMD_SV_RD_WR_UINT8,
+	IWL_TM_USER_CMD_SV_RD_WR_UINT32,
+	IWL_TM_USER_CMD_SV_RD_WR_BUFFER,
 };
 
 enum {
@@ -164,6 +174,14 @@ struct iwl_tm_cmd_request {
 	__u32 want_resp;
 	__u32 len;
 	__u8 data[];
+} __packed __aligned(4);
+
+/**
+ * struct iwl_svt_sdio_enable - SV Tester SDIO bus enable command
+ * @enable:	Function enable/disable 1/0
+ */
+struct iwl_tm_sdio_io_toggle {
+	__u32 enable;
 } __packed __aligned(4);
 
 /* Register operations - Operation type */

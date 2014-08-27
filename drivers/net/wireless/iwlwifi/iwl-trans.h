@@ -494,6 +494,7 @@ struct iwl_trans_ops {
 #if IS_ENABLED(CPTCFG_IWLXVT)
 	int (*start_fw_dbg)(struct iwl_trans *trans, const struct fw_img *fw,
 			    bool run_in_rfkill, u32 fw_dbg_flags);
+	int (*test_mode_cmd)(struct iwl_trans *trans, bool enable);
 #endif
 	int (*start_fw)(struct iwl_trans *trans, const struct fw_img *fw,
 			bool run_in_rfkill);
@@ -873,6 +874,15 @@ static inline int iwl_trans_wait_tx_queue_empty(struct iwl_trans *trans,
 
 	return trans->ops->wait_tx_queue_empty(trans, txq_bm);
 }
+
+#if IS_ENABLED(CPTCFG_IWLXVT)
+static inline int iwl_trans_test_mode_cmd(struct iwl_trans *trans, bool enable)
+{
+	if (trans->ops->test_mode_cmd)
+		return trans->ops->test_mode_cmd(trans, enable);
+	return -ENOTSUPP;
+}
+#endif
 
 static inline int iwl_trans_dbgfs_register(struct iwl_trans *trans,
 					   struct dentry *dir)
