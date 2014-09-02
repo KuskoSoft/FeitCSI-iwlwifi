@@ -214,6 +214,7 @@ config USB_NET_RNDIS_WLAN
 	depends on m
 	depends on USB
 	depends on CFG80211
+	depends on USB_NET_DRIVERS
 	depends on USB_USBNET
 	depends on USB_NET_CDCETHER
 	depends on USB_NET_RNDIS_HOST

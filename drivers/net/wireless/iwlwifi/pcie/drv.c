@@ -80,7 +80,7 @@
 	.driver_data = (kernel_ulong_t)&(cfg)
 
 /* Hardware specific file defines the PCI IDs table for that hardware module */
-static DEFINE_PCI_DEVICE_TABLE(iwl_hw_card_ids) = {
+static const struct pci_device_id iwl_hw_card_ids[] = {
 
 #if IS_ENABLED(CPTCFG_IWLMVM)
 /* 7260 Series */

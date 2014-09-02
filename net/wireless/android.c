@@ -105,7 +105,8 @@ int cfg80211_android_create_p2p_device(struct wireless_dev *wdev,
 	if (WARN_ON(wdev->p2pdev))
 		return -EEXIST;
 
-	wdev->p2pdev = alloc_netdev(0, name, cfg80211_android_p2pdev_setup);
+	wdev->p2pdev = alloc_netdev(0, name, NET_NAME_UNKNOWN,
+				    cfg80211_android_p2pdev_setup);
 	if (!wdev->p2pdev)
 		return -ENOMEM;
 
