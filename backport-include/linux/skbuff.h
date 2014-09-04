@@ -2,6 +2,7 @@
 #define __BACKPORT_SKBUFF_H
 #include_next <linux/skbuff.h>
 #include <linux/version.h>
+#include <generated/utsrelease.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)) && \
       (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6,4)) && \
@@ -327,7 +328,9 @@ static inline void skb_frag_set_page(struct sk_buff *skb, int f,
 }
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) && \
+    RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0) && \
+    !(LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
 /*
  * Packet hash types specify the type of hash in skb_set_hash.
  *

@@ -18,6 +18,7 @@ compat-$(CPTCFG_BACKPORT_KERNEL_3_12) += backport-3.12.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_13) += backport-3.13.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_14) += backport-3.14.o
 compat-$(CPTCFG_BACKPORT_KERNEL_3_15) += backport-3.15.o
+compat-$(CPTCFG_BACKPORT_KERNEL_3_17) += backport-3.17.o
 
 compat-$(CPTCFG_BACKPORT_BUILD_CRYPTO_CCM) += crypto-ccm.o
 compat-$(CPTCFG_BACKPORT_BUILD_DMA_SHARED_HELPERS) += dma-shared-helpers.o

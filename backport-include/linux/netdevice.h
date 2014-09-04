@@ -157,36 +157,23 @@ static inline void netdev_reset_queue(struct net_device *dev_queue)
 #define IFF_UNICAST_FLT	0x20000		/* Supports unicast filtering	*/
 #endif
 
+#ifndef QUEUE_STATE_ANY_XOFF
+#define __QUEUE_STATE_DRV_XOFF __QUEUE_STATE_XOFF
+#define __QUEUE_STATE_STACK_XOFF __QUEUE_STATE_XOFF
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)
-
-/* interface name assignment types (sysfs name_assign_type attribute) */
-#define NET_NAME_UNKNOWN	0	/* unknown origin (not exposed to userspace) */
-#define NET_NAME_ENUM		1	/* enumerated by kernel */
-#define NET_NAME_PREDICTABLE	2	/* predictably named by the kernel */
-#define NET_NAME_USER		3	/* provided by user-space */
-#define NET_NAME_RENAMED	4	/* renamed by user-space */
-
-static inline struct net_device *
-backport_alloc_netdev_mqs(int sizeof_priv, const char *name,
-			  unsigned char name_assign_type,
-			  void (*setup)(struct net_device *),
-			  unsigned int txqs, unsigned int rxqs)
-{
-	return alloc_netdev_mqs(sizeof_priv, name, setup, txqs, rxqs);
-}
-
-#define alloc_netdev_mqs LINUX_BACKPORT(alloc_netdev_mqs)
+#define alloc_netdev_mqs(sizeof_priv, name, name_assign_type, setup, txqs, rxqs) \
+	alloc_netdev_mqs(sizeof_priv, name, setup, txqs, rxqs)
 
 #undef alloc_netdev
-static inline struct net_device *
-backport_alloc_netdev(int sizeof_priv, const char *name,
-		      unsigned char name_assign_type,
-		      void (*setup)(struct net_device *))
-{
-	return backport_alloc_netdev_mqs(sizeof_priv, name, name_assign_type,
-					 setup, 1, 1);
-}
-#define alloc_netdev LINUX_BACKPORT(alloc_netdev)
-#endif
+#define alloc_netdev(sizeof_priv, name, name_assign_type, setup) \
+	alloc_netdev_mqs(sizeof_priv, name, name_assign_type, setup, 1, 1)
+
+#undef alloc_netdev_mq
+#define alloc_netdev_mq(sizeof_priv, name, name_assign_type, setup, count) \
+	alloc_netdev_mqs(sizeof_priv, name, name_assign_type, setup, count, \
+			 count)
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0) */
 
 #endif /* __BACKPORT_NETDEVICE_H */

@@ -70,6 +70,16 @@ do {									\
 	dev_level_ratelimited(dev_emerg, dev, fmt, ##__VA_ARGS__)
 #define dev_alert_ratelimited(dev, fmt, ...)				\
 	dev_level_ratelimited(dev_alert, dev, fmt, ##__VA_ARGS__)
+#define dev_crit_ratelimited(dev, fmt, ...)				\
+	dev_level_ratelimited(dev_crit, dev, fmt, ##__VA_ARGS__)
+#define dev_err_ratelimited(dev, fmt, ...)				\
+	dev_level_ratelimited(dev_err, dev, fmt, ##__VA_ARGS__)
+#define dev_warn_ratelimited(dev, fmt, ...)				\
+	dev_level_ratelimited(dev_warn, dev, fmt, ##__VA_ARGS__)
+#define dev_notice_ratelimited(dev, fmt, ...)				\
+	dev_level_ratelimited(dev_notice, dev, fmt, ##__VA_ARGS__)
+#define dev_info_ratelimited(dev, fmt, ...)				\
+	dev_level_ratelimited(dev_info, dev, fmt, ##__VA_ARGS__)
 
 
 #if defined(CONFIG_DYNAMIC_DEBUG) || defined(DEBUG)
@@ -148,6 +158,17 @@ __ATTRIBUTE_GROUPS(_name)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)
 #define devm_kstrdup LINUX_BACKPORT(devm_kstrdup)
 extern char *devm_kstrdup(struct device *dev, const char *s, gfp_t gfp);
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#define devm_kmalloc_array LINUX_BACKPORT(devm_kmalloc_array)
+static inline void *devm_kmalloc_array(struct device *dev,
+				       size_t n, size_t size, gfp_t flags)
+{
+	if (size != 0 && n > SIZE_MAX / size)
+		return NULL;
+	return devm_kmalloc(dev, n * size, flags);
+}
 #endif
 
 #endif /* __BACKPORT_DEVICE_H */

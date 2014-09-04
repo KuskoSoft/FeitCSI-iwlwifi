@@ -63,4 +63,14 @@
 	(!list_empty(ptr) ? list_first_entry(ptr, type, member) : NULL)
 #endif /* list_first_entry_or_null */
 
+#ifndef list_next_entry
+/**
+ * list_next_entry - get the next element in list
+ * @pos:	the type * to cursor
+ * @member:	the name of the list_struct within the struct.
+ */
+#define list_next_entry(pos, member) \
+	list_entry((pos)->member.next, typeof(*(pos)), member)
+#endif /* list_next_entry */
+
 #endif /* __BACKPORT_LIST_H */
