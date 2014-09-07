@@ -748,11 +748,14 @@ static int iwl_pcie_load_given_ucode(struct iwl_trans *trans,
 	int first_ucode_section;
 
 	IWL_DEBUG_FW(trans,
+		     "working with %s image\n",
+		     image->is_secure ? "Secured" : "Non Secured");
+	IWL_DEBUG_FW(trans,
 		     "working with %s CPU\n",
 		     image->is_dual_cpus ? "Dual" : "Single");
 
 	/* configure the ucode to be ready to get the secured image */
-	if (has_secure_boot(trans->cfg->device_family)) {
+	if (image->is_secure) {
 		/* set secure boot inspector addresses */
 		iwl_write_prph(trans,
 			       LMPM_SECURE_INSPECTOR_CODE_ADDR,
@@ -788,7 +791,7 @@ static int iwl_pcie_load_given_ucode(struct iwl_trans *trans,
 			       LMPM_SECURE_CPU2_HDR_MEM_SPACE);
 
 		/* load to FW the binary sections of CPU2 */
-		if (has_secure_boot(trans->cfg->device_family))
+		if (image->is_secure)
 			ret = iwl_pcie_load_cpu_secured_sections(
 							trans, image, 2,
 							&first_ucode_section);
@@ -822,7 +825,7 @@ static int iwl_pcie_load_given_ucode(struct iwl_trans *trans,
 	else
 		iwl_write32(trans, CSR_RESET, 0);
 
-	if (has_secure_boot(trans->cfg->device_family)) {
+	if (image->is_secure) {
 		/* wait for image verification to complete  */
 		ret = iwl_poll_prph_bit(trans,
 					LMPM_SECURE_BOOT_CPU1_STATUS_ADDR,

@@ -87,11 +87,6 @@ enum iwl_device_family {
 	IWL_DEVICE_FAMILY_8000,
 };
 
-static inline bool has_secure_boot(enum iwl_device_family family)
-{
-	return (family == IWL_DEVICE_FAMILY_8000);
-}
-
 /*
  * LED mode
  *    IWL_LED_DEFAULT:  use device default
