@@ -31,7 +31,6 @@ obj-$(CPTCFG_WLAN) += drivers/net/wireless/
 #obj-$(CPTCFG_USB_NET_RNDIS_WLAN) += drivers/net/usb/
 #obj-$(CPTCFG_NFC) += net/nfc/
 #obj-$(CPTCFG_NFC) += drivers/nfc/
-#obj-$(CPTCFG_REGULATOR) += drivers/regulator/
 #obj-$(CPTCFG_MEDIA_SUPPORT) += drivers/media/
 #
 #obj-$(CPTCFG_IEEE802154) += net/ieee802154/

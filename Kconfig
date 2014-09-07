@@ -38,7 +38,6 @@ source drivers/net/wireless/Kconfig
 
 #source net/nfc/Kconfig
 
-#source drivers/regulator/Kconfig
 #source drivers/media/Kconfig
 
 #source net/ieee802154/Kconfig
