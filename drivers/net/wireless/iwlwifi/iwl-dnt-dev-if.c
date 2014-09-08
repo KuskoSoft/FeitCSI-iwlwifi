@@ -218,66 +218,17 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt *dnt,
 						    void *buffer,
 						    u32 buffer_size)
 {
-	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
-	u32 wr_ptr;
-	bool dont_reorder = false;
-	/* FIXME send stop command to FW */
 	if (WARN_ON_ONCE(!dnt->mon_buf_cpu_addr)) {
 		IWL_ERR(trans, "Can't retrieve data - DMA wasn't allocated\n");
 		return -ENOMEM;
 	}
 
-	/* If we're running a device that supports DBGC - use it */
-	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
-		wr_ptr = iwl_read_prph(trans, cfg->dbgc_dram_wrptr_addr);
-	else
-		wr_ptr = iwl_read_prph(trans, cfg->dbg_mon_wr_ptr_addr);
-	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
-	if (wr_ptr == 0x5a5a5a5a) {
-		IWL_ERR(trans,
-			"Can't read write pointer - not reordering buffer\n");
-		dont_reorder = true;
+	if (buffer_size < dnt->mon_buf_size) {
+		IWL_ERR(trans, "Can't retrieve data - Invalid buffer size\n");
+		return -EINVAL;
 	}
 
-	/* If we're running a device that supports DBGC.... */
-	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
-		if (CSR_HW_REV_STEP(trans->hw_rev) == 0) /* A-step */
-			/*
-			 * Here the write pointer points to the chunk previously
-			 * written, and in this function we refer to it as
-			 * pointing to the oldest data in the buffer, so we
-			 * need to also increment the value we're using by a
-			 * chunk (256 bytes).
-			 */
-			wr_ptr = ((wr_ptr - (dnt->mon_base_addr >> 6)) << 6) +
-				 256;
-		else
-			/*
-			 * In the B-step, wr_ptr is given relative to the base
-			 * address, in DWORD granularity, and points to the
-			 * next chunk to write to - i.e., the oldest data in
-			 * the buffer.
-			 */
-			wr_ptr <<= 2;
-	} else {
-		wr_ptr = (wr_ptr << 4) - dnt->mon_base_addr;
-	}
-
-	/* Misunderstanding wr_ptr can cause a page fault, so validate it... */
-	if (wr_ptr > dnt->mon_buf_size) {
-		IWL_ERR(trans,
-			"Write pointer DMA monitor register points to invalid data - setting to 0\n");
-		dont_reorder = true;
-	}
-
-	/* We have a problem with the wr_ptr, so just return the memory as-is */
-	if (dont_reorder)
-		wr_ptr = 0;
-
-	memcpy(buffer, dnt->mon_buf_cpu_addr + wr_ptr,
-	       dnt->mon_buf_size - wr_ptr);
-	memcpy(buffer + dnt->mon_buf_size - wr_ptr, dnt->mon_buf_cpu_addr,
-	       wr_ptr);
+	memcpy(buffer, dnt->mon_buf_cpu_addr, dnt->mon_buf_size);
 
 	return dnt->mon_buf_size;
 }
@@ -288,17 +239,8 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 						      u32 buffer_size)
 {
 	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
-	int buf_size_in_dwords, buf_index, i;
-	u32 wr_ptr, read_val;
-
-	/* FIXME send stop command to FW */
-
-	wr_ptr = iwl_read_prph(trans, cfg->dbg_mon_wr_ptr_addr);
-	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
-	if (wr_ptr == 0x5a5a5a5a) {
-		IWL_ERR(trans, "Can't read write pointer\n");
-		return -ENODEV;
-	}
+	int buf_size_in_dwords, i;
+	u32 read_val;
 
 	read_val = iwl_read_prph(trans, cfg->dbg_mon_buff_base_addr_reg_addr);
 	if (read_val == 0x5a5a5a5a) {
@@ -314,19 +256,14 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt *dnt,
 	}
 	dnt->mon_end_addr = read_val;
 
-	wr_ptr = wr_ptr - dnt->mon_base_addr;
 	iwl_write_prph(trans, cfg->dbg_mon_dmarb_rd_ctl_addr, 0x00000001);
 
 	/* buf size includes the end_addr as well */
 	buf_size_in_dwords = dnt->mon_end_addr - dnt->mon_base_addr + 1;
 	for (i = 0; i < buf_size_in_dwords; i++) {
-		/* reordering cyclic buffer */
-		buf_index = (i + (buf_size_in_dwords - wr_ptr)) %
-			    buf_size_in_dwords;
 		read_val = iwl_read_prph(trans,
 					 cfg->dbg_mon_dmarb_rd_data_addr);
-		memcpy(&buffer[buf_index * sizeof(u32)], &read_val,
-		       sizeof(u32));
+		memcpy(&buffer[i * sizeof(u32)], &read_val, sizeof(u32));
 	}
 	iwl_write_prph(trans, cfg->dbg_mon_dmarb_rd_ctl_addr, 0x00000000);
 
@@ -340,21 +277,15 @@ static int iwl_dnt_dev_if_retrieve_smem_monitor_data(struct iwl_dnt *dnt,
 {
 	struct iwl_dbg_cfg *cfg = &trans->dbg_cfg;
 	u32 i, bytes_to_end, calc_size;
-	u32 base_addr, end_addr, wr_ptr_addr, wr_ptr_shift;
-	u32 base, end, wr_ptr, pos, chunks_num, wr_ptr_offset;
-	u8 *temp_buffer;
+	u32 base, end, wr_ptr, pos, chunks_num, base_addr, end_addr;
 
 	if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_B_STEP) {
 		base_addr = cfg->dbg_mon_buff_base_addr_reg_addr_b_step;
 		end_addr = cfg->dbg_mon_buff_end_addr_reg_addr_b_step;
-		wr_ptr_addr = cfg->dbg_mon_wr_ptr_addr_b_step;
-		wr_ptr_shift = 2;
 	} else {
 		/* assuming A-step */
 		base_addr = cfg->dbg_mon_buff_base_addr_reg_addr;
 		end_addr = cfg->dbg_mon_buff_end_addr_reg_addr;
-		wr_ptr_addr = cfg->dbg_mon_wr_ptr_addr;
-		wr_ptr_shift = 0;
 	}
 
 	base = iwl_read_prph(trans, base_addr);
@@ -376,49 +307,26 @@ static int iwl_dnt_dev_if_retrieve_smem_monitor_data(struct iwl_dnt *dnt,
 		return -ENODEV;
 	}
 
-	wr_ptr = iwl_read_prph(trans, wr_ptr_addr);
-	/* iwl_read_prph returns 0x5a5a5a5a when it fails to grab nic access */
-	if (wr_ptr == 0x5a5a5a5a) {
-		IWL_ERR(trans, "Can't read write pointer, not re-aligning\n");
-		wr_ptr = base << 8;
-	}
-
 	pos = base << 8;
 	calc_size = (end - base + 1) << 8;
-	wr_ptr <<= wr_ptr_shift;
 	bytes_to_end = ((end + 1) << 8) - wr_ptr;
 	chunks_num = calc_size / DNT_CHUNK_SIZE;
-	wr_ptr_offset = wr_ptr - pos;
-
-	if (wr_ptr_offset > calc_size) {
-		IWL_ERR(trans, "Invalid wr_ptr value, not re-aligning\n");
-		wr_ptr_offset = 0;
-	}
 
 	if (calc_size > buffer_size) {
 		IWL_ERR(trans, "Invalid buffer size\n");
 		return -EINVAL;
 	}
 
-	temp_buffer = kzalloc(calc_size, GFP_KERNEL);
-	if (!temp_buffer)
-		return -ENOMEM;
-
 	for (i = 0; i < chunks_num; i++)
 		iwl_trans_read_mem(trans, pos + (i * DNT_CHUNK_SIZE),
-				   temp_buffer + (i * DNT_CHUNK_SIZE),
+				   buffer + (i * DNT_CHUNK_SIZE),
 				   DNT_CHUNK_SIZE / sizeof(u32));
 
 	if (calc_size % DNT_CHUNK_SIZE)
 		iwl_trans_read_mem(trans, pos + (chunks_num * DNT_CHUNK_SIZE),
-				   temp_buffer + (chunks_num * DNT_CHUNK_SIZE),
+				   buffer + (chunks_num * DNT_CHUNK_SIZE),
 				   (calc_size - (chunks_num * DNT_CHUNK_SIZE)) /
 				   sizeof(u32));
-
-	memcpy(buffer, temp_buffer + wr_ptr_offset, bytes_to_end);
-	memcpy(buffer + bytes_to_end, temp_buffer, wr_ptr_offset);
-
-	kfree(temp_buffer);
 
 	return calc_size;
 }
