@@ -1263,6 +1263,9 @@ ieee80211_find_80211h_pwr_constr(struct ieee80211_sub_if_data *sdata,
 	return have_chan_pwr;
 }
 
+#if 0
+#error "For drivers we (Intel) ship, we want to disable"
+#error "this reverse-engineered part of CCX."
 static void ieee80211_find_cisco_dtpc(struct ieee80211_sub_if_data *sdata,
 				      struct ieee80211_channel *channel,
 				      const u8 *cisco_dtpc_ie,
@@ -1276,6 +1279,7 @@ static void ieee80211_find_cisco_dtpc(struct ieee80211_sub_if_data *sdata,
 	 */
 	*pwr_level = (__s8)cisco_dtpc_ie[4];
 }
+#endif
 
 static u32 ieee80211_handle_pwr_constr(struct ieee80211_sub_if_data *sdata,
 				       struct ieee80211_channel *channel,
@@ -1300,12 +1304,13 @@ static u32 ieee80211_handle_pwr_constr(struct ieee80211_sub_if_data *sdata,
 			max_t(int, 0, chan_pwr - pwr_reduction_80211h);
 	}
 
+#if 0
 	if (cisco_dtpc_ie) {
 		ieee80211_find_cisco_dtpc(
 			sdata, channel, cisco_dtpc_ie, &pwr_level_cisco);
 		has_cisco_pwr = true;
 	}
-
+#endif
 	if (!has_80211h_pwr && !has_cisco_pwr)
 		return 0;
 
