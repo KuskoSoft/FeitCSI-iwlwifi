@@ -9062,6 +9062,7 @@ static int nl80211_set_rekey_data(struct sk_buff *skb, struct genl_info *info)
 	err = rdev_set_rekey_data(rdev, dev, &rekey_data);
  out:
 	wdev_unlock(wdev);
+	memset(&rekey_data, 0, sizeof(rekey_data));
 	return err;
 }
 
