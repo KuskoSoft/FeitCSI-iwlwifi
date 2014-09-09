@@ -496,6 +496,8 @@ static int __cfg80211_set_encryption(struct cfg80211_registered_device *rdev,
 			err = 0;
 		if (!err) {
 			if (!addr) {
+				memset(wext->wext.keys->params[idx].data, 0,
+				       sizeof(wext->wext.keys->params[idx].data));
 				wdev->wext.keys->params[idx].key_len = 0;
 				wdev->wext.keys->params[idx].cipher = 0;
 			}
