@@ -752,8 +752,9 @@ static void iwl_mvm_cleanup_iterator(void *data, u8 *mac,
 }
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-static void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
+void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 {
+	static char *env[] = { "DRIVER=iwlwifi", "EVENT=error_dump", NULL };
 	struct iwl_fw_error_dump_file *dump_file;
 	struct iwl_fw_error_dump_data *dump_data;
 	struct iwl_fw_error_dump_info *dump_info;
@@ -845,19 +846,15 @@ static void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 		file_len += fw_error_dump->trans_ptr->len;
 	dump_file->file_len = cpu_to_le32(file_len);
 	mvm->fw_error_dump = fw_error_dump;
+
+	/* notify the userspace about the error we had */
+	kobject_uevent_env(&mvm->hw->wiphy->dev.kobj, KOBJ_CHANGE, env);
 }
 #endif
 
 static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 {
-#ifdef CPTCFG_IWLWIFI_DEBUGFS
-	static char *env[] = { "DRIVER=iwlwifi", "EVENT=error_dump", NULL };
-
 	iwl_mvm_fw_error_dump(mvm);
-
-	/* notify the userspace about the error we had */
-	kobject_uevent_env(&mvm->hw->wiphy->dev.kobj, KOBJ_CHANGE, env);
-#endif
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	iwl_dnt_dispatch_handle_nic_err(mvm->trans);
@@ -989,6 +986,7 @@ static void iwl_mvm_mac_stop(struct ieee80211_hw *hw)
 
 	flush_work(&mvm->d0i3_exit_work);
 	flush_work(&mvm->async_handlers_wk);
+	flush_work(&mvm->fw_error_dump_wk);
 
 	mutex_lock(&mvm->mutex);
 	__iwl_mvm_mac_stop(mvm);
