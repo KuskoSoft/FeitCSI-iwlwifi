@@ -2366,12 +2366,14 @@ static void rs_get_initial_rate(struct iwl_mvm *mvm,
 		nentries = ARRAY_SIZE(rs_init_rates_24ghz);
 	}
 
-	for (i = 0; i < nentries; i++) {
-		int rate_idx = initial_rates[i].rate_idx;
-		if ((best_rssi >= initial_rates[i].rssi) &&
-		    (BIT(rate_idx) & lq_sta->active_legacy_rate)) {
-			rate->index = rate_idx;
-			break;
+	if (IWL_MVM_RS_RSSI_BASED_INIT_RATE) {
+		for (i = 0; i < nentries; i++) {
+			int rate_idx = initial_rates[i].rate_idx;
+			if ((best_rssi >= initial_rates[i].rssi) &&
+			    (BIT(rate_idx) & lq_sta->active_legacy_rate)) {
+				rate->index = rate_idx;
+				break;
+			}
 		}
 	}
 
