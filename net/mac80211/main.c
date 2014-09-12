@@ -1183,12 +1183,12 @@ void ieee80211_free_hw(struct ieee80211_hw *hw)
 
 	kfree(rcu_access_pointer(local->tx_consec));
 
-	tx_latency = rcu_dereference(local->tx_latency);
+	tx_latency = rcu_access_pointer(local->tx_latency);
 	if (tx_latency) {
 		kfree(tx_latency->thresholds_bss);
 		kfree(tx_latency->thresholds_p2p);
 	}
-	kfree(rcu_access_pointer(local->tx_latency));
+	kfree(tx_latency);
 
 	wiphy_free(local->hw.wiphy);
 }
