@@ -778,8 +778,10 @@ static void iwl_mvm_tcm_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
 	low_latency = mvm->tcm.result.low_latency[mvmvif->id];
 
 	if (!mvm->tcm.result.change[mvmvif->id] &&
-	    mvmvif->low_latency == low_latency)
+	    mvmvif->low_latency == low_latency) {
+		iwl_mvm_update_quotas(mvm, NULL);
 		return;
+	}
 
 	if (mvmvif->low_latency != low_latency) {
 		/* this sends traffic load and updates quota as well */
