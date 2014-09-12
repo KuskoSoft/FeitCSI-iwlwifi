@@ -737,6 +737,7 @@ struct iwl_mvm {
 			} rx;
 		} data[NUM_MAC_INDEX_DRIVER];
 		struct {
+			u32 elapsed; /* milliseconds for this TCM period */
 			u32 airtime[NUM_MAC_INDEX_DRIVER];
 			u8 load[NUM_MAC_INDEX_DRIVER];
 			u8 global_load;

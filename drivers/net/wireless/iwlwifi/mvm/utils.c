@@ -828,6 +828,8 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 	if (handle_ll)
 		mvm->tcm.ll_ts = ts;
 
+	mvm->tcm.result.elapsed = elapsed;
+
 	for (mac = 0; mac < NUM_MAC_INDEX_DRIVER; mac++) {
 		u32 vo_vi_pkts = 0;
 		u32 airtime = 0;
