@@ -859,7 +859,9 @@ static void iwl_mvm_fw_error_dump_wk(struct work_struct *work)
 	struct iwl_mvm *mvm =
 		container_of(work, struct iwl_mvm, fw_error_dump_wk);
 
+	mutex_lock(&mvm->mutex);
 	iwl_mvm_fw_error_dump(mvm);
+	mutex_unlock(&mvm->mutex);
 }
 
 void iwl_mvm_nic_restart(struct iwl_mvm *mvm, bool fw_error)
