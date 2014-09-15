@@ -1699,11 +1699,6 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 			       rdev->wiphy.max_num_csa_counters))
 			goto nla_put_failure;
 
-		if (rdev->wiphy.flags & WIPHY_FLAG_HAS_CHANNEL_SWITCH &&
-		    nla_put_u8(msg, NL80211_ATTR_MAX_CSA_COUNTERS,
-			       rdev->wiphy.max_num_csa_counters))
-			goto nla_put_failure;
-
 		/* done */
 		state->split_start = 0;
 		break;
