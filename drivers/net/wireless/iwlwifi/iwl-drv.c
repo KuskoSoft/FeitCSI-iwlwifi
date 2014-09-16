@@ -379,6 +379,11 @@ static void iwl_free_fw_img(struct iwl_drv *drv, struct fw_img *img)
 static void iwl_dealloc_ucode(struct iwl_drv *drv)
 {
 	int i;
+
+	kfree(drv->fw.dbg_dest_tlv);
+	for (i = 0; i < ARRAY_SIZE(drv->fw.dbg_conf_tlv); i++)
+		kfree(drv->fw.dbg_conf_tlv[i]);
+
 	for (i = 0; i < IWL_UCODE_TYPE_MAX; i++)
 		iwl_free_fw_img(drv, drv->fw.img + i);
 }
@@ -498,6 +503,11 @@ struct iwl_firmware_pieces {
 
 	u32 init_evtlog_ptr, init_evtlog_size, init_errlog_ptr;
 	u32 inst_evtlog_ptr, inst_evtlog_size, inst_errlog_ptr;
+
+	/* FW debug data parsed for driver usage */
+	struct iwl_fw_dbg_dest_tlv *dbg_dest_tlv;
+	struct iwl_fw_dbg_conf_tlv *dbg_conf_tlv[FW_DBG_MAX];
+	size_t dbg_conf_tlv_len[FW_DBG_MAX];
 };
 
 /*
@@ -1064,6 +1074,66 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 			capa->n_scan_channels =
 				le32_to_cpup((__le32 *)tlv_data);
 			break;
+		case IWL_UCODE_TLV_FW_DBG_DEST: {
+			struct iwl_fw_dbg_dest_tlv *dest = (void *)tlv_data;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+			if (drv->trans->dbg_cfg.dbm_destination_path) {
+				IWL_ERR(drv,
+					"Ignoring destination, ini file present\n");
+				break;
+			}
+#endif
+
+			if (pieces->dbg_dest_tlv) {
+				IWL_ERR(drv,
+					"dbg destination ignored, already exists\n");
+				break;
+			}
+
+			pieces->dbg_dest_tlv = dest;
+			IWL_INFO(drv, "Found debug destination: %s\n",
+				 get_fw_dbg_mode_string(dest->monitor_mode));
+
+			drv->fw.dbg_dest_reg_num =
+				tlv_len - offsetof(struct iwl_fw_dbg_dest_tlv,
+						   reg_ops);
+			drv->fw.dbg_dest_reg_num /=
+				sizeof(drv->fw.dbg_dest_tlv->reg_ops[0]);
+
+			break;
+			}
+		case IWL_UCODE_TLV_FW_DBG_CONF: {
+			struct iwl_fw_dbg_conf_tlv *conf = (void *)tlv_data;
+
+			if (!pieces->dbg_dest_tlv) {
+				IWL_ERR(drv,
+					"Ignore dbg config %d - no destination configured\n",
+					conf->id);
+				break;
+			}
+
+			if (conf->id >= ARRAY_SIZE(drv->fw.dbg_conf_tlv)) {
+				IWL_ERR(drv,
+					"Skip unknown configuration: %d\n",
+					conf->id);
+				break;
+			}
+
+			if (pieces->dbg_conf_tlv[conf->id]) {
+				IWL_ERR(drv,
+					"Ignore duplicate dbg config %d\n",
+					conf->id);
+				break;
+			}
+
+			IWL_INFO(drv, "Found debug configuration: %d\n",
+				 conf->id);
+
+			pieces->dbg_conf_tlv[conf->id] = conf;
+			pieces->dbg_conf_tlv_len[conf->id] = tlv_len;
+			break;
+			}
 		default:
 			IWL_DEBUG_INFO(drv, "unknown TLV: %d\n", tlv_type);
 			break;
@@ -1329,6 +1399,30 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	for (i = 0; i < IWL_UCODE_TYPE_MAX; i++)
 		if (iwl_alloc_ucode(drv, &pieces, i))
 			goto out_free_fw;
+
+	if (pieces.dbg_dest_tlv) {
+		drv->fw.dbg_dest_tlv =
+			kmemdup(pieces.dbg_dest_tlv,
+				sizeof(*pieces.dbg_dest_tlv) +
+				sizeof(pieces.dbg_dest_tlv->reg_ops[0]) *
+				drv->fw.dbg_dest_reg_num, GFP_KERNEL);
+
+		if (!drv->fw.dbg_dest_tlv)
+			goto out_free_fw;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(drv->fw.dbg_conf_tlv); i++) {
+		if (pieces.dbg_conf_tlv[i]) {
+			drv->fw.dbg_conf_tlv_len[i] =
+				pieces.dbg_conf_tlv_len[i];
+			drv->fw.dbg_conf_tlv[i] =
+				kmemdup(pieces.dbg_conf_tlv[i],
+					drv->fw.dbg_conf_tlv_len[i],
+					GFP_KERNEL);
+			if (!drv->fw.dbg_conf_tlv[i])
+				goto out_free_fw;
+		}
+	}
 
 	/* Now that we can no longer fail, copy information */
 
