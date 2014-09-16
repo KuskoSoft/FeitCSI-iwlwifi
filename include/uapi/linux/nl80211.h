@@ -920,10 +920,10 @@ enum nl80211_commands {
 
 	NL80211_CMD_SET_QOS_MAP,
 
-	NL80211_CMD_CH_SWITCH_STARTED_NOTIFY,
-
 	NL80211_CMD_ADD_TX_TS,
 	NL80211_CMD_DEL_TX_TS,
+
+	NL80211_CMD_CH_SWITCH_STARTED_NOTIFY,
 
 	/* add new commands above here */
 
@@ -1639,6 +1639,12 @@ enum nl80211_commands {
  *	association request. In addition, it must also set the RRM capability
  *	flag in the association request's Capability Info field.
  *
+ * @NL80211_ATTR_WIPHY_DYN_ACK: flag attribute used to enable ACK timeout
+ *	estimation algorithm (dynack). In order to activate dynack
+ *	%NL80211_FEATURE_ACKTO_ESTIMATION feature flag must be set by lower
+ *	drivers to indicate dynack capability. Dynack is automatically disabled
+ *	setting valid value for coverage class.
+ *
  * @NL80211_ATTR_TSID: a TSID value (u8 attribute)
  * @NL80211_ATTR_USER_PRIO: user priority value (u8 attribute)
  * @NL80211_ATTR_ADMITTED_TIME: admitted time in units of 32 microseconds
@@ -1986,16 +1992,20 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_CSA_C_OFFSETS_TX,
 	NL80211_ATTR_MAX_CSA_COUNTERS,
+
 	NL80211_ATTR_TDLS_INITIATOR,
-	NL80211_ATTR_REG_INDOOR,
 
 	NL80211_ATTR_USE_RRM,
+
+	NL80211_ATTR_WIPHY_DYN_ACK,
 
 	NL80211_ATTR_TSID,
 	NL80211_ATTR_USER_PRIO,
 	NL80211_ATTR_ADMITTED_TIME,
 
 	NL80211_ATTR_SMPS_MODE,
+
+	NL80211_ATTR_REG_INDOOR,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -4051,6 +4061,9 @@ enum nl80211_ap_sme_features {
  *	current tx power value into the TPC Report IE in the spectrum
  *	management TPC Report action frame, and in the Radio Measurement Link
  *	Measurement Report action frame.
+ * @NL80211_FEATURE_ACKTO_ESTIMATION: This driver supports dynamic ACK timeout
+ *	estimation (dynack). %NL80211_ATTR_WIPHY_DYN_ACK flag attribute is used
+ *	to enable dynack.
  * @NL80211_FEATURE_STATIC_SMPS: Device supports static spatial
  *	multiplexing powersave, ie. can turn off all but one chain
  *	even on HT connections that should be using more chains.
@@ -4083,8 +4096,9 @@ enum nl80211_feature_flags {
 	NL80211_FEATURE_WFA_TPC_IE_IN_PROBES		= 1 << 20,
 	NL80211_FEATURE_QUIET				= 1 << 21,
 	NL80211_FEATURE_TX_POWER_INSERTION		= 1 << 22,
-	NL80211_FEATURE_STATIC_SMPS			= 1 << 23,
-	NL80211_FEATURE_DYNAMIC_SMPS			= 1 << 24,
+	NL80211_FEATURE_ACKTO_ESTIMATION		= 1 << 23,
+	NL80211_FEATURE_STATIC_SMPS			= 1 << 24,
+	NL80211_FEATURE_DYNAMIC_SMPS			= 1 << 25,
 };
 
 /**
