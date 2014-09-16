@@ -187,6 +187,8 @@ struct xvt_alive_resp_ver2 {
 
 #define TX_CMD_LIFE_TIME_INFINITE	0xFFFFFFFF
 
+#define TX_CMD_FLG_ACK_MSK cpu_to_le32(1 << 3)
+
 struct iwl_tx_cmd {
 	__le16 len;
 	__le16 next_frame_len;

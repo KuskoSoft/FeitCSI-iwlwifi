@@ -837,6 +837,7 @@ iwl_xvt_set_mod_tx_params(struct iwl_xvt *xvt, struct sk_buff *skb,
 
 	tx_cmd->sta_id = sta_id;
 	tx_cmd->rate_n_flags = cpu_to_le32(rate_flags);
+	tx_cmd->tx_flags = TX_CMD_FLG_ACK_MSK;
 
 	/* the skb should already hold the data */
 	memcpy(tx_cmd->hdr, skb->data, sizeof(struct ieee80211_hdr));
