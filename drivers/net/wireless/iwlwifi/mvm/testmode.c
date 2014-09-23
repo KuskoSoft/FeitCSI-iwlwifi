@@ -262,9 +262,6 @@ static int iwl_tm_get_dev_info(struct iwl_mvm *mvm,
 	struct iwl_tm_dev_info *dev_info;
 	const u8 driver_ver[] = IWLWIFI_VERSION;
 
-	if (!mvm->nvm_data)
-		return -EINVAL;
-
 	dev_info = kzalloc(sizeof(struct iwl_tm_dev_info) +
 			   (strlen(driver_ver)+1)*sizeof(u8), GFP_KERNEL);
 	if (!dev_info)
@@ -273,8 +270,7 @@ static int iwl_tm_get_dev_info(struct iwl_mvm *mvm,
 	dev_info->dev_id = mvm->trans->hw_id;
 	dev_info->fw_ver = mvm->fw->ucode_ver;
 	dev_info->vendor_id = PCI_VENDOR_ID_INTEL;
-
-	dev_info->silicon_step = mvm->nvm_data->radio_cfg_step;
+	dev_info->silicon_step = CSR_HW_REV_STEP(mvm->trans->hw_rev);
 
 	/* TODO: Assign real value when feature is implemented */
 	dev_info->build_ver = 0x00;
