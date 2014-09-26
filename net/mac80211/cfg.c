@@ -2789,11 +2789,7 @@ EXPORT_SYMBOL(ieee80211_csa_finish);
 static int ieee80211_set_after_csa_beacon(struct ieee80211_sub_if_data *sdata,
 					  u32 *changed)
 {
-	struct ieee80211_local *local = sdata->local;
 	int err;
-
-	sdata_assert_lock(sdata);
-	lockdep_assert_held(&local->mtx);
 
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP:
@@ -2928,26 +2924,7 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 				    u32 *changed)
 {
 	struct ieee80211_csa_settings csa = {};
-	struct ieee80211_local *local = sdata->local;
-	struct ieee80211_if_mesh __maybe_unused *ifmsh;
 	int err;
-
-	sdata_assert_lock(sdata);
-	lockdep_assert_held(&local->mtx);
-
-	if (!list_empty(&local->roc_list) || local->scanning)
-		return -EBUSY;
-
-	if (sdata->wdev.cac_started)
-		return -EBUSY;
-
-	if (cfg80211_chandef_identical(&params->chandef,
-				       &sdata->vif.bss_conf.chandef))
-		return -EINVAL;
-
-	/* don't allow another channel switch if one is already active. */
-	if (sdata->vif.csa_active)
-		return -EBUSY;
 
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP:
@@ -3035,8 +3012,6 @@ static int ieee80211_set_csa_beacon(struct ieee80211_sub_if_data *sdata,
 #ifdef CPTCFG_MAC80211_MESH
 	case NL80211_IFTYPE_MESH_POINT: {
 		struct ieee80211_if_mesh *ifmsh = &sdata->u.mesh;
-
-		ifmsh = &sdata->u.mesh;
 
 		if (params->chandef.width != sdata->vif.bss_conf.chandef.width)
 			return -EINVAL;
