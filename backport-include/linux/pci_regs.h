@@ -121,6 +121,10 @@
 #define  PCI_EXP_DEVCTL2_ARI	0x20    /* Alternative Routing-ID */
 #endif
 
+#ifndef PCI_EXP_LTR_EN
+#define PCI_EXP_LTR_EN		0x400   /* Latency tolerance reporting */
+#endif
+
 #ifndef PCI_PM_CAP_PME_SHIFT
 #define PCI_PM_CAP_PME_SHIFT	11
 #endif
