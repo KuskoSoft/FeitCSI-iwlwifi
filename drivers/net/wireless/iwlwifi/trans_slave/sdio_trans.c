@@ -1919,6 +1919,8 @@ static irqreturn_t sdio_irq_handler(int irq, void *data)
 	iwl_trans_slv_ref(trans);
 	iwl_trans_slv_unref(trans);
 
+	pm_wakeup_event(trans->dev, 0);
+
 	return IRQ_WAKE_THREAD;
 }
 
@@ -2017,6 +2019,8 @@ static int iwlwifi_plat_probe(struct platform_device *pdev)
 
 	trans_sdio->plat_data.gpio = wlan_gpio;
 	platform_set_drvdata(pdev, trans);
+
+	device_set_wakeup_capable(trans->dev, true);
 
 	return ret;
 }
