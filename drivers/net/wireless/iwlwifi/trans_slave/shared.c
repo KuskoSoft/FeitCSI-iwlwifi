@@ -582,6 +582,8 @@ static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 
 static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 {
+	struct iwl_trans_slv *trans_slv __maybe_unused =
+				IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
 	if (iwlwifi_mod_params.d0i3_disable)
@@ -594,8 +596,9 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 	}
 
 #ifdef CONFIG_HAS_WAKELOCK
-	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
-		wake_lock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
+	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
+	    !trans_slv->suspending)
+		wake_lock(&trans_slv->slv_wake_lock);
 #endif
 
 	return 0;
@@ -648,10 +651,61 @@ static int iwl_slv_rpm_runtime_idle(struct device *dev)
 	return -EBUSY;
 }
 
+static int iwl_slv_rpm_suspend(struct device *dev)
+{
+	struct iwl_slv_rpm_device *rpm_dev =
+			container_of(dev, struct iwl_slv_rpm_device, dev);
+	struct iwl_trans *trans = rpm_dev->trans;
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+
+	/*
+	 * mac80211 might ask us to perform various actions (e.g.
+	 * remove all interfaces). however, the device might be in d0i3,
+	 * and the runtime_suspend/resume callbacks won't get called
+	 * as the pm workqueue is frozen.
+	 *
+	 * since this suspend handler is get called before mac80211's one,
+	 * get out of d0i3 here (by calling pm_runtime_resume).
+	 * we'll get back into d0i3 in iwl_trans_slv_suspend() (called
+	 * after mac80211's suspend handler.
+	 *
+	 * set trans_slv->suspending to avoid taking wakelock during
+	 * this process (which will abort the suspend)
+	 */
+	IWL_DEBUG_RPM(trans, "call pm_runtime_resume - rpm counter: %d\n",
+		      atomic_read(&trans->dev->power.usage_count));
+
+	trans_slv->suspending = true;
+	pm_runtime_resume(dev);
+	trans_slv->suspending = false;
+
+	return 0;
+}
+
+static int iwl_slv_rpm_resume(struct device *dev)
+{
+	struct iwl_slv_rpm_device *rpm_dev =
+			container_of(dev, struct iwl_slv_rpm_device, dev);
+	struct iwl_trans *trans = rpm_dev->trans;
+
+	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
+		      atomic_read(&trans->dev->power.usage_count));
+
+	/*
+	 * Nothing to do here. runtime_pm should be active at this point,
+	 * and will be autosuspended later on.
+	 */
+	return 0;
+}
+
 static const struct dev_pm_ops iwl_slv_rpm_pm_ops = {
 	SET_RUNTIME_PM_OPS(iwl_slv_rpm_runtime_suspend,
 			   iwl_slv_rpm_runtime_resume,
 			   iwl_slv_rpm_runtime_idle)
+#ifdef CONFIG_PM
+	.suspend = iwl_slv_rpm_suspend,
+	.resume = iwl_slv_rpm_resume,
+#endif
 };
 
 static struct class iwl_slv_rpm_class = {
@@ -1875,14 +1929,32 @@ void iwl_trans_slv_unref(struct iwl_trans *trans)
 
 void iwl_trans_slv_suspend(struct iwl_trans *trans)
 {
+#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
+	IWL_DEBUG_RPM(trans, "suspending: %d, rpm counter: %d\n",
+		      trans_slv->suspending,
+		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
+
+	/* set the device back into d0i3 (see iwl_slv_rpm_suspend()) */
+	iwl_slv_fw_enter_d0i3(trans);
+#endif
 	trans_slv->wowlan_enabled = true;
 }
 
 void iwl_trans_slv_resume(struct iwl_trans *trans)
 {
+#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
+	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
+		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
+
+	/*
+	 * set the device active again (mac80211 might interact with it,
+	 * and the runtime_pm handlers are frozen at this point)
+	 */
+	iwl_slv_fw_exit_d0i3(trans);
+#endif
 	trans_slv->wowlan_enabled = false;
 }

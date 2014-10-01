@@ -196,6 +196,7 @@ struct iwl_trans_slv {
 	u8 no_reclaim_cmds[MAX_NO_RECLAIM_CMDS];
 
 	bool bc_table_dword;
+	bool suspending;
 
 	struct device *d0i3_dev;
 	wait_queue_head_t d0i3_waitq;
