@@ -1925,8 +1925,16 @@ static irqreturn_t sdio_irq_handler(int irq, void *data)
 static irqreturn_t sdio_irq_thread(int irq, void *data)
 {
 	struct iwl_trans *trans = (struct iwl_trans *)data;
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
 	IWL_DEBUG_ISR(trans, "IRQ thread was called\n");
+
+	if (trans_sdio->suspended) {
+		IWL_DEBUG_ISR(trans, "skip handling\n");
+		disable_irq_nosync(trans_sdio->plat_data.irq);
+		trans_sdio->pending_irq = true;
+		return IRQ_HANDLED;
+	}
 
 	iwl_write_direct32(trans, CSR_SDIO_WAKE, 1);
 
@@ -2283,6 +2291,29 @@ static int iwl_trans_sdio_dbgfs_register(struct iwl_trans *trans,
 	return 0;
 }
 #endif /*CPTCFG_IWLWIFI_DEBUGFS */
+
+#ifdef CONFIG_PM_SLEEP
+void _iwl_sdio_suspend(struct iwl_trans *trans)
+{
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+
+	IWL_DEBUG_ISR(trans, "setting trans_sdio->suspended = true\n");
+	trans_sdio->suspended = true;
+}
+
+void _iwl_sdio_resume(struct iwl_trans *trans)
+{
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+
+	IWL_DEBUG_ISR(trans, "setting trans_sdio->suspended = false\n");
+	trans_sdio->suspended = false;
+	if (trans_sdio->pending_irq) {
+		sdio_irq_thread(0, trans);
+		enable_irq(trans_sdio->plat_data.irq);
+		trans_sdio->pending_irq = false;
+	}
+}
+#endif /* CONFIG_PM_SLEEP */
 
 static int iwl_trans_sdio_test_mode_cmd(struct iwl_trans *trans, bool enable)
 {

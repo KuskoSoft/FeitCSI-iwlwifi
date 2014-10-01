@@ -197,6 +197,10 @@ struct iwl_trans_sdio {
 
 	struct iwl_sdio_plat_data plat_data;
 
+	/* suspend flow */
+	bool suspended;
+	bool pending_irq;
+
 	/* Debug variables */
 	bool print_rx_hex_dump;
 	const struct iwl_sdio_sf_mem_addresses *sf_mem_addresses;
@@ -256,6 +260,11 @@ int iwl_sdio_tx_init(struct iwl_trans *trans);
 ******************************************************/
 void iwl_sdio_handle_ta_read_ready(struct iwl_trans *trans,
 				   struct iwl_sdio_cmd_buffer *ta_buff);
+
+#ifdef CONFIG_PM_SLEEP
+void _iwl_sdio_suspend(struct iwl_trans *trans);
+void _iwl_sdio_resume(struct iwl_trans *trans);
+#endif
 
 /*
  * INTERNAL API

@@ -124,6 +124,7 @@ static int iwl_sdio_suspend(struct device *dev)
 		}
 	}
 
+	_iwl_sdio_suspend(trans);
 	return 0;
 }
 
@@ -135,7 +136,10 @@ static int iwl_sdio_suspend(struct device *dev)
 static int iwl_sdio_resume(struct device *dev)
 {
 	struct sdio_func *func = dev_to_sdio_func(dev);
+	struct iwl_trans *trans = sdio_get_drvdata(func);
 	struct mmc_host *host;
+
+	_iwl_sdio_resume(trans);
 
 	host = func->card->host;
 	host->pm_flags &= ~MMC_PM_KEEP_POWER;
