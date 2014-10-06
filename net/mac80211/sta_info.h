@@ -280,6 +280,9 @@ struct ieee80211_tx_latency_stat {
 	u32 bin_count;
 };
 
+/* Value to indicate no TID reservation */
+#define IEEE80211_TID_UNRESERVED	0xff
+
 /**
  * struct sta_info - STA information
  *
@@ -370,6 +373,7 @@ struct ieee80211_tx_latency_stat {
  *	AP only.
  * @cipher_scheme: optional cipher scheme for this station
  * @last_tdls_pkt_time: holds the time in jiffies of last TDLS pkt ACKed
+ * @reserved_tid: reserved TID (if any, otherwise IEEE80211_TID_UNRESERVED)
  */
 struct sta_info {
 	/* General information, mostly static */
@@ -488,6 +492,8 @@ struct sta_info {
 
 	/* TDLS timeout data */
 	unsigned long last_tdls_pkt_time;
+
+	u8 reserved_tid;
 
 	/* keep last! */
 	struct ieee80211_sta sta;
