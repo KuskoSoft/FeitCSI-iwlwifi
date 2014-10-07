@@ -385,7 +385,8 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		BIT(NL80211_IFTYPE_P2P_DEVICE) |
 		BIT(NL80211_IFTYPE_ADHOC);
 
-	hw->wiphy->flags |= WIPHY_FLAG_IBSS_RSN;
+	hw->wiphy->flags |= WIPHY_FLAG_IBSS_RSN |
+			    WIPHY_FLAG_SUPPORTS_WMM_ADMISSION;
 	hw->wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG |
 				       REGULATORY_DISABLE_BEACON_HINTS |
 				       REGULATORY_ENABLE_RELAX_NO_IR;
