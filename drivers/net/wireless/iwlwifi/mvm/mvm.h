@@ -659,7 +659,6 @@ struct iwl_mvm {
 	/* -1 for always, 0 for never, >0 for that many times */
 	s8 restart_fw;
 	struct work_struct fw_error_dump_wk;
-	struct iwl_mvm_dump_ptrs *fw_error_dump;
 
 #ifdef CPTCFG_IWLWIFI_LEDS
 	struct led_classdev led;
