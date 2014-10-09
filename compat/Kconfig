@@ -126,3 +126,14 @@ config BACKPORT_BUILD_CRYPTO_CCM
 	default n if CRYPTO_CCM
 	default y if BACKPORT_CRYPTO_CCM
 	#c-file crypto/ccm.c
+
+config BACKPORT_WANT_DEV_COREDUMP
+	bool
+
+config BACKPORT_BUILD_WANT_DEV_COREDUMP
+	bool
+	default n if DEV_COREDUMP
+	default n if DISABLE_DEV_COREDUMP
+	default y if BACKPORT_WANT_DEV_COREDUMP
+	#h-file linux/devcoredump.h
+	#c-file drivers/base/devcoredump.c

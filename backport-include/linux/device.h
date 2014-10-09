@@ -110,6 +110,12 @@ backport_device_release_driver(struct device *dev)
 	device_unlock(dev);
 }
 #define device_release_driver LINUX_BACKPORT(device_release_driver)
+
+#define kobj_to_dev LINUX_BACKPORT(kobj_to_dev)
+static inline struct device *kobj_to_dev(struct kobject *kobj)
+{
+	return container_of(kobj, struct device, kobj);
+}
 #endif /* LINUX_VERSION_CODE <= KERNEL_VERSION(3,6,0) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)

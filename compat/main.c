@@ -57,6 +57,12 @@ static int __init backport_init(void)
 	if (ret)
 		return ret;
 
+	ret = devcoredump_init();
+	if (ret) {
+		crypto_ccm_module_exit();
+		return ret;
+	}
+
 	printk(KERN_INFO "Loading modules backported from " BACKPORTED_KERNEL_NAME
 #ifndef BACKPORTS_GIT_TRACKED
 		" version " BACKPORTED_KERNEL_VERSION
@@ -75,5 +81,6 @@ subsys_initcall(backport_init);
 static void __exit backport_exit(void)
 {
 	crypto_ccm_module_exit();
+	devcoredump_exit();
 }
 module_exit(backport_exit);
