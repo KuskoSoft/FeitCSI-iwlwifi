@@ -2890,6 +2890,16 @@ enum ieee80211_reconfig_type {
  * @get_expected_throughput: extract the expected throughput towards the
  *	specified station. The returned value is expressed in Kbps. It returns 0
  *	if the RC algorithm does not have proper data to provide.
+ *
+ * @tdls_channel_switch: Start channel-switching with a TDLS peer. The driver
+ *	is responsible for continually initiating channel-switching operations
+ *	and returning to the base channel for communication with the AP. The
+ *	driver receives a channel-switch request template and the location of
+ *	the switch-timing IE within the template as part of the invocation.
+ *	The template is valid only within the call, and the driver can
+ *	optionally copy the skb for further re-use.
+ * @tdls_cancel_channel_switch: Stop channel-switching with a TDLS peer. Both
+ *	peers must be on the base channel when the call completes.
  */
 struct ieee80211_ops {
 	void (*tx)(struct ieee80211_hw *hw,
@@ -3097,6 +3107,15 @@ struct ieee80211_ops {
 	int (*join_ibss)(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
 	void (*leave_ibss)(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
 	u32 (*get_expected_throughput)(struct ieee80211_sta *sta);
+
+	int (*tdls_channel_switch)(struct ieee80211_hw *hw,
+				   struct ieee80211_vif *vif,
+				   struct ieee80211_sta *sta, u8 oper_class,
+				   struct cfg80211_chan_def *chandef,
+				   struct sk_buff *skb, u32 ch_sw_tm_ie);
+	void (*tdls_cancel_channel_switch)(struct ieee80211_hw *hw,
+					   struct ieee80211_vif *vif,
+					   struct ieee80211_sta *sta);
 };
 
 /**
