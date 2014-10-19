@@ -1554,73 +1554,14 @@ static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
 	return ret;
 }
 
-static int iwl_sdio_load_cpu_secured_sections(struct iwl_trans *trans,
-					      const struct fw_img *image,
-					      int cpu, int *first_ucode_section)
+static int iwl_sdio_load_cpu_sections_8000b(struct iwl_trans *trans,
+					    const struct fw_img *image,
+					    int cpu,
+					    int *first_ucode_section)
 {
 	int shift_param;
 	u32 load_status;
-	int i, ret = 0;
-	u32 last_read_idx = 0;
-
-	if (cpu == 1) {
-		shift_param = 0;
-		*first_ucode_section = 0;
-	} else {
-		shift_param = 16;
-		(*first_ucode_section)++;
-	}
-
-
-	for (i = *first_ucode_section; i < IWL_UCODE_SECTION_MAX; i++) {
-		last_read_idx = i;
-
-		if (!image->sec[i].data ||
-		    image->sec[i].offset == CPU1_CPU2_SEPARATOR_SECTION) {
-			IWL_DEBUG_FW(trans,
-				     "Break since Data not valid or Empty section, sec = %d\n",
-				     i);
-			break;
-		}
-
-		if (i == (*first_ucode_section) + 1) {
-			/* set CPU to started */
-			load_status = iwl_sdio_read_prph_no_claim(trans,
-						CSR_UCODE_LOAD_STATUS_ADDR);
-			iwl_sdio_write_prph_no_claim(trans,
-					       CSR_UCODE_LOAD_STATUS_ADDR,
-					       load_status |
-					       (LMPM_CPU_HDRS_LOADING_COMPLETED
-					       << shift_param));
-		}
-
-		ret = iwl_sdio_load_fw_section(trans, i, &image->sec[i]);
-		if (ret)
-			return ret;
-	}
-
-	/* image loading complete */
-	load_status = iwl_sdio_read_prph_no_claim(trans,
-						  CSR_UCODE_LOAD_STATUS_ADDR);
-	iwl_sdio_write_prph_no_claim(trans,
-				     CSR_UCODE_LOAD_STATUS_ADDR,
-				     load_status |
-				     (LMPM_CPU_UCODE_LOADING_COMPLETED
-				     << shift_param));
-
-	*first_ucode_section = last_read_idx;
-
-	return 0;
-}
-
-static int iwl_sdio_load_cpu_secured_sections_8000b(struct iwl_trans *trans,
-						    const struct fw_img *image,
-						    int cpu,
-						    int *first_ucode_section)
-{
-	int shift_param;
-	u32 load_status;
-	int i, ret = 0, sec_num = 0;
+	int i, ret = 0, sec_num = 1;
 	u32 last_read_idx = 0;
 
 	if (cpu == 1) {
@@ -1645,13 +1586,19 @@ static int iwl_sdio_load_cpu_secured_sections_8000b(struct iwl_trans *trans,
 		ret = iwl_sdio_load_fw_section(trans, i, &image->sec[i]);
 		if (ret)
 			return ret;
-		/* indicate ucode w/ the section num */
-		load_status = iwl_sdio_read_prph_no_claim(trans,
-							  FH_UCODE_LOAD_STATUS);
-		iwl_sdio_write_prph_no_claim(trans,
-					     FH_UCODE_LOAD_STATUS,
-					     load_status |
-					     (sec_num << shift_param));
+		ret = iwl_sdio_ta_read(trans, FH_UCODE_LOAD_STATUS,
+				       sizeof(u32), &load_status,
+				       IWL_SDIO_TA_AC_DIRECT);
+		if (ret)
+			return ret;
+		/* send to ucode the section number and the status */
+		load_status |= (sec_num << shift_param);
+		ret = iwl_sdio_ta_write(trans, FH_UCODE_LOAD_STATUS,
+					sizeof(u32), &load_status,
+					IWL_SDIO_TA_AC_DIRECT);
+		if (ret)
+			return ret;
+
 		sec_num = (sec_num << 1) | 0x1;
 	}
 
@@ -1728,38 +1675,13 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 	if (!image)
 		return -EINVAL;
 
-	IWL_DEBUG_FW(trans,
-		     "working with %s CPU\n",
+	IWL_DEBUG_FW(trans, "working with %s CPU\n",
 		     image->is_dual_cpus ? "Dual" : "Single");
 
-	/* configure the ucode to be ready to get the secured image */
-	if (iwl_has_secure_boot(trans->hw_rev, trans->cfg->device_family)) {
-		/* set secure boot inspector addresses */
-		iwl_sdio_write_prph_no_claim(trans,
-					LMPM_SECURE_INSPECTOR_CODE_ADDR,
-					LMPM_SECURE_INSPECTOR_CODE_MEM_SPACE);
-
-		iwl_sdio_write_prph_no_claim(trans,
-					LMPM_SECURE_INSPECTOR_DATA_ADDR,
-					LMPM_SECURE_INSPECTOR_DATA_MEM_SPACE);
-
-		/* set CPU1 header address */
-		iwl_sdio_write_prph_no_claim(trans,
-					LMPM_SECURE_UCODE_LOAD_CPU1_HDR_ADDR,
-					LMPM_SECURE_CPU1_HDR_MEM_SPACE);
-
-		/* load to FW the binary Secured sections of CPU1 */
-		ret = iwl_sdio_load_cpu_secured_sections(trans, image, 1,
-							 &first_ucode_section);
-		if (ret)
-			goto exit_err;
-	} else {
-		/* load to FW the binary NoN secured sections of CPU1 */
-		ret = iwl_sdio_load_cpu_sections(trans, image, 1,
-						 &first_ucode_section);
-		if (ret)
-			goto exit_err;
-	}
+	/* load to FW the binary NoN secured sections of CPU1 */
+	ret = iwl_sdio_load_cpu_sections(trans, image, 1, &first_ucode_section);
+	if (ret)
+		goto exit_err;
 
 	if (image->is_dual_cpus) {
 		/* set CPU2 header address */
@@ -1768,16 +1690,8 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 					LMPM_SECURE_CPU2_HDR_MEM_SPACE);
 
 		/* load to FW the binary sections of CPU2 */
-		if (iwl_has_secure_boot(trans->hw_rev,
-					trans->cfg->device_family))
-			ret = iwl_sdio_load_cpu_secured_sections(
-							trans,
-							image,
-							2,
-							&first_ucode_section);
-		else
-			ret = iwl_sdio_load_cpu_sections(trans, image, 2,
-							 &first_ucode_section);
+		ret = iwl_sdio_load_cpu_sections(trans, image, 2,
+						 &first_ucode_section);
 		if (ret)
 			goto exit_err;
 	}
@@ -1815,19 +1729,6 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 			goto exit_err;
 	}
 
-	if (iwl_has_secure_boot(trans->hw_rev, trans->cfg->device_family)) {
-		/* wait for image verification to complete  */
-		/* polling on CSR_CPU_STATUS_LOADING_COMPLETED  */
-		ret = iwl_sdio_poll_prph_bits(trans,
-					     LMPM_SECURE_BOOT_CPU1_STATUS_ADDR,
-					     LMPM_SECURE_BOOT_STATUS_SUCCESS,
-					     LMPM_SECURE_BOOT_STATUS_SUCCESS,
-					     LMPM_SECURE_TIME_OUT);
-		if (ret < 0)
-			IWL_ERR(trans, "Time out on secure boot process\n");
-		else /* ret = the time iwl_sdio_poll_prph_bits returned*/
-			ret = 0;
-	}
 exit_err:
 	return ret;
 }
@@ -1838,13 +1739,12 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	int ret = 0;
 	int first_ucode_section;
-	u32 write_data = 0;
+	u32 write_data;
 
 	if (!image)
 		return -EINVAL;
 
-	IWL_DEBUG_FW(trans,
-		     "working with %s CPU\n",
+	IWL_DEBUG_FW(trans, "working with %s CPU\n",
 		     image->is_dual_cpus ? "Dual" : "Single");
 
 	/* configure the ucode to be ready to get the secured image */
@@ -1854,26 +1754,44 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 					     RELEASE_CPU_RESET_BIT);
 
 		/* load to FW the binary Secured sections of CPU1 */
-		ret = iwl_sdio_load_cpu_secured_sections_8000b(
-							trans, image, 1,
-							&first_ucode_section);
+		ret = iwl_sdio_load_cpu_sections_8000b(trans, image, 1,
+						       &first_ucode_section);
 		if (ret)
 			goto exit_err;
 
 		/* load to FW the binary sections of CPU2 */
-		ret = iwl_sdio_load_cpu_secured_sections_8000b(
-							trans, image, 2,
-							&first_ucode_section);
+		ret = iwl_sdio_load_cpu_sections_8000b(trans, image, 2,
+						       &first_ucode_section);
+		if (ret)
+			goto exit_err;
+
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+		/*
+		 * The unlocking is required otherwise the writing to periphery
+		 * regs will get stuck due to being unable to grab nic access
+		 */
+		sdio_release_host(trans_sdio->func);
+		mutex_unlock(&trans_sdio->target_access_mtx);
+		iwl_dnt_configure(trans, image);
+		mutex_lock(&trans_sdio->target_access_mtx);
+		sdio_claim_host(trans_sdio->func);
+#endif
+
+		/* Notify FW loading is done */
+		write_data = 0xFFFFFFFF;
+		ret = iwl_sdio_ta_write(trans, FH_UCODE_LOAD_STATUS,
+					sizeof(u32), &write_data,
+					IWL_SDIO_TA_AC_DIRECT);
 		if (ret)
 			goto exit_err;
 
 		/* wait for image verification to complete  */
 		/* polling on CSR_CPU_STATUS_LOADING_COMPLETED	*/
 		ret = iwl_sdio_poll_prph_bits(trans,
-					     LMPM_SECURE_BOOT_STATUS_ADDR,
-					     LMPM_SECURE_BOOT_STATUS_SUCCESS,
-					     LMPM_SECURE_BOOT_STATUS_SUCCESS,
-					     LMPM_SECURE_TIME_OUT);
+					LMPM_SECURE_BOOT_CPU1_STATUS_ADDR_B0,
+					LMPM_SECURE_BOOT_STATUS_SUCCESS,
+					LMPM_SECURE_BOOT_STATUS_SUCCESS,
+					LMPM_SECURE_TIME_OUT);
 		if (ret < 0)
 			IWL_ERR(trans, "Time out on secure boot process\n");
 		else /* ret = the time iwl_sdio_poll_prph_bits returned*/
@@ -1886,23 +1804,12 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 			goto exit_err;
 
 		/* Remove CSR reset to allow NIC to operate */
+		write_data = 0;
 		ret = iwl_sdio_ta_write(trans, CSR_RESET, sizeof(u32),
 					&write_data, IWL_SDIO_TA_AC_DIRECT);
 		if (ret)
 			goto exit_err;
 	}
-
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	/*
-	 * The unlocking is required otherwise the writing to periphery
-	 * registers will get stuck due to being unable to grab nic access
-	 */
-	sdio_release_host(trans_sdio->func);
-	mutex_unlock(&trans_sdio->target_access_mtx);
-	iwl_dnt_configure(trans, image);
-	mutex_lock(&trans_sdio->target_access_mtx);
-	sdio_claim_host(trans_sdio->func);
-#endif
 
 exit_err:
 	return ret;
