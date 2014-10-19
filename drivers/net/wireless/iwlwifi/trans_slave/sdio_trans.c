@@ -2034,6 +2034,10 @@ static int iwl_trans_sdio_update_sf(struct iwl_trans *trans,
 		return -EINVAL;
 	}
 
+	/* tb_pool is also initialized to a default size in sdio_tx_init
+	 * Deinit it prior to reinit to avoid a mem leak
+	 */
+	iwl_slv_al_mem_pool_deinit(&trans_sdio->slv_tx.tb_pool);
 	ret = iwl_slv_al_mem_pool_init(&trans_sdio->slv_tx.tb_pool, num_of_tb);
 	if (ret)
 		IWL_ERR(trans,
