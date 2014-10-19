@@ -153,6 +153,8 @@ struct iwl_sdio_plat_data {
  * @scd_base_addr:	the base address of scheduler region
  * @cfg_pool_size:	the size of dtu_cfg_pool buffers
  * @send_buf:		the buffer for copying DTU to be sent
+ * @sdio_adma_addr: the default address to set for the ADMA in SDIO mode until
+ *	we get the ALIVE from the uCode
  */
 struct iwl_trans_sdio {
 	struct iwl_drv *drv;
@@ -207,6 +209,8 @@ struct iwl_trans_sdio {
 	struct net_device napi_dev;
 	struct napi_struct napi;
 	struct iwl_sdio_sf_mem_addresses mem_addresses;
+
+	u32 sdio_adma_addr;
 };
 
 /*

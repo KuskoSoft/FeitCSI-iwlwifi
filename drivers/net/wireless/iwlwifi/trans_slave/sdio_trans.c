@@ -931,30 +931,6 @@ static int iwl_sdio_config_sdtm_register(struct iwl_trans *trans)
 	return ret;
 }
 
-/*
- * Configure the SDTM in the SDIO AL.
- *
- *@func - The SDIO HW function bus driver.
- */
-static int iwl_sdio_config_sdtm(struct iwl_trans *trans)
-{
-	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
-	int ret;
-
-	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
-		if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP)
-			trans_sdio->sf_mem_addresses = &iwl8000_sf_addresses;
-		else
-			trans_sdio->sf_mem_addresses = &iwl8000b_sf_addresses;
-	} else {
-		trans_sdio->sf_mem_addresses = &iwl7000_sf_addresses;
-	}
-
-	ret = iwl_sdio_config_sdtm_register(trans);
-
-	return ret;
-}
-
 static int iwl_sdio_update_sdtm(struct iwl_trans *trans,
 				struct iwl_sf_region *st_fwrd_space)
 {
@@ -974,6 +950,41 @@ static int iwl_sdio_update_sdtm(struct iwl_trans *trans,
 	trans_sdio->mem_addresses.tb_base_addr =
 		st_fwrd_space->addr + IWL_SDIO_SF_MEM_TB_OFFSET;
 	trans_sdio->sf_mem_addresses = &trans_sdio->mem_addresses;
+
+	ret = iwl_sdio_config_sdtm_register(trans);
+
+	return ret;
+}
+
+/*
+ * Configure the SDTM in the SDIO AL.
+ *
+ *@func - The SDIO HW function bus driver.
+ */
+static int iwl_sdio_config_sdtm(struct iwl_trans *trans)
+{
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	int ret;
+
+	/* If a default ADMA addr has been given in the FW - use it */
+	if (trans_sdio->sdio_adma_addr) {
+		struct iwl_sf_region st_fwrd_space = {
+			.addr = trans_sdio->sdio_adma_addr,
+			.size = 0, /* Unused in the initial configuration */
+		};
+
+		return iwl_sdio_update_sdtm(trans, &st_fwrd_space);
+	}
+
+	/* No default ADMA addr has been given in FW - use driver defaults */
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
+		if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP)
+			trans_sdio->sf_mem_addresses = &iwl8000_sf_addresses;
+		else
+			trans_sdio->sf_mem_addresses = &iwl8000b_sf_addresses;
+	} else {
+		trans_sdio->sf_mem_addresses = &iwl7000_sf_addresses;
+	}
 
 	ret = iwl_sdio_config_sdtm_register(trans);
 
@@ -1382,6 +1393,8 @@ static void iwl_trans_sdio_configure(struct iwl_trans *trans,
 	/*Configure RX page order and size */
 	trans_sdio->rx_buf_size_8k = trans_cfg->rx_buf_size_8k;
 	trans_sdio->bc_table_dword = trans_cfg->bc_table_dword;
+
+	trans_sdio->sdio_adma_addr = trans_cfg->sdio_adma_addr;
 
 	trans_slv->cmd_queue = trans_cfg->cmd_queue;
 	trans_slv->cmd_fifo = trans_cfg->cmd_fifo;
