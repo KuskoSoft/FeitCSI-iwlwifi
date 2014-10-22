@@ -345,7 +345,7 @@ static int iwl_xvt_get_dev_info(struct iwl_xvt *xvt,
 {
 	struct iwl_tm_dev_info_req *dev_info_req;
 	struct iwl_tm_dev_info *dev_info;
-	const u8 driver_ver[] = IWLWIFI_VERSION;
+	const u8 driver_ver[] = BACKPORTS_GIT_TRACKED;
 	int sv_step = 0x00;
 	int dev_info_size;
 	bool read_sv_drop = true;
