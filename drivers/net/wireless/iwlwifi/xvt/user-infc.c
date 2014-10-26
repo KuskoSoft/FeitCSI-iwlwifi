@@ -889,8 +889,8 @@ static int iwl_xvt_modulated_tx(struct iwl_xvt *xvt,
 			iwl_xvt_led_enable(xvt);
 
 		/* wait until the tx queue isn't full */
-		time_remain = wait_event_timeout(xvt->mod_tx_wq,
-						 !xvt->txq_full, HZ);
+		time_remain = wait_event_interruptible_timeout(xvt->mod_tx_wq,
+							!xvt->txq_full, HZ);
 
 		if (time_remain <= 0) {
 			/* This should really not happen */
