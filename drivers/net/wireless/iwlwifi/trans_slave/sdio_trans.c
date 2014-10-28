@@ -1209,6 +1209,13 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 	if (ret)
 		goto release_hw;
 
+	/*
+	 * Clear out hw_rev before reading the CSR, so it doesn't skip the
+	 * overwriting of the IWL_SDIO_INTR_CAUSE_REG in iwl_sdio_isr() until
+	 * CSR_SDTM_REG is set
+	 */
+	trans->hw_rev = 0;
+
 	/* read HW rev from HW */
 	ret = iwl_sdio_ta_read(trans, CSR_HW_REV, sizeof(u32), &trans->hw_rev,
 			       IWL_SDIO_TA_AC_DIRECT);
