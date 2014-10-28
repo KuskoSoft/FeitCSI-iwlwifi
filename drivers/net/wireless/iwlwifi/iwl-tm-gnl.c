@@ -75,7 +75,7 @@
 #include "iwl-tm-infc.h"
 #include "iwl-dnt-cfg.h"
 #include "iwl-dnt-dispatch.h"
-
+#include "iwl-csr.h"
 
 /**
  * iwl_tm_validate_fw_cmd() - Validates FW host command input data
@@ -407,6 +407,19 @@ static int iwl_tm_switch_op_mode(struct iwl_tm_gnl_dev *dev,
 }
 #endif
 
+static int iwl_tm_gnl_get_sil_step(struct iwl_trans *trans,
+				   struct iwl_tm_data *data_out)
+{
+	struct iwl_sil_step *resp;
+	data_out->data =  kmalloc(sizeof(struct iwl_sil_step), GFP_KERNEL);
+	if (!data_out->data)
+		return -ENOMEM;
+	data_out->len = sizeof(struct iwl_sil_step);
+	resp = (struct iwl_sil_step *)data_out->data;
+	resp->silicon_step = CSR_HW_REV_STEP(trans->hw_rev);
+	return 0;
+}
+
 /*
  * Testmode GNL family types (This NL family
  * will eventually replace nl80211 support in
@@ -699,6 +712,11 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 #endif
 	case IWL_XVT_CMD_GET_CHIP_ID:
 		ret = iwl_tm_validate_get_chip_id(dev->trans);
+		break;
+
+	case IWL_TM_USER_CMD_GET_SIL_STEP:
+		ret = iwl_tm_gnl_get_sil_step(dev->trans, &cmd_data->data_out);
+		common_op = true;
 		break;
 	}
 	if (ret) {

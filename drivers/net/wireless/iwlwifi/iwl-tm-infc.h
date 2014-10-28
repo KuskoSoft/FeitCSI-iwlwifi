@@ -108,6 +108,7 @@ enum {
 	IWL_TM_USER_CMD_TRACE_DUMP,
 	IWL_TM_USER_CMD_NOTIFICATIONS,
 	IWL_TM_USER_CMD_SWITCH_OP_MODE,
+	IWL_TM_USER_CMD_GET_SIL_STEP,
 
 	IWL_TM_USER_CMD_NOTIF_UCODE_RX_PKT = TM_CMD_NOTIF_BASE,
 	IWL_TM_USER_CMD_NOTIF_DRIVER,
@@ -300,6 +301,14 @@ struct iwl_tm_thrshld_md {
  */
 struct iwl_switch_op_mode {
 	__u8 new_op_mode[MAX_OP_MODE_LENGTH];
+} __packed __aligned(4);
+
+/**
+ * struct iwl_sil_step - holds the silicon step
+ * @silicon_step: the device silicon step
+ */
+struct iwl_sil_step {
+	__u32 silicon_step;
 } __packed __aligned(4);
 
 /* xVT defeinitions */
