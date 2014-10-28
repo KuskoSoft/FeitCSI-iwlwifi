@@ -848,9 +848,18 @@ static void iwl_sdio_config_tfd(struct iwl_trans *trans,
 	struct iwl_sdio_dtu_info *dtu_info =
 		(struct iwl_sdio_dtu_info *)txq_entry->reclaim_info;
 	struct iwl_sdio_tfd *tfd;
-	u32 tb_addr, tb_len, last_tb;
+	u32 tb_addr, tb_len, last_tb, tb_base;
 	int cur_len;
 	int idx;
+
+	/*
+	 * In 8000 HW family starting from B-step the tb_base is relative
+	 * rather than absolute as the other NICs and steps.
+	 */
+	tb_base = trans_sdio->sf_mem_addresses->tb_base_addr;
+	if ((trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) &&
+	    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_B_STEP))
+		tb_base -= IWL_SDIO_8000B_SF_MEM_BASE_ADDR;
 
 	tfd = (void *)((u8 *)dtu_info->ctrl_buf +
 		       sizeof(struct iwl_sdio_tx_dtu_hdr) +
@@ -872,7 +881,7 @@ static void iwl_sdio_config_tfd(struct iwl_trans *trans,
 			cur_len += last_tb;
 		}
 		tb_len = cur_len << IWL_SDIO_DMA_DESC_LEN_SHIFT;
-		tb_addr = trans_sdio->sf_mem_addresses->tb_base_addr +
+		tb_addr = tb_base +
 			  dtu_info->sram_alloc.fragments[idx].index *
 			  IWL_SDIO_TB_SIZE;
 		tfd->tbs[idx] = cpu_to_le32(tb_addr | tb_len);
