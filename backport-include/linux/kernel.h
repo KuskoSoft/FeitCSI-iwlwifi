@@ -45,6 +45,18 @@
 #define SHRT_MIN       ((s16)(-SHRT_MAX - 1))
 #endif
 
+#ifndef U8_MAX
+#define U8_MAX		((u8)~0U)
+#endif
+
+#ifndef S8_MAX
+#define S8_MAX		((s8)(U8_MAX>>1))
+#endif
+
+#ifndef S8_MIN
+#define S8_MIN		((s8)(-S8_MAX - 1))
+#endif
+
 #ifndef U16_MAX
 #define U16_MAX		((u16)~0U)
 #endif

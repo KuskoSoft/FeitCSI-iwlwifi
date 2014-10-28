@@ -173,4 +173,9 @@ static inline void ether_addr_copy(u8 *dst, const u8 *src)
 }
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#define eth_get_headlen LINUX_BACKPORT(eth_get_headlen)
+int eth_get_headlen(unsigned char *data, unsigned int max_len);
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) */
+
 #endif /* _BACKPORT_LINUX_ETHERDEVICE_H */

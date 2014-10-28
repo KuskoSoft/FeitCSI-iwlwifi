@@ -15,12 +15,17 @@
 #define __pskb_copy LINUX_BACKPORT(__pskb_copy)
 extern struct sk_buff *__pskb_copy(struct sk_buff *skb,
 				   int headroom, gfp_t gfp_mask);
+#endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 #define skb_complete_wifi_ack LINUX_BACKPORT(skb_complete_wifi_ack)
 static inline void skb_complete_wifi_ack(struct sk_buff *skb, bool acked)
 {
 	WARN_ON(1);
 }
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#define skb_complete_wifi_ack LINUX_BACKPORT(skb_complete_wifi_ack)
+void skb_complete_wifi_ack(struct sk_buff *skb, bool acked);
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
@@ -384,6 +389,11 @@ static inline struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb,
 {
 	return __pskb_copy(skb, headroom, gfp_mask);
 }
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#define skb_clone_sk LINUX_BACKPORT(skb_clone_sk)
+struct sk_buff *skb_clone_sk(struct sk_buff *skb);
 #endif
 
 #endif /* __BACKPORT_SKBUFF_H */
