@@ -1335,10 +1335,6 @@ void iwl_mvm_resume_tcm(struct iwl_mvm *mvm);
 #endif
 
 void iwl_mvm_nic_restart(struct iwl_mvm *mvm, bool fw_error);
-#ifdef CPTCFG_IWLWIFI_DEBUGFS
 void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm);
-#else
-static inline void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm) {}
-#endif
 
 #endif /* __IWL_MVM_H__ */
