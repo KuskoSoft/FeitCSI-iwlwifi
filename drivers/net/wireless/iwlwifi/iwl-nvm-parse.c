@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2008 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -116,10 +116,11 @@ enum family_8000_nvm_offsets {
 
 /* SKU Capabilities (actual values from NVM definition) */
 enum nvm_sku_bits {
-	NVM_SKU_CAP_BAND_24GHZ	= BIT(0),
-	NVM_SKU_CAP_BAND_52GHZ	= BIT(1),
-	NVM_SKU_CAP_11N_ENABLE	= BIT(2),
-	NVM_SKU_CAP_11AC_ENABLE	= BIT(3),
+	NVM_SKU_CAP_BAND_24GHZ		= BIT(0),
+	NVM_SKU_CAP_BAND_52GHZ		= BIT(1),
+	NVM_SKU_CAP_11N_ENABLE		= BIT(2),
+	NVM_SKU_CAP_11AC_ENABLE		= BIT(3),
+	NVM_SKU_CAP_MIMO_DISABLE	= BIT(5),
 };
 
 /*
@@ -386,6 +387,11 @@ static void iwl_init_vht_hw_capab(const struct iwl_cfg *cfg,
 			    IEEE80211_VHT_MCS_NOT_SUPPORTED << 12 |
 			    IEEE80211_VHT_MCS_NOT_SUPPORTED << 14);
 
+	if (data->sku_cap_mimo_disabled) {
+		num_rx_ants = 1;
+		num_tx_ants = 1;
+	}
+
 	if (num_rx_ants == 1 || cfg->rx_with_siso_diversity) {
 		vht_cap->cap |= IEEE80211_VHT_CAP_RX_ANTENNA_PATTERN;
 		/* this works because NOT_SUPPORTED == 3 */
@@ -610,6 +616,7 @@ iwl_parse_nvm_data(struct device *dev, const struct iwl_cfg *cfg,
 		data->sku_cap_11n_enable = false;
 	data->sku_cap_11ac_enable = data->sku_cap_11n_enable &&
 				    (sku & NVM_SKU_CAP_11AC_ENABLE);
+	data->sku_cap_mimo_disabled = sku & NVM_SKU_CAP_MIMO_DISABLE;
 
 	data->n_hw_addrs = iwl_get_n_hw_addrs(cfg, nvm_sw);
 
