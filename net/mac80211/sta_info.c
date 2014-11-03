@@ -1588,7 +1588,7 @@ void ieee80211_sta_ps_deliver_uapsd(struct sta_info *sta)
 		break;
 	case 0:
 		/* XXX: what is a good value? */
-		n_frames = 8;
+		n_frames = 128;
 		break;
 	}
 
