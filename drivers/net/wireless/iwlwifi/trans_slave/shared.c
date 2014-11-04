@@ -497,6 +497,11 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 
 	/* config the fw */
 	ret = iwl_op_mode_enter_d0i3(trans->op_mode);
+	if (ret == 1) {
+		IWL_DEBUG_RPM(trans, "aborting d0i3 entrance\n");
+		clear_bit(STATUS_TRANS_GOING_IDLE, &trans->status);
+		return 0;
+	}
 	if (ret)
 		goto err;
 
