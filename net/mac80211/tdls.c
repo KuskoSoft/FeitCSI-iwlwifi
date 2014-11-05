@@ -246,19 +246,6 @@ static void ieee80211_tdls_add_wmm_param_ie(struct ieee80211_sub_if_data *sdata,
 }
 
 static void
-iee80211_tdls_add_ch_switch_timing(u8 *buf, u16 switch_time, u16 switch_timeout)
-{
-	struct ieee80211_ch_switch_timing *ch_sw;
-
-	*buf++ = WLAN_EID_CHAN_SWITCH_TIMING;
-	*buf++ = sizeof(struct ieee80211_ch_switch_timing);
-
-	ch_sw = (void *)buf;
-	ch_sw->switch_time = cpu_to_le16(switch_time);
-	ch_sw->switch_timeout = cpu_to_le16(switch_timeout);
-}
-
-static void
 ieee80211_tdls_add_setup_start_ies(struct ieee80211_sub_if_data *sdata,
 				   struct sk_buff *skb, const u8 *peer,
 				   u8 action_code, bool initiator,
@@ -1144,6 +1131,19 @@ void ieee80211_tdls_oper_request(struct ieee80211_vif *vif, const u8 *peer,
 	cfg80211_tdls_oper_request(sdata->dev, peer, oper, reason_code, gfp);
 }
 EXPORT_SYMBOL(ieee80211_tdls_oper_request);
+
+static void
+iee80211_tdls_add_ch_switch_timing(u8 *buf, u16 switch_time, u16 switch_timeout)
+{
+	struct ieee80211_ch_switch_timing *ch_sw;
+
+	*buf++ = WLAN_EID_CHAN_SWITCH_TIMING;
+	*buf++ = sizeof(struct ieee80211_ch_switch_timing);
+
+	ch_sw = (void *)buf;
+	ch_sw->switch_time = cpu_to_le16(switch_time);
+	ch_sw->switch_timeout = cpu_to_le16(switch_timeout);
+}
 
 /* find switch timing IE in SKB ready for Tx */
 static const u8 *ieee80211_tdls_find_sw_timing_ie(struct sk_buff *skb)
