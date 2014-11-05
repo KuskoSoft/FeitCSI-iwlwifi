@@ -84,6 +84,9 @@
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "iwl-dnt-cfg.h"
 #endif
+#ifdef CPTCFG_IWLWIFI_PLATFORM_DATA
+#include <linux/platform_data/iwlwifi.h>
+#endif
 
 /* extended range in FW SRAM */
 #define IWL_FW_MEM_EXTENDED_START	0x40000
@@ -1133,6 +1136,20 @@ static void iwl_trans_pcie_stop_device(struct iwl_trans *trans)
 	if (hw_rfkill != was_hw_rfkill)
 		iwl_trans_pcie_rf_kill(trans, hw_rfkill);
 
+#ifdef CPTCFG_IWLWIFI_PLATFORM_DATA
+	{
+		struct iwl_trans_platform_ops *ops = trans_pcie->platform_ops;
+
+		if (ops && ops->disable_regulator) {
+			pci_save_state(trans_pcie->pci_dev);
+			pci_disable_device(trans_pcie->pci_dev);
+			pci_set_power_state(trans_pcie->pci_dev, PCI_D3hot);
+			ops->disable_regulator();
+			/* card is off, no need to re-take ownership */
+			return;
+		}
+	}
+#endif /* CPTCFG_IWLWIFI_PLATFORM_DATA */
 	/* re-take ownership to prevent other users from stealing the deivce */
 	iwl_pcie_prepare_card_hw(trans);
 }
@@ -1229,6 +1246,24 @@ static int iwl_trans_pcie_start_hw(struct iwl_trans *trans)
 {
 	bool hw_rfkill;
 	int err;
+
+#ifdef CPTCFG_IWLWIFI_PLATFORM_DATA
+	{
+		struct iwl_trans_pcie *trans_pcie =
+			IWL_TRANS_GET_PCIE_TRANS(trans);
+		struct iwl_trans_platform_ops *ops = trans_pcie->platform_ops;
+		int err;
+
+		if (ops && ops->enable_regulator) {
+			ops->enable_regulator();
+			pci_set_power_state(trans_pcie->pci_dev, PCI_D0);
+			err = pci_enable_device(trans_pcie->pci_dev);
+			if (err)
+				return err;
+			pci_restore_state(trans_pcie->pci_dev);
+		}
+	}
+#endif /* CPTCFG_IWLWIFI_PLATFORM_DATA */
 
 	err = iwl_pcie_prepare_card_hw(trans);
 	if (err) {

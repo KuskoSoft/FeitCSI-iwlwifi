@@ -40,6 +40,10 @@
 #include <linux/wakelock.h>
 #endif
 
+#ifdef CPTCFG_IWLWIFI_PLATFORM_DATA
+#include <linux/platform_data/iwlwifi.h>
+#endif
+
 #include "iwl-fh.h"
 #include "iwl-csr.h"
 #include "iwl-trans.h"
@@ -332,6 +336,10 @@ struct iwl_trans_pcie {
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock ref_wake_lock;
 	struct wake_lock timed_wake_lock;
+#endif
+
+#ifdef CPTCFG_IWLWIFI_PLATFORM_DATA
+	struct iwl_trans_platform_ops *platform_ops;
 #endif
 
 	dma_addr_t fw_mon_phys;

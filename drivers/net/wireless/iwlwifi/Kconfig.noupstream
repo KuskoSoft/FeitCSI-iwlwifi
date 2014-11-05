@@ -107,3 +107,13 @@ config IWLMVM_TDLS_PEER_CACHE
 	  This option enables (vendor) commands from userspace to monitor
 	  traffic to and from specific peers on the same BSS. These peers
 	  might be TDLS peers, or candidates to become such.
+
+config IWLWIFI_PLATFORM_DATA
+	bool "iwlwifi platform data support"
+	---help---
+	  This option enables support for platform data hooks
+
+	  Select this to be able to implement platform data hooks
+	  for power function handlings (GPIO toggling)
+
+	  If unsure, select N.
