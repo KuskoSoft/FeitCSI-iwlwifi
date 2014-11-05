@@ -2054,6 +2054,41 @@ static struct platform_driver iwlwifi_plat_driver = {
 	}
 };
 
+static int iwl_sdio_register_plat_driver(struct iwl_trans *trans)
+{
+	int ret;
+
+	/* we currently need the platform driver just for d0i3 */
+	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+		return 0;
+
+	/* verify we have only a single trans */
+	if (WARN_ON(iwl_sdio_plat_trans))
+		return -EEXIST;
+
+	/* set the global plat_trans. make sure to clear on failure */
+	iwl_sdio_plat_trans = trans;
+
+	/* register the platform driver (used to extract the OOB irq info) */
+	ret = platform_driver_register(&iwlwifi_plat_driver);
+	if (ret) {
+		IWL_ERR(trans, "Failed registering iwlwifi plat driver, %d\n",
+			ret);
+		iwl_sdio_plat_trans = NULL;
+	}
+
+	return ret;
+}
+
+static void iwl_sdio_unregister_plat_driver(void)
+{
+	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+		return;
+
+	platform_driver_unregister(&iwlwifi_plat_driver);
+	iwl_sdio_plat_trans = NULL;
+}
+
 /*
  * SDIO start fw.
  * Performs fw download.
@@ -2069,20 +2104,9 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 	if (ret)
 		goto exit_err;
 
-	/* verify we have only a single trans */
-	if (WARN_ON(iwl_sdio_plat_trans))
+	ret = iwl_sdio_register_plat_driver(trans);
+	if (ret)
 		goto free_slv;
-
-	/* set the global plat_trans. make sure to clear on failure */
-	iwl_sdio_plat_trans = trans;
-
-	/* register the platform driver (used to extract the OOB irq info) */
-	ret = platform_driver_register(&iwlwifi_plat_driver);
-	if (ret) {
-		IWL_ERR(trans, "Failed registering iwlwifi plat driver, %d\n",
-			ret);
-		goto clear_plat;
-	}
 
 	ret = iwl_sdio_tx_init(trans);
 	if (ret)
@@ -2145,11 +2169,8 @@ free_tx:
 	sdio_release_host(IWL_TRANS_SDIO_GET_FUNC(trans));
 	mutex_unlock(&trans_sdio->target_access_mtx);
 	iwl_sdio_tx_free(trans);
-
 free_plat:
-	platform_driver_unregister(&iwlwifi_plat_driver);
-clear_plat:
-	iwl_sdio_plat_trans = NULL;
+	iwl_sdio_unregister_plat_driver();
 free_slv:
 	iwl_slv_free(trans);
 
@@ -2278,8 +2299,7 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans)
 		iwl_slv_tx_stop(trans);
 		iwl_sdio_tx_stop(trans);
 
-		platform_driver_unregister(&iwlwifi_plat_driver);
-		iwl_sdio_plat_trans = NULL;
+		iwl_sdio_unregister_plat_driver();
 		iwl_slv_free(trans);
 		iwl_sdio_tx_free(trans);
 	}
