@@ -71,7 +71,7 @@
 /* FIXME: need to abstract out TX command (once we know what it looks like) */
 #include "mvm/fw-api.h"
 
-unsigned int d0i3_debug;
+unsigned int d0i3_debug = IWL_D0I3_DBG_DISABLE;
 module_param(d0i3_debug, uint, S_IRUGO);
 MODULE_PARM_DESC(d0i3_debug, "D0i3 debug flags");
 
