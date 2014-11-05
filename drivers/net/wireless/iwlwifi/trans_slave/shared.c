@@ -930,9 +930,9 @@ void iwl_slv_unregister_drivers(void)
 }
 
 /* iwl_slv_tx_get_cmd_entry - get requested cmd entry */
-void iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
-			      struct iwl_rx_packet *pkt,
-			      struct iwl_slv_tx_cmd_entry **cmd_entry)
+int iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
+			     struct iwl_rx_packet *pkt,
+			     struct iwl_slv_tx_cmd_entry **cmd_entry)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct iwl_slv_tx_queue *txq = &trans_slv->txqs[trans_slv->cmd_queue];
@@ -948,7 +948,7 @@ void iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
 		 "wrong command queue %d (should be %d), sequence 0x%X\n",
 		 txq_id, trans_slv->cmd_queue, sequence)) {
 		iwl_print_hex_error(priv, pkt, 32);
-		return;
+		return -EINVAL;
 	}
 
 	/* FIXME - when not found? */
@@ -956,7 +956,7 @@ void iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
 
 	if (WARN(list_empty(&txq->sent), "empty sent queue.\n")) {
 		spin_unlock_bh(&trans_slv->txq_lock);
-		return;
+		return -EINVAL;
 	}
 
 	cmd_list_idx = 0;
@@ -982,6 +982,8 @@ void iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
 
 	iwl_slv_recalc_rpm_ref(trans);
 	spin_unlock_bh(&trans_slv->txq_lock);
+
+	return 0;
 }
 
 /**
@@ -1664,7 +1666,7 @@ int iwl_trans_slv_wait_txq_empty(struct iwl_trans *trans, u32 txq_bm)
 	return 0;
 }
 
-void iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
+int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 				struct iwl_rx_cmd_buffer *rxcb)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
@@ -1693,9 +1695,9 @@ void iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 	}
 
 	if (reclaim) {
-		iwl_slv_tx_get_cmd_entry(trans, pkt, &cmd_entry);
-		if (cmd_entry == NULL)
-			return;
+		ret = iwl_slv_tx_get_cmd_entry(trans, pkt, &cmd_entry);
+		if (ret || cmd_entry == NULL)
+			return ret;
 
 		if (!(d0i3_debug & IWL_D0I3_DBG_KEEP_BUS) &&
 		    (cmd_entry->hcmd_meta.flags & CMD_MAKE_TRANS_IDLE) &&
@@ -1745,7 +1747,8 @@ void iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 		if (take_ref)
 			iwl_trans_slv_unref(trans);
 	}
-	return;
+
+	return 0;
 }
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
