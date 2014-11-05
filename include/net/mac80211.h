@@ -263,6 +263,7 @@ struct ieee80211_vif_chanctx_switch {
  * @BSS_CHANGED_BANDWIDTH: The bandwidth used by this interface changed,
  *	note that this is only called when it changes after the channel
  *	context had been assigned.
+ * @BSS_CHANGED_OCB: OCB join status changed
  */
 enum ieee80211_bss_change {
 	BSS_CHANGED_ASSOC		= 1<<0,
@@ -287,6 +288,7 @@ enum ieee80211_bss_change {
 	BSS_CHANGED_P2P_PS		= 1<<19,
 	BSS_CHANGED_BEACON_INFO		= 1<<20,
 	BSS_CHANGED_BANDWIDTH		= 1<<21,
+	BSS_CHANGED_OCB                 = 1<<22,
 
 	/* when adding here, make sure to change ieee80211_reconfig */
 };
@@ -1583,6 +1585,10 @@ struct ieee80211_tx_control {
  *	a virtual monitor interface when monitor interfaces are the only
  *	active interfaces.
  *
+ * @IEEE80211_HW_NO_AUTO_VIF: The driver would like for no wlanX to
+ *	be created.  It is expected user-space will create vifs as
+ *	desired (and thus have them named as desired).
+ *
  * @IEEE80211_HW_QUEUE_CONTROL: The driver wants to control per-interface
  *	queue mapping in order to use different queues (not just one per AC)
  *	for different virtual interfaces. See the doc section on HW queue
@@ -1629,7 +1635,8 @@ enum ieee80211_hw_flags {
 	IEEE80211_HW_SUPPORTS_DYNAMIC_PS		= 1<<12,
 	IEEE80211_HW_MFP_CAPABLE			= 1<<13,
 	IEEE80211_HW_WANT_MONITOR_VIF			= 1<<14,
-	/* free slots */
+	IEEE80211_HW_NO_AUTO_VIF			= 1<<15,
+	/* free slot */
 	IEEE80211_HW_SUPPORTS_UAPSD			= 1<<17,
 	IEEE80211_HW_REPORTS_TX_ACK_STATUS		= 1<<18,
 	IEEE80211_HW_CONNECTION_MONITOR			= 1<<19,
@@ -2916,6 +2923,9 @@ enum ieee80211_reconfig_type {
  *	specified station. The returned value is expressed in Kbps. It returns 0
  *	if the RC algorithm does not have proper data to provide.
  *
+ * @get_txpower: get current maximum tx power (in dBm) based on configuration
+ *	and hardware limits.
+ *
  * @tdls_channel_switch: Start channel-switching with a TDLS peer. The driver
  *	is responsible for continually initiating channel-switching operations
  *	and returning to the base channel for communication with the AP. The
@@ -3055,6 +3065,7 @@ struct ieee80211_ops {
 	void (*flush)(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		      u32 queues, bool drop);
 	void (*channel_switch)(struct ieee80211_hw *hw,
+			       struct ieee80211_vif *vif,
 			       struct ieee80211_channel_switch *ch_switch);
 	int (*set_antenna)(struct ieee80211_hw *hw, u32 tx_ant, u32 rx_ant);
 	int (*get_antenna)(struct ieee80211_hw *hw, u32 *tx_ant, u32 *rx_ant);
@@ -3140,6 +3151,9 @@ struct ieee80211_ops {
 	void (*leave_ibss)(struct ieee80211_hw *hw, struct ieee80211_vif *vif);
 	u32 (*get_expected_throughput)(struct ieee80211_sta *sta);
 
+	int (*get_txpower)(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+			   int *dbm);
+
 	int (*tdls_channel_switch)(struct ieee80211_hw *hw,
 				   struct ieee80211_vif *vif,
 				   struct ieee80211_sta *sta, u8 oper_class,
@@ -3154,7 +3168,27 @@ struct ieee80211_ops {
 };
 
 /**
- * ieee80211_alloc_hw -  Allocate a new hardware device
+ * ieee80211_alloc_hw_nm - Allocate a new hardware device
+ *
+ * This must be called once for each hardware device. The returned pointer
+ * must be used to refer to this device when calling other functions.
+ * mac80211 allocates a private data area for the driver pointed to by
+ * @priv in &struct ieee80211_hw, the size of this area is given as
+ * @priv_data_len.
+ *
+ * @priv_data_len: length of private data
+ * @ops: callbacks for this device
+ * @requested_name: Requested name for this device.
+ *	NULL is valid value, and means use the default naming (phy%d)
+ *
+ * Return: A pointer to the new hardware device, or %NULL on error.
+ */
+struct ieee80211_hw *ieee80211_alloc_hw_nm(size_t priv_data_len,
+					   const struct ieee80211_ops *ops,
+					   const char *requested_name);
+
+/**
+ * ieee80211_alloc_hw - Allocate a new hardware device
  *
  * This must be called once for each hardware device. The returned pointer
  * must be used to refer to this device when calling other functions.
@@ -3167,8 +3201,12 @@ struct ieee80211_ops {
  *
  * Return: A pointer to the new hardware device, or %NULL on error.
  */
+static inline
 struct ieee80211_hw *ieee80211_alloc_hw(size_t priv_data_len,
-					const struct ieee80211_ops *ops);
+					const struct ieee80211_ops *ops)
+{
+	return ieee80211_alloc_hw_nm(priv_data_len, ops, NULL);
+}
 
 /**
  * ieee80211_register_hw - Register hardware device

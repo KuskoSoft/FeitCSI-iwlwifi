@@ -1041,6 +1041,8 @@ static void ieee80211_chswitch_post_beacon(struct ieee80211_sub_if_data *sdata)
 
 	sdata_assert_lock(sdata);
 
+	WARN_ON(!sdata->vif.csa_active);
+
 	if (sdata->csa_block_tx) {
 		ieee80211_wake_vif_queues(local, sdata,
 					  IEEE80211_QUEUE_STOP_REASON_CSA);
@@ -1117,7 +1119,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 
 	current_band = cbss->channel->band;
 	memset(&csa_ie, 0, sizeof(csa_ie));
-	res = ieee80211_parse_ch_switch_ie(sdata, elems, beacon, current_band,
+	res = ieee80211_parse_ch_switch_ie(sdata, elems, current_band,
 					   ifmgd->flags,
 					   ifmgd->associated->bssid, &csa_ie);
 	if (res	< 0)
@@ -1210,7 +1212,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 
 	if (local->ops->channel_switch) {
 		/* use driver's channel switch callback */
-		drv_channel_switch(local, &ch_switch);
+		drv_channel_switch(local, sdata, &ch_switch);
 		return;
 	}
 
@@ -1219,7 +1221,8 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 		ieee80211_queue_work(&local->hw, &ifmgd->chswitch_work);
 	else
 		mod_timer(&ifmgd->chswitch_timer,
-			  TU_TO_EXP_TIME(csa_ie.count * cbss->beacon_interval));
+			  TU_TO_EXP_TIME((csa_ie.count - 1) *
+					 cbss->beacon_interval));
 }
 
 static bool

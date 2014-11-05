@@ -191,7 +191,7 @@ static int ieee80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 		 * receive the key. When wpa_supplicant has roamed
 		 * using FT, it attempts to set the key before
 		 * association has completed, this rejects that attempt
-		 * so it will set the key again after assocation.
+		 * so it will set the key again after association.
 		 *
 		 * TODO: accept the key if we have a station entry and
 		 *       add it to the device after the station.
@@ -230,6 +230,7 @@ static int ieee80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 	case NUM_NL80211_IFTYPES:
 	case NL80211_IFTYPE_P2P_CLIENT:
 	case NL80211_IFTYPE_P2P_GO:
+	case NL80211_IFTYPE_OCB:
 		/* shouldn't happen */
 		WARN_ON_ONCE(1);
 		break;
@@ -1233,14 +1234,14 @@ static int ieee80211_add_station(struct wiphy *wiphy, struct net_device *dev,
 }
 
 static int ieee80211_del_station(struct wiphy *wiphy, struct net_device *dev,
-				 const u8 *mac)
+				 struct station_del_parameters *params)
 {
 	struct ieee80211_sub_if_data *sdata;
 
 	sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 
-	if (mac)
-		return sta_info_destroy_addr_bss(sdata, mac);
+	if (params->mac)
+		return sta_info_destroy_addr_bss(sdata, params->mac);
 
 	sta_info_flush(sdata);
 	return 0;
@@ -1520,6 +1521,57 @@ static int ieee80211_dump_mpath(struct wiphy *wiphy, struct net_device *dev,
 	}
 	memcpy(dst, mpath->dst, ETH_ALEN);
 	mpath_set_pinfo(mpath, next_hop, pinfo);
+	rcu_read_unlock();
+	return 0;
+}
+
+static void mpp_set_pinfo(struct mesh_path *mpath, u8 *mpp,
+			  struct mpath_info *pinfo)
+{
+	memset(pinfo, 0, sizeof(*pinfo));
+	memcpy(mpp, mpath->mpp, ETH_ALEN);
+
+	pinfo->generation = mpp_paths_generation;
+}
+
+static int ieee80211_get_mpp(struct wiphy *wiphy, struct net_device *dev,
+			     u8 *dst, u8 *mpp, struct mpath_info *pinfo)
+
+{
+	struct ieee80211_sub_if_data *sdata;
+	struct mesh_path *mpath;
+
+	sdata = IEEE80211_DEV_TO_SUB_IF(dev);
+
+	rcu_read_lock();
+	mpath = mpp_path_lookup(sdata, dst);
+	if (!mpath) {
+		rcu_read_unlock();
+		return -ENOENT;
+	}
+	memcpy(dst, mpath->dst, ETH_ALEN);
+	mpp_set_pinfo(mpath, mpp, pinfo);
+	rcu_read_unlock();
+	return 0;
+}
+
+static int ieee80211_dump_mpp(struct wiphy *wiphy, struct net_device *dev,
+			      int idx, u8 *dst, u8 *mpp,
+			      struct mpath_info *pinfo)
+{
+	struct ieee80211_sub_if_data *sdata;
+	struct mesh_path *mpath;
+
+	sdata = IEEE80211_DEV_TO_SUB_IF(dev);
+
+	rcu_read_lock();
+	mpath = mpp_path_lookup_by_idx(sdata, idx);
+	if (!mpath) {
+		rcu_read_unlock();
+		return -ENOENT;
+	}
+	memcpy(dst, mpath->dst, ETH_ALEN);
+	mpp_set_pinfo(mpath, mpp, pinfo);
 	rcu_read_unlock();
 	return 0;
 }
@@ -1974,6 +2026,17 @@ static int ieee80211_leave_ibss(struct wiphy *wiphy, struct net_device *dev)
 	return ieee80211_ibss_leave(IEEE80211_DEV_TO_SUB_IF(dev));
 }
 
+static int ieee80211_join_ocb(struct wiphy *wiphy, struct net_device *dev,
+			      struct ocb_setup *setup)
+{
+	return ieee80211_ocb_join(IEEE80211_DEV_TO_SUB_IF(dev), setup);
+}
+
+static int ieee80211_leave_ocb(struct wiphy *wiphy, struct net_device *dev)
+{
+	return ieee80211_ocb_leave(IEEE80211_DEV_TO_SUB_IF(dev));
+}
+
 static int ieee80211_set_mcast_rate(struct wiphy *wiphy, struct net_device *dev,
 				    int rate[IEEE80211_NUM_BANDS])
 {
@@ -2088,6 +2151,9 @@ static int ieee80211_get_tx_power(struct wiphy *wiphy,
 {
 	struct ieee80211_local *local = wiphy_priv(wiphy);
 	struct ieee80211_sub_if_data *sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
+
+	if (local->ops->get_txpower)
+		return drv_get_txpower(local, sdata, dbm);
 
 	if (!local->use_chanctx)
 		*dbm = local->hw.conf.power_level;
@@ -2858,11 +2924,7 @@ static int __ieee80211_csa_finalize(struct ieee80211_sub_if_data *sdata)
 		if (sdata->reserved_ready)
 			return 0;
 
-		err = ieee80211_vif_use_reserved_context(sdata);
-		if (err)
-			return err;
-
-		return 0;
+		return ieee80211_vif_use_reserved_context(sdata);
 	}
 
 	if (!cfg80211_chandef_identical(&sdata->vif.bss_conf.chandef,
@@ -3069,7 +3131,8 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 	struct ieee80211_channel_switch ch_switch;
 	struct ieee80211_chanctx_conf *conf;
 	struct ieee80211_chanctx *chanctx;
-	int err, changed = 0;
+	u32 changed = 0;
+	int err;
 
 	sdata_assert_lock(sdata);
 	lockdep_assert_held(&local->mtx);
@@ -3124,6 +3187,12 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 		ieee80211_vif_unreserve_chanctx(sdata);
 		goto out;
 	}
+
+	ch_switch.timestamp = 0;
+	ch_switch.device_timestamp = 0;
+	ch_switch.block_tx = params->block_tx;
+	ch_switch.chandef = params->chandef;
+	ch_switch.count = params->count;
 
 	err = ieee80211_set_csa_beacon(sdata, params, &changed);
 	if (err) {
@@ -3644,11 +3713,15 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.change_mpath = ieee80211_change_mpath,
 	.get_mpath = ieee80211_get_mpath,
 	.dump_mpath = ieee80211_dump_mpath,
+	.get_mpp = ieee80211_get_mpp,
+	.dump_mpp = ieee80211_dump_mpp,
 	.update_mesh_config = ieee80211_update_mesh_config,
 	.get_mesh_config = ieee80211_get_mesh_config,
 	.join_mesh = ieee80211_join_mesh,
 	.leave_mesh = ieee80211_leave_mesh,
 #endif
+	.join_ocb = ieee80211_join_ocb,
+	.leave_ocb = ieee80211_leave_ocb,
 	.change_bss = ieee80211_change_bss,
 	.set_txq_params = ieee80211_set_txq_params,
 	.set_monitor_channel = ieee80211_set_monitor_channel,

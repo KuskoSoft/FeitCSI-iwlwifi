@@ -1132,6 +1132,7 @@ void ieee80211_set_wmm_default(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_chanctx_conf *chanctx_conf;
 	int ac;
 	bool use_11b, enable_qos;
+	bool is_ocb; /* Use another EDCA parameters if dot11OCBActivated=true */
 	int aCWmin, aCWmax;
 
 	if (!local->ops->conf_tx)
@@ -1156,6 +1157,8 @@ void ieee80211_set_wmm_default(struct ieee80211_sub_if_data *sdata,
 	 */
 	enable_qos = (sdata->vif.type != NL80211_IFTYPE_STATION);
 
+	is_ocb = (sdata->vif.type == NL80211_IFTYPE_OCB);
+
 	/* Set defaults according to 802.11-2007 Table 7-37 */
 	aCWmax = 1023;
 	if (use_11b)
@@ -1177,7 +1180,10 @@ void ieee80211_set_wmm_default(struct ieee80211_sub_if_data *sdata,
 				qparam.cw_max = aCWmax;
 				qparam.cw_min = aCWmin;
 				qparam.txop = 0;
-				qparam.aifs = 7;
+				if (is_ocb)
+					qparam.aifs = 9;
+				else
+					qparam.aifs = 7;
 				break;
 			/* never happens but let's not leave undefined */
 			default:
@@ -1185,21 +1191,32 @@ void ieee80211_set_wmm_default(struct ieee80211_sub_if_data *sdata,
 				qparam.cw_max = aCWmax;
 				qparam.cw_min = aCWmin;
 				qparam.txop = 0;
-				qparam.aifs = 3;
+				if (is_ocb)
+					qparam.aifs = 6;
+				else
+					qparam.aifs = 3;
 				break;
 			case IEEE80211_AC_VI:
 				qparam.cw_max = aCWmin;
 				qparam.cw_min = (aCWmin + 1) / 2 - 1;
-				if (use_11b)
+				if (is_ocb)
+					qparam.txop = 0;
+				else if (use_11b)
 					qparam.txop = 6016/32;
 				else
 					qparam.txop = 3008/32;
-				qparam.aifs = 2;
+
+				if (is_ocb)
+					qparam.aifs = 3;
+				else
+					qparam.aifs = 2;
 				break;
 			case IEEE80211_AC_VO:
 				qparam.cw_max = (aCWmin + 1) / 2 - 1;
 				qparam.cw_min = (aCWmin + 1) / 4 - 1;
-				if (use_11b)
+				if (is_ocb)
+					qparam.txop = 0;
+				else if (use_11b)
 					qparam.txop = 3264/32;
 				else
 					qparam.txop = 1504/32;
@@ -1871,6 +1888,10 @@ int ieee80211_reconfig(struct ieee80211_local *local)
 			sdata_lock(sdata);
 			ieee80211_bss_info_change_notify(sdata, changed);
 			sdata_unlock(sdata);
+			break;
+		case NL80211_IFTYPE_OCB:
+			changed |= BSS_CHANGED_OCB;
+			ieee80211_bss_info_change_notify(sdata, changed);
 			break;
 		case NL80211_IFTYPE_ADHOC:
 			changed |= BSS_CHANGED_IBSS;
@@ -2582,11 +2603,23 @@ void ieee80211_dfs_radar_detected_work(struct work_struct *work)
 	struct ieee80211_local *local =
 		container_of(work, struct ieee80211_local, radar_detected_work);
 	struct cfg80211_chan_def chandef = local->hw.conf.chandef;
+	struct ieee80211_chanctx *ctx;
+	int num_chanctx = 0;
+
+	mutex_lock(&local->chanctx_mtx);
+	list_for_each_entry(ctx, &local->chanctx_list, list) {
+		if (ctx->replace_state == IEEE80211_CHANCTX_REPLACES_OTHER)
+			continue;
+
+		num_chanctx++;
+		chandef = ctx->conf.def;
+	}
+	mutex_unlock(&local->chanctx_mtx);
 
 	ieee80211_dfs_cac_cancel(local);
 
-	if (local->use_chanctx)
-		/* currently not handled */
+	if (num_chanctx > 1)
+		/* XXX: multi-channel is not supported yet */
 		WARN_ON(1);
 	else
 		cfg80211_radar_event(local->hw.wiphy, &chandef, GFP_KERNEL);

@@ -2037,7 +2037,6 @@ enum ieee80211_tdls_actioncode {
 #define WLAN_EXT_CAPA4_TDLS_BUFFER_STA		BIT(4)
 #define WLAN_EXT_CAPA4_TDLS_PEER_PSM		BIT(5)
 #define WLAN_EXT_CAPA4_TDLS_CHAN_SWITCH		BIT(6)
-
 /* Interworking capabilities are set in 7th bit of 4th byte of the
  * @WLAN_EID_EXT_CAPABILITY information element
  */

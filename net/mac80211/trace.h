@@ -988,12 +988,14 @@ TRACE_EVENT(drv_flush,
 
 TRACE_EVENT(drv_channel_switch,
 	TP_PROTO(struct ieee80211_local *local,
+		 struct ieee80211_sub_if_data *sdata,
 		 struct ieee80211_channel_switch *ch_switch),
 
-	TP_ARGS(local, ch_switch),
+	TP_ARGS(local, sdata, ch_switch),
 
 	TP_STRUCT__entry(
 		LOCAL_ENTRY
+		VIF_ENTRY
 		CHANDEF_ENTRY
 		__field(u64, timestamp)
 		__field(u32, device_timestamp)
@@ -1003,6 +1005,7 @@ TRACE_EVENT(drv_channel_switch,
 
 	TP_fast_assign(
 		LOCAL_ASSIGN;
+		VIF_ASSIGN;
 		CHANDEF_ASSIGN(&ch_switch->chandef)
 		__entry->timestamp = ch_switch->timestamp;
 		__entry->device_timestamp = ch_switch->device_timestamp;
@@ -1011,8 +1014,8 @@ TRACE_EVENT(drv_channel_switch,
 	),
 
 	TP_printk(
-		LOCAL_PR_FMT " new " CHANDEF_PR_FMT " count:%d",
-		LOCAL_PR_ARG, CHANDEF_PR_ARG, __entry->count
+		LOCAL_PR_FMT VIF_PR_FMT " new " CHANDEF_PR_FMT " count:%d",
+		LOCAL_PR_ARG, VIF_PR_ARG, CHANDEF_PR_ARG, __entry->count
 	)
 );
 
@@ -2142,6 +2145,33 @@ DEFINE_EVENT(local_sdata_evt, drv_post_channel_switch,
 	     TP_ARGS(local, sdata)
 );
 
+TRACE_EVENT(drv_get_txpower,
+	TP_PROTO(struct ieee80211_local *local,
+		 struct ieee80211_sub_if_data *sdata,
+		 int dbm, int ret),
+
+	TP_ARGS(local, sdata, dbm, ret),
+
+	TP_STRUCT__entry(
+		LOCAL_ENTRY
+		VIF_ENTRY
+		__field(int, dbm)
+		__field(int, ret)
+	),
+
+	TP_fast_assign(
+		LOCAL_ASSIGN;
+		VIF_ASSIGN;
+		__entry->dbm = dbm;
+		__entry->ret = ret;
+	),
+
+	TP_printk(
+		LOCAL_PR_FMT VIF_PR_FMT " dbm:%d ret:%d",
+		LOCAL_PR_ARG, VIF_PR_ARG, __entry->dbm, __entry->ret
+	)
+);
+
 TRACE_EVENT(drv_tdls_channel_switch,
 	TP_PROTO(struct ieee80211_local *local,
 		 struct ieee80211_sub_if_data *sdata,
@@ -2243,6 +2273,7 @@ TRACE_EVENT(drv_tdls_recv_channel_switch,
 		CHANDEF_PR_ARG, STA_PR_ARG
 	)
 );
+
 
 #ifdef CPTCFG_MAC80211_MESSAGE_TRACING
 #undef TRACE_SYSTEM
