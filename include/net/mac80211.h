@@ -2408,9 +2408,9 @@ enum ieee80211_roc_type {
  * This enum is used by the reconfig_complete() callback to indicate what
  * reconfiguration type was completed.
  *
- * @IEEE80211_RECONFIG_COMPLETE_RESTART: hw restart type
+ * @IEEE80211_RECONFIG_TYPE_RESTART: hw restart type
  *	(also due to resume() callback returning 1)
- * @IEEE80211_RECONFIG_COMPLETE_SUSPEND: suspend type (regardless
+ * @IEEE80211_RECONFIG_TYPE_SUSPEND: suspend type (regardless
  *	of wowlan configuration)
  */
 enum ieee80211_reconfig_type {
