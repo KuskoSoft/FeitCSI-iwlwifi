@@ -491,7 +491,7 @@ enum hwsim_multicast_groups {
 	HWSIM_MCGRP_CONFIG,
 };
 
-static const struct genl_multicast_group hwsim_mcgrps[] = {
+static __genl_const struct genl_multicast_group hwsim_mcgrps[] = {
 	[HWSIM_MCGRP_CONFIG] = { .name = "config", },
 };
 
