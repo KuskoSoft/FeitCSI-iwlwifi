@@ -3227,6 +3227,7 @@ static int iwl_mvm_mac_testmode_cmd(struct ieee80211_hw *hw,
 #endif
 
 static void iwl_mvm_channel_switch(struct ieee80211_hw *hw,
+				   struct ieee80211_vif *vif,
 				   struct ieee80211_channel_switch *chsw)
 {
 	/* By implementing this operation, we prevent mac80211 from
