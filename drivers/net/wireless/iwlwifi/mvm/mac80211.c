@@ -911,12 +911,13 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 	 * firmware coredump on reconfiguration, we shouldn't do that
 	 * on D3->D0 transition
 	 */
-	if (!test_and_clear_bit(IWL_MVM_STATUS_D3_RECONFIG, &mvm->status))
+	if (!test_and_clear_bit(IWL_MVM_STATUS_D3_RECONFIG, &mvm->status)) {
 		iwl_mvm_fw_error_dump(mvm);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_dispatch_handle_nic_err(mvm->trans);
+		iwl_dnt_dispatch_handle_nic_err(mvm->trans);
 #endif
+	}
 
 	iwl_trans_stop_device(mvm->trans);
 
