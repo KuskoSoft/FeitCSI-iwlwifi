@@ -3167,11 +3167,6 @@ struct wiphy {
 
 	u16 max_ap_assoc_sta;
 
-	/*
-	 * Number of supported csa_counters in beacons and probe responses.
-	 * This value should be set if the driver wishes to limit the number of
-	 * csa counters. Default (0) means infinite.
-	 */
 	u8 max_num_csa_counters;
 	u8 max_adj_channel_rssi_comp;
 
