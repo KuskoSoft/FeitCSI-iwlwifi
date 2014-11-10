@@ -1995,14 +1995,16 @@ int iwl_mvm_rx_umac_scan_complete_notif(struct iwl_mvm *mvm,
 	mvm->last_ebs_successful = !notif->ebs_status;
 	mvm->scan_uid[uid_idx] = 0;
 
-	if (!sched)
+	if (!sched) {
 		ieee80211_scan_completed(mvm->hw,
 					 notif->status ==
 						IWL_SCAN_OFFLOAD_ABORTED);
-	else if (!iwl_mvm_find_scan_type(mvm, IWL_UMAC_SCAN_UID_SCHED_SCAN))
+		iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
+	} else if (!iwl_mvm_find_scan_type(mvm, IWL_UMAC_SCAN_UID_SCHED_SCAN)) {
 		ieee80211_sched_scan_stopped(mvm->hw);
-	else
+	} else {
 		IWL_DEBUG_SCAN(mvm, "Another sched scan is running\n");
+	}
 
 	return 0;
 }
@@ -2086,8 +2088,10 @@ static int iwl_umac_scan_stop(struct iwl_mvm *mvm,
 	if (notify) {
 		if (type & IWL_UMAC_SCAN_UID_SCHED_SCAN)
 			ieee80211_sched_scan_stopped(mvm->hw);
-		if (type & IWL_UMAC_SCAN_UID_REG_SCAN)
+		if (type & IWL_UMAC_SCAN_UID_REG_SCAN) {
 			ieee80211_scan_completed(mvm->hw, true);
+			iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
+		}
 	}
 
 	return ret;
