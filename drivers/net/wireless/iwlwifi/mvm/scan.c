@@ -1947,13 +1947,10 @@ int iwl_mvm_sched_scan_umac(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	iwl_mvm_umac_scan_cfg_channels(mvm, req->channels, req->n_channels,
 				       ssid_bitmap, cmd);
 
-	/*
-	 * Schedule plan 0 must be finite num of iteration, so we don't
-	 * configure it.
-	 */
-	sec_part->schedule[1].iter_count = 0xff;
-	sec_part->schedule[1].interval =
+	sec_part->schedule[0].interval =
 				cpu_to_le16(req->interval / MSEC_PER_SEC);
+	sec_part->schedule[0].iter_count = 0xff;
+
 	sec_part->delay = 0;
 
 	iwl_mvm_build_unified_scan_probe(mvm, vif, ies, &sec_part->preq);

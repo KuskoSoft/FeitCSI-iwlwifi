@@ -946,7 +946,7 @@ struct iwl_scan_channel_cfg_umac {
 /**
  * struct iwl_scan_umac_schedule
  * @interval: interval in seconds between scan iterations
- * @iter_count: num of scan iterations for schedule plan
+ * @iter_count: num of scan iterations for schedule plan, 0xff for infinite loop
  * @reserved: for alignment and future use
  */
 struct iwl_scan_umac_schedule {
@@ -958,8 +958,7 @@ struct iwl_scan_umac_schedule {
 /**
  * struct iwl_scan_req_umac_tail - the rest of the UMAC scan request command
  *      parameters following channels configuration array.
- * @schedule: two scheduling plans. The first one is finite, the second one can
- *	be infinite.
+ * @schedule: two scheduling plans.
  * @delay: delay in TUs before starting the first scan iteration
  * @reserved: for future use and alignment
  * @preq: probe request with IEs blocks
