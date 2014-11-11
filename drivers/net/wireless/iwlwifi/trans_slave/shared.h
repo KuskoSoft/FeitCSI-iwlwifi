@@ -377,8 +377,6 @@ int iwl_slv_al_mem_pool_free_count(struct iwl_trans_slv_tx *slv_tx,
 struct iwl_slv_txq_entry *iwl_slv_txq_pop_entry(
 					struct iwl_trans_slv *trans_slv,
 					u8 txq_id);
-void iwl_slv_txq_push_entry(struct iwl_trans_slv *trans_slv, u8 txq_id,
-		      struct iwl_slv_txq_entry *txq_entry);
 void iwl_slv_txq_pushback_entry(struct iwl_trans_slv *trans_slv, u8 txq_id,
 		      struct iwl_slv_txq_entry *txq_entry);
 

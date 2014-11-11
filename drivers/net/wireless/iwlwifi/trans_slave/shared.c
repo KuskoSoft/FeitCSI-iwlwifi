@@ -337,19 +337,6 @@ void iwl_slv_txq_pushback_entry(struct iwl_trans_slv *trans_slv, u8 txq_id,
 	spin_unlock_bh(&trans_slv->txq_lock);
 }
 
-void iwl_slv_txq_push_entry(struct iwl_trans_slv *trans_slv, u8 txq_id,
-		      struct iwl_slv_txq_entry *txq_entry)
-{
-	struct iwl_slv_tx_queue *txq = &trans_slv->txqs[txq_id];
-
-	spin_lock_bh(&trans_slv->txq_lock);
-
-	list_add_tail(&txq_entry->list, &txq->waiting);
-	atomic_inc(&txq->waiting_count);
-
-	spin_unlock_bh(&trans_slv->txq_lock);
-}
-
 void iwl_slv_txq_add_to_sent(struct iwl_trans_slv *trans_slv, u8 txq_id,
 			      struct iwl_slv_txq_entry *txq_entry)
 {
