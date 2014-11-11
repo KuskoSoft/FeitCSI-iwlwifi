@@ -682,22 +682,22 @@ void iwl_slv_free_data_queue(struct iwl_trans *trans, int txq_id)
 
 	/* waiting queue - no need to handle DTU memory */
 	list_for_each_entry_safe(txq_entry, tmp, &txq->waiting, list) {
-		list_del(&txq_entry->list);
-		atomic_dec(&txq->waiting_count);
 		IWL_SLV_TXQ_GET_ENTRY(txq_entry, data_entry);
 		iwl_op_mode_free_skb(trans->op_mode, data_entry->skb);
 		kmem_cache_free(trans_slv->data_entry_pool, data_entry);
 	}
+	atomic_set(&txq->waiting_count, 0);
+	INIT_LIST_HEAD(&txq->waiting);
 
 	/* sent queue - need to free DTU memory */
 	list_for_each_entry_safe(txq_entry, tmp, &txq->sent, list) {
-		list_del(&txq_entry->list);
-		atomic_dec(&txq->sent_count);
 		IWL_SLV_TXQ_GET_ENTRY(txq_entry, data_entry);
 		trans_slv->config.free_dtu_mem(trans, &txq_entry->reclaim_info);
 		iwl_op_mode_free_skb(trans->op_mode, data_entry->skb);
 		kmem_cache_free(trans_slv->data_entry_pool, data_entry);
 	}
+	atomic_set(&txq->sent_count, 0);
+	INIT_LIST_HEAD(&txq->sent);
 
 	/* just in case the queue was stopped */
 	if (test_and_clear_bit(txq_id, trans_slv->queue_stopped_map)) {
