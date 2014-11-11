@@ -261,17 +261,26 @@ static void iwl_xvt_nic_config(struct iwl_op_mode *op_mode)
 static void iwl_xvt_nic_error(struct iwl_op_mode *op_mode)
 {
 	struct iwl_xvt *xvt = IWL_OP_MODE_GET_XVT(op_mode);
+	struct iwl_error_event_table *p_table, table;
 	int err;
 
 	xvt->fw_error = true;
 	wake_up_interruptible(&xvt->mod_tx_wq);
 
-	iwl_xvt_dump_nic_error_log(xvt);
+	iwl_xvt_get_nic_error_log(xvt, &table);
 
-	err = iwl_xvt_user_send_notif(xvt, IWL_XVT_CMD_SEND_NIC_ERROR,
-				      NULL, 0, GFP_ATOMIC);
-	if (err)
-		IWL_WARN(xvt, "Error %d sending NIC error notification\n", err);
+	iwl_xvt_dump_nic_error_log(xvt, &table);
+
+	p_table = kmemdup(&table, sizeof(table), GFP_ATOMIC);
+	if (p_table) {
+		err = iwl_xvt_user_send_notif(xvt, IWL_XVT_CMD_SEND_NIC_ERROR,
+					      (void *)p_table, sizeof(*p_table),
+					      GFP_ATOMIC);
+		if (err)
+			IWL_WARN(xvt,
+				 "Error %d sending NIC error notification\n",
+				 err);
+	}
 }
 
 static bool iwl_xvt_set_hw_rfkill_state(struct iwl_op_mode *op_mode, bool state)
