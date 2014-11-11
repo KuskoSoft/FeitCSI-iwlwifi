@@ -852,6 +852,73 @@ void iwl_mvm_tcm_work(struct work_struct *work)
 	mutex_unlock(&mvm->mutex);
 }
 
+static void iwl_mvm_uapsd_agg_disconnect_iter(void *data, u8 *mac,
+					      struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	struct iwl_mvm *mvm = mvmvif->mvm;
+	int *mac_id = data;
+
+	if (mvmvif->id != *mac_id)
+		return;
+
+	/* remember that this AP is broken */
+	memcpy(mvm->uapsd_noagg_bssids[mvm->uapsd_noagg_bssid_write_idx].addr,
+	       vif->bss_conf.bssid, ETH_ALEN);
+	mvm->uapsd_noagg_bssid_write_idx++;
+	if (mvm->uapsd_noagg_bssid_write_idx >= IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM)
+		mvm->uapsd_noagg_bssid_write_idx = 0;
+
+	ieee80211_connection_loss(vif);
+}
+
+static void iwl_mvm_check_uapsd_agg_expected_tpt(struct iwl_mvm *mvm,
+						 unsigned int elapsed,
+						 int mac)
+{
+	u32 rate_n_flags = mvm->tcm.data[mac].uapsd_nonagg_detect.rate_n_flags;
+	u64 bytes = mvm->tcm.data[mac].uapsd_nonagg_detect.rx_bytes;
+	u64 tpt;
+	/* expected throughput in 500kbps, single stream, 20 MHz */
+	static const u16 thresh_tpt[] = {
+		3, 6, 10, 14, 20, 26, 30, 32, 40, 45,
+	};
+	u16 thr;
+
+	if (mvm->tcm.data[mac].opened_rx_ba_sessions)
+		return;
+
+	if (!(rate_n_flags & RATE_MCS_HT_POS) &&
+	    !(rate_n_flags & RATE_MCS_VHT_POS))
+		return;
+
+	if (rate_n_flags & RATE_MCS_HT_POS) {
+		thr = thresh_tpt[rate_n_flags & RATE_HT_MCS_RATE_CODE_MSK];
+		thr *= 1 + ((rate_n_flags & RATE_HT_MCS_NSS_MSK) >>
+					RATE_HT_MCS_NSS_POS);
+	} else {
+		if (WARN_ON(rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK) >
+				ARRAY_SIZE(thresh_tpt))
+			return;
+		thr = thresh_tpt[rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK];
+		thr *= 1 + ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >>
+					RATE_VHT_MCS_NSS_POS);
+	}
+
+	thr *= 1 + ((rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) >>
+				RATE_MCS_CHAN_WIDTH_POS);
+
+	tpt = 2 * 8 * bytes;
+	do_div(tpt, elapsed); /* 500kbps */
+
+	if (tpt < thr)
+		return;
+
+	ieee80211_iterate_active_interfaces_atomic(
+		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+		iwl_mvm_uapsd_agg_disconnect_iter, &mac);
+}
+
 static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 					    unsigned long ts)
 {
@@ -899,9 +966,16 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 		}
 		low_latency |= mvm->tcm.result.low_latency[mac];
 
+		if (mvm->tcm.data[mac].uapsd_nonagg_detect.rx_pkts >
+				IWL_MVM_UAPSD_AGGDETECT_MIN_PKTS &&
+		    !low_latency)
+			iwl_mvm_check_uapsd_agg_expected_tpt(mvm, elapsed, mac);
+
 		/* clear old data */
 		memset(&mdata->rx.airtime, 0, sizeof(mdata->rx.airtime));
 		memset(&mdata->tx.airtime, 0, sizeof(mdata->tx.airtime));
+		memset(&mdata->uapsd_nonagg_detect, 0,
+		       sizeof(mdata->uapsd_nonagg_detect));
 	}
 
 	load = iwl_mvm_tcm_load(mvm, total_airtime, elapsed);

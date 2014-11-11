@@ -746,6 +746,15 @@ static int iwl_mvm_mac_ampdu_action(struct ieee80211_hw *hw,
 
 	switch (action) {
 	case IEEE80211_AMPDU_RX_START:
+#ifdef CPTCFG_IWLMVM_TCM
+		if (iwl_mvm_vif_from_mac80211(vif)->ap_sta_id ==
+				iwl_mvm_sta_from_mac80211(sta)->sta_id) {
+			u16 macid = iwl_mvm_vif_from_mac80211(vif)->id;
+			struct iwl_mvm_tcm_mac *mdata = &mvm->tcm.data[macid];
+
+			mdata->opened_rx_ba_sessions = true;
+		}
+#endif
 		if (!iwl_enable_rx_ampdu(mvm->cfg)) {
 			ret = -EINVAL;
 			break;
@@ -2236,6 +2245,14 @@ static void iwl_mvm_sta_pre_rcu_remove(struct ieee80211_hw *hw,
 static void iwl_mvm_check_uapsd(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 				const u8 *bssid)
 {
+#ifdef CPTCFG_IWLMVM_TCM
+	struct iwl_mvm_tcm_mac *mdata;
+	int i;
+
+	mdata = &mvm->tcm.data[iwl_mvm_vif_from_mac80211(vif)->id];
+	mdata->opened_rx_ba_sessions = false;
+#endif
+
 	if (!(mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_UAPSD_SUPPORT))
 		return;
 
@@ -2243,6 +2260,15 @@ static void iwl_mvm_check_uapsd(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		vif->driver_flags &= ~IEEE80211_VIF_SUPPORTS_UAPSD;
 		return;
 	}
+
+#ifdef CPTCFG_IWLMVM_TCM
+	for (i = 0; i < IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM; i++) {
+		if (ether_addr_equal(mvm->uapsd_noagg_bssids[i].addr, bssid)) {
+			vif->driver_flags &= ~IEEE80211_VIF_SUPPORTS_UAPSD;
+			return;
+		}
+	}
+#endif
 
 	vif->driver_flags |= IEEE80211_VIF_SUPPORTS_UAPSD;
 }

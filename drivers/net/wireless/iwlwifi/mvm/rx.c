@@ -364,6 +364,7 @@ int iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 		if (sta) {
 			struct iwl_mvm_sta *mvmsta;
 			struct iwl_mvm_tcm_mac *mdata;
+			struct iwl_mvm_vif *mvmvif;
 			int mac;
 
 			mvmsta = iwl_mvm_sta_from_mac80211(sta);
@@ -375,6 +376,16 @@ int iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 			mdata->rx.pkts[ac]++;
 			mdata->rx.airtime[ac] +=
 				le16_to_cpu(phy_info->frame_time);
+			mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
+			if (!mdata->opened_rx_ba_sessions &&
+			    mvmsta->vif->driver_flags &
+						IEEE80211_VIF_SUPPORTS_UAPSD &&
+			    mvmsta->sta_id == mvmvif->ap_sta_id) {
+				mdata->uapsd_nonagg_detect.rx_bytes += len;
+				mdata->uapsd_nonagg_detect.rx_pkts++;
+				mdata->uapsd_nonagg_detect.rate_n_flags =
+					rate_n_flags;
+			}
 		}
 	}
 #endif

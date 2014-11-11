@@ -546,6 +546,13 @@ struct iwl_mvm_tcm_mac {
 		u32 pkts[IEEE80211_NUM_ACS];
 		u32 airtime[IEEE80211_NUM_ACS];
 	} rx;
+	struct {
+		/* track AP's transfer in client mode */
+		u64 rx_bytes;
+		u32 rx_pkts;
+		u32 rate_n_flags;
+	} uapsd_nonagg_detect;
+	bool opened_rx_ba_sessions;
 };
 
 struct iwl_mvm_tcm {
@@ -773,6 +780,12 @@ struct iwl_mvm {
 	bool temperature_test;  /* Debug test temperature is enabled */
 
 #ifdef CPTCFG_IWLMVM_TCM
+#define IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM	20
+
+	u8 uapsd_noagg_bssid_write_idx;
+	struct mac_address uapsd_noagg_bssids[IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM]
+		__aligned(2);
+
 	struct iwl_mvm_tcm tcm;
 #endif
 
