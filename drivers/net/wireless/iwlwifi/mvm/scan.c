@@ -2069,6 +2069,13 @@ static int iwl_umac_scan_stop(struct iwl_mvm *mvm,
 		if (mvm->scan_uid[i] & type) {
 			int err;
 
+			if (iwl_mvm_is_radio_killed(mvm) &&
+			    (type & IWL_UMAC_SCAN_UID_REG_SCAN)) {
+				ieee80211_scan_completed(mvm->hw, true);
+				iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
+				break;
+			}
+
 			err = iwl_umac_scan_abort_one(mvm, mvm->scan_uid[i]);
 			if (!err)
 				ret = 0;
