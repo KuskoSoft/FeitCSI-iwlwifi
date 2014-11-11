@@ -316,7 +316,7 @@ struct iwl_slv_txq_entry *iwl_slv_txq_pop_entry(
 		goto exit;
 	}
 
-	list_del(txq->waiting.next);
+	list_del(&txq_entry->list);
 	atomic_dec(&txq->waiting_count);
 
 exit:
