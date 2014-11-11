@@ -1646,8 +1646,7 @@ int iwl_mvm_config_scan(struct iwl_mvm *mvm)
 	scan_config->dwell_passive = 110;
 	scan_config->dwell_fragmented = 20;
 
-	memcpy(&scan_config->mac_addr, &mvm->addresses[0].addr,
-	       sizeof(ETH_ALEN));
+	memcpy(&scan_config->mac_addr, &mvm->addresses[0].addr, ETH_ALEN);
 
 	scan_config->bcast_sta_id = mvm->aux_sta.sta_id;
 	scan_config->channel_flags = IWL_CHANNEL_FLAG_EBS |
