@@ -74,6 +74,7 @@
  */
 enum iwl_tm_gnl_cmd_t {
 	IWL_TM_GNL_CMD_EXECUTE = 0,
+	IWL_TM_GNL_CMD_SUBSCRIBE_EVENTS,
 };
 
 

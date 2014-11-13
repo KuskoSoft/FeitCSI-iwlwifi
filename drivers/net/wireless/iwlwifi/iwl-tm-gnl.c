@@ -561,7 +561,7 @@ send_msg_err:
 }
 
 /**
- * iwl_tm_gnl_send_msg() - Sends a message to a multicast group
+ * iwl_tm_gnl_send_msg() - Sends a message to mcast or userspace listener
  * @trans:	transport
  * @cmd:	Command index
  * @check_notify: only send when notify is set
@@ -577,6 +577,7 @@ int iwl_tm_gnl_send_msg(struct iwl_trans *trans, u32 cmd, bool check_notify,
 	struct iwl_tm_gnl_dev *dev;
 	struct iwl_tm_gnl_cmd cmd_data;
 	struct sk_buff *skb;
+	u32 nlportid;
 
 	if (WARN_ON_ONCE(!trans))
 		return -EINVAL;
@@ -584,6 +585,8 @@ int iwl_tm_gnl_send_msg(struct iwl_trans *trans, u32 cmd, bool check_notify,
 	if (!trans->tmdev)
 		return 0;
 	dev = trans->tmdev;
+
+	nlportid = ACCESS_ONCE(dev->nl_events_portid);
 
 	if (check_notify && !dev->tst.notify)
 		return 0;
@@ -594,10 +597,12 @@ int iwl_tm_gnl_send_msg(struct iwl_trans *trans, u32 cmd, bool check_notify,
 	cmd_data.data_out.data = data_out;
 	cmd_data.data_out.len = data_len;
 
-	skb = iwl_tm_gnl_create_msg(0, 0, cmd_data, flags);
+	skb = iwl_tm_gnl_create_msg(nlportid, 0, cmd_data, flags);
 	if (!skb)
 		return -EINVAL;
 
+	if (nlportid)
+		return genlmsg_unicast(&init_net, skb, nlportid);
 	return genlmsg_multicast(&iwl_tm_gnl_family, skb, 0, 0, flags);
 }
 IWL_EXPORT_SYMBOL(iwl_tm_gnl_send_msg);
@@ -983,6 +988,37 @@ static int iwl_tm_gnl_done(struct netlink_callback *cb)
 	return -EOPNOTSUPP;
 }
 
+static int iwl_tm_gnl_cmd_subscribe(struct sk_buff *skb, struct genl_info *info)
+{
+	struct iwl_tm_gnl_dev *dev;
+	const char *dev_name;
+	int ret;
+
+	if (!info->attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME])
+		return -EINVAL;
+
+	dev_name = nla_data(info->attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME]);
+
+	mutex_lock(&dev_list_mtx);
+	dev = iwl_tm_gnl_get_dev(dev_name);
+	if (!dev) {
+		ret = -ENODEV;
+		goto unlock;
+	}
+
+	if (dev->nl_events_portid) {
+		ret = -EBUSY;
+		goto unlock;
+	}
+
+	dev->nl_events_portid = genl_info_snd_portid(info);
+	ret = 0;
+
+ unlock:
+	mutex_unlock(&dev_list_mtx);
+	return ret;
+}
+
 /*
  * iwl_tm_gnl_ops - GNL Family commands.
  * There is only one NL command, and only one callback,
@@ -995,6 +1031,11 @@ static __genl_const struct genl_ops iwl_tm_gnl_ops[] = {
 	  .doit = iwl_tm_gnl_cmd_do,
 	  .dumpit = iwl_tm_gnl_dump,
 	  .done = iwl_tm_gnl_done,
+	},
+	{
+		.cmd = IWL_TM_GNL_CMD_SUBSCRIBE_EVENTS,
+		.policy = iwl_tm_gnl_msg_policy,
+		.doit = iwl_tm_gnl_cmd_subscribe,
 	},
 };
 
@@ -1060,6 +1101,28 @@ void iwl_tm_gnl_remove(struct iwl_trans *trans)
 	mutex_unlock(&dev_list_mtx);
 }
 
+static int iwl_tm_gnl_netlink_notify(struct notifier_block *nb,
+				     unsigned long state,
+				     void *_notify)
+{
+	struct netlink_notify *notify = _notify;
+	struct iwl_tm_gnl_dev *dev;
+
+	rcu_read_lock();
+	list_for_each_entry_rcu(dev, &dev_list, list) {
+		if (dev->nl_events_portid == netlink_notify_portid(notify))
+			dev->nl_events_portid = 0;
+	}
+	rcu_read_unlock();
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block iwl_tm_gnl_netlink_notifier = {
+	.notifier_call = iwl_tm_gnl_netlink_notify,
+};
+
+
 /**
  * iwl_tm_gnl_init() - Registers tm-gnl module
  *
@@ -1068,12 +1131,20 @@ void iwl_tm_gnl_remove(struct iwl_trans *trans)
  */
 int iwl_tm_gnl_init(void)
 {
+	int ret;
+
 	INIT_LIST_HEAD(&dev_list);
 	mutex_init(&dev_list_mtx);
 
-	return genl_register_family_with_ops_groups(&iwl_tm_gnl_family,
-						    iwl_tm_gnl_ops,
-						    iwl_tm_gnl_mcgrps);
+	ret = genl_register_family_with_ops_groups(&iwl_tm_gnl_family,
+						   iwl_tm_gnl_ops,
+						   iwl_tm_gnl_mcgrps);
+	if (ret)
+		return ret;
+	ret = netlink_register_notifier(&iwl_tm_gnl_netlink_notifier);
+	if (ret)
+		genl_unregister_family(&iwl_tm_gnl_family);
+	return ret;
 }
 
 /**
@@ -1081,5 +1152,6 @@ int iwl_tm_gnl_init(void)
  */
 int iwl_tm_gnl_exit(void)
 {
+	netlink_unregister_notifier(&iwl_tm_gnl_netlink_notifier);
 	return genl_unregister_family(&iwl_tm_gnl_family);
 }

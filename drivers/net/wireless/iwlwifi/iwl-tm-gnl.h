@@ -97,6 +97,7 @@ struct iwl_tm_gnl_dev {
 	struct iwl_dnt *dnt;
 	struct iwl_trans *trans;
 	const char *dev_name;
+	u32 nl_events_portid;
 };
 
 /**
