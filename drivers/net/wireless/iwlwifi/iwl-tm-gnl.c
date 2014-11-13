@@ -1036,16 +1036,14 @@ unlock:
  */
 void iwl_tm_gnl_remove(struct iwl_trans *trans)
 {
-	struct iwl_tm_gnl_dev *dev_itr = NULL;
-	struct list_head *list_itr, *list_temp;
+	struct iwl_tm_gnl_dev *dev_itr, *tmp;
 
 	if (WARN_ON_ONCE(!trans))
 		return;
 
 	/* Searching for operation mode in list */
 	mutex_lock(&dev_list_mtx);
-	list_for_each_safe(list_itr, list_temp, &dev_list) {
-		dev_itr = list_entry(list_itr, struct iwl_tm_gnl_dev, list);
+	list_for_each_entry_safe(dev_itr, tmp, &dev_list, list) {
 		if (dev_itr->trans == trans) {
 			/*
 			 * Device found. Removing it from list
