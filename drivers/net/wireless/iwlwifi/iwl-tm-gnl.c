@@ -448,8 +448,8 @@ struct iwl_tm_gnl_cmd {
 	struct iwl_tm_data data_out;
 };
 
-static struct list_head dev_list;
-static struct mutex dev_list_mtx; /* Protects dev_list */
+static struct list_head dev_list; /* protected by mutex or RCU */
+static struct mutex dev_list_mtx;
 
 /* Testmode GNL family command attributes  */
 enum iwl_tm_gnl_cmd_attr_t {
@@ -1024,7 +1024,7 @@ void iwl_tm_gnl_add(struct iwl_trans *trans)
 	dev->dev_name = dev_name(trans->dev);
 	trans->tmdev = dev;
 	dev->trans = trans;
-	list_add_tail(&dev->list, &dev_list);
+	list_add_tail_rcu(&dev->list, &dev_list);
 
 unlock:
 	mutex_unlock(&dev_list_mtx);
@@ -1051,7 +1051,8 @@ void iwl_tm_gnl_remove(struct iwl_trans *trans)
 			 * Device found. Removing it from list
 			 * and releasing it's resources
 			 */
-			list_del(&dev_itr->list);
+			list_del_rcu(&dev_itr->list);
+			synchronize_rcu();
 			kfree(dev_itr);
 			break;
 		}
