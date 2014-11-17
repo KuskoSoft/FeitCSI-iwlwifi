@@ -382,4 +382,10 @@ enum secure_load_status_reg {
 #define RADIO_REG_SYS_MANUAL_DFT_0	0xAD4078
 #define RFIC_REG_RD			0xAD0470
 
+/* FW chicken bits */
+#define LMPM_CHICK			0xA01FF8
+enum {
+	LMPM_CHICK_EXTENDED_ADDR_SPACE = BIT(0),
+};
+
 #endif				/* __iwl_prph_h__ */
