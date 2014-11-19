@@ -57,9 +57,12 @@ config IWLWIFI_PCIE_SUSPEND_RESUME
 	  or if you need the driver to store and restore the PCIe
 	  configuration for other reasons.
 
+config IWLWIFI_WANT_PM_RUNTIME
+	bool
+
 config IWLWIFI_MINI_PM_RUNTIME
-	bool "internal mini-runtime PM implementation"
-	depends on IWLWIFI
+	bool
+	depends on IWLWIFI_WANT_PM_RUNTIME
 	default y if !PM_RUNTIME
 	help
 	  Enable use of an internal reference counting framework for the
