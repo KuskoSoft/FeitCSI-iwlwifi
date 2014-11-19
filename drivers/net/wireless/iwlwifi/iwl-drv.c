@@ -82,9 +82,6 @@
 #include "iwl-dbg-cfg.h"
 #endif
 
-/* private includes */
-#include "iwl-fw-file.h"
-
 /******************************************************************************
  *
  * module boiler plate
