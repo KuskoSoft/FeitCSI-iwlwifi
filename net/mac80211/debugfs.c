@@ -43,12 +43,6 @@ static ssize_t sta_tx_latency_threshold_read(struct file *file,
 	rcu_read_lock();
 	tx_latency = rcu_dereference(local->tx_latency);
 
-	pos += scnprintf(buf + pos, bufsz - pos, "mode: %s\n",
-			 tx_latency->monitor_record_mode ?
-			 "Continues Recording" : "Internal Buffer");
-	pos += scnprintf(buf + pos, bufsz - pos, "window: %d\n",
-			 tx_latency->monitor_collec_wind);
-
 	/* Tx latency is not enabled or no thresholds were configured */
 	if (!tx_latency || (!tx_latency->thresholds_bss &&
 			    !tx_latency->thresholds_p2p)) {
@@ -56,6 +50,12 @@ static ssize_t sta_tx_latency_threshold_read(struct file *file,
 				TX_TIMING_STATS_DISABLED);
 		goto unlock;
 	}
+
+	pos += scnprintf(buf + pos, bufsz - pos, "mode: %s\n",
+			 tx_latency->monitor_record_mode ?
+			 "Continuous Recording" : "Internal Buffer");
+	pos += scnprintf(buf + pos, bufsz - pos, "window: %d\n",
+			 tx_latency->monitor_collec_wind);
 
 	if (tx_latency->thresholds_bss) {
 		pos += scnprintf(buf + pos, bufsz - pos, "BSS thresholds:\n");
