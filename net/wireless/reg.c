@@ -56,7 +56,6 @@
 #include <net/cfg80211.h>
 #include "core.h"
 #include "reg.h"
-#include "rdev-ops.h"
 #include "regdb.h"
 #include "nl80211.h"
 
@@ -1575,8 +1574,6 @@ static void reg_call_notifier(struct wiphy *wiphy,
 static bool reg_wdev_chan_valid(struct wiphy *wiphy, struct wireless_dev *wdev)
 {
 	struct ieee80211_channel *ch;
-	struct cfg80211_chan_def chandef;
-	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
 	bool ret = true;
 
 	wdev_lock(wdev);
@@ -1618,13 +1615,9 @@ static bool reg_wdev_chan_valid(struct wiphy *wiphy, struct wireless_dev *wdev)
 		    !wdev->current_bss->pub.channel)
 			goto out;
 
+		/* TODO: more elaborate tracking for wide channels */
 		ch = wdev->current_bss->pub.channel;
-		if (rdev->ops->get_channel &&
-		    !rdev_get_channel(rdev, wdev, &chandef))
-			ret = cfg80211_chandef_usable(wiphy, &chandef,
-						      IEEE80211_CHAN_DISABLED);
-		else
-			ret = !(ch->flags & IEEE80211_CHAN_DISABLED);
+		ret = !(ch->flags & IEEE80211_CHAN_DISABLED);
 		break;
 	default:
 		/* others not implemented for now */
