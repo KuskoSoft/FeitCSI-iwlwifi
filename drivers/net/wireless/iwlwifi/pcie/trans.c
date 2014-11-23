@@ -973,6 +973,11 @@ static int iwl_trans_pcie_start_fw(struct iwl_trans *trans,
 		return ret;
 	}
 
+#ifdef CONFIG_HAS_WAKELOCK
+	/* The ref wakelock is locked on init */
+	if (iwlwifi_mod_params.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
+		wake_lock(&trans_pcie->ref_wake_lock);
+#endif
 	/* init ref_count to 1 (should be cleared when ucode is loaded) */
 	trans_pcie->ref_count = 1;
 
@@ -1029,6 +1034,11 @@ static void iwl_trans_pcie_stop_device(struct iwl_trans *trans)
 		IWL_DEBUG_INFO(trans, "DEVICE_ENABLED bit was set and is now cleared\n");
 		iwl_pcie_tx_stop(trans);
 		iwl_pcie_rx_stop(trans);
+#ifdef CONFIG_HAS_WAKELOCK
+		/* release wake_lock while device is stopped */
+		if (iwlwifi_mod_params.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
+			wake_unlock(&trans_pcie->ref_wake_lock);
+#endif
 
 		/* Power-down device's busmaster DMA clocks */
 		iwl_write_prph(trans, APMG_CLK_DIS_REG,
@@ -1330,6 +1340,11 @@ void iwl_trans_pcie_free(struct iwl_trans *trans)
 	if (trans_pcie->napi.poll)
 		netif_napi_del(&trans_pcie->napi);
 
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&trans_pcie->ref_wake_lock);
+	wake_lock_destroy(&trans_pcie->timed_wake_lock);
+#endif
+
 	iwl_pcie_free_fw_monitor(trans);
 
 	kfree(trans);
@@ -1582,6 +1597,12 @@ void iwl_trans_pcie_ref(struct iwl_trans *trans)
 	spin_lock_irqsave(&trans_pcie->ref_lock, flags);
 	IWL_DEBUG_RPM(trans, "ref_counter: %d\n", trans_pcie->ref_count);
 	trans_pcie->ref_count++;
+#ifdef CONFIG_HAS_WAKELOCK
+	/* take ref wakelock on first reference */
+	if (trans_pcie->ref_count == 1 &&
+	    iwlwifi_mod_params.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
+		wake_lock(&trans_pcie->ref_wake_lock);
+#endif
 	spin_unlock_irqrestore(&trans_pcie->ref_lock, flags);
 }
 
@@ -1600,6 +1621,20 @@ void iwl_trans_pcie_unref(struct iwl_trans *trans)
 		return;
 	}
 	trans_pcie->ref_count--;
+
+#ifdef CONFIG_HAS_WAKELOCK
+	/*
+	 * release ref wake lock and take timed wake lock when
+	 * last reference is released.
+	 */
+	if (trans_pcie->ref_count == 0 &&
+	    iwlwifi_mod_params.wakelock_mode == IWL_WAKELOCK_MODE_IDLE) {
+		wake_unlock(&trans_pcie->ref_wake_lock);
+		wake_lock_timeout(&trans_pcie->timed_wake_lock,
+				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
+	}
+#endif
+
 	spin_unlock_irqrestore(&trans_pcie->ref_lock, flags);
 }
 
@@ -2470,6 +2505,13 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 	}
 
 	trans_pcie->inta_mask = CSR_INI_SET_MASK;
+
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&trans_pcie->ref_wake_lock, WAKE_LOCK_SUSPEND,
+		       "iwlwifi_pcie_ref_wakelock");
+	wake_lock_init(&trans_pcie->timed_wake_lock, WAKE_LOCK_SUSPEND,
+		       "iwlwifi_pcie_timed_wakelock");
+#endif
 
 	return trans;
 

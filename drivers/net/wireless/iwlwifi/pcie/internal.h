@@ -36,6 +36,9 @@
 #include <linux/wait.h>
 #include <linux/pci.h>
 #include <linux/timer.h>
+#ifdef CONFIG_HAS_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 
 #include "iwl-fh.h"
 #include "iwl-csr.h"
@@ -323,6 +326,10 @@ struct iwl_trans_pcie {
 	/* protect ref counter */
 	spinlock_t ref_lock;
 	u32 ref_count;
+#ifdef CONFIG_HAS_WAKELOCK
+	struct wake_lock ref_wake_lock;
+	struct wake_lock timed_wake_lock;
+#endif
 
 	dma_addr_t fw_mon_phys;
 	struct page *fw_mon_page;

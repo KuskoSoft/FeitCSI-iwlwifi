@@ -202,6 +202,9 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(u8, wakelock_mode)
 	IWL_DBG_CFG_NODEF(u32, d0i3_debug)
 	IWL_DBG_CFG_NODEF(u32, valid_ants)
+#ifdef CONFIG_HAS_WAKELOCK
+	IWL_DBG_CFG(u32, WAKELOCK_TIMEOUT_MS)
+#endif /* CONFIG_HAS_WAKELOCK */
 #undef IWL_DBG_CFG
 #undef IWL_DBG_CFG_NODEF
 #undef IWL_DBG_CFG_BIN
