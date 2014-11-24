@@ -868,12 +868,13 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 	mvm->tcm.result.elapsed = elapsed;
 
 	for (mac = 0; mac < NUM_MAC_INDEX_DRIVER; mac++) {
+		struct iwl_mvm_tcm_mac *mdata = &mvm->tcm.data[mac];
 		u32 vo_vi_pkts = 0;
 		u32 airtime = 0;
 
 		for (ac = IEEE80211_AC_VO; ac <= IEEE80211_AC_BK; ac++)
-			airtime += mvm->tcm.data[mac].rx.airtime[ac] +
-				   mvm->tcm.data[mac].tx.airtime[ac];
+			airtime += mdata->rx.airtime[ac] +
+				   mdata->tx.airtime[ac];
 		total_airtime += airtime;
 
 		load = iwl_mvm_tcm_load(mvm, airtime, elapsed);
@@ -882,8 +883,8 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 		mvm->tcm.result.airtime[mac] = airtime;
 
 		for (ac = IEEE80211_AC_VO; ac <= IEEE80211_AC_VI; ac++)
-			vo_vi_pkts += mvm->tcm.data[mac].rx.pkts[ac] +
-				      mvm->tcm.data[mac].tx.pkts[ac];
+			vo_vi_pkts += mdata->rx.pkts[ac] +
+				      mdata->tx.pkts[ac];
 
 		/* enable immediately with enough packets but defer disabling */
 		if (vo_vi_pkts > IWL_MVM_TCM_LOWLAT_ENABLE_THRESH)
@@ -893,18 +894,14 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 
 		if (handle_ll) {
 			/* clear old data */
-			memset(&mvm->tcm.data[mac].rx.pkts, 0,
-			       sizeof(mvm->tcm.data[mac].rx.pkts));
-			memset(&mvm->tcm.data[mac].tx.pkts, 0,
-			       sizeof(mvm->tcm.data[mac].tx.pkts));
+			memset(&mdata->rx.pkts, 0, sizeof(mdata->rx.pkts));
+			memset(&mdata->tx.pkts, 0, sizeof(mdata->tx.pkts));
 		}
 		low_latency |= mvm->tcm.result.low_latency[mac];
 
 		/* clear old data */
-		memset(&mvm->tcm.data[mac].rx.airtime, 0,
-		       sizeof(mvm->tcm.data[mac].rx.airtime));
-		memset(&mvm->tcm.data[mac].tx.airtime, 0,
-		       sizeof(mvm->tcm.data[mac].tx.airtime));
+		memset(&mdata->rx.airtime, 0, sizeof(mdata->rx.airtime));
+		memset(&mdata->tx.airtime, 0, sizeof(mdata->tx.airtime));
 	}
 
 	load = iwl_mvm_tcm_load(mvm, total_airtime, elapsed);
@@ -956,15 +953,12 @@ void iwl_mvm_resume_tcm(struct iwl_mvm *mvm)
 	mvm->tcm.ts = jiffies;
 	mvm->tcm.ll_ts = jiffies;
 	for (mac = 0; mac < NUM_MAC_INDEX_DRIVER; mac++) {
-		memset(&mvm->tcm.data[mac].rx.pkts, 0,
-		       sizeof(mvm->tcm.data[mac].rx.pkts));
-		memset(&mvm->tcm.data[mac].tx.pkts, 0,
-		       sizeof(mvm->tcm.data[mac].tx.pkts));
+		struct iwl_mvm_tcm_mac *mdata = &mvm->tcm.data[mac];
 
-		memset(&mvm->tcm.data[mac].rx.airtime, 0,
-		       sizeof(mvm->tcm.data[mac].rx.airtime));
-		memset(&mvm->tcm.data[mac].tx.airtime, 0,
-		       sizeof(mvm->tcm.data[mac].tx.airtime));
+		memset(&mdata->rx.pkts, 0, sizeof(mdata->rx.pkts));
+		memset(&mdata->tx.pkts, 0, sizeof(mdata->tx.pkts));
+		memset(&mdata->rx.airtime, 0, sizeof(mdata->rx.airtime));
+		memset(&mdata->tx.airtime, 0, sizeof(mdata->tx.airtime));
 	}
 	/* The TCM data needs to be reset before "paused" flag changes */
 	smp_mb();

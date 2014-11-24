@@ -537,6 +537,38 @@ enum iwl_mvm_tdls_cs_state {
 	IWL_MVM_TDLS_SW_ACTIVE,
 };
 
+#ifdef CPTCFG_IWLMVM_TCM
+struct iwl_mvm_tcm_mac {
+	struct {
+		u32 pkts[IEEE80211_NUM_ACS];
+		u32 airtime[IEEE80211_NUM_ACS];
+	} tx;
+	struct {
+		u32 pkts[IEEE80211_NUM_ACS];
+		u32 airtime[IEEE80211_NUM_ACS];
+	} rx;
+};
+
+struct iwl_mvm_tcm {
+	struct timer_list timer;
+	struct work_struct work;
+	spinlock_t lock; /* used when time elapsed */
+	unsigned long ts; /* timestamp when period ends */
+	unsigned long ll_ts;
+	bool paused;
+	struct iwl_mvm_tcm_mac data[NUM_MAC_INDEX_DRIVER];
+	struct {
+		u32 elapsed; /* milliseconds for this TCM period */
+		u32 airtime[NUM_MAC_INDEX_DRIVER];
+		u8 load[NUM_MAC_INDEX_DRIVER];
+		u8 global_load;
+		bool low_latency[NUM_MAC_INDEX_DRIVER];
+		bool change[NUM_MAC_INDEX_DRIVER];
+		bool global_change;
+	} result;
+};
+#endif
+
 struct iwl_mvm {
 	/* for logger access */
 	struct device *dev;
@@ -737,33 +769,7 @@ struct iwl_mvm {
 	bool temperature_test;  /* Debug test temperature is enabled */
 
 #ifdef CPTCFG_IWLMVM_TCM
-	struct {
-		struct timer_list timer;
-		struct work_struct work;
-		spinlock_t lock; /* used when time elapsed */
-		unsigned long ts; /* timestamp when period ends */
-		unsigned long ll_ts;
-		bool paused;
-		struct {
-			struct {
-				u32 pkts[IEEE80211_NUM_ACS];
-				u32 airtime[IEEE80211_NUM_ACS];
-			} tx;
-			struct {
-				u32 pkts[IEEE80211_NUM_ACS];
-				u32 airtime[IEEE80211_NUM_ACS];
-			} rx;
-		} data[NUM_MAC_INDEX_DRIVER];
-		struct {
-			u32 elapsed; /* milliseconds for this TCM period */
-			u32 airtime[NUM_MAC_INDEX_DRIVER];
-			u8 load[NUM_MAC_INDEX_DRIVER];
-			u8 global_load;
-			bool low_latency[NUM_MAC_INDEX_DRIVER];
-			bool change[NUM_MAC_INDEX_DRIVER];
-			bool global_change;
-		} result;
-	} tcm;
+	struct iwl_mvm_tcm tcm;
 #endif
 
 	struct iwl_time_quota_cmd last_quota_cmd;

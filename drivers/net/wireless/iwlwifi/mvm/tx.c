@@ -596,14 +596,15 @@ static void iwl_mvm_tx_airtime(struct iwl_mvm *mvm,
 {
 	u32 ac = tid_to_mac80211_ac[tid];
 	int mac = mvmsta->mac_id_n_color & FW_CTXT_ID_MSK;
+	struct iwl_mvm_tcm_mac *mdata = &mvm->tcm.data[mac];
 
 	if (mvm->tcm.paused)
 		return;
 
 	if (time_after(jiffies, mvm->tcm.ts + MVM_TCM_PERIOD))
 		iwl_mvm_recalc_tcm(mvm);
-	mvm->tcm.data[mac].tx.pkts[ac]++;
-	mvm->tcm.data[mac].tx.airtime[ac] += airtime;
+	mdata->tx.pkts[ac]++;
+	mdata->tx.airtime[ac] += airtime;
 }
 #endif
 
