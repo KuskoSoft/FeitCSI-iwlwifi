@@ -3,17 +3,12 @@ CFLAGS=-Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
 LXDIALOG := lxdialog/checklist.o lxdialog/inputbox.o lxdialog/menubox.o lxdialog/textbox.o lxdialog/util.o lxdialog/yesno.o
 
 conf: conf.o zconf.tab.o
+mconf_CFLAGS := $(shell ./lxdialog/check-lxdialog.sh -ccflags) -DLOCALE
+mconf_LDFLAGS := $(shell ./lxdialog/check-lxdialog.sh -ldflags $(CC))
+mconf: CFLAGS += $(mconf_CFLAGS)
 
-RELEASE=$(shell lsb_release -si)
-ifeq ($(RELEASE), Ubuntu)
-	AS_NEEDED=--no-as-needed
-else
-	AS_NEEDED=--add-needed
-endif
-mconf: LDFLAGS = -Wl,$(AS_NEEDED) $(shell ./lxdialog/check-lxdialog.sh -ldflags $(CC))
-
-mconf: CFLAGS += -DCURSES_LOC="<ncurses.h>" -DLOCALE
 mconf: mconf.o zconf.tab.o $(LXDIALOG)
+	$(CC) -o mconf $^ $(mconf_LDFLAGS)
 
 .PHONY: clean
 clean:

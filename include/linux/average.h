@@ -1,5 +1,5 @@
 /* Automatically created during backport process */
-#ifndef CPTCFG_BACKPORT_BUILD_AVERAGE
+#ifndef CPTCFG_BPAUTO_BUILD_AVERAGE
 #include_next <linux/average.h>
 #else
 #undef ewma_init
@@ -7,4 +7,4 @@
 #undef ewma_add
 #define ewma_add LINUX_BACKPORT(ewma_add)
 #include <linux/backport-average.h>
-#endif /* CPTCFG_BACKPORT_BUILD_AVERAGE */
+#endif /* CPTCFG_BPAUTO_BUILD_AVERAGE */

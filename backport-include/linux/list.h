@@ -17,7 +17,9 @@
 
 #undef hlist_entry_safe
 #define hlist_entry_safe(ptr, type, member) \
-	(ptr) ? hlist_entry(ptr, type, member) : NULL
+	({ typeof(ptr) ____ptr = (ptr); \
+	   ____ptr ? hlist_entry(____ptr, type, member) : NULL; \
+	})
 
 #define hlist_for_each_entry4(tpos, pos, head, member)			\
 	for (pos = (head)->first;					\
@@ -72,5 +74,18 @@
 #define list_next_entry(pos, member) \
 	list_entry((pos)->member.next, typeof(*(pos)), member)
 #endif /* list_next_entry */
+
+#ifndef list_last_entry
+/**
+ * list_last_entry - get the last element from a list
+ * @ptr:	the list head to take the element from.
+ * @type:	the type of the struct this is embedded in.
+ * @member:	the name of the list_struct within the struct.
+ *
+ * Note, that list is expected to be not empty.
+ */
+#define list_last_entry(ptr, type, member) \
+	list_entry((ptr)->prev, type, member)
+#endif
 
 #endif /* __BACKPORT_LIST_H */

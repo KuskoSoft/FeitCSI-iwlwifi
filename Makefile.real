@@ -89,7 +89,7 @@ modules: backport-include/backport/autoconf.h
 
 .PHONY: install
 install: modules
-	@$(MAKE) -C $(KLIB_BUILD) M=$(BACKPORT_PWD)			\
+	@$(MAKE) -C $(KLIB_BUILD) M=$(BACKPORT_DIR)			\
 		INSTALL_MOD_DIR=$(KMODDIR) $(KMODPATH_ARG)		\
 		modules_install
 	@./scripts/blacklist.sh $(KLIB)/ $(KLIB)/$(KMODDIR)

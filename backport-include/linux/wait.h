@@ -23,4 +23,13 @@ backport_wait_on_bit_io(void *word, int bit, unsigned mode)
 
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#define WQ_FLAG_WOKEN		0x02
+
+#define wait_woken LINUX_BACKPORT(wait_woken)
+long wait_woken(wait_queue_t *wait, unsigned mode, long timeout);
+#define wait_woken LINUX_BACKPORT(wait_woken)
+int woken_wake_function(wait_queue_t *wait, unsigned mode, int sync, void *key);
+#endif
+
 #endif /* __BACKPORT_LINUX_WAIT_H */

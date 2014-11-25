@@ -394,19 +394,16 @@ minstrel_ht_sort_best_tp_rates(struct minstrel_ht_sta *mi, u16 index,
 	cur_thr = mi->groups[cur_group].rates[cur_idx].cur_tp;
 	cur_prob = mi->groups[cur_group].rates[cur_idx].probability;
 
-	tmp_group = tp_list[j - 1] / MCS_GROUP_RATES;
-	tmp_idx = tp_list[j - 1] % MCS_GROUP_RATES;
-	tmp_thr = mi->groups[tmp_group].rates[tmp_idx].cur_tp;
-	tmp_prob = mi->groups[tmp_group].rates[tmp_idx].probability;
-
-	while (j > 0 && (cur_thr > tmp_thr ||
-	      (cur_thr == tmp_thr && cur_prob > tmp_prob))) {
-		j--;
+	do {
 		tmp_group = tp_list[j - 1] / MCS_GROUP_RATES;
 		tmp_idx = tp_list[j - 1] % MCS_GROUP_RATES;
 		tmp_thr = mi->groups[tmp_group].rates[tmp_idx].cur_tp;
 		tmp_prob = mi->groups[tmp_group].rates[tmp_idx].probability;
-	}
+		if (cur_thr < tmp_thr ||
+		    (cur_thr == tmp_thr && cur_prob <= tmp_prob))
+			break;
+		j--;
+	} while (j > 0);
 
 	if (j < MAX_THR_RATES - 1) {
 		memmove(&tp_list[j + 1], &tp_list[j], (sizeof(*tp_list) *
@@ -690,6 +687,9 @@ minstrel_aggr_check(struct ieee80211_sta *pubsta, struct sk_buff *skb)
 	struct sta_info *sta = container_of(pubsta, struct sta_info, sta);
 	u16 tid;
 
+	if (skb_get_queue_mapping(skb) == IEEE80211_AC_VO)
+		return;
+
 	if (unlikely(!ieee80211_is_data_qos(hdr->frame_control)))
 		return;
 
@@ -698,9 +698,6 @@ minstrel_aggr_check(struct ieee80211_sta *pubsta, struct sk_buff *skb)
 
 	tid = *ieee80211_get_qos_ctl(hdr) & IEEE80211_QOS_CTL_TID_MASK;
 	if (likely(sta->ampdu_mlme.tid_tx[tid]))
-		return;
-
-	if (skb_get_queue_mapping(skb) == IEEE80211_AC_VO)
 		return;
 
 	ieee80211_start_tx_ba_session(pubsta, tid, 5000);

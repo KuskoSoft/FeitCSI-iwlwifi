@@ -3130,7 +3130,7 @@ int ieee80211_reserve_tid(struct ieee80211_sta *pubsta, u8 tid)
 		return -EINVAL;
 	}
 
-	if (WARN_ON(tid >= IEEE80211_NUM_TIDS))
+	if (WARN_ON(tid >= IEEE80211_NUM_UPS))
 		return -EINVAL;
 
 	if (sta->reserved_tid == tid) {

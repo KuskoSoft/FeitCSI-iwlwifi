@@ -20,11 +20,12 @@ extern void backport_dependency_symbol(void);
 #define BACKPORT_MOD_VERSIONS MODULE_VERSION(BACKPORTS_GIT_TRACKED);
 #else
 #define BACKPORT_MOD_VERSIONS						\
-	MODULE_VERSION("backported from " BACKPORTED_KERNEL_NAME	\
-		       " (" BACKPORTED_KERNEL_VERSION ")"		\
-		       " using backports " BACKPORTS_VERSION);
+	MODULE_VERSION("backported from " CPTCFG_KERNEL_NAME	\
+		       " (" CPTCFG_KERNEL_VERSION ")"		\
+		       " using backports " CPTCFG_VERSION);
 #endif
 
+#ifdef MODULE
 #undef module_init
 #define module_init(initfn)						\
 	static int __init __init_backport(void)				\
@@ -58,6 +59,7 @@ extern void backport_dependency_symbol(void);
 		rcu_barrier();						\
 	}								\
 	void cleanup_module(void) __attribute__((alias("__exit_compat")));
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
 #undef param_check_bool

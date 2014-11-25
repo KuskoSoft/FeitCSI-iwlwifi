@@ -8,7 +8,7 @@
  * allows compilation.
  */
 
-#ifdef CPTCFG_BACKPORT_BUILD_LEDS
+#ifdef CPTCFG_BPAUTO_BUILD_LEDS
 #include <linux/list.h>
 #include <linux/spinlock.h>
 #include <linux/rwsem.h>

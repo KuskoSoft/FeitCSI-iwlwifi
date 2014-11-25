@@ -46,14 +46,14 @@ if IWLWIFI
 config IWLWIFI_LEDS
 	bool
 	depends on LEDS_CLASS=y || LEDS_CLASS=IWLWIFI
-	select BACKPORT_LEDS_TRIGGERS
+	select BPAUTO_LEDS_TRIGGERS
 	select MAC80211_LEDS
 	default y
 
 config IWLMVM
 	tristate "Intel Wireless WiFi MVM Firmware support"
 	depends on m
-	select BACKPORT_WANT_DEV_COREDUMP
+	select BPAUTO_WANT_DEV_COREDUMP
 	help
 	  This is the driver that supports the MVM firmware which is
 	  currently only available for 7260 and 3160 devices.

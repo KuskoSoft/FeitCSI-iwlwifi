@@ -1,3 +1,4 @@
+ifeq ($(CONFIG_BACKPORT_INTEGRATE),)
 # Since 2.6.21, try-run is available, but cc-disable-warning
 # was only added later, so we add it here ourselves:
 backport-cc-disable-warning = $(call try-run,\
@@ -10,13 +11,25 @@ NOSTDINC_FLAGS := \
 	-I$(M)/include/uapi \
 	-include $(M)/backport-include/backport/backport.h \
 	$(call backport-cc-disable-warning, unused-but-set-variable) \
-	-DBACKPORTS_VERSION=\"$(BACKPORTS_VERSION)\" \
-	-DBACKPORTED_KERNEL_VERSION=\"$(BACKPORTED_KERNEL_VERSION)\" \
-	-DBACKPORTED_KERNEL_NAME=\"$(BACKPORTED_KERNEL_NAME)\" \
+	-DCPTCFG_VERSION=\"$(BACKPORTS_VERSION)\" \
+	-DCPTCFG_KERNEL_VERSION=\"$(BACKPORTED_KERNEL_VERSION)\" \
+	-DCPTCFG_KERNEL_NAME=\"$(BACKPORTED_KERNEL_NAME)\" \
 	$(BACKPORTS_GIT_TRACKER_DEF) \
 	$(CFLAGS)
 
 export backport_srctree = $(M)
+else
+export BACKPORT_DIR = backports/
+export backport_srctree = $(BACKPORT_DIR)
+NOSTDINC_FLAGS := \
+	-I$(BACKPORT_DIR)/backport-include/ \
+	-I$(BACKPORT_DIR)/backport-include/uapi \
+	-I$(BACKPORT_DIR)/include/ \
+	-I$(BACKPORT_DIR)/include/uapi \
+	-include $(BACKPORT_DIR)/backport-include/backport/backport.h \
+	$(CFLAGS)
+endif
+
 
 obj-y += compat/
 
@@ -33,6 +46,7 @@ obj-$(CPTCFG_WLAN) += drivers/net/wireless/
 #obj-$(CPTCFG_NFC) += drivers/nfc/
 #obj-$(CPTCFG_MEDIA_SUPPORT) += drivers/media/
 #
+#obj-$(CPTCFG_6LOWPAN) += net/6lowpan/
 #obj-$(CPTCFG_IEEE802154) += net/ieee802154/
 #obj-$(CPTCFG_BT) += net/ieee802154/
 #obj-$(CPTCFG_MAC802154) += net/mac802154/

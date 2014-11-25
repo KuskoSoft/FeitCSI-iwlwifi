@@ -5,9 +5,9 @@ config MAC80211
 	depends on CRYPTO
 	depends on CRYPTO_ARC4
 	depends on CRYPTO_AES
-	select BACKPORT_CRYPTO_CCM
+	select BPAUTO_CRYPTO_CCM
 	depends on CRC32
-	select BACKPORT_AVERAGE
+	select BPAUTO_AVERAGE
 	---help---
 	  This option enables the hardware independent IEEE 802.11
 	  networking stack.
@@ -85,7 +85,7 @@ config MAC80211_LEDS
 	bool "Enable LED triggers"
 	depends on MAC80211
 	depends on LEDS_CLASS
-	select BACKPORT_LEDS_TRIGGERS
+	select BPAUTO_LEDS_TRIGGERS
 	---help---
 	  This option enables a few LED triggers for different
 	  packet receive/transmit events.

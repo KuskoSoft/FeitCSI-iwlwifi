@@ -176,4 +176,28 @@ static inline void netdev_reset_queue(struct net_device *dev_queue)
 			 count)
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0) */
 
+/*
+ * This backports this commit from upstream:
+ * commit 87757a917b0b3c0787e0563c679762152be81312
+ * net: force a list_del() in unregister_netdevice_many()
+ */
+#if (!(LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,45) && \
+       LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)) && \
+     !(LINUX_VERSION_CODE >= KERNEL_VERSION(3,12,23) && \
+       LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)) && \
+     !(LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,9) && \
+       LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)) && \
+     !(LINUX_VERSION_CODE >= KERNEL_VERSION(3,15,2) && \
+       LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)) && \
+     (LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)))
+static inline void backport_unregister_netdevice_many(struct list_head *head)
+{
+	unregister_netdevice_many(head);
+
+	if (!(head->next == LIST_POISON1 && head->prev == LIST_POISON2))
+		list_del(head);
+}
+#define unregister_netdevice_many LINUX_BACKPORT(unregister_netdevice_many)
+#endif
+
 #endif /* __BACKPORT_NETDEVICE_H */

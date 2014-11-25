@@ -3,8 +3,8 @@ export
 
 .PHONY: modules
 modules:
-	@$(MAKE) -C $(KLIB_BUILD) M=$(BACKPORT_PWD) modules
+	@$(MAKE) -C $(KLIB_BUILD) M=$(BACKPORT_DIR) modules
 
 .PHONY: clean
 clean:
-	@$(MAKE) -C $(KLIB_BUILD) M=$(BACKPORT_PWD) clean
+	@$(MAKE) -C $(KLIB_BUILD) M=$(BACKPORT_DIR) clean

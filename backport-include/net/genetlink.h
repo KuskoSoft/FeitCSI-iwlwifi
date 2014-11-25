@@ -1,6 +1,7 @@
 #ifndef __BACKPORT_NET_GENETLINK_H
 #define __BACKPORT_NET_GENETLINK_H
 #include_next <net/genetlink.h>
+#include <linux/version.h>
 
 /* this is for patches we apply */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
@@ -85,6 +86,10 @@ _genl_register_family_with_ops_grps(struct genl_family *family,
 #define genl_unregister_family backport_genl_unregister_family
 int genl_unregister_family(struct genl_family *family);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+extern void genl_notify(struct sk_buff *skb, struct net *net, u32 pid,
+			u32 group, struct nlmsghdr *nlh, gfp_t flags);
+#endif
 #define genl_notify(_fam, _skb, _net, _portid, _group, _nlh, _flags)	\
 	genl_notify(_skb, _net, _portid, (_fam)->mcgrps[_group].id,	\
 		    _nlh, _flags)
