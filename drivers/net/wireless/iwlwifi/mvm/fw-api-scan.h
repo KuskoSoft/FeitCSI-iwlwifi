@@ -1047,7 +1047,7 @@ struct iwl_umac_scan_complete {
 	__le32 reserved;
 } __packed; /* SCAN_COMPLETE_NTF_UMAC_API_S_VER_1 */
 
-#define SCAN_OFFLOAD_MATCHING_CHANNELS_BITMASK_LEN 5
+#define SCAN_OFFLOAD_MATCHING_CHANNELS_LEN 5
 /**
  * struct iwl_scan_offload_profile_match - match information
  * @bssid: matched bssid
@@ -1059,10 +1059,11 @@ struct iwl_umac_scan_complete {
  */
 struct iwl_scan_offload_profile_match {
 	u8 bssid[ETH_ALEN];
+	__le16 reserved;
 	u8 channel;
 	u8 energy;
 	u8 matching_feature;
-	u8 matching_channels[SCAN_OFFLOAD_MATCHING_CHANNELS_BITMASK_LEN];
+	u8 matching_channels[SCAN_OFFLOAD_MATCHING_CHANNELS_LEN];
 } __packed; /* SCAN_OFFLOAD_PROFILE_MATCH_RESULTS_S_VER_1 */
 
 /**
