@@ -68,6 +68,7 @@
 #include "iwl-devtrace.h"
 #include "shared.h"
 #include "iwl-op-mode.h"
+#include "iwl-constants.h"
 /* FIXME: need to abstract out TX command (once we know what it looks like) */
 #include "mvm/fw-api.h"
 
@@ -477,9 +478,6 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
-	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
-		return 0;
-
 	set_bit(STATUS_TRANS_GOING_IDLE, &trans->status);
 
 	/* config the fw */
@@ -512,11 +510,6 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 			goto err;
 	}
 
-#ifdef CONFIG_HAS_WAKELOCK
-	if (!(d0i3_debug & IWL_D0I3_DBG_KEEP_WAKE_LOCK))
-		wake_unlock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
-#endif
-
 	return 0;
 err:
 	clear_bit(STATUS_TRANS_GOING_IDLE, &trans->status);
@@ -529,17 +522,9 @@ static int iwl_slv_fw_exit_d0i3(struct iwl_trans *trans)
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
-	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
-		return 0;
-
 	/* sometimes a D0i3 entry is not followed through */
 	if (!test_bit(STATUS_TRANS_IDLE, &trans->status))
 		return 0;
-
-#ifdef CONFIG_HAS_WAKELOCK
-	if (!(d0i3_debug & IWL_D0I3_DBG_KEEP_WAKE_LOCK))
-		wake_lock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
-#endif
 
 	if (!(d0i3_debug & IWL_D0I3_DBG_KEEP_BUS) &&
 	    trans_slv->config.grab_bus) {
@@ -572,6 +557,44 @@ err:
 	return ret;
 }
 
+static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
+{
+	int ret;
+
+	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+		return 0;
+
+	ret = iwl_slv_fw_enter_d0i3(trans);
+	if (ret)
+		return ret;
+
+#ifdef CONFIG_HAS_WAKELOCK
+	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
+		wake_unlock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
+#endif
+
+	return 0;
+}
+
+static int iwl_slv_runtime_resume(struct iwl_trans *trans)
+{
+	int ret;
+
+	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+		return 0;
+
+#ifdef CONFIG_HAS_WAKELOCK
+	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
+		wake_lock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
+#endif
+
+	ret = iwl_slv_fw_exit_d0i3(trans);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
 struct iwl_slv_rpm_device {
 	struct iwl_trans *trans;
 	struct device dev;
@@ -593,7 +616,7 @@ static int iwl_slv_rpm_runtime_suspend(struct device *dev)
 	struct iwl_trans *trans = rpm_dev->trans;
 
 	IWL_DEBUG_RPM(trans, "entering d0i3\n");
-	iwl_slv_fw_enter_d0i3(trans);
+	iwl_slv_runtime_suspend(trans);
 	return 0;
 }
 
@@ -604,7 +627,7 @@ static int iwl_slv_rpm_runtime_resume(struct device *dev)
 	struct iwl_trans *trans = rpm_dev->trans;
 
 	IWL_DEBUG_RPM(trans, "exiting d0i3\n");
-	iwl_slv_fw_exit_d0i3(trans);
+	iwl_slv_runtime_resume(trans);
 	return 0;
 }
 
@@ -808,8 +831,8 @@ static int iwl_slv_mini_rpm_init(struct iwl_trans *trans)
 	struct slv_mini_rpm_config rpm_config;
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
-	rpm_config.runtime_suspend = iwl_slv_fw_enter_d0i3;
-	rpm_config.runtime_resume = iwl_slv_fw_exit_d0i3;
+	rpm_config.runtime_suspend = iwl_slv_runtime_suspend;
+	rpm_config.runtime_resume = iwl_slv_runtime_resume;
 	rpm_config.autosuspend_delay = d0i3_entry_timeout_ms;
 
 	return mini_rpm_init(trans_slv, &rpm_config);
@@ -864,7 +887,8 @@ int iwl_slv_init(struct iwl_trans *trans)
 		       "iwlwifi_trans_slv_wakelock");
 	wake_lock_init(&trans_slv->data_wake_lock, WAKE_LOCK_SUSPEND,
 		       "iwlwifi_trans_data_wakelock");
-	wake_lock(&trans_slv->slv_wake_lock);
+	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
+		wake_lock(&trans_slv->slv_wake_lock);
 #endif
 
 	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
@@ -1498,8 +1522,9 @@ int iwl_trans_slv_tx_data_send(struct iwl_trans *trans, struct sk_buff *skb,
 
 	/* allow a burst of Tx to go through */
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_timeout(&trans_slv->data_wake_lock,
-			  msecs_to_jiffies(TRANS_DATA_WAKE_TIMEOUT_MS));
+	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
+		wake_lock_timeout(&trans_slv->data_wake_lock,
+				msecs_to_jiffies(TRANS_DATA_WAKE_TIMEOUT_MS));
 #endif
 
 	queue_work(trans_slv->policy_wq, &trans_slv->policy_trigger);
@@ -1725,7 +1750,8 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 
 #ifdef CONFIG_HAS_WAKELOCK
 		/* let the packet propagate up the stack before suspend */
-		if (take_ref)
+		if (take_ref &&
+		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
 			wake_lock_timeout(&trans_slv->data_wake_lock,
 				  msecs_to_jiffies(TRANS_DATA_WAKE_TIMEOUT_MS));
 #endif

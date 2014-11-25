@@ -199,6 +199,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(u32, dbg_mon_buff_end_addr_reg_addr_b_step)
 	IWL_DBG_CFG_NODEF(u32, dbg_mon_wr_ptr_addr_b_step)
 #endif /* CPTCFG_IWLWIFI_DEVICE_TESTMODE */
+	IWL_DBG_CFG_NODEF(u8, wakelock_mode)
 	IWL_DBG_CFG_NODEF(u32, valid_ants)
 #undef IWL_DBG_CFG
 #undef IWL_DBG_CFG_NODEF
