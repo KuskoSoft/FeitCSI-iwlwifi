@@ -110,6 +110,7 @@ enum {
 	IWL_TM_USER_CMD_NOTIFICATIONS,
 	IWL_TM_USER_CMD_SWITCH_OP_MODE,
 	IWL_TM_USER_CMD_GET_SIL_STEP,
+	IWL_TM_USER_CMD_GET_DRIVER_BUILD_INFO,
 
 	IWL_TM_USER_CMD_NOTIF_UCODE_RX_PKT = TM_CMD_NOTIF_BASE,
 	IWL_TM_USER_CMD_NOTIF_DRIVER,
@@ -310,6 +311,20 @@ struct iwl_switch_op_mode {
  */
 struct iwl_sil_step {
 	__u32 silicon_step;
+} __packed __aligned(4);
+
+#define MAX_DRIVER_VERSION_LEN	256
+#define MAX_BUILD_DATE_LEN	32
+/**
+ * struct iwl_tm_build_info - Result data for get driver build info request
+ * @driver_version: driver version in tree:branch:build:sha1
+ * @branch_time: branch creation time
+ * @build_time: build time
+ */
+struct iwl_tm_build_info {
+	__u8 driver_version[MAX_DRIVER_VERSION_LEN];
+	__u8 branch_time[MAX_BUILD_DATE_LEN];
+	__u8 build_time[MAX_BUILD_DATE_LEN];
 } __packed __aligned(4);
 
 /* xVT defeinitions */

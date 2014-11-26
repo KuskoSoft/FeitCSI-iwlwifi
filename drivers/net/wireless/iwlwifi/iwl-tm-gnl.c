@@ -420,6 +420,30 @@ static int iwl_tm_gnl_get_sil_step(struct iwl_trans *trans,
 	return 0;
 }
 
+static int iwl_tm_gnl_get_build_info(struct iwl_trans *trans,
+				     struct iwl_tm_data *data_out)
+{
+	struct iwl_tm_build_info *resp;
+
+	data_out->data =  kmalloc(sizeof(*resp), GFP_KERNEL);
+	if (!data_out->data)
+		return -ENOMEM;
+	data_out->len = sizeof(struct iwl_tm_build_info);
+	resp = (struct iwl_tm_build_info *)data_out->data;
+
+	memset(resp, 0 , sizeof(*resp));
+	strncpy(resp->driver_version, BACKPORTS_GIT_TRACKED,
+		sizeof(resp->driver_version));
+#ifdef BACKPORTS_BRANCH_TSTAMP
+	strncpy(resp->branch_time, BACKPORTS_BRANCH_TSTAMP,
+		sizeof(resp->branch_time));
+#endif
+	strncpy(resp->build_time, BACKPORTS_BUILD_TSTAMP,
+		sizeof(resp->build_time));
+
+	return 0;
+}
+
 /*
  * Testmode GNL family types (This NL family
  * will eventually replace nl80211 support in
@@ -721,6 +745,12 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 
 	case IWL_TM_USER_CMD_GET_SIL_STEP:
 		ret = iwl_tm_gnl_get_sil_step(dev->trans, &cmd_data->data_out);
+		common_op = true;
+		break;
+
+	case IWL_TM_USER_CMD_GET_DRIVER_BUILD_INFO:
+		ret = iwl_tm_gnl_get_build_info(dev->trans,
+						&cmd_data->data_out);
 		common_op = true;
 		break;
 	}
