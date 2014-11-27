@@ -425,8 +425,7 @@ static bool is_user_regdom_saved(void)
 		return false;
 
 	/* This would indicate a mistake on the design */
-	if (WARN(!is_world_regdom(user_alpha2) && !is_an_alpha2(user_alpha2) &&
-		 !is_unknown_alpha2(user_alpha2),
+	if (WARN(!is_world_regdom(user_alpha2) && !is_an_alpha2(user_alpha2),
 		 "Unexpected user alpha2: %c%c\n",
 		 user_alpha2[0], user_alpha2[1]))
 		return false;
@@ -603,8 +602,7 @@ bool reg_is_valid_request(const char *alpha2)
 	if (!lr || lr->processed)
 		return false;
 
-	return alpha2_equal(lr->alpha2, alpha2) ||
-	       is_unknown_alpha2(lr->alpha2);
+	return alpha2_equal(lr->alpha2, alpha2);
 }
 
 static const struct ieee80211_regdomain *reg_get_regdomain(struct wiphy *wiphy)
