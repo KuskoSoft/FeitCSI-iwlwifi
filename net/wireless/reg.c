@@ -79,8 +79,6 @@
  *	further processing is required, i.e., not need to update last_request
  *	etc. This should be used for user hints that do not provide an alpha2
  *	but some other type of regulatory hint, i.e., indoor operation.
- * @REG_REQ_HANDLED: a request was handled synchronously. No need to set
- *	timeouts and potentially revert to the default settings.
  */
 enum reg_request_treatment {
 	REG_REQ_OK,
@@ -88,7 +86,6 @@ enum reg_request_treatment {
 	REG_REQ_INTERSECT,
 	REG_REQ_ALREADY_SET,
 	REG_REQ_USER_HINT_HANDLED,
-	REG_REQ_HANDLED,
 };
 
 static struct regulatory_request core_request_world = {
@@ -138,15 +135,6 @@ static int reg_num_devs_support_basehint;
  * (protected by RTNL)
  */
 static bool reg_is_indoor;
-
-/*
- * Wiphy with a get_regd() callback that can provide regulatory information
- * when the country code changes. Only the first wiphy registered with the
- * get_regd callback will be called to provide a regdomain on country-code
- * changes.
- * (protected by RTNL)
- */
-static struct wiphy *regd_info_wiphy;
 
 static const struct ieee80211_regdomain *get_cfg80211_regdom(void)
 {
@@ -557,39 +545,9 @@ static int call_crda(const char *alpha2)
 	return kobject_uevent_env(&reg_pdev->dev.kobj, KOBJ_CHANGE, env);
 }
 
-static int call_wiphy_regd_info(const char *alpha2)
-{
-	struct ieee80211_regdomain *regd;
-
-	if (!regd_info_wiphy)
-		return -ENOENT;
-
-	/* can happen if the driver removes the callback at runtime */
-	if (WARN_ON(!regd_info_wiphy->get_regd))
-		return -EINVAL;
-
-	regd = regd_info_wiphy->get_regd(regd_info_wiphy, alpha2);
-	if (IS_ERR(regd))
-		return -EIO;
-
-	if (regd)
-		set_regdom(regd);
-
-	return 0;
-}
-
 static enum reg_request_treatment
-reg_get_regdom_data(struct regulatory_request *request)
+reg_call_crda(struct regulatory_request *request)
 {
-	ASSERT_RTNL();
-
-	/*
-	 * A wiphy wishing to set the regdomain takes precedence. Note the
-	 * regdomain setting happens synchronously inside.
-	 */
-	if (!call_wiphy_regd_info(request->alpha2))
-		return REG_REQ_HANDLED;
-
 	if (call_crda(request->alpha2))
 		return REG_REQ_IGNORE;
 	return REG_REQ_OK;
@@ -1740,7 +1698,7 @@ reg_process_hint_core(struct regulatory_request *core_request)
 
 	reg_update_last_request(core_request);
 
-	return reg_get_regdom_data(core_request);
+	return reg_call_crda(core_request);
 }
 
 static enum reg_request_treatment
@@ -1815,7 +1773,7 @@ reg_process_hint_user(struct regulatory_request *user_request)
 	user_alpha2[0] = user_request->alpha2[0];
 	user_alpha2[1] = user_request->alpha2[1];
 
-	return reg_get_regdom_data(user_request);
+	return reg_call_crda(user_request);
 }
 
 static enum reg_request_treatment
@@ -1864,7 +1822,6 @@ reg_process_hint_driver(struct wiphy *wiphy,
 		break;
 	case REG_REQ_IGNORE:
 	case REG_REQ_USER_HINT_HANDLED:
-	case REG_REQ_HANDLED:
 		reg_free_request(driver_request);
 		return treatment;
 	case REG_REQ_INTERSECT:
@@ -1895,7 +1852,7 @@ reg_process_hint_driver(struct wiphy *wiphy,
 		return treatment;
 	}
 
-	return reg_get_regdom_data(driver_request);
+	return reg_call_crda(driver_request);
 }
 
 static enum reg_request_treatment
@@ -1962,7 +1919,6 @@ reg_process_hint_country_ie(struct wiphy *wiphy,
 		break;
 	case REG_REQ_IGNORE:
 	case REG_REQ_USER_HINT_HANDLED:
-	case REG_REQ_HANDLED:
 		/* fall through */
 	case REG_REQ_ALREADY_SET:
 		reg_free_request(country_ie_request);
@@ -1982,7 +1938,7 @@ reg_process_hint_country_ie(struct wiphy *wiphy,
 
 	reg_update_last_request(country_ie_request);
 
-	return reg_get_regdom_data(country_ie_request);
+	return reg_call_crda(country_ie_request);
 }
 
 /* This processes *all* regulatory hints */
@@ -2002,8 +1958,7 @@ static void reg_process_hint(struct regulatory_request *reg_request)
 		treatment = reg_process_hint_user(reg_request);
 		if (treatment == REG_REQ_IGNORE ||
 		    treatment == REG_REQ_ALREADY_SET ||
-		    treatment == REG_REQ_USER_HINT_HANDLED ||
-		    treatment == REG_REQ_HANDLED)
+		    treatment == REG_REQ_USER_HINT_HANDLED)
 			return;
 		queue_delayed_work(system_power_efficient_wq,
 				   &reg_timeout, msecs_to_jiffies(3142));
@@ -2786,9 +2741,6 @@ void wiphy_regulatory_register(struct wiphy *wiphy)
 {
 	struct regulatory_request *lr;
 
-	if (wiphy->get_regd && !regd_info_wiphy)
-		regd_info_wiphy = wiphy;
-
 	if (!reg_dev_ignore_cell_hint(wiphy))
 		reg_num_devs_support_basehint++;
 
@@ -2801,8 +2753,6 @@ void wiphy_regulatory_deregister(struct wiphy *wiphy)
 	struct wiphy *request_wiphy = NULL;
 	struct regulatory_request *lr;
 
-	ASSERT_RTNL();
-
 	lr = get_last_request();
 
 	if (!reg_dev_ignore_cell_hint(wiphy))
@@ -2810,9 +2760,6 @@ void wiphy_regulatory_deregister(struct wiphy *wiphy)
 
 	rcu_free_regdom(get_wiphy_regdom(wiphy));
 	RCU_INIT_POINTER(wiphy->regd, NULL);
-
-	if (wiphy == regd_info_wiphy)
-		regd_info_wiphy = NULL;
 
 	if (lr)
 		request_wiphy = wiphy_idx_to_wiphy(lr->wiphy_idx);
