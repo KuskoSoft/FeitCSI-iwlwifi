@@ -720,7 +720,7 @@ int iwl_mvm_init_mcc(struct iwl_mvm *mvm)
 	 * is not set.
 	 */
 	mvm->lar_regdom_set = false;
-	return regulatory_hint(mvm->hw->wiphy, "99");
+	return 0;
 }
 
 int iwl_mvm_rx_chub_update_mcc(struct iwl_mvm *mvm,
@@ -741,7 +741,5 @@ int iwl_mvm_rx_chub_update_mcc(struct iwl_mvm *mvm,
 	IWL_DEBUG_LAR(mvm,
 		      "RX: received chub update mcc command (mcc 0x%x '%s')\n",
 		      notif->mcc, mcc);
-
-	return regulatory_hint_force_policy(mvm->hw->wiphy, mcc,
-					    DRIVER_REG_HINT_OVERRIDE);
+	return 0;
 }
