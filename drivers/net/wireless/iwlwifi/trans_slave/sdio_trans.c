@@ -81,6 +81,7 @@
 #include "iwl-fh.h"
 #include "iwl-agn-hw.h"
 #include "iwl-debug.h"
+#include "iwl-fw-error-dump.h"
 #include "iwl-prph.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "iwl-dnt-cfg.h"
@@ -2288,6 +2289,151 @@ static int iwl_trans_sdio_test_mode_cmd(struct iwl_trans *trans, bool enable)
 	return ret;
 }
 
+#define IWL_CSR_TO_DUMP (0x250)
+
+static u32 iwl_trans_sdio_dump_csr(struct iwl_trans *trans,
+				   struct iwl_fw_error_dump_data **data)
+{
+	u32 csr_len = sizeof(**data) + IWL_CSR_TO_DUMP;
+	__le32 *val;
+	int i;
+
+	(*data)->type = cpu_to_le32(IWL_FW_ERROR_DUMP_CSR);
+	(*data)->len = cpu_to_le32(IWL_CSR_TO_DUMP);
+	val = (void *)(*data)->data;
+
+	for (i = 0; i < IWL_CSR_TO_DUMP; i += 4)
+		*val++ = cpu_to_le32(iwl_trans_sdio_read32(trans, i));
+
+	*data = iwl_fw_error_next_data(*data);
+
+	return csr_len;
+}
+
+static
+struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
+{
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+	struct iwl_slv_tx_queue *txq = &trans_slv->txqs[trans_slv->cmd_queue];
+	struct iwl_fw_error_dump_data *data;
+	struct iwl_trans_dump_data *dump_data;
+	u32 base = 0;
+	u32 base_shift = 0;
+	u32 base_addr = 0;
+	int monitor_len = 0;
+	u32 len;
+
+	/* transport dump header */
+	len = sizeof(*dump_data);
+
+	/* CSR registers */
+	len += sizeof(*data) + IWL_CSR_TO_DUMP;
+
+	/* host commands */
+	spin_lock_bh(&trans_slv->txq_lock);
+	if (!list_empty(&txq->waiting))
+		len += sizeof(*data) +
+		       (atomic_read(&txq->waiting_count) *
+			sizeof(struct iwl_device_cmd));
+	spin_unlock_bh(&trans_slv->txq_lock);
+
+	/* FW monitor, assuming the registers can be accessed */
+	if (trans->dbg_dest_tlv) {
+		u32 end = le32_to_cpu(trans->dbg_dest_tlv->end_reg);
+		u32 end_shift = trans->dbg_dest_tlv->end_shift;
+		u32 end_addr = iwl_read_prph(trans, end) << end_shift;
+
+		base = le32_to_cpu(trans->dbg_dest_tlv->base_reg);
+		base_shift = trans->dbg_dest_tlv->base_shift;
+		base_addr = iwl_read_prph(trans, base) << base_shift;
+		monitor_len = end_addr - base_addr + (1 << end_shift);
+		/*
+		 * Make sure we've read the regs OK and that HW didn't crash
+		 * (which, in such a case, would put the same bad value in both
+		 * base_addr and end_addr).
+		 */
+		if (base_addr < end_addr && base_addr != 0x5a5a5a5a)
+			len += sizeof(*data) +
+			       sizeof(struct iwl_fw_error_dump_fw_mon) +
+			       monitor_len;
+		else
+			monitor_len = 0;
+	}
+
+	dump_data = vzalloc(len);
+	if (!dump_data)
+		return NULL;
+
+	len = 0;
+	data = (void *)dump_data->data;
+
+	/* Copy all waiting TX commands in the queue */
+	spin_lock_bh(&trans_slv->txq_lock);
+	if (!list_empty(&txq->waiting)) {
+		struct iwl_slv_txq_entry *txq_entry;
+		struct iwl_slv_tx_cmd_entry *queued_cmd;
+		struct iwl_device_cmd *dev_cmd;
+		struct iwl_fw_error_dump_txcmd *txcmd;
+		u32 txq_data_len = 0;
+		u16 cmdlen, caplen;
+
+		data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_TXCMD);
+
+		txcmd = (void *)data->data;
+		list_for_each_entry(txq_entry, &txq->waiting, list) {
+			queued_cmd = list_entry(txq_entry,
+						struct iwl_slv_tx_cmd_entry,
+						txq_entry);
+
+			dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv,
+							    queued_cmd);
+
+			cmdlen = sizeof(*dev_cmd);
+			caplen = queued_cmd->txq_entry.dtu_meta.total_len;
+			caplen = min_t(u32, cmdlen, caplen);
+			txcmd->cmdlen = cpu_to_le32(cmdlen);
+			txcmd->caplen = cpu_to_le32(caplen);
+			memcpy(txcmd->data, dev_cmd, caplen);
+			txcmd = (void *)((u8 *)txcmd->data + caplen);
+
+			txq_data_len += sizeof(*txcmd) + caplen;
+		}
+
+		data->len = cpu_to_le32(txq_data_len);
+		len += sizeof(*data) + txq_data_len;
+		data = iwl_fw_error_next_data(data);
+	}
+	spin_unlock_bh(&trans_slv->txq_lock);
+
+	len += iwl_trans_sdio_dump_csr(trans, &data);
+	/* data is already pointing to the next section */
+
+	if (trans->dbg_dest_tlv && monitor_len) {
+		struct iwl_fw_error_dump_fw_mon *fw_mon_data;
+		u32 write_ptr = le32_to_cpu(trans->dbg_dest_tlv->write_ptr_reg);
+		u32 wrap_cnt = le32_to_cpu(trans->dbg_dest_tlv->wrap_count);
+
+		data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_FW_MONITOR);
+		data->len = cpu_to_le32(monitor_len + sizeof(*fw_mon_data));
+		fw_mon_data = (void *)data->data;
+		fw_mon_data->fw_mon_wr_ptr =
+			cpu_to_le32(iwl_read_prph(trans, write_ptr));
+		fw_mon_data->fw_mon_cycle_cnt =
+			cpu_to_le32(iwl_read_prph(trans, wrap_cnt));
+		fw_mon_data->fw_mon_base_ptr =
+			cpu_to_le32(base_addr >> base_shift);
+
+		iwl_trans_read_mem_bytes(trans, base_addr, fw_mon_data->data,
+					 monitor_len);
+
+		len += sizeof(*data) + sizeof(*fw_mon_data) + monitor_len;
+	}
+
+	dump_data->len = len;
+
+	return dump_data;
+}
+
 /*
  * The SDIO transport operations.
  */
@@ -2328,6 +2474,8 @@ static const struct iwl_trans_ops trans_ops_sdio = {
 	.suspend = iwl_trans_slv_suspend,
 	.resume = iwl_trans_slv_resume,
 	.test_mode_cmd = iwl_trans_sdio_test_mode_cmd,
+
+	.dump_data = iwl_trans_sdio_dump_data,
 };
 
 /*
