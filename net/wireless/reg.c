@@ -2600,6 +2600,9 @@ static int reg_set_rd_user(const struct ieee80211_regdomain *rd,
 {
 	const struct ieee80211_regdomain *intersected_rd = NULL;
 
+	if (!regdom_changes(rd->alpha2))
+		return -EALREADY;
+
 	if (!is_valid_rd(rd)) {
 		pr_err("Invalid regulatory domain detected:\n");
 		print_regdomain_info(rd);
@@ -2629,6 +2632,12 @@ static int reg_set_rd_driver(const struct ieee80211_regdomain *rd,
 	const struct ieee80211_regdomain *intersected_rd = NULL;
 	const struct ieee80211_regdomain *tmp;
 	struct wiphy *request_wiphy;
+
+	if (is_world_regdom(rd->alpha2))
+		return -EINVAL;
+
+	if (!regdom_changes(rd->alpha2))
+		return -EALREADY;
 
 	if (!is_valid_rd(rd)) {
 		pr_err("Invalid regulatory domain detected:\n");
