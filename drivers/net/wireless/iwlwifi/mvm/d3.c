@@ -694,6 +694,9 @@ static int iwl_mvm_d3_reprogram(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	if (ret)
 		IWL_ERR(mvm, "Failed to send quota: %d\n", ret);
 
+	if (iwl_mvm_is_lar_supported(mvm) && iwl_mvm_init_fw_regd(mvm))
+		IWL_ERR(mvm, "Failed to initialize D3 LAR information\n");
+
 	return 0;
 }
 
@@ -1842,6 +1845,19 @@ static int __iwl_mvm_resume(struct iwl_mvm *mvm, bool test)
 
 	/* query SRAM first in case we want event logging */
 	iwl_mvm_read_d3_sram(mvm);
+
+	/*
+	 * Query the current location and source from the D3 firmware so we
+	 * can play it back when we re-intiailize the D0 firmware
+	 */
+	if (iwl_mvm_is_lar_supported(mvm)) {
+		struct ieee80211_regdomain *regd =
+					iwl_mvm_get_current_regdomain(mvm);
+		if (!IS_ERR_OR_NULL(regd)) {
+			regulatory_set_wiphy_regd(mvm->hw->wiphy, regd);
+			kfree(regd);
+		}
+	}
 
 	if (mvm->net_detect) {
 		iwl_mvm_query_netdetect_reasons(mvm, vif);
