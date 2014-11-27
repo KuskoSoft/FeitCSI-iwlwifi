@@ -70,6 +70,7 @@
 static const struct nla_policy
 iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_LOW_LATENCY] = { .type = NLA_FLAG },
+	[IWL_MVM_VENDOR_ATTR_COUNTRY] = { .type = NLA_STRING, .len = 2 },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -130,6 +131,46 @@ static int iwl_mvm_get_low_latency(struct wiphy *wiphy,
 	return cfg80211_vendor_cmd_reply(skb);
 }
 
+static int iwl_mvm_set_country(struct wiphy *wiphy,
+			       struct wireless_dev *wdev,
+			       const void *data, int data_len)
+{
+	struct ieee80211_regdomain *regd;
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	int retval;
+
+	if (!iwl_mvm_is_lar_supported(mvm))
+		return -EOPNOTSUPP;
+
+	retval = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (retval)
+		return retval;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_COUNTRY])
+		return -EINVAL;
+
+	mutex_lock(&mvm->mutex);
+
+	/* set regdomain information to FW */
+	regd = iwl_mvm_get_regdomain(wiphy,
+				     nla_data(tb[IWL_MVM_VENDOR_ATTR_COUNTRY]),
+				     iwl_mvm_is_wifi_mcc_supported(mvm) ?
+				     MCC_SOURCE_3G_LTE_HOST :
+				     MCC_SOURCE_OLD_FW);
+	if (IS_ERR_OR_NULL(regd)) {
+		retval = -EIO;
+		goto unlock;
+	}
+
+	retval = regulatory_set_wiphy_regd(wiphy, regd);
+	kfree(regd);
+unlock:
+	mutex_unlock(&mvm->mutex);
+	return retval;
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -148,6 +189,15 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_mvm_get_low_latency,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_SET_COUNTRY,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mvm_set_country,
 	},
 };
 

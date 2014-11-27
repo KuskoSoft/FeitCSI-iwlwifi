@@ -78,6 +78,7 @@
  * @IWL_MVM_VENDOR_CMD_LTE_COEX_SPS_INFO: configure semi oersistent info
  * @IWL_MVM_VENDOR_CMD_LTE_COEX_WIFI_RPRTD_CHAN: Wifi reported channel as
  *	calculated by the coex-manager
+ * @IWL_MVM_VENDOR_CMD_SET_COUNTRY: set a new mcc regulatory information
  */
 
 enum iwl_mvm_vendor_cmd {
@@ -89,6 +90,7 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_LTE_COEX_DYNAMIC_INFO,
 	IWL_MVM_VENDOR_CMD_LTE_COEX_SPS_INFO,
 	IWL_MVM_VENDOR_CMD_LTE_COEX_WIFI_RPRTD_CHAN,
+	IWL_MVM_VENDOR_CMD_SET_COUNTRY,
 };
 
 /**
@@ -116,6 +118,7 @@ enum iwl_mvm_vendor_load {
  * @IWL_MVM_VENDOR_ATTR_LL: global low-latency (u8, 0/1)
  * @IWL_MVM_VENDOR_ATTR_VIF_LOAD: vif traffic load (u8, see load enum)
  * @IWL_MVM_VENDOR_ATTR_LOAD: global traffic load (u8, see load enum)
+ * @IWL_MVM_VENDOR_ATTR_COUNTRY: MCC to set, for regulatory information (u16)
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
  */
@@ -127,6 +130,7 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_LL,
 	IWL_MVM_VENDOR_ATTR_VIF_LOAD,
 	IWL_MVM_VENDOR_ATTR_LOAD,
+	IWL_MVM_VENDOR_ATTR_COUNTRY,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,
