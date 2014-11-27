@@ -34,22 +34,6 @@ enum environment_cap {
 };
 
 /**
- * enum driver_reg_driver_type - type of driver regulatory hint
- *
- * classifies if the regdomain should be overrided or intersected upon new
- * reg updates.
- *
- * @DRIVER_REG_HINT_REGULAR: intersect/overwrite in the usual way.
- * @DRIVER_REG_HINT_OVERRIDE: always override regdomain.
- * @DRIVER_REG_HINT_INTERSECT: always intersect regdomain.
- */
-enum driver_reg_hint_type {
-	DRIVER_REG_HINT_REGULAR,
-	DRIVER_REG_HINT_OVERRIDE,
-	DRIVER_REG_HINT_INTERSECT,
-};
-
-/**
  * struct regulatory_request - used to keep track of regulatory requests
  *
  * @rcu_head: RCU head struct used to free the request
@@ -74,9 +58,6 @@ enum driver_reg_hint_type {
  *	%NL80211_REGDOM_SET_BY_USER, this classifies the type
  *	of hint passed. This could be any of the %NL80211_USER_REG_HINT_*
  *	types.
- * @driver_reg_hint_type: if the @initiator was driver, this classifies
- *	if the regdomain should be overrided or intersected upon new reg
- *	updates.
  * @intersect: indicates whether the wireless core should intersect
  *	the requested regulatory domain with the presently set regulatory
  *	domain.
@@ -99,7 +80,6 @@ struct regulatory_request {
 	int wiphy_idx;
 	enum nl80211_reg_initiator initiator;
 	enum nl80211_user_reg_hint_type user_reg_hint_type;
-	enum driver_reg_hint_type driver_reg_hint_type;
 	char alpha2[2];
 	enum nl80211_dfs_regions dfs_region;
 	bool intersect;
