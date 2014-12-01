@@ -259,6 +259,9 @@
  *	regulatory_hint() API. Even when a private regdomain is used the channel
  *	information will still be mended according to further hints from
  *	the regulatory core to help with compliance.
+ *	If a wiphy is self-managed (%NL80211_ATTR_WIPHY_SELF_MANAGED_REG), then
+ *	its private regdomain is the only valid one for it. The regulatory
+ *	core is not used to help with compliance in this case.
  * @NL80211_CMD_SET_REG: Set current regulatory domain. CRDA sends this command
  *	after being queried by the kernel. CRDA replies by sending a regulatory
  *	domain structure which consists of %NL80211_ATTR_REG_ALPHA set to our
@@ -1702,6 +1705,11 @@ enum nl80211_commands {
  *
  * @NL80211_ATTR_MAC_MASK: MAC address mask
  *
+ * @NL80211_ATTR_WIPHY_SELF_MANAGED_REG: flag attribute indicating this device
+ *	is self-managing its regulatory information and any regulatory domain
+ *	obtained from it is coming from the device's wiphy and not the global
+ *	cfg80211 regdomain.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2058,6 +2066,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_OPER_CLASS,
 
 	NL80211_ATTR_MAC_MASK,
+
+	NL80211_ATTR_WIPHY_SELF_MANAGED_REG,
 
 	NL80211_ATTR_REG_INDOOR,
 	/* add attributes here, update the policy in nl80211.c */
