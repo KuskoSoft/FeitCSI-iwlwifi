@@ -558,6 +558,8 @@ static int iwl_xvt_get_sw_config(struct iwl_xvt *xvt,
 		case IWL_UCODE_WOWLAN:
 			u = IWL_USER_FW_IMAGE_IDX_WOWLAN;
 			break;
+		case IWL_UCODE_REGULAR_USNIFFER:
+			continue;
 		}
 		if (get_cfg_req->get_calib_type == IWL_XVT_GET_CALIB_TYPE_DEF) {
 			event_trigger =
