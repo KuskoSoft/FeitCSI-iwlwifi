@@ -1672,6 +1672,95 @@ static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 	return 0;
 }
 
+static void iwl_sdio_apply_destination(struct iwl_trans *trans)
+{
+	const struct iwl_fw_dbg_dest_tlv *dest = trans->dbg_dest_tlv;
+	int i, ret;
+	u32 val2;
+
+	if (dest->version)
+		IWL_ERR(trans,
+			"DBG DEST version is %d - expect issues\n",
+			dest->version);
+
+	if (dest->monitor_mode == EXTERNAL_MODE)
+		IWL_ERR(trans, "SDIO should have internal buffer debug\n");
+
+	for (i = 0; i < trans->dbg_dest_reg_num; i++) {
+		u32 addr = le32_to_cpu(dest->reg_ops[i].addr);
+		u32 val = le32_to_cpu(dest->reg_ops[i].val);
+
+		switch (dest->reg_ops[i].op) {
+		case CSR_ASSIGN:
+			ret = iwl_sdio_ta_write(trans, addr, sizeof(u32),
+						&val,
+						IWL_SDIO_TA_AC_DIRECT);
+			if (ret)
+				IWL_ERR(trans,
+					"apply destination: failed to write to CSR %d\n",
+					ret);
+			break;
+		case CSR_SETBIT:
+			ret = iwl_sdio_ta_read(trans, addr, sizeof(u32),
+					       &val2,
+					       IWL_SDIO_TA_AC_DIRECT);
+			if (ret) {
+				IWL_ERR(trans,
+					"apply destination: failed to read from CSR %d\n",
+					ret);
+				break;
+			}
+
+			val2 |= BIT(val);
+			ret = iwl_sdio_ta_write(trans, addr, sizeof(u32),
+						&val2,
+						IWL_SDIO_TA_AC_DIRECT);
+			if (ret)
+				IWL_ERR(trans,
+					"apply destination: failed to write to CSR %d\n",
+					ret);
+			break;
+		case CSR_CLEARBIT:
+			ret = iwl_sdio_ta_read(trans, addr, sizeof(u32),
+					       &val2,
+					       IWL_SDIO_TA_AC_DIRECT);
+			if (ret) {
+				IWL_ERR(trans,
+					"apply destination: failed to read from CSR %d\n",
+					ret);
+				break;
+			}
+
+			val2 &= ~BIT(val);
+			ret = iwl_sdio_ta_write(trans, addr, sizeof(u32),
+						&val2,
+						IWL_SDIO_TA_AC_DIRECT);
+			if (ret)
+				IWL_ERR(trans,
+					"apply destination: failed to write to CSR %d\n",
+					ret);
+			break;
+		case PRPH_ASSIGN:
+			iwl_sdio_write_prph_no_claim(trans, addr, val);
+			break;
+		case PRPH_SETBIT:
+			val2 = iwl_sdio_read_prph_no_claim(trans, addr);
+			iwl_sdio_write_prph_no_claim(trans, addr,
+						     val2 | val);
+			break;
+		case PRPH_CLEARBIT:
+			val2 = iwl_sdio_read_prph_no_claim(trans, addr);
+			iwl_sdio_write_prph_no_claim(trans, addr,
+						     (val2 & ~val));
+			break;
+		default:
+			IWL_ERR(trans, "FW debug - unknown OP %d\n",
+				dest->reg_ops[i].op);
+			break;
+		}
+	}
+}
+
 /*
  * Load the given FW image to the NIC.
  */
@@ -1723,6 +1812,9 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 	sdio_claim_host(trans_sdio->func);
 #endif
 
+	if (trans->dbg_dest_tlv)
+		iwl_sdio_apply_destination(trans);
+
 	/* Remove CSR reset to allow NIC to operate */
 	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
 		/*
@@ -1761,6 +1853,9 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 
 	IWL_DEBUG_FW(trans, "working with %s CPU\n",
 		     image->is_dual_cpus ? "Dual" : "Single");
+
+	if (trans->dbg_dest_tlv)
+		iwl_sdio_apply_destination(trans);
 
 	/* configure the ucode to be ready to get the secured image */
 	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
