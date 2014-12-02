@@ -1282,7 +1282,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	struct iwl_ucode_header *ucode;
 	struct iwlwifi_opmode_table *op;
 	int err;
-	struct iwl_firmware_pieces pieces;
+	struct iwl_firmware_pieces *pieces;
 	const unsigned int api_max = drv->cfg->ucode_api_max;
 	unsigned int api_ok = drv->cfg->ucode_api_ok;
 	const unsigned int api_min = drv->cfg->ucode_api_min;
@@ -1299,7 +1299,9 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	if (!api_ok)
 		api_ok = api_max;
 
-	memset(&pieces, 0, sizeof(pieces));
+	pieces = kzalloc(sizeof(*pieces), GFP_KERNEL);
+	if (!pieces)
+		return;
 
 	if (!ucode_raw) {
 		if (drv->fw_index <= api_ok)
@@ -1349,10 +1351,10 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	ucode = (struct iwl_ucode_header *)ucode_raw->data;
 
 	if (ucode->ver)
-		err = iwl_parse_v1_v2_firmware(drv, ucode_raw, &pieces);
+		err = iwl_parse_v1_v2_firmware(drv, ucode_raw, pieces);
 	else
-		err = iwl_parse_tlv_firmware(drv, ucode_raw, &pieces,
-					   &fw->ucode_capa);
+		err = iwl_parse_tlv_firmware(drv, ucode_raw, pieces,
+					     &fw->ucode_capa);
 
 	if (err)
 		goto try_again;
@@ -1392,7 +1394,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	 * In mvm uCode there is no difference between data and instructions
 	 * sections.
 	 */
-	if (!fw->mvm_fw && validate_sec_sizes(drv, &pieces, drv->cfg))
+	if (!fw->mvm_fw && validate_sec_sizes(drv, pieces, drv->cfg))
 		goto try_again;
 
 	/* Allocate ucode buffers for card's bus-master loading ... */
@@ -1401,14 +1403,14 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	 * 1) unmodified from disk
 	 * 2) backup cache for save/restore during power-downs */
 	for (i = 0; i < IWL_UCODE_TYPE_MAX; i++)
-		if (iwl_alloc_ucode(drv, &pieces, i))
+		if (iwl_alloc_ucode(drv, pieces, i))
 			goto out_free_fw;
 
-	if (pieces.dbg_dest_tlv) {
+	if (pieces->dbg_dest_tlv) {
 		drv->fw.dbg_dest_tlv =
-			kmemdup(pieces.dbg_dest_tlv,
-				sizeof(*pieces.dbg_dest_tlv) +
-				sizeof(pieces.dbg_dest_tlv->reg_ops[0]) *
+			kmemdup(pieces->dbg_dest_tlv,
+				sizeof(*pieces->dbg_dest_tlv) +
+				sizeof(pieces->dbg_dest_tlv->reg_ops[0]) *
 				drv->fw.dbg_dest_reg_num, GFP_KERNEL);
 
 		if (!drv->fw.dbg_dest_tlv)
@@ -1416,11 +1418,11 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(drv->fw.dbg_conf_tlv); i++) {
-		if (pieces.dbg_conf_tlv[i]) {
+		if (pieces->dbg_conf_tlv[i]) {
 			drv->fw.dbg_conf_tlv_len[i] =
-				pieces.dbg_conf_tlv_len[i];
+				pieces->dbg_conf_tlv_len[i];
 			drv->fw.dbg_conf_tlv[i] =
-				kmemdup(pieces.dbg_conf_tlv[i],
+				kmemdup(pieces->dbg_conf_tlv[i],
 					drv->fw.dbg_conf_tlv_len[i],
 					GFP_KERNEL);
 			if (!drv->fw.dbg_conf_tlv[i])
@@ -1435,20 +1437,20 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	 * for each event, which is of mode 1 (including timestamp) for all
 	 * new microcodes that include this information.
 	 */
-	fw->init_evtlog_ptr = pieces.init_evtlog_ptr;
-	if (pieces.init_evtlog_size)
-		fw->init_evtlog_size = (pieces.init_evtlog_size - 16)/12;
+	fw->init_evtlog_ptr = pieces->init_evtlog_ptr;
+	if (pieces->init_evtlog_size)
+		fw->init_evtlog_size = (pieces->init_evtlog_size - 16)/12;
 	else
 		fw->init_evtlog_size =
 			drv->cfg->base_params->max_event_log_size;
-	fw->init_errlog_ptr = pieces.init_errlog_ptr;
-	fw->inst_evtlog_ptr = pieces.inst_evtlog_ptr;
-	if (pieces.inst_evtlog_size)
-		fw->inst_evtlog_size = (pieces.inst_evtlog_size - 16)/12;
+	fw->init_errlog_ptr = pieces->init_errlog_ptr;
+	fw->inst_evtlog_ptr = pieces->inst_evtlog_ptr;
+	if (pieces->inst_evtlog_size)
+		fw->inst_evtlog_size = (pieces->inst_evtlog_size - 16)/12;
 	else
 		fw->inst_evtlog_size =
 			drv->cfg->base_params->max_event_log_size;
-	fw->inst_errlog_ptr = pieces.inst_errlog_ptr;
+	fw->inst_errlog_ptr = pieces->inst_errlog_ptr;
 
 	/*
 	 * figure out the offset of chain noise reset and gain commands
@@ -1557,10 +1559,12 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 		iwl_req_fw_callback(ucode_raw, context);
 	}
 
+	kfree(pieces);
 	return;
 
  try_again:
 	/* try next, if any */
+	kfree(pieces);
 	release_firmware(ucode_raw);
 	if (iwl_request_firmware(drv, false))
 		goto out_unbind;
@@ -1571,6 +1575,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	iwl_dealloc_ucode(drv);
 	release_firmware(ucode_raw);
  out_unbind:
+	kfree(pieces);
 	complete(&drv->request_firmware_complete);
 	device_release_driver(drv->trans->dev);
 }
