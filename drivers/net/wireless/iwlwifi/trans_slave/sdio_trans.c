@@ -1683,8 +1683,11 @@ static void iwl_sdio_apply_destination(struct iwl_trans *trans)
 			"DBG DEST version is %d - expect issues\n",
 			dest->version);
 
-	if (dest->monitor_mode == EXTERNAL_MODE)
-		IWL_ERR(trans, "SDIO should have internal buffer debug\n");
+	if (dest->monitor_mode == EXTERNAL_MODE) {
+		IWL_ERR(trans,
+			"SDIO needs an internal buffer - FW debug disabled\n");
+		return;
+	}
 
 	for (i = 0; i < trans->dbg_dest_reg_num; i++) {
 		u32 addr = le32_to_cpu(dest->reg_ops[i].addr);
