@@ -1823,7 +1823,7 @@ void iwl_trans_slv_ref(struct iwl_trans *trans)
 	mini_rpm_get(trans_slv);
 #else
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
-		      atomic_read(&trans->dev->power.usage_count));
+		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
 	pm_runtime_get(trans_slv->d0i3_dev);
 #endif
 }
