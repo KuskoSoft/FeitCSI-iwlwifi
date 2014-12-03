@@ -116,12 +116,16 @@ static int iwl_sdio_suspend(struct device *dev)
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
-	if (trans_slv->wowlan_enabled) {
-		ret = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
-		if (ret) {
-			IWL_WARN_DEV(dev, "Unable to set MMC_PM_KEEP_POWER\n");
-			return ret;
-		}
+	/*
+	 * There seems to be some platform issue that prevents the mmc
+	 * from resuming properly when MMC_PM_KEEP_POWER is not set.
+	 * Workaround it by always setting the flag, even when not needed.
+	 * Since it's a work around, abort suspend only if wowlan is enabled.
+	 */
+	ret = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
+	if (ret && trans_slv->wowlan_enabled) {
+		IWL_WARN_DEV(dev, "Unable to set MMC_PM_KEEP_POWER\n");
+		return ret;
 	}
 
 	_iwl_sdio_suspend(trans);
