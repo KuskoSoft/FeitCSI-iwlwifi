@@ -469,18 +469,15 @@ void iwl_sdio_isr(struct sdio_func *func)
 
 		/*
 		 * SDTM CSR register to enable read optimization on 8000 family
-		 * B-step and onwards. In this optimization there is no need to
-		 * clear the IWL_SDIO_INTR_CAUSE_REG
+		 * B-step and onwards is currently disabled due to some HW/FW
+		 * issue. In this optimization there is no need to clear the
+		 * IWL_SDIO_INTR_CAUSE_REG
 		 */
-		if ((trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) ||
-		    ((trans->hw_rev & 0xc) == 0x0)) {
-			ret = iwl_sdio_write8(trans, IWL_SDIO_INTR_CAUSE_REG,
-					      val);
-			if (ret)
-				IWL_ERR(trans,
-					"Failed to clear the int val %d, reason %d\n",
-					val, ret);
-		}
+		ret = iwl_sdio_write8(trans, IWL_SDIO_INTR_CAUSE_REG, val);
+		if (ret)
+			IWL_ERR(trans,
+				"Failed to clear the int val %d, reason %d\n",
+				val, ret);
 
 
 		if (val & IWL_SDIO_INTR_READ_ERROR) {

@@ -1236,11 +1236,11 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 				((trans->hw_rev << 2) & 0xc);
 
 		/*
-		 * Set SDTM CSR register to enable read optimization on 8000
-		 * family B-step
+		 * Set SDTM CSR register to disabled read optimization on 8000
+		 * family B-step, as the optimization currently causes issues
 		 */
 		if (CSR_HW_REV_STEP(trans->hw_rev) != SILICON_A_STEP) {
-			u32 val = 0x1;
+			u32 val = 0x0;
 
 			ret = iwl_sdio_ta_write(trans, CSR_SDTM_REG,
 						sizeof(u32), &val,
