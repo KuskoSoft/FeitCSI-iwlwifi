@@ -1671,11 +1671,13 @@ struct iwl_sf_cfg_cmd {
  * 'ZZ' MCC will be used to switch to NVM default profile; in this case, the
  * MCC in the cmd response will be the relevant MCC in the NVM.
  * @mcc: given mobile contry code
+ * @source_id: the source from where we got the MCC, see iwl_mcc_source
  * @reserved: reserved for alignment
  */
 struct iwl_mcc_update_cmd {
 	__le16 mcc;
-	__le16 reserved;
+	u8 source_id;
+	u8 reserved;
 } __packed; /* LAR_UPDATE_MCC_CMD_API_S */
 
 /**
@@ -1685,6 +1687,8 @@ struct iwl_mcc_update_cmd {
  * The new MCC may be different than what was requested in MCC_UPDATE_CMD.
  * @status: 0 for success, 1 no change in channel profile, 2 invalid input.
  * @mcc: the new applied MCC
+ * @cap: capabilities for all channels which matches the MCC
+ * @source_id: the MCC source, see iwl_mcc_source
  * @n_channels: number of channels in @channels_data (may be 14, 39, 50 or 51
  *		channels, depending on platform)
  * @channels: channel control data map, DWORD for each channel. Only the first
@@ -1693,7 +1697,8 @@ struct iwl_mcc_update_cmd {
 struct iwl_mcc_update_resp {
 	__le32 status;
 	__le16 mcc;
-	__le16 reserved;
+	u8 cap;
+	u8 source_id;
 	__le32 n_channels;
 	__le32 channels[0];
 } __packed; /* LAR_UPDATE_MCC_CMD_RESP_S */
@@ -1710,11 +1715,13 @@ struct iwl_mcc_update_resp {
  * 'ZZ' MCC will be used to switch to NVM default profile; in this case, the
  * MCC in the cmd response will be the relevant MCC in the NVM.
  * @mcc: given mobile contry code
- * @reserved: reserved for alignment
+ * @source_id: identity of the change originator, see iwl_mcc_source
+ * @reserved1: reserved for alignment
  */
 struct iwl_mcc_chub_notif {
 	u16 mcc;
-	u16 reserved1;
+	u8 source_id;
+	u8 reserved1;
 } __packed; /* LAR_MCC_NOTIFY_S */
 
 enum iwl_mcc_update_status {
@@ -1722,6 +1729,21 @@ enum iwl_mcc_update_status {
 	MCC_RESP_SAME_CHAN_PROFILE,
 	MCC_RESP_INVALID,
 	MCC_RESP_NVM_DISABLED,
+	MCC_RESP_ILLEGAL,
+	MCC_RESP_LOW_PRIORITY,
+};
+
+enum iwl_mcc_source {
+	MCC_SOURCE_OLD_FW = 0,
+	MCC_SOURCE_ME = 1,
+	MCC_SOURCE_BIOS = 2,
+	MCC_SOURCE_3G_LTE_HOST = 3,
+	MCC_SOURCE_3G_LTE_DEVICE = 4,
+	MCC_SOURCE_WIFI = 5,
+	MCC_SOURCE_RESERVED = 6,
+	MCC_SOURCE_DEFAULT = 7,
+	MCC_SOURCE_UNINITIALIZED = 8,
+	MCC_SOURCE_GET_CURRENT = 0x10
 };
 
 /* DTS measurements */
