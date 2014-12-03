@@ -2388,6 +2388,45 @@ static int iwl_trans_sdio_test_mode_cmd(struct iwl_trans *trans, bool enable)
 	return ret;
 }
 
+static u32 iwl_trans_sdio_fh_regs_dump(struct iwl_trans *trans,
+				       struct iwl_fw_error_dump_data **data)
+{
+	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
+	u32 fh_regs_len = FH_MEM_UPPER_BOUND - FH_MEM_LOWER_BOUND;
+	unsigned long flags;
+	u32 offset, copy_size;
+	int ret;
+
+	if (!iwl_trans_grab_nic_access(trans, false, &flags))
+		return 0;
+	sdio_claim_host(func);
+
+	for (offset = 0; offset < fh_regs_len;
+	     offset += IWL_SDIO_MAX_PAYLOAD_SIZE) {
+		copy_size = min_t(u32,
+				  IWL_SDIO_MAX_PAYLOAD_SIZE,
+				  fh_regs_len - offset);
+		ret = iwl_sdio_ta_read(trans, FH_MEM_LOWER_BOUND + offset,
+				       copy_size,
+				       (void *)(*data)->data + offset,
+				       IWL_SDIO_TA_AC_DIRECT);
+		if (ret)
+			break;
+	}
+
+	sdio_release_host(func);
+	iwl_trans_release_nic_access(trans, &flags);
+
+	if (ret)
+		return 0;
+
+	(*data)->type = cpu_to_le32(IWL_FW_ERROR_DUMP_FH_REGS);
+	(*data)->len = cpu_to_le32(fh_regs_len);
+	*data = iwl_fw_error_next_data(*data);
+
+	return sizeof(**data) + fh_regs_len;
+}
+
 #define IWL_CSR_TO_DUMP (0x250)
 
 static u32 iwl_trans_sdio_dump_csr(struct iwl_trans *trans,
@@ -2427,6 +2466,9 @@ struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
 
 	/* CSR registers */
 	len += sizeof(*data) + IWL_CSR_TO_DUMP;
+
+	/* FH registers */
+	len += sizeof(*data) + (FH_MEM_UPPER_BOUND - FH_MEM_LOWER_BOUND);
 
 	/* host commands */
 	spin_lock_bh(&trans_slv->txq_lock);
@@ -2505,6 +2547,7 @@ struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
 	spin_unlock_bh(&trans_slv->txq_lock);
 
 	len += iwl_trans_sdio_dump_csr(trans, &data);
+	len += iwl_trans_sdio_fh_regs_dump(trans, &data);
 	/* data is already pointing to the next section */
 
 	if (trans->dbg_dest_tlv && monitor_len) {
