@@ -3,6 +3,12 @@ ifeq ($(CONFIG_BACKPORT_INTEGRATE),)
 # was only added later, so we add it here ourselves:
 backport-cc-disable-warning = $(call try-run,\
 	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-$(strip $(1)))
+backport-cc-disable-error = $(call try-run,\
+	$(CC) $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) -W$(strip $(1)) -c -x c /dev/null -o "$$TMP",-Wno-error=$(strip $(1)))
+
+KBUILD_CFLAGS := $(KBUILD_CFLAGS) \
+	$(call backport-cc-disable-error, date-time) \
+	$(call backport-cc-disable-warning, date-time)
 
 NOSTDINC_FLAGS := \
 	-I$(M)/backport-include/ \
