@@ -5432,7 +5432,7 @@ static int nl80211_get_reg_do(struct sk_buff *skb, struct genl_info *info)
 	if (!msg)
 		return -ENOBUFS;
 
-	hdr = nl80211hdr_put(msg, info->snd_portid, info->snd_seq, 0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_GET_REG);
 	if (!hdr)
 		goto put_failure;
@@ -5488,7 +5488,7 @@ static int nl80211_send_regdom(struct sk_buff *msg, struct netlink_callback *cb,
 			       u32 seq, int flags, struct wiphy *wiphy,
 			       const struct ieee80211_regdomain *regdom)
 {
-	void *hdr = nl80211hdr_put(msg, NETLINK_CB(cb->skb).portid, seq, flags,
+	void *hdr = nl80211hdr_put(msg, NETLINK_CB_PORTID(cb->skb), seq, flags,
 				   NL80211_CMD_GET_REG);
 
 	if (!hdr)
