@@ -71,6 +71,7 @@
 #include <linux/mmc/sdhci.h>
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
+#include <linux/vmalloc.h>
 
 #include "sdio_internal.h"
 #include "sdio_tx.h"
