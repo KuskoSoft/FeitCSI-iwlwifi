@@ -238,6 +238,48 @@ static u32 iwl_mvm_set_mac80211_rx_flag(struct iwl_mvm *mvm,
 	return 0;
 }
 
+#ifdef CPTCFG_IWLMVM_TCM
+static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
+				  struct ieee80211_sta *sta,
+				  struct ieee80211_hdr *hdr, u32 len,
+				  struct iwl_rx_phy_info *phy_info,
+				  u32 rate_n_flags)
+{
+	struct iwl_mvm_sta *mvmsta;
+	struct iwl_mvm_tcm_mac *mdata;
+	struct iwl_mvm_vif *mvmvif;
+	int mac;
+	int ac = IEEE80211_AC_BE; /* treat non-QoS as BE */
+
+	if (ieee80211_is_data_qos(hdr->frame_control)) {
+		int tid = *ieee80211_get_qos_ctl(hdr) &
+				IEEE80211_QOS_CTL_TID_MASK;
+
+		ac = tid_to_mac80211_ac[tid];
+	}
+
+	mvmsta = iwl_mvm_sta_from_mac80211(sta);
+	mac = mvmsta->mac_id_n_color & FW_CTXT_ID_MSK;
+
+	if (time_after(jiffies, mvm->tcm.ts + MVM_TCM_PERIOD))
+		iwl_mvm_recalc_tcm(mvm);
+	mdata = &mvm->tcm.data[mac];
+	mdata->rx.pkts[ac]++;
+	mdata->rx.airtime[ac] +=
+		le16_to_cpu(phy_info->frame_time);
+	mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
+	if (!mdata->opened_rx_ba_sessions &&
+	    mvmsta->vif->driver_flags &
+				IEEE80211_VIF_SUPPORTS_UAPSD &&
+	    mvmsta->sta_id == mvmvif->ap_sta_id) {
+		mdata->uapsd_nonagg_detect.rx_bytes += len;
+		mdata->uapsd_nonagg_detect.rx_pkts++;
+		mdata->uapsd_nonagg_detect.rate_n_flags =
+			rate_n_flags;
+	}
+}
+#endif
+
 /*
  * iwl_mvm_rx_rx_mpdu - REPLY_RX_MPDU_CMD handler
  *
@@ -349,45 +391,11 @@ int iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 	}
 
 #ifdef CPTCFG_IWLMVM_TCM
-	if (!mvm->tcm.paused && len >= sizeof(*hdr) &&
+	if (sta && !mvm->tcm.paused && len >= sizeof(*hdr) &&
 	    !is_multicast_ether_addr(hdr->addr1) &&
-	    ieee80211_is_data(hdr->frame_control)) {
-		int ac = IEEE80211_AC_BE; /* treat non-QoS as BE */
-
-		if (ieee80211_is_data_qos(hdr->frame_control)) {
-			int tid = *ieee80211_get_qos_ctl(hdr) &
-					IEEE80211_QOS_CTL_TID_MASK;
-
-			ac = tid_to_mac80211_ac[tid];
-		}
-
-		if (sta) {
-			struct iwl_mvm_sta *mvmsta;
-			struct iwl_mvm_tcm_mac *mdata;
-			struct iwl_mvm_vif *mvmvif;
-			int mac;
-
-			mvmsta = iwl_mvm_sta_from_mac80211(sta);
-			mac = mvmsta->mac_id_n_color & FW_CTXT_ID_MSK;
-
-			if (time_after(jiffies, mvm->tcm.ts + MVM_TCM_PERIOD))
-				iwl_mvm_recalc_tcm(mvm);
-			mdata = &mvm->tcm.data[mac];
-			mdata->rx.pkts[ac]++;
-			mdata->rx.airtime[ac] +=
-				le16_to_cpu(phy_info->frame_time);
-			mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
-			if (!mdata->opened_rx_ba_sessions &&
-			    mvmsta->vif->driver_flags &
-						IEEE80211_VIF_SUPPORTS_UAPSD &&
-			    mvmsta->sta_id == mvmvif->ap_sta_id) {
-				mdata->uapsd_nonagg_detect.rx_bytes += len;
-				mdata->uapsd_nonagg_detect.rx_pkts++;
-				mdata->uapsd_nonagg_detect.rate_n_flags =
-					rate_n_flags;
-			}
-		}
-	}
+	    ieee80211_is_data(hdr->frame_control))
+		iwl_mvm_rx_handle_tcm(mvm, sta, hdr, len, phy_info,
+				      rate_n_flags);
 #endif
 	rcu_read_unlock();
 
