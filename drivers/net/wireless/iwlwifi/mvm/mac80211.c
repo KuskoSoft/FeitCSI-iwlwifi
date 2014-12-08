@@ -749,10 +749,13 @@ static int iwl_mvm_mac_ampdu_action(struct ieee80211_hw *hw,
 #ifdef CPTCFG_IWLMVM_TCM
 		if (iwl_mvm_vif_from_mac80211(vif)->ap_sta_id ==
 				iwl_mvm_sta_from_mac80211(sta)->sta_id) {
+			struct iwl_mvm_vif *mvmvif;
 			u16 macid = iwl_mvm_vif_from_mac80211(vif)->id;
 			struct iwl_mvm_tcm_mac *mdata = &mvm->tcm.data[macid];
 
 			mdata->opened_rx_ba_sessions = true;
+			mvmvif = iwl_mvm_vif_from_mac80211(vif);
+			cancel_delayed_work(&mvmvif->uapsd_nonagg_detected_wk);
 		}
 #endif
 		if (!iwl_enable_rx_ampdu(mvm->cfg)) {
@@ -1318,6 +1321,10 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 		mvm->p2p_device_vif = vif;
 	}
 
+#ifdef CPTCFG_IWLMVM_TCM
+	iwl_mvm_tcm_add_vif(mvm, vif);
+#endif
+
 	iwl_mvm_vif_dbgfs_register(mvm, vif);
 	goto out_unlock;
 
@@ -1383,6 +1390,10 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
 	iwl_mvm_prepare_mac_removal(mvm, vif);
+
+#ifdef CPTCFG_IWLMVM_TCM
+	iwl_mvm_tcm_rm_vif(mvm, vif);
+#endif
 
 	mutex_lock(&mvm->mutex);
 

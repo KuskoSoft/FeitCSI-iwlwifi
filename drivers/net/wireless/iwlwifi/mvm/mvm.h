@@ -79,6 +79,10 @@
 #include "fw-api.h"
 #include "constants.h"
 
+#ifdef CPTCFG_IWLMVM_TCM
+#include <linux/average.h>
+#endif
+
 #define IWL_INVALID_MAC80211_QUEUE	0xff
 #define IWL_MVM_MAX_ADDRESSES		5
 /* RSSI offset for WkP */
@@ -407,6 +411,10 @@ struct iwl_mvm_vif {
 	/* FW identified misbehaving AP */
 	u8 uapsd_misbehaving_bssid[ETH_ALEN];
 
+#ifdef CPTCFG_IWLMVM_TCM
+	struct delayed_work uapsd_nonagg_detected_wk;
+#endif
+
 	/* Indicates that CSA countdown may be started */
 	bool csa_countdown;
 };
@@ -550,7 +558,8 @@ struct iwl_mvm_tcm_mac {
 		/* track AP's transfer in client mode */
 		u64 rx_bytes;
 		u32 rx_pkts;
-		u32 rate_n_flags;
+		struct ewma rate;
+		bool detected;
 	} uapsd_nonagg_detect;
 	bool opened_rx_ba_sessions;
 };
@@ -1461,6 +1470,8 @@ void iwl_mvm_tcm_work(struct work_struct *work);
 void iwl_mvm_recalc_tcm(struct iwl_mvm *mvm);
 void iwl_mvm_pause_tcm(struct iwl_mvm *mvm);
 void iwl_mvm_resume_tcm(struct iwl_mvm *mvm);
+void iwl_mvm_tcm_add_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
+void iwl_mvm_tcm_rm_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 #endif
 
 void iwl_mvm_nic_restart(struct iwl_mvm *mvm, bool fw_error);

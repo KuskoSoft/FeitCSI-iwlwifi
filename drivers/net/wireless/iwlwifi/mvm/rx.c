@@ -250,6 +250,11 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 	struct iwl_mvm_vif *mvmvif;
 	int mac;
 	int ac = IEEE80211_AC_BE; /* treat non-QoS as BE */
+	/* expected throughput in 500kbps, single stream, 20 MHz */
+	static const u16 thresh_tpt[] = {
+		3, 6, 10, 14, 20, 26, 30, 32, 40, 45,
+	};
+	u16 thr;
 
 	if (ieee80211_is_data_qos(hdr->frame_control)) {
 		int tid = *ieee80211_get_qos_ctl(hdr) &
@@ -268,15 +273,35 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 	mdata->rx.airtime[ac] +=
 		le16_to_cpu(phy_info->frame_time);
 	mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
-	if (!mdata->opened_rx_ba_sessions &&
-	    mvmsta->vif->driver_flags &
-				IEEE80211_VIF_SUPPORTS_UAPSD &&
-	    mvmsta->sta_id == mvmvif->ap_sta_id) {
-		mdata->uapsd_nonagg_detect.rx_bytes += len;
-		mdata->uapsd_nonagg_detect.rx_pkts++;
-		mdata->uapsd_nonagg_detect.rate_n_flags =
-			rate_n_flags;
+
+	if (!(rate_n_flags & (RATE_MCS_HT_POS | RATE_MCS_VHT_POS)))
+		return;
+
+	if (mdata->opened_rx_ba_sessions ||
+	    mdata->uapsd_nonagg_detect.detected ||
+	    !(mvmsta->vif->driver_flags & IEEE80211_VIF_SUPPORTS_UAPSD) ||
+	    mvmsta->sta_id != mvmvif->ap_sta_id)
+		return;
+
+	if (rate_n_flags & RATE_MCS_HT_POS) {
+		thr = thresh_tpt[rate_n_flags & RATE_HT_MCS_RATE_CODE_MSK];
+		thr *= 1 + ((rate_n_flags & RATE_HT_MCS_NSS_MSK) >>
+					RATE_HT_MCS_NSS_POS);
+	} else {
+		if (WARN_ON(rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK) >
+				ARRAY_SIZE(thresh_tpt))
+			return;
+		thr = thresh_tpt[rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK];
+		thr *= 1 + ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >>
+					RATE_VHT_MCS_NSS_POS);
 	}
+
+	thr *= 1 + ((rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) >>
+				RATE_MCS_CHAN_WIDTH_POS);
+
+	mdata->uapsd_nonagg_detect.rx_bytes += len;
+	mdata->uapsd_nonagg_detect.rx_pkts++;
+	ewma_add(&mdata->uapsd_nonagg_detect.rate, thr);
 }
 #endif
 

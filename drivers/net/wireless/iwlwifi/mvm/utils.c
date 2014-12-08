@@ -852,14 +852,18 @@ void iwl_mvm_tcm_work(struct work_struct *work)
 	mutex_unlock(&mvm->mutex);
 }
 
-static void iwl_mvm_uapsd_agg_disconnect_iter(void *data, u8 *mac,
-					      struct ieee80211_vif *vif)
+static void iwl_mvm_tcm_uapsd_nonagg_detected_wk(struct work_struct *wk)
 {
-	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
-	struct iwl_mvm *mvm = mvmvif->mvm;
-	int *mac_id = data;
+	struct iwl_mvm *mvm;
+	struct iwl_mvm_vif *mvmvif;
+	struct ieee80211_vif *vif;
 
-	if (mvmvif->id != *mac_id)
+	mvmvif = container_of(wk, struct iwl_mvm_vif,
+			      uapsd_nonagg_detected_wk.work);
+	vif = container_of((void *)mvmvif, struct ieee80211_vif, drv_priv);
+	mvm = mvmvif->mvm;
+
+	if (mvm->tcm.data[mvmvif->id].opened_rx_ba_sessions)
 		return;
 
 	/* remember that this AP is broken */
@@ -872,46 +876,44 @@ static void iwl_mvm_uapsd_agg_disconnect_iter(void *data, u8 *mac,
 	ieee80211_connection_loss(vif);
 }
 
+static void iwl_mvm_uapsd_agg_disconnect_iter(void *data, u8 *mac,
+					      struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	struct iwl_mvm *mvm = mvmvif->mvm;
+	int *mac_id = data;
+
+	if (vif->type != NL80211_IFTYPE_STATION)
+		return;
+
+	if (mvmvif->id != *mac_id)
+		return;
+
+	if (!vif->bss_conf.assoc)
+		return;
+
+	if (mvm->tcm.data[*mac_id].uapsd_nonagg_detect.detected)
+		return;
+
+	mvm->tcm.data[*mac_id].uapsd_nonagg_detect.detected = true;
+	schedule_delayed_work(&mvmvif->uapsd_nonagg_detected_wk, 5 * HZ);
+}
+
 static void iwl_mvm_check_uapsd_agg_expected_tpt(struct iwl_mvm *mvm,
 						 unsigned int elapsed,
 						 int mac)
 {
-	u32 rate_n_flags = mvm->tcm.data[mac].uapsd_nonagg_detect.rate_n_flags;
 	u64 bytes = mvm->tcm.data[mac].uapsd_nonagg_detect.rx_bytes;
 	u64 tpt;
-	/* expected throughput in 500kbps, single stream, 20 MHz */
-	static const u16 thresh_tpt[] = {
-		3, 6, 10, 14, 20, 26, 30, 32, 40, 45,
-	};
-	u16 thr;
 
-	if (mvm->tcm.data[mac].opened_rx_ba_sessions)
+	if (mvm->tcm.data[mac].opened_rx_ba_sessions ||
+	    mvm->tcm.data[mac].uapsd_nonagg_detect.detected)
 		return;
-
-	if (!(rate_n_flags & RATE_MCS_HT_POS) &&
-	    !(rate_n_flags & RATE_MCS_VHT_POS))
-		return;
-
-	if (rate_n_flags & RATE_MCS_HT_POS) {
-		thr = thresh_tpt[rate_n_flags & RATE_HT_MCS_RATE_CODE_MSK];
-		thr *= 1 + ((rate_n_flags & RATE_HT_MCS_NSS_MSK) >>
-					RATE_HT_MCS_NSS_POS);
-	} else {
-		if (WARN_ON(rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK) >
-				ARRAY_SIZE(thresh_tpt))
-			return;
-		thr = thresh_tpt[rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK];
-		thr *= 1 + ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >>
-					RATE_VHT_MCS_NSS_POS);
-	}
-
-	thr *= 1 + ((rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) >>
-				RATE_MCS_CHAN_WIDTH_POS);
 
 	tpt = 2 * 8 * bytes;
 	do_div(tpt, elapsed); /* 500kbps */
 
-	if (tpt < thr)
+	if (tpt < ewma_read(&mvm->tcm.data[mac].uapsd_nonagg_detect.rate))
 		return;
 
 	ieee80211_iterate_active_interfaces_atomic(
@@ -1038,5 +1040,20 @@ void iwl_mvm_resume_tcm(struct iwl_mvm *mvm)
 	smp_mb();
 	mvm->tcm.paused = false;
 	spin_unlock_bh(&mvm->tcm.lock);
+}
+
+void iwl_mvm_tcm_add_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+	INIT_DELAYED_WORK(&mvmvif->uapsd_nonagg_detected_wk,
+			  iwl_mvm_tcm_uapsd_nonagg_detected_wk);
+}
+
+void iwl_mvm_tcm_rm_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+	cancel_delayed_work_sync(&mvmvif->uapsd_nonagg_detected_wk);
 }
 #endif
