@@ -72,10 +72,6 @@
 /* FIXME: need to abstract out TX command (once we know what it looks like) */
 #include "mvm/fw-api.h"
 
-unsigned int d0i3_debug = IWL_D0I3_DBG_DISABLE;
-module_param(d0i3_debug, uint, S_IRUGO);
-MODULE_PARM_DESC(d0i3_debug, "D0i3 debug flags");
-
 /* FIXME: change values to be unique for each bus? */
 #define IWL_SLV_TX_Q_HIGH_THLD 320
 #define IWL_SLV_TX_Q_LOW_THLD 256
@@ -503,7 +499,7 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 	}
 
 	clear_bit(STATUS_TRANS_GOING_IDLE, &trans->status);
-	if (!(d0i3_debug & IWL_D0I3_DBG_KEEP_BUS) &&
+	if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_KEEP_BUS) &&
 	    trans_slv->config.release_bus) {
 		ret = trans_slv->config.release_bus(trans);
 		if (ret)
@@ -526,7 +522,7 @@ static int iwl_slv_fw_exit_d0i3(struct iwl_trans *trans)
 	if (!test_bit(STATUS_TRANS_IDLE, &trans->status))
 		return 0;
 
-	if (!(d0i3_debug & IWL_D0I3_DBG_KEEP_BUS) &&
+	if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_KEEP_BUS) &&
 	    trans_slv->config.grab_bus) {
 		ret = trans_slv->config.grab_bus(trans);
 		if (ret)
@@ -561,7 +557,7 @@ static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 {
 	int ret;
 
-	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
 		return 0;
 
 	ret = iwl_slv_fw_enter_d0i3(trans);
@@ -580,7 +576,7 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 {
 	int ret;
 
-	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
 		return 0;
 
 #ifdef CONFIG_HAS_WAKELOCK
@@ -891,7 +887,7 @@ int iwl_slv_init(struct iwl_trans *trans)
 		wake_lock(&trans_slv->slv_wake_lock);
 #endif
 
-	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
 		IWL_DEBUG_RPM(trans, "D0i3 transition disabled\n");
 
 	return 0;
@@ -1714,7 +1710,7 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 		if (ret || cmd_entry == NULL)
 			return ret;
 
-		if (!(d0i3_debug & IWL_D0I3_DBG_KEEP_BUS) &&
+		if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_KEEP_BUS) &&
 		    (cmd_entry->hcmd_meta.flags & CMD_MAKE_TRANS_IDLE) &&
 		    trans_slv->config.rx_dma_idle)
 			trans_slv->config.rx_dma_idle(trans);
@@ -1745,7 +1741,7 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 			take_ref = false;
 		}
 
-		if (d0i3_debug & IWL_D0I3_DBG_IGNORE_RX)
+		if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_IGNORE_RX)
 			take_ref = false;
 
 #ifdef CONFIG_HAS_WAKELOCK

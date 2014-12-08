@@ -84,6 +84,7 @@
 #include "iwl-debug.h"
 #include "iwl-fw-error-dump.h"
 #include "iwl-prph.h"
+#include "iwl-constants.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "iwl-dnt-cfg.h"
 #endif
@@ -2080,7 +2081,7 @@ static int iwl_sdio_register_plat_driver(struct iwl_trans *trans)
 	int ret;
 
 	/* we currently need the platform driver just for d0i3 */
-	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
 		return 0;
 
 	/* verify we have only a single trans */
@@ -2101,9 +2102,9 @@ static int iwl_sdio_register_plat_driver(struct iwl_trans *trans)
 	return ret;
 }
 
-static void iwl_sdio_unregister_plat_driver(void)
+static void iwl_sdio_unregister_plat_driver(struct iwl_trans *trans)
 {
-	if (d0i3_debug & IWL_D0I3_DBG_DISABLE)
+	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
 		return;
 
 	platform_driver_unregister(&iwlwifi_plat_driver);
@@ -2191,7 +2192,7 @@ free_tx:
 	mutex_unlock(&trans_sdio->target_access_mtx);
 	iwl_sdio_tx_free(trans);
 free_plat:
-	iwl_sdio_unregister_plat_driver();
+	iwl_sdio_unregister_plat_driver(trans);
 free_slv:
 	iwl_slv_free(trans);
 
@@ -2320,7 +2321,7 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans)
 		iwl_slv_tx_stop(trans);
 		iwl_sdio_tx_stop(trans);
 
-		iwl_sdio_unregister_plat_driver();
+		iwl_sdio_unregister_plat_driver(trans);
 		iwl_slv_free(trans);
 		iwl_sdio_tx_free(trans);
 	}

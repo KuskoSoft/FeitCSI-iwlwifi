@@ -77,6 +77,7 @@
 #include "sdio_internal.h"
 #include "iwl-trans.h"
 #include "iwl-config.h"
+#include "iwl-constants.h"
 
 /*
  * Vendor ID and SDIO compatible devices
@@ -164,42 +165,42 @@ static int iwl_sdio_probe(struct sdio_func *func,
 {
 	const struct iwl_cfg *cfg = (struct iwl_cfg *)(id->driver_data);
 	struct iwl_trans_sdio *trans_sdio;
-	struct iwl_trans *iwl_trans;
+	struct iwl_trans *trans;
 	int ret;
 
 	/* Allocate generic transport layer */
-	iwl_trans = iwl_trans_sdio_alloc(func, id, cfg);
-	if (IS_ERR(iwl_trans))
-		return PTR_ERR(iwl_trans);
+	trans = iwl_trans_sdio_alloc(func, id, cfg);
+	if (IS_ERR(trans))
+		return PTR_ERR(trans);
 
-	trans_sdio = IWL_TRANS_GET_SDIO_TRANS(iwl_trans);
+	trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
 	/* Set the generic transport as the private data of the
 	 * the sdio function */
-	sdio_set_drvdata(func, iwl_trans);
+	sdio_set_drvdata(func, trans);
 
-	trans_sdio->drv = iwl_drv_start(iwl_trans, cfg);
+	trans_sdio->drv = iwl_drv_start(trans, cfg);
 	if (IS_ERR(trans_sdio->drv)) {
 		ret = PTR_ERR(trans_sdio->drv);
 		goto out_free_trans;
 	}
 
 	/* register transport layer debugfs here */
-	ret = iwl_trans_slv_dbgfs_register(iwl_trans, iwl_trans->dbgfs_dir);
+	ret = iwl_trans_slv_dbgfs_register(trans, trans->dbgfs_dir);
 	if (ret)
 		goto out_free_drv;
 
 	/* enable sdio runtime pm */
-	if (!(d0i3_debug & IWL_D0I3_DBG_DISABLE))
-		pm_runtime_put_noidle(iwl_trans->dev);
+	if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE))
+		pm_runtime_put_noidle(trans->dev);
 
-	IWL_INFO(iwl_trans, "SDIO probing completed successfully\n");
+	IWL_INFO(trans, "SDIO probing completed successfully\n");
 	return 0;
 
 out_free_drv:
 	iwl_drv_stop(trans_sdio->drv);
 out_free_trans:
-	iwl_trans_sdio_free(iwl_trans);
+	iwl_trans_sdio_free(trans);
 	sdio_set_drvdata(func, NULL);
 
 	__iwl_err(&func->dev, 0, 0, "Failed to complete SDIO probe\n");
@@ -227,7 +228,7 @@ static void iwl_sdio_remove(struct sdio_func *func)
 	sdio_set_drvdata(func, NULL);
 
 	/* disable sdio runtime pm */
-	if (!(d0i3_debug & IWL_D0I3_DBG_DISABLE))
+	if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE))
 		pm_runtime_get_noresume(trans->dev);
 
 	/* Release all BUS allocated memroy */

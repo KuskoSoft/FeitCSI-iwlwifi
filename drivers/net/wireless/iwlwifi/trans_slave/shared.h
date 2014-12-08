@@ -348,13 +348,6 @@ struct iwl_slv_tx_queue {
 	atomic_t sent_count;
 };
 
-enum {
-	IWL_D0I3_DBG_DISABLE		= BIT(0),
-	IWL_D0I3_DBG_KEEP_BUS		= BIT(1),
-	IWL_D0I3_DBG_IGNORE_RX		= BIT(3),
-};
-extern unsigned int d0i3_debug;
-
 int iwl_slv_al_mem_pool_init(struct iwl_slv_al_mem_pool *pm, u16 num_elems);
 void iwl_slv_al_mem_pool_deinit(struct iwl_slv_al_mem_pool *pm);
 int iwl_slv_al_mem_pool_alloc(struct iwl_trans_slv_tx *slv_tx,
