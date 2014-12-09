@@ -790,6 +790,7 @@ struct iwl_mvm {
 
 #ifdef CPTCFG_IWLMVM_TCM
 #define IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM	20
+	unsigned long bt_coex_last_tcm_ts;
 
 	u8 uapsd_noagg_bssid_write_idx;
 	struct mac_address uapsd_noagg_bssids[IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM]
