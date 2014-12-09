@@ -560,9 +560,11 @@ static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
 		return 0;
 
-	ret = iwl_slv_fw_enter_d0i3(trans);
-	if (ret)
-		return ret;
+	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE) {
+		ret = iwl_slv_fw_enter_d0i3(trans);
+		if (ret)
+			return ret;
+	}
 
 #ifdef CONFIG_HAS_WAKELOCK
 	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
@@ -579,14 +581,16 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
 		return 0;
 
+	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE) {
+		ret = iwl_slv_fw_exit_d0i3(trans);
+		if (ret)
+			return ret;
+	}
+
 #ifdef CONFIG_HAS_WAKELOCK
 	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
 		wake_lock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
 #endif
-
-	ret = iwl_slv_fw_exit_d0i3(trans);
-	if (ret)
-		return ret;
 
 	return 0;
 }

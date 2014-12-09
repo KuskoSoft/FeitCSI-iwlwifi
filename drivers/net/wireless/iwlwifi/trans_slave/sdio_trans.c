@@ -2711,6 +2711,8 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 		goto free_rx_desc;
 	}
 
+	trans->d0i3_mode = IWL_D0I3_MODE_ON_IDLE;
+
 	IWL_DEBUG_INFO(trans,
 		 "Allocated SDIO trans: Device %s\n"
 		 "iwlwifi-SDIO: HW_REV 0x%x HW ID 0x%x\n",
