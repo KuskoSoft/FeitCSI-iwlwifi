@@ -967,7 +967,7 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 	dump_mem = (void *)dump_data->data;
 	dump_mem->type = cpu_to_le32(IWL_FW_ERROR_DUMP_MEM_SRAM);
 	dump_mem->offset = cpu_to_le32(sram_ofs);
-	iwl_trans_read_mem_bytes(mvm->trans, sram_ofs, dump_data->data,
+	iwl_trans_read_mem_bytes(mvm->trans, sram_ofs, dump_mem->data,
 				 sram_len);
 
 	if (smem_len) {
