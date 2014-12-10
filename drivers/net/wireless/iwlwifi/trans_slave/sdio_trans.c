@@ -1169,6 +1169,79 @@ static inline int iwl_sdio_exit_retention_flow(struct iwl_trans *trans)
 }
 
 /*
+ * Read the HW_REV register in SDIO while the NIC is off.
+ *
+ * Mainly used in init flow to understand which FW to load.
+ * Does the minimum procedures in order to be able to read
+ * the register via target access.
+ *
+ * @trans - the generic transport layer.
+ */
+int iwl_sdio_read_hw_rev_nic_off(struct iwl_trans *trans)
+{
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
+	int ret;
+
+	iwl_sdio_set_power(trans, true);
+	mutex_lock(&trans_sdio->target_access_mtx);
+
+	/* Enable SDIO function for access */
+	sdio_claim_host(func);
+	func->enable_timeout = IWL_SDIO_ENABLE_TIMEOUT;
+	ret = sdio_enable_func(func);
+	if (ret) {
+		IWL_ERR(trans, "Failed to enable the sdio function\n");
+		goto clear_locks;
+	}
+
+	/* Exit retention flow for TA interrupts */
+	ret = iwl_sdio_exit_retention_flow(trans);
+	if (ret)
+		goto disable_hw;
+
+	/* Enable interrupts which are required for TA */
+	ret = iwl_sdio_enable_interrupts(trans);
+	if (ret)
+		goto disable_hw;
+
+	/* Read HW rev from HW */
+	ret = iwl_sdio_ta_read(trans, CSR_HW_REV, sizeof(u32), &trans->hw_rev,
+			       IWL_SDIO_TA_AC_DIRECT);
+	if (ret)
+		goto disable_int;
+
+	/* Parse the HW revision according to the new HW_REV format */
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
+		trans->hw_rev = (trans->hw_rev & 0xfff0) |
+				((trans->hw_rev << 2) & 0xc);
+
+	IWL_INFO(trans, "Device HW revision 0x%x\n", trans->hw_rev);
+
+disable_int:
+	/* Disable and Release the interrupts registration */
+	iwl_sdio_disable_interrupts(trans);
+	sdio_release_irq(func);
+
+disable_hw:
+	/* Power down back to original state */
+	IWL_DEBUG_INFO(trans, "Powering down the NIC after reading REV\n");
+	ret = sdio_disable_func(IWL_TRANS_SDIO_GET_FUNC(trans));
+	if (ret)
+		IWL_ERR(trans, "Failed to disable the SDIO bus\n");
+
+	/* Wait for 10ms for IOR to become 0 */
+	msleep(IWL_SDIO_DISABLE_SLEEP);
+
+clear_locks:
+	sdio_release_host(func);
+	mutex_unlock(&trans_sdio->target_access_mtx);
+	iwl_sdio_set_power(trans, false);
+
+	return ret;
+}
+
+/*
  * SDIO transport start HW.
  * This will enable the SDIO HW function and configure the SDIO AL.
  *
@@ -2701,8 +2774,8 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 
 	IWL_DEBUG_INFO(trans,
 		 "Allocated SDIO trans: Device %s\n"
-		 "iwlwifi-SDIO: HW_REV 0x%x HW ID 0x%x\n",
-		 trans->hw_id_str, trans->hw_rev, trans->hw_id);
+		 "iwlwifi-SDIO: HW ID 0x%x\n",
+		 trans->hw_id_str, trans->hw_id);
 	return trans;
 
 free_rx_desc:

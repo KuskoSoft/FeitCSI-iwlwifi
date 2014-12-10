@@ -260,6 +260,7 @@ int iwl_sdio_tx_init(struct iwl_trans *trans);
 ******************************************************/
 void iwl_sdio_handle_ta_read_ready(struct iwl_trans *trans,
 				   struct iwl_sdio_cmd_buffer *ta_buff);
+int iwl_sdio_read_hw_rev_nic_off(struct iwl_trans *trans);
 
 #ifdef CONFIG_PM_SLEEP
 void _iwl_sdio_suspend(struct iwl_trans *trans);

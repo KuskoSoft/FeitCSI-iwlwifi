@@ -179,6 +179,11 @@ static int iwl_sdio_probe(struct sdio_func *func,
 	 * the sdio function */
 	sdio_set_drvdata(func, trans);
 
+	/* Read CSR_HW_REV prior to fw request flow */
+	ret = iwl_sdio_read_hw_rev_nic_off(trans);
+	if (ret)
+		goto out_free_trans;
+
 	trans_sdio->drv = iwl_drv_start(trans, cfg);
 	if (IS_ERR(trans_sdio->drv)) {
 		ret = PTR_ERR(trans_sdio->drv);
