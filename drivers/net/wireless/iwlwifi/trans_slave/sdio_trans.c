@@ -1179,7 +1179,6 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 	int ret;
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
-	u32 hw_rev = trans->hw_rev;
 
 	iwl_sdio_set_power(trans, true);
 	mutex_lock(&trans_sdio->target_access_mtx);
@@ -1251,19 +1250,6 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 					"Failed to set SDIO to optimized reading\n");
 				goto release_hw;
 			}
-		} else {
-			/*
-			 * If we didn't have the HW rev when we entered the
-			 * function - fail now, so we can restart with the right
-			 * FW file, since if we're here and hw_rev==0 - the
-			 * A-step FW should be requested
-			 *
-			 * TODO:
-			 * Once there is only one supported step for 8000
-			 * family - delete this whole "else" part!
-			 */
-			if (!hw_rev)
-				goto release_hw;
 		}
 	}
 
