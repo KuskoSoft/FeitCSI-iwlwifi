@@ -494,7 +494,8 @@ void iwl_mvm_fw_dbg_collect(struct iwl_mvm *mvm)
 	iwl_mvm_fw_error_dump(mvm);
 
 	/* start recording again */
-	WARN_ON_ONCE(iwl_mvm_start_fw_dbg_conf(mvm, mvm->fw_dbg_conf));
+	WARN_ON_ONCE(mvm->fw->dbg_dest_tlv &&
+		     iwl_mvm_start_fw_dbg_conf(mvm, mvm->fw_dbg_conf));
 }
 
 int iwl_mvm_start_fw_dbg_conf(struct iwl_mvm *mvm, enum iwl_fw_dbg_conf conf_id)
