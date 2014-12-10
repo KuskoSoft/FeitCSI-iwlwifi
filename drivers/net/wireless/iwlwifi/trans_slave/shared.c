@@ -557,7 +557,7 @@ static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 {
 	int ret;
 
-	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
+	if (iwlwifi_mod_params.d0i3_disable)
 		return 0;
 
 	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE) {
@@ -578,7 +578,7 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 {
 	int ret;
 
-	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
+	if (iwlwifi_mod_params.d0i3_disable)
 		return 0;
 
 	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE) {
@@ -891,7 +891,7 @@ int iwl_slv_init(struct iwl_trans *trans)
 		wake_lock(&trans_slv->slv_wake_lock);
 #endif
 
-	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
+	if (iwlwifi_mod_params.d0i3_disable)
 		IWL_DEBUG_RPM(trans, "D0i3 transition disabled\n");
 
 	return 0;

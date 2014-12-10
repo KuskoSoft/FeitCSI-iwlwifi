@@ -2140,7 +2140,7 @@ static int iwl_sdio_register_plat_driver(struct iwl_trans *trans)
 	int ret;
 
 	/* we currently need the platform driver just for d0i3 */
-	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
+	if (iwlwifi_mod_params.d0i3_disable)
 		return 0;
 
 	/* verify we have only a single trans */
@@ -2163,7 +2163,7 @@ static int iwl_sdio_register_plat_driver(struct iwl_trans *trans)
 
 static void iwl_sdio_unregister_plat_driver(struct iwl_trans *trans)
 {
-	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
+	if (iwlwifi_mod_params.d0i3_disable)
 		return;
 
 	platform_driver_unregister(&iwlwifi_plat_driver);

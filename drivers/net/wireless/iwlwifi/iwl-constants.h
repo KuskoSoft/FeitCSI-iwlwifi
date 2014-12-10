@@ -80,14 +80,12 @@ enum iwl_wakelock_mode {
 };
 
 enum {
-	IWL_D0I3_DBG_DISABLE		= BIT(0),
-	IWL_D0I3_DBG_KEEP_BUS		= BIT(1),
-	IWL_D0I3_DBG_KEEP_WAKE_LOCK	= BIT(2),
-	IWL_D0I3_DBG_IGNORE_RX		= BIT(3),
+	IWL_D0I3_DBG_KEEP_BUS		= BIT(0),
+	IWL_D0I3_DBG_KEEP_WAKE_LOCK	= BIT(1),
+	IWL_D0I3_DBG_IGNORE_RX		= BIT(2),
 };
 
 #ifndef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-#define IWL_D0I3_DEBUG			IWL_D0I3_DBG_DISABLE
 #ifdef CONFIG_HAS_WAKELOCK
 /* wakelock timeout to use when all the references were released */
 #define IWL_WAKELOCK_TIMEOUT_MS		1500

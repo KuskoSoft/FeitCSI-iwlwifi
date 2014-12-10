@@ -196,7 +196,7 @@ static int iwl_sdio_probe(struct sdio_func *func,
 		goto out_free_drv;
 
 	/* enable sdio runtime pm */
-	if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE))
+	if (!iwlwifi_mod_params.d0i3_disable)
 		pm_runtime_put_noidle(trans->dev);
 
 	IWL_INFO(trans, "SDIO probing completed successfully\n");
@@ -233,7 +233,7 @@ static void iwl_sdio_remove(struct sdio_func *func)
 	sdio_set_drvdata(func, NULL);
 
 	/* disable sdio runtime pm */
-	if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE))
+	if (!iwlwifi_mod_params.d0i3_disable)
 		pm_runtime_get_noresume(trans->dev);
 
 	/* Release all BUS allocated memroy */

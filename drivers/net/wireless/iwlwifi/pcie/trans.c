@@ -1591,7 +1591,7 @@ void iwl_trans_pcie_ref(struct iwl_trans *trans)
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	unsigned long flags;
 
-	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
+	if (iwlwifi_mod_params.d0i3_disable)
 		return;
 
 	spin_lock_irqsave(&trans_pcie->ref_lock, flags);
@@ -1611,7 +1611,7 @@ void iwl_trans_pcie_unref(struct iwl_trans *trans)
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	unsigned long flags;
 
-	if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_DISABLE)
+	if (iwlwifi_mod_params.d0i3_disable)
 		return;
 
 	spin_lock_irqsave(&trans_pcie->ref_lock, flags);
