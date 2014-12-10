@@ -975,7 +975,7 @@ static int iwl_trans_pcie_start_fw(struct iwl_trans *trans,
 
 #ifdef CONFIG_HAS_WAKELOCK
 	/* The ref wakelock is locked on init */
-	if (iwlwifi_mod_params.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
+	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
 		wake_lock(&trans_pcie->ref_wake_lock);
 #endif
 	/* init ref_count to 1 (should be cleared when ucode is loaded) */
@@ -1036,7 +1036,7 @@ static void iwl_trans_pcie_stop_device(struct iwl_trans *trans)
 		iwl_pcie_rx_stop(trans);
 #ifdef CONFIG_HAS_WAKELOCK
 		/* release wake_lock while device is stopped */
-		if (iwlwifi_mod_params.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
+		if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
 			wake_unlock(&trans_pcie->ref_wake_lock);
 #endif
 
@@ -1600,7 +1600,7 @@ void iwl_trans_pcie_ref(struct iwl_trans *trans)
 #ifdef CONFIG_HAS_WAKELOCK
 	/* take ref wakelock on first reference */
 	if (trans_pcie->ref_count == 1 &&
-	    iwlwifi_mod_params.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
+	    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
 		wake_lock(&trans_pcie->ref_wake_lock);
 #endif
 	spin_unlock_irqrestore(&trans_pcie->ref_lock, flags);
@@ -1628,7 +1628,7 @@ void iwl_trans_pcie_unref(struct iwl_trans *trans)
 	 * last reference is released.
 	 */
 	if (trans_pcie->ref_count == 0 &&
-	    iwlwifi_mod_params.wakelock_mode == IWL_WAKELOCK_MODE_IDLE) {
+	    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE) {
 		wake_unlock(&trans_pcie->ref_wake_lock);
 		wake_lock_timeout(&trans_pcie->timed_wake_lock,
 				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
