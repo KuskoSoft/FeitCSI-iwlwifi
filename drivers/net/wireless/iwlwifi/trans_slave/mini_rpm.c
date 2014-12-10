@@ -138,6 +138,7 @@ int mini_rpm_init(struct iwl_trans_slv *trans_slv,
 
 void mini_rpm_destroy(struct iwl_trans_slv *trans_slv)
 {
+	flush_delayed_work(&trans_slv->rpm_suspend_work);
 	flush_workqueue(trans_slv->rpm_wq);
 	destroy_workqueue(trans_slv->rpm_wq);
 	trans_slv->rpm_wq = NULL;
