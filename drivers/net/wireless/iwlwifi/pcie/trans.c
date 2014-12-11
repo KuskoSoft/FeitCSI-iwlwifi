@@ -916,6 +916,9 @@ static int iwl_pcie_load_given_ucode_8000b(struct iwl_trans *trans,
 	if (ret)
 		return ret;
 
+	if (trans->dbg_dest_tlv)
+		iwl_pcie_apply_destination(trans);
+
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	iwl_dnt_configure(trans, image);
 #endif
