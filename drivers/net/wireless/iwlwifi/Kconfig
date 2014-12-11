@@ -122,6 +122,15 @@ config IWLWIFI_UAPSD
 
 	  If unsure, say N.
 
+config IWLWIFI_D0I3_DEFAULT_DISABLE
+	bool "Disable D0I3 by default"
+	depends on IWLMVM
+	help
+	  Say Y here to disable D0I3 by default (e.g. if the platform
+	  isn't well configured for issuing interrupts while in D0I3).
+
+	  If unsure, select N.
+
 menu "Debugging Options"
 
 config IWLWIFI_DEBUG
