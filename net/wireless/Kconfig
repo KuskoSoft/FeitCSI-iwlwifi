@@ -158,7 +158,7 @@ config CFG80211_INTERNAL_REGDB
 	  Most distributions have a CRDA package.  So if unsure, say N.
 
 config CFG80211_WEXT
-	bool "cfg80211 wireless extensions compatibility"
+	bool
 	depends on CFG80211
 	depends on WEXT_CORE
 	help
