@@ -482,8 +482,11 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 		IWL_DEBUG_RPM(trans, "aborting d0i3 entrance\n");
 		clear_bit(STATUS_TRANS_GOING_IDLE, &trans->status);
 		/* trigger policy to handle commands that could be skipped while
-		 * waiting d0i3 exit */
-		queue_work(trans_slv->policy_wq, &trans_slv->policy_trigger);
+		 * waiting d0i3 exit in case policy exists (meaning we got here
+		 * not from flush of rpm_suspend_work) */
+		if (trans_slv->policy_wq)
+			queue_work(trans_slv->policy_wq,
+				   &trans_slv->policy_trigger);
 		return 0;
 	}
 	if (ret)
