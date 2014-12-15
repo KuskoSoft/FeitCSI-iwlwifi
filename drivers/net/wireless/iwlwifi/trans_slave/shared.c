@@ -474,6 +474,9 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
+	if (test_bit(STATUS_FW_ERROR, &trans->status))
+		return 0;
+
 	set_bit(STATUS_TRANS_GOING_IDLE, &trans->status);
 
 	/* config the fw */
