@@ -4242,7 +4242,8 @@ static int ieee80211_prep_connection(struct ieee80211_sub_if_data *sdata,
 	if (new_sta || is_override) {
 		err = ieee80211_prep_channel(sdata, cbss);
 		if (err) {
-			sta_info_free(local, new_sta);
+			if (new_sta)
+				sta_info_free(local, new_sta);
 			return -EINVAL;
 		}
 	}
