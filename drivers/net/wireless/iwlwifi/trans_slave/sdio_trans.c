@@ -749,11 +749,6 @@ static int iwl_sdio_enable_interrupts(struct iwl_trans *trans)
 		IWL_ERR(trans,
 			"Failed to enable interrupts on the SDIO bus\n");
 
-	/* Register the interrupts handler */
-	ret = sdio_claim_irq(IWL_TRANS_SDIO_GET_FUNC(trans), iwl_sdio_isr);
-	if (ret)
-		IWL_ERR(trans, "Failed to claim IRQ on SDIO, ret %d\n", ret);
-
 	return ret;
 }
 
@@ -1156,10 +1151,6 @@ exit_error:
  *
  * This should be called after HW reset, during init INIT and after
  * system resume.
- *
- * Disables interrupts.
- *
- * @trans - the generic transport layer.
  */
 static inline int iwl_sdio_exit_retention_flow(struct iwl_trans *trans)
 {
@@ -1175,6 +1166,45 @@ static inline int iwl_sdio_exit_retention_flow(struct iwl_trans *trans)
 	if (iwl_sdio_clear_interrupts(trans) ||
 	    iwl_sdio_disable_retention(trans) ||
 	    iwl_sdio_wait_h2d_gp_cmd_ack(trans))
+		return -EIO;
+
+	/* Enable interrupts */
+	if (iwl_sdio_enable_interrupts(trans))
+		return -EIO;
+
+	return 0;
+}
+
+/*
+ * Enter retention flow
+ *
+ * Run a series of operations which when done the core is able to go
+ * into retention.
+ *
+ * This can be called only in family 8000 B0.
+ *
+ * Disables interrupts.
+ *
+ * @trans - the generic transport layer.
+ */
+static inline int iwl_sdio_enter_retention_flow(struct iwl_trans *trans)
+{
+	/* Disable interrupts */
+	if (iwl_sdio_disable_interrupts(trans))
+		return -EIO;
+
+	/*
+	 * Disable retention:
+	 * Clear interrupts, Enable retention,
+	 * Wait for h2d GP cmd ack interrupt.
+	 */
+	if (iwl_sdio_clear_interrupts(trans) ||
+	    iwl_sdio_enable_retention(trans) ||
+	    iwl_sdio_wait_h2d_gp_cmd_ack(trans))
+		return -EIO;
+
+	/* Enable interrupts */
+	if (iwl_sdio_enable_interrupts(trans))
 		return -EIO;
 
 	return 0;
@@ -1212,10 +1242,12 @@ int iwl_sdio_read_hw_rev_nic_off(struct iwl_trans *trans)
 	if (ret)
 		goto disable_hw;
 
-	/* Enable interrupts which are required for TA */
-	ret = iwl_sdio_enable_interrupts(trans);
-	if (ret)
+	/* Register the interrupts handler */
+	ret = sdio_claim_irq(IWL_TRANS_SDIO_GET_FUNC(trans), iwl_sdio_isr);
+	if (ret) {
+		IWL_ERR(trans, "Failed to claim IRQ on SDIO, ret %d\n", ret);
 		goto disable_hw;
+	}
 
 	/* Read HW rev from HW */
 	ret = iwl_sdio_ta_read(trans, CSR_HW_REV, sizeof(u32), &trans->hw_rev,
@@ -1292,15 +1324,20 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 		goto release_hw;
 	}
 
-	/* Exit retention flow after init */
+	/*
+	 * Exit retention flow after init since that A0 can't access
+	 * bus when retention is not disabled.
+	 */
 	ret = iwl_sdio_exit_retention_flow(trans);
 	if (ret)
 		goto release_hw;
 
-	/* Enable interrupts */
-	ret = iwl_sdio_enable_interrupts(trans);
-	if (ret)
+	/* Register the interrupts handler */
+	ret = sdio_claim_irq(IWL_TRANS_SDIO_GET_FUNC(trans), iwl_sdio_isr);
+	if (ret) {
+		IWL_ERR(trans, "Failed to claim IRQ on SDIO, ret %d\n", ret);
 		goto release_hw;
+	}
 
 	/*
 	 * Clear out hw_rev before reading the CSR, so it doesn't skip the
@@ -1343,8 +1380,14 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 		}
 	}
 
-	/* Configure the SDTM  and ADMA in the SDIO AL */
+	/* Enable the retention for B step */
+	if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_B_STEP) {
+		ret = iwl_sdio_enter_retention_flow(trans);
+		if (ret)
+			goto release_hw;
+	}
 
+	/* Configure the SDTM  and ADMA in the SDIO AL */
 	ret = iwl_sdio_config_sdtm(trans);
 	if (ret)
 		goto release_hw;
