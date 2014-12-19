@@ -1017,4 +1017,14 @@ rdev_tdls_cancel_channel_switch(struct cfg80211_registered_device *rdev,
 	trace_rdev_return_void(&rdev->wiphy);
 }
 
+static inline void
+rdev_ratestats(struct cfg80211_registered_device *rdev,
+	       enum cfg80211_ratestats_ops op)
+{
+	trace_rdev_ratestats(&rdev->wiphy, op);
+	if (rdev->ops->ratestats)
+		rdev->ops->ratestats(&rdev->wiphy, op);
+	trace_rdev_return_void(&rdev->wiphy);
+}
+
 #endif /* __CFG80211_RDEV_OPS */

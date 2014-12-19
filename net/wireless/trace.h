@@ -2077,6 +2077,20 @@ TRACE_EVENT(rdev_tdls_cancel_channel_switch,
 		  WIPHY_PR_ARG, NETDEV_PR_ARG, MAC_PR_ARG(addr))
 );
 
+TRACE_EVENT(rdev_ratestats,
+	TP_PROTO(struct wiphy *wiphy, enum cfg80211_ratestats_ops op),
+	TP_ARGS(wiphy, op),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		__field(u32, op)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		__entry->op = op;
+	),
+	TP_printk(WIPHY_PR_FMT ", op=%d", WIPHY_PR_ARG, __entry->op)
+);
+
 /*************************************************************
  *	     cfg80211 exported functions traces		     *
  *************************************************************/

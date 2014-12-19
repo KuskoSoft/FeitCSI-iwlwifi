@@ -3,6 +3,21 @@
 
 #include "core.h"
 
+/* netlink family */
+extern struct genl_family nl80211_fam;
+
+/* multicast groups */
+enum nl80211_multicast_groups {
+	NL80211_MCGRP_CONFIG,
+	NL80211_MCGRP_SCAN,
+	NL80211_MCGRP_REGULATORY,
+	NL80211_MCGRP_MLME,
+	NL80211_MCGRP_VENDOR,
+	NL80211_MCGRP_RATESTATS,
+	NL80211_MCGRP_TESTMODE /* keep last - ifdef! */
+};
+
+
 int nl80211_init(void);
 void nl80211_exit(void);
 void nl80211_notify_wiphy(struct cfg80211_registered_device *rdev,

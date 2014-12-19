@@ -35,9 +35,16 @@ static int nl80211_pre_doit(__genl_const struct genl_ops *ops, struct sk_buff *s
 			    struct genl_info *info);
 static void nl80211_post_doit(__genl_const struct genl_ops *ops, struct sk_buff *skb,
 			      struct genl_info *info);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+static int nl80211_mcast_bind(struct net *net, int group);
+static void nl80211_mcast_unbind(struct net *net, int group);
+#else
+static void nl80211_do_ratestats(struct net *net,
+				 enum cfg80211_ratestats_ops op);
+#endif
 
 /* the netlink family */
-static struct genl_family nl80211_fam = {
+struct genl_family nl80211_fam = {
 	.id = GENL_ID_GENERATE,		/* don't bother with a hardcoded ID */
 	.name = NL80211_GENL_NAME,	/* have users key off the name instead */
 	.hdrsize = 0,			/* no private header */
@@ -46,24 +53,56 @@ static struct genl_family nl80211_fam = {
 	.netnsok = true,
 	.pre_doit = nl80211_pre_doit,
 	.post_doit = nl80211_post_doit,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+	.mcast_bind = nl80211_mcast_bind,
+	.mcast_unbind = nl80211_mcast_unbind,
+#endif
 };
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+/* Kernels before 3.19 don't support the mcast_bind/unbind API used above.
+ * We therefore track it here, with the caveat that we must have another
+ * signal -- we use any called command -- to start subscriptions.
+ */
+static bool have_ratestats_subscribers;
+static void nl80211_ratestats_check(void)
+{
+	bool new;
+
+	/* check again - may have changed */
+	new = genl_has_listeners(&nl80211_fam, &init_net,
+				 NL80211_MCGRP_RATESTATS);
+
+	if (have_ratestats_subscribers == new)
+		return;
+
+	if (new)
+		nl80211_do_ratestats(&init_net, CFG80211_RATESTATS_START);
+	else
+		nl80211_do_ratestats(&init_net, CFG80211_RATESTATS_STOP);
+
+	have_ratestats_subscribers = new;
+}
+
+static void nl80211_ratestats_wk(struct work_struct *wk)
+{
+	rtnl_lock();
+	nl80211_ratestats_check();
+	rtnl_unlock();
+}
+static DECLARE_WORK(ratestats_wk, nl80211_ratestats_wk);
+#endif
 
 /* multicast groups */
-enum nl80211_multicast_groups {
-	NL80211_MCGRP_CONFIG,
-	NL80211_MCGRP_SCAN,
-	NL80211_MCGRP_REGULATORY,
-	NL80211_MCGRP_MLME,
-	NL80211_MCGRP_VENDOR,
-	NL80211_MCGRP_TESTMODE /* keep last - ifdef! */
-};
-
 static __genl_const struct genl_multicast_group nl80211_mcgrps[] = {
 	[NL80211_MCGRP_CONFIG] = { .name = NL80211_MULTICAST_GROUP_CONFIG },
 	[NL80211_MCGRP_SCAN] = { .name = NL80211_MULTICAST_GROUP_SCAN },
 	[NL80211_MCGRP_REGULATORY] = { .name = NL80211_MULTICAST_GROUP_REG },
 	[NL80211_MCGRP_MLME] = { .name = NL80211_MULTICAST_GROUP_MLME },
 	[NL80211_MCGRP_VENDOR] = { .name = NL80211_MULTICAST_GROUP_VENDOR },
+	[NL80211_MCGRP_RATESTATS] = {
+		.name = NL80211_MULTICAST_GROUP_RATESTATS
+	},
 #ifdef CPTCFG_NL80211_TESTMODE
 	[NL80211_MCGRP_TESTMODE] = { .name = NL80211_MULTICAST_GROUP_TESTMODE }
 #endif
@@ -3697,6 +3736,33 @@ static bool nl80211_put_signal(struct sk_buff *msg, u8 mask, s8 *signal,
 	return true;
 }
 
+static bool nl80211_put_tidstats(struct sk_buff *msg,
+				 struct cfg80211_tid_stats *tidstats,
+				 u32 attr)
+{
+	struct nlattr *tidattr = nla_nest_start(msg, attr);
+
+	if (!tidattr)
+		return false;
+
+#define PUT_TIDVAL(attr, memb, type) do {				\
+	if (tidstats->filled & BIT(NL80211_TID_STATS_ ## attr) &&	\
+	    nla_put_ ## type(msg, NL80211_TID_STATS_ ## attr,		\
+			     tidstats->memb))				\
+		return false;						\
+	} while (0)
+
+	PUT_TIDVAL(RX_MSDU, rx_msdu, u64);
+	PUT_TIDVAL(TX_MSDU, tx_msdu, u64);
+	PUT_TIDVAL(TX_MSDU_RETRIES, tx_msdu_retries, u64);
+	PUT_TIDVAL(TX_MSDU_FAILED, tx_msdu_failed, u64);
+
+#undef PUT_TIDVAL
+	nla_nest_end(msg, tidattr);
+
+	return true;
+}
+
 static int nl80211_send_station(struct sk_buff *msg, u32 cmd, u32 portid,
 				u32 seq, int flags,
 				struct cfg80211_registered_device *rdev,
@@ -3830,31 +3896,14 @@ static int nl80211_send_station(struct sk_buff *msg, u32 cmd, u32 portid,
 
 		for (tid = 0; tid < IEEE80211_NUM_TIDS + 1; tid++) {
 			struct cfg80211_tid_stats *tidstats;
-			struct nlattr *tidattr;
 
 			tidstats = &sinfo->pertid[tid];
 
 			if (!tidstats->filled)
 				continue;
 
-			tidattr = nla_nest_start(msg, tid + 1);
-			if (!tidattr)
+			if (!nl80211_put_tidstats(msg, tidstats, tid + 1))
 				goto nla_put_failure;
-
-#define PUT_TIDVAL(attr, memb, type) do {				\
-	if (tidstats->filled & BIT(NL80211_TID_STATS_ ## attr) &&	\
-	    nla_put_ ## type(msg, NL80211_TID_STATS_ ## attr,		\
-			     tidstats->memb))				\
-		goto nla_put_failure;					\
-	} while (0)
-
-			PUT_TIDVAL(RX_MSDU, rx_msdu, u64);
-			PUT_TIDVAL(TX_MSDU, tx_msdu, u64);
-			PUT_TIDVAL(TX_MSDU_RETRIES, tx_msdu_retries, u64);
-			PUT_TIDVAL(TX_MSDU_FAILED, tx_msdu_failed, u64);
-
-#undef PUT_TIDVAL
-			nla_nest_end(msg, tidattr);
 		}
 
 		nla_nest_end(msg, tidsattr);
@@ -10220,6 +10269,28 @@ static int nl80211_tdls_cancel_channel_switch(struct sk_buff *skb,
 	return 0;
 }
 
+static int nl80211_get_ratestats(struct sk_buff *skb, struct genl_info *info)
+{
+	struct cfg80211_registered_device *rdev;
+
+	if (!genl_has_listeners(&nl80211_fam, genl_info_net(info),
+				NL80211_MCGRP_RATESTATS))
+		return -ENODATA;
+
+	list_for_each_entry(rdev, &cfg80211_rdev_list, list) {
+		if (wiphy_net(&rdev->wiphy) != genl_info_net(info))
+			continue;
+
+		if (!wiphy_ext_feature_isset(&rdev->wiphy,
+					     NL80211_EXT_FEATURE_RATESTATS))
+			continue;
+
+		rdev_ratestats(rdev, CFG80211_RATESTATS_DUMP);
+	}
+
+	return 0;
+}
+
 #define NL80211_FLAG_NEED_WIPHY		0x01
 #define NL80211_FLAG_NEED_NETDEV	0x02
 #define NL80211_FLAG_NEED_RTNL		0x04
@@ -10240,8 +10311,16 @@ static int nl80211_pre_doit(__genl_const struct genl_ops *ops, struct sk_buff *s
 	struct net_device *dev;
 	bool rtnl = ops->internal_flags & NL80211_FLAG_NEED_RTNL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+	if (rtnl) {
+		rtnl_lock();
+		/* recheck the ratestats ... we don't get mcast_bind() */
+		nl80211_ratestats_check();
+	}
+#else
 	if (rtnl)
 		rtnl_lock();
+#endif
 
 	if (ops->internal_flags & NL80211_FLAG_NEED_WIPHY) {
 		rdev = cfg80211_get_dev_from_info(genl_info_net(info), info);
@@ -10335,6 +10414,58 @@ static void nl80211_post_doit(__genl_const struct genl_ops *ops, struct sk_buff 
 		memset(nlmsg_data(nlh), 0, nlmsg_len(nlh));
 	}
 }
+
+static void nl80211_do_ratestats(struct net *net,
+				 enum cfg80211_ratestats_ops op)
+{
+	struct cfg80211_registered_device *rdev;
+
+	rtnl_lock();
+
+	list_for_each_entry(rdev, &cfg80211_rdev_list, list) {
+		if (wiphy_net(&rdev->wiphy) != net)
+			continue;
+
+		if (!wiphy_ext_feature_isset(&rdev->wiphy,
+					     NL80211_EXT_FEATURE_RATESTATS))
+			continue;
+
+		rdev_ratestats(rdev, op);
+	}
+
+	rtnl_unlock();
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+static int nl80211_mcast_bind(struct net *net, int group)
+{
+	enum cfg80211_ratestats_ops op;
+
+	switch (group) {
+	case NL80211_MCGRP_RATESTATS:
+		if (!genl_has_listeners(&nl80211_fam, net,
+					NL80211_MCGRP_RATESTATS))
+			op = CFG80211_RATESTATS_START;
+		else
+			op = CFG80211_RATESTATS_DUMP;
+		nl80211_do_ratestats(net, op);
+		break;
+	}
+
+	return 0;
+}
+
+static void nl80211_mcast_unbind(struct net *net, int group)
+{
+	switch (group) {
+	case NL80211_MCGRP_RATESTATS:
+		if (!genl_has_listeners(&nl80211_fam, net,
+					NL80211_MCGRP_RATESTATS))
+			nl80211_do_ratestats(net, CFG80211_RATESTATS_STOP);
+		break;
+	}
+}
+#endif
 
 static __genl_const struct genl_ops nl80211_ops[] = {
 	{
@@ -11040,6 +11171,13 @@ static __genl_const struct genl_ops nl80211_ops[] = {
 		.flags = GENL_ADMIN_PERM,
 		.internal_flags = NL80211_FLAG_NEED_NETDEV_UP |
 				  NL80211_FLAG_NEED_RTNL,
+	},
+	{
+		.cmd = NL80211_CMD_GET_RATESTATS,
+		.doit = nl80211_get_ratestats,
+		.policy = nl80211_policy,
+		.flags = GENL_ADMIN_PERM,
+		.internal_flags = NL80211_FLAG_NEED_RTNL,
 	},
 };
 
@@ -12811,6 +12949,15 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 	if (state != NETLINK_URELEASE)
 		return NOTIFY_DONE;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+	/* Sadly, the URELEASE is called too early, so that if this
+	 * runs quickly it will not see that the socket died ...
+	 * Not much we can do, just hope for the best - and any new
+	 * command sent on any other socket will 'fix' it anyway.
+	 */
+	schedule_work(&ratestats_wk);
+#endif
+
 	rcu_read_lock();
 
 	list_for_each_entry_rcu(rdev, &cfg80211_rdev_list, list) {
@@ -12959,6 +13106,70 @@ void cfg80211_crit_proto_stopped(struct wireless_dev *wdev, gfp_t gfp)
 }
 EXPORT_SYMBOL(cfg80211_crit_proto_stopped);
 
+void cfg80211_report_ratestats(struct wiphy *wiphy, struct wireless_dev *wdev,
+			       const u8 *addr, unsigned int n_stats,
+			       struct cfg80211_ratestats *stats, gfp_t gfp)
+{
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
+	unsigned int i;
+
+	if (!genl_has_listeners(&nl80211_fam, wiphy_net(wiphy),
+				NL80211_MCGRP_RATESTATS))
+		return;
+
+	for (i = 0; i < n_stats; i++) {
+		struct sk_buff *msg;
+		void *hdr;
+		struct nlattr *attr_all;
+
+		if (!stats[i].stats.filled)
+			continue;
+
+		msg = nlmsg_new(NLMSG_DEFAULT_SIZE, gfp);
+		if (!msg)
+			continue;
+
+		hdr = nl80211hdr_put(msg, 0, 0, 0, NL80211_CMD_GET_RATESTATS);
+		if (!hdr)
+			goto nla_put_failure;
+
+		if (nla_put_u32(msg, NL80211_ATTR_WIPHY, rdev->wiphy_idx) ||
+		    nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
+			goto nla_put_failure;
+
+		if (wdev->netdev &&
+		    nla_put_u32(msg, NL80211_ATTR_IFINDEX,
+				wdev->netdev->ifindex))
+			goto nla_put_failure;
+
+		if (nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr))
+			goto nla_put_failure;
+
+		attr_all = nla_nest_start(msg, NL80211_ATTR_RATESTATS);
+		if (!attr_all)
+			goto nla_put_failure;
+
+		if (!nl80211_put_sta_rate(msg, &stats[i].rate,
+					  NL80211_ATTR_RATESTATS_RATE))
+			goto nla_put_failure;
+
+		if (!nl80211_put_tidstats(msg, &stats[i].stats,
+					  NL80211_ATTR_RATESTATS_STATS))
+			goto nla_put_failure;
+
+		nla_nest_end(msg, attr_all);
+
+		genlmsg_end(msg, hdr);
+
+		genlmsg_multicast_netns(&nl80211_fam, wiphy_net(wiphy), msg, 0,
+					NL80211_MCGRP_RATESTATS, GFP_KERNEL);
+		continue;
+ nla_put_failure:
+		nlmsg_free(msg);
+	}
+}
+EXPORT_SYMBOL_GPL(cfg80211_report_ratestats);
+
 void nl80211_send_ap_stopped(struct wireless_dev *wdev)
 {
 	struct wiphy *wiphy = wdev->wiphy;
@@ -13011,6 +13222,9 @@ int nl80211_init(void)
 
 void nl80211_exit(void)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+	cancel_work_sync(&ratestats_wk);
+#endif
 	netlink_unregister_notifier(&nl80211_netlink_notifier);
 	genl_unregister_family(&nl80211_fam);
 }
