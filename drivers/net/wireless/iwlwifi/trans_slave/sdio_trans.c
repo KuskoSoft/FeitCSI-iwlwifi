@@ -72,6 +72,7 @@
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
+#include <linux/pm_runtime.h>
 
 #include "sdio_internal.h"
 #include "sdio_tx.h"
@@ -1264,16 +1265,21 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
+	/*
+	 * keep sdio on until fw is loaded (after that the runtime pm
+	 * management will be controlled by the registered platform
+	 * device, as it's child of the sdio card).
+	 */
+	pm_runtime_get_sync(trans->dev);
+
 	iwl_sdio_set_power(trans, true);
 	mutex_lock(&trans_sdio->target_access_mtx);
 	sdio_claim_host(func);
 	func->enable_timeout = IWL_SDIO_ENABLE_TIMEOUT;
 	ret = sdio_enable_func(func);
 	if (ret) {
-		sdio_release_host(func);
-		mutex_unlock(&trans_sdio->target_access_mtx);
 		IWL_ERR(trans, "Failed to enable the sdio function\n");
-		return ret;
+		goto release_hw;
 	}
 
 	/* Set the block size in the function */
@@ -1359,6 +1365,7 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 release_hw:
 	iwl_sdio_release_hw(trans);
 	mutex_unlock(&trans_sdio->target_access_mtx);
+	pm_runtime_put(trans->dev);
 	return ret;
 }
 
@@ -2255,6 +2262,12 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 	sdio_release_host(IWL_TRANS_SDIO_GET_FUNC(trans));
 	mutex_unlock(&trans_sdio->target_access_mtx);
 
+	/*
+	 * Release the reference. the platform device will take care
+	 * of keeping the sdio awake (if needed) from now on.
+	 */
+	pm_runtime_put(trans->dev);
+
 	set_bit(STATUS_DEVICE_ENABLED, &trans->status);
 	return 0;
 
@@ -2390,6 +2403,11 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans)
 	IWL_DEBUG_INFO(trans, "%s\n", __func__);
 
 	if (test_and_clear_bit(STATUS_DEVICE_ENABLED, &trans->status)) {
+		/*
+		 * Take a reference to make sure the sdio card will stay active
+		 * even after removing its active slv_rpm_device child.
+		 */
+		pm_runtime_get_sync(trans->dev);
 		iwl_slv_tx_stop(trans);
 		iwl_sdio_tx_stop(trans);
 
@@ -2401,6 +2419,9 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans)
 	/* Stop HW and power down */
 	sdio_claim_host(func);
 	iwl_sdio_release_hw(trans);
+
+	/* we no longer need the sdio card active - release it */
+	pm_runtime_put(trans->dev);
 }
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
