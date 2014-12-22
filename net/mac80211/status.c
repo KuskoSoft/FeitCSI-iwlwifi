@@ -650,7 +650,9 @@ tx_latency_threshold(struct ieee80211_local *local, struct sk_buff *skb,
 		md.tid = tid;
 		md.seq = (le16_to_cpu(hdr->seq_ctrl) &
 			  IEEE80211_SCTL_SEQ) >> 4;
+#ifdef CPTCFG_NL80211_TESTMODE
 		drv_retrieve_monitor_logs(local, &md);
+#endif
 	}
 }
 
