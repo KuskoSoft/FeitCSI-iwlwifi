@@ -159,4 +159,9 @@ static inline int pci_enable_msix_range(struct pci_dev *dev,
 #endif
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#define pci_device_is_present LINUX_BACKPORT(pci_device_is_present)
+bool pci_device_is_present(struct pci_dev *pdev);
+#endif
+
 #endif /* _BACKPORT_LINUX_PCI_H */

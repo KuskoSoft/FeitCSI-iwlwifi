@@ -4,6 +4,9 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 #include_next <linux/dma-buf.h>
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0) */
+#include <linux/dma-direction.h>
+#include <linux/dma-attrs.h>
+#include <linux/dma-mapping.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #define dma_buf_export(priv, ops, size, flags, resv)	\

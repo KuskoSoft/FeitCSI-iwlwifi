@@ -60,4 +60,8 @@ void backport_destroy_workqueue(struct workqueue_struct *wq);
 #define system_freezable_power_efficient_wq system_freezable_wq
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
+#define drain_workqueue(wq) flush_workqueue(wq)
+#endif
+
 #endif /* __BACKPORT_LINUX_WORKQUEUE_H */

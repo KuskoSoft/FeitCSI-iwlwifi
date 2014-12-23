@@ -11,7 +11,9 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 #include <linux/export.h>
-
+#include <linux/net.h>
+#include <linux/netdevice.h>
+#include <linux/debugfs.h>
 
 static inline bool is_kthread_should_stop(void)
 {
@@ -77,3 +79,70 @@ int woken_wake_function(wait_queue_t *wait, unsigned mode, int sync, void *key)
 	return default_wake_function(wait, mode, sync, key);
 }
 EXPORT_SYMBOL(woken_wake_function);
+
+#ifdef __BACKPORT_NETDEV_RSS_KEY_FILL
+u8 netdev_rss_key[NETDEV_RSS_KEY_LEN];
+
+void netdev_rss_key_fill(void *buffer, size_t len)
+{
+	BUG_ON(len > sizeof(netdev_rss_key));
+	net_get_random_once(netdev_rss_key, sizeof(netdev_rss_key));
+	memcpy(buffer, netdev_rss_key, len);
+}
+EXPORT_SYMBOL_GPL(netdev_rss_key_fill);
+#endif /* __BACKPORT_NETDEV_RSS_KEY_FILL */
+
+#if defined(CONFIG_DEBUG_FS)
+struct debugfs_devm_entry {
+	int (*read)(struct seq_file *seq, void *data);
+	struct device *dev;
+};
+
+static int debugfs_devm_entry_open(struct inode *inode, struct file *f)
+{
+	struct debugfs_devm_entry *entry = inode->i_private;
+
+	return single_open(f, entry->read, entry->dev);
+}
+
+static const struct file_operations debugfs_devm_entry_ops = {
+	.owner = THIS_MODULE,
+	.open = debugfs_devm_entry_open,
+	.release = single_release,
+	.read = seq_read,
+	.llseek = seq_lseek
+};
+
+/**
+ * debugfs_create_devm_seqfile - create a debugfs file that is bound to device.
+ *
+ * @dev: device related to this debugfs file.
+ * @name: name of the debugfs file.
+ * @parent: a pointer to the parent dentry for this file.  This should be a
+ *	directory dentry if set.  If this parameter is %NULL, then the
+ *	file will be created in the root of the debugfs filesystem.
+ * @read_fn: function pointer called to print the seq_file content.
+ */
+struct dentry *debugfs_create_devm_seqfile(struct device *dev, const char *name,
+					   struct dentry *parent,
+					   int (*read_fn)(struct seq_file *s,
+							  void *data))
+{
+	struct debugfs_devm_entry *entry;
+
+	if (IS_ERR(parent))
+		return ERR_PTR(-ENOENT);
+
+	entry = devm_kzalloc(dev, sizeof(*entry), GFP_KERNEL);
+	if (!entry)
+		return ERR_PTR(-ENOMEM);
+
+	entry->read = read_fn;
+	entry->dev = dev;
+
+	return debugfs_create_file(name, S_IRUGO, parent, entry,
+				   &debugfs_devm_entry_ops);
+}
+EXPORT_SYMBOL_GPL(debugfs_create_devm_seqfile);
+
+#endif /* CONFIG_DEBUG_FS */

@@ -29,6 +29,7 @@ static inline struct device_node *of_find_node_by_name(struct device_node *from,
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0)
+#define of_property_read_u8_array LINUX_BACKPORT(of_property_read_u8_array)
 #ifdef CONFIG_OF
 extern int of_property_read_u8_array(const struct device_node *np,
 			const char *propname, u8 *out_values, size_t sz);
@@ -39,7 +40,31 @@ static inline int of_property_read_u8_array(const struct device_node *np,
 	return -ENOSYS;
 }
 #endif /* CONFIG_OF */
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
+#define of_property_read_u32_array LINUX_BACKPORT(of_property_read_u32_array)
+#ifdef CONFIG_OF
+extern int of_property_read_u32_array(const struct device_node *np,
+				      const char *propname,
+				      u32 *out_values,
+				      size_t sz);
+#else
+static inline int of_property_read_u32_array(const struct device_node *np,
+					     const char *propname,
+					     u32 *out_values, size_t sz)
+{
+	return -ENOSYS;
+}
+#endif /* CONFIG_OF */
+#define of_property_read_u32 LINUX_BACKPORT(of_property_read_u32)
+static inline int of_property_read_u32(const struct device_node *np,
+				       const char *propname,
+				       u32 *out_value)
+{
+	return of_property_read_u32_array(np, propname, out_value, 1);
+}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #define of_property_read_u32_index LINUX_BACKPORT(of_property_read_u32_index)
@@ -113,5 +138,23 @@ static inline void of_node_put(struct device_node *node) { }
 #define of_match_ptr(_ptr)	NULL
 #endif /* CONFIG_OF */
 #endif /* of_match_ptr */
+
+#ifndef for_each_compatible_node
+#define for_each_compatible_node(dn, type, compatible) \
+	for (dn = of_find_compatible_node(NULL, type, compatible); dn; \
+	     dn = of_find_compatible_node(dn, type, compatible))
+#endif /* for_each_compatible_node */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#ifndef CONFIG_OF
+static inline struct device_node *of_find_compatible_node(
+						struct device_node *from,
+						const char *type,
+						const char *compat)
+{
+	return NULL;
+}
+#endif
+#endif
 
 #endif	/* _COMPAT_LINUX_OF_H */

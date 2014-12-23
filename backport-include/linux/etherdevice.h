@@ -178,4 +178,19 @@ static inline void ether_addr_copy(u8 *dst, const u8 *src)
 int eth_get_headlen(unsigned char *data, unsigned int max_len);
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#define eth_skb_pad LINUX_BACKPORT(eth_skb_pad)
+/**
+ * eth_skb_pad - Pad buffer to mininum number of octets for Ethernet frame
+ * @skb: Buffer to pad
+ *
+ * An Ethernet frame should have a minimum size of 60 bytes.  This function
+ * takes short frames and pads them with zeros up to the 60 byte limit.
+ */
+static inline int eth_skb_pad(struct sk_buff *skb)
+{
+	return skb_put_padto(skb, ETH_ZLEN);
+}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
+
 #endif /* _BACKPORT_LINUX_ETHERDEVICE_H */
