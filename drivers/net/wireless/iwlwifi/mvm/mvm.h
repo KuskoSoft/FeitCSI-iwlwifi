@@ -341,6 +341,7 @@ struct iwl_mvm_vif_bf_data {
  *	combined on update to yield the overall request to mac80211.
  */
 struct iwl_mvm_vif {
+	struct iwl_mvm *mvm;
 	u16 id;
 	u16 color;
 	u8 ap_sta_id;
@@ -398,7 +399,6 @@ struct iwl_mvm_vif {
 #endif
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-	struct iwl_mvm *mvm;
 	struct dentry *dbgfs_dir;
 	struct dentry *dbgfs_slink;
 	struct iwl_dbgfs_pm dbgfs_pm;
