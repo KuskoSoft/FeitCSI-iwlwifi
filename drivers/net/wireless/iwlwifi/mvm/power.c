@@ -367,14 +367,12 @@ static void iwl_mvm_power_build_cmd(struct iwl_mvm *mvm,
 
 	cmd->flags |= cpu_to_le16(POWER_FLAGS_POWER_MANAGEMENT_ENA_MSK);
 
-#if 0
 	if (vif->bss_conf.beacon_rate &&
 	    (vif->bss_conf.beacon_rate->bitrate == 10 ||
 	     vif->bss_conf.beacon_rate->bitrate == 60)) {
 		cmd->flags |= cpu_to_le16(POWER_FLAGS_LPRX_ENA_MSK);
 		cmd->lprx_rssi_threshold = POWER_LPRX_RSSI_THRESHOLD;
 	}
-#endif
 
 	/* Check if radar detection is required on current channel */
 	radar_detect = iwl_mvm_power_is_radar(vif);
