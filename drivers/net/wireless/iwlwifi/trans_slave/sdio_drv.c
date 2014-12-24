@@ -223,9 +223,6 @@ static void iwl_sdio_remove(struct sdio_func *func)
 	struct iwl_trans *trans = sdio_get_drvdata(func);
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
-	/* Stop SDIO HW, Release interrupts and power down */
-	iwl_trans_stop_device(trans);
-
 	/* Stop driver and the FW request callback */
 	iwl_drv_stop(trans_sdio->drv);
 
