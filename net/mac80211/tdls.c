@@ -68,12 +68,11 @@ ieee80211_tdls_add_subband(struct ieee80211_sub_if_data *sdata,
 		ch = ieee80211_get_channel(sdata->local->hw.wiphy, i);
 		if (ch) {
 			/* we will be active on the channel */
-			u32 flags = IEEE80211_CHAN_DISABLED |
-				    IEEE80211_CHAN_NO_IR;
 			cfg80211_chandef_create(&chandef, ch,
-						NL80211_CHAN_HT20);
-			if (cfg80211_chandef_usable(sdata->local->hw.wiphy,
-						    &chandef, flags)) {
+						NL80211_CHAN_NO_HT);
+			if (cfg80211_reg_can_beacon(sdata->local->hw.wiphy,
+						    &chandef,
+						    sdata->wdev.iftype)) {
 				ch_cnt++;
 				continue;
 			}
@@ -87,6 +86,14 @@ ieee80211_tdls_add_subband(struct ieee80211_sub_if_data *sdata,
 			subband_cnt++;
 			ch_cnt = 0;
 		}
+	}
+
+	if (ch_cnt) {
+		u8 *pos = skb_put(skb, 2);
+		*pos++ = ieee80211_frequency_to_channel(subband_start);
+		*pos++ = ch_cnt;
+
+		subband_cnt++;
 	}
 
 	return subband_cnt;
