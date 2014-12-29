@@ -4985,7 +4985,8 @@ static int nl80211_req_set_reg(struct sk_buff *skb, struct genl_info *info)
 		return regulatory_hint_user(data, user_reg_hint_type);
 	case NL80211_USER_REG_HINT_INDOOR:
 		is_indoor = !!info->attrs[NL80211_ATTR_REG_INDOOR];
-		return regulatory_hint_indoor_user(is_indoor);
+		return regulatory_hint_indoor(is_indoor,
+					      genl_info_snd_portid(info));
 	default:
 		return -EINVAL;
 	}
@@ -12830,6 +12831,11 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 
 	rcu_read_unlock();
 
+	/*
+	 * It is possible that the user space process that is controlling the
+	 * indoor setting disappeared, so notify the regulatory core.
+	 */
+	regulatory_netlink_notify(netlink_notify_portid(notify));
 	return NOTIFY_OK;
 }
 

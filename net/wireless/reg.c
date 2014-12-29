@@ -143,6 +143,11 @@ static int reg_num_devs_support_basehint;
  */
 static bool reg_is_indoor;
 
+/*
+ * Used to track the userspace process that is controlling the indoor setting
+ */
+static u32 reg_is_indoor_portid;
+
 static const struct ieee80211_regdomain *get_cfg80211_regdom(void)
 {
 	return rtnl_dereference(cfg80211_regdomain);
@@ -1254,13 +1259,6 @@ static bool reg_request_cell_base(struct regulatory_request *request)
 	return request->user_reg_hint_type == NL80211_USER_REG_HINT_CELL_BASE;
 }
 
-static bool reg_request_indoor(struct regulatory_request *request)
-{
-	if (request->initiator != NL80211_REGDOM_SET_BY_USER)
-		return false;
-	return request->user_reg_hint_type == NL80211_USER_REG_HINT_INDOOR;
-}
-
 bool reg_last_request_cell_base(void)
 {
 	return reg_request_cell_base(get_last_request());
@@ -1841,12 +1839,6 @@ __reg_process_hint_user(struct regulatory_request *user_request)
 {
 	struct regulatory_request *lr = get_last_request();
 
-	if (reg_request_indoor(user_request)) {
-		reg_is_indoor = user_request->is_indoor;
-
-		return REG_REQ_USER_HINT_HANDLED;
-	}
-
 	if (reg_request_cell_base(user_request))
 		return reg_ignore_cell_hint(user_request);
 
@@ -2293,21 +2285,49 @@ int regulatory_hint_user(const char *alpha2,
 	return 0;
 }
 
-int regulatory_hint_indoor_user(bool is_indoor)
+int regulatory_hint_indoor(bool is_indoor, u32 portid)
 {
-	struct regulatory_request *request;
+	rtnl_lock();
 
-	request = kzalloc(sizeof(struct regulatory_request), GFP_KERNEL);
-	if (!request)
-		return -ENOMEM;
+	/*
+	 * Process only if there is a real change, so the original port ID is
+	 * saved (to handle cases that several processes try to change the
+	 * indoor setting).
+	 */
+	if (reg_is_indoor != is_indoor) {
+		rtnl_unlock();
+		return 0;
+	}
 
-	request->wiphy_idx = WIPHY_IDX_INVALID;
-	request->initiator = NL80211_REGDOM_SET_BY_USER;
-	request->user_reg_hint_type = NL80211_USER_REG_HINT_INDOOR;
-	request->is_indoor = is_indoor;
-	queue_regulatory_request(request);
+	reg_is_indoor = is_indoor;
+	if (reg_is_indoor)
+		reg_is_indoor_portid = portid;
+	else
+		reg_is_indoor_portid = 0;
+
+	rtnl_unlock();
+
+	if (!is_indoor)
+		reg_check_channels();
 
 	return 0;
+}
+
+void regulatory_netlink_notify(u32 portid)
+{
+	rtnl_lock();
+
+	if (reg_is_indoor_portid != portid) {
+		rtnl_unlock();
+		return;
+	}
+
+	reg_is_indoor = false;
+	reg_is_indoor_portid = 0;
+
+	rtnl_unlock();
+
+	reg_check_channels();
 }
 
 /* Driver hints */
@@ -2476,9 +2496,6 @@ static void restore_regulatory_settings(bool reset_user)
 	struct cfg80211_registered_device *rdev;
 
 	ASSERT_RTNL();
-
-	if (reset_user)
-		reg_is_indoor = false;
 
 	reset_regdomains(true, &world_regdom);
 	restore_alpha2(alpha2, reset_user);
