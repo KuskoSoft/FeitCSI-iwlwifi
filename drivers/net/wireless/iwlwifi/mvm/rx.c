@@ -270,8 +270,13 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 		iwl_mvm_recalc_tcm(mvm);
 	mdata = &mvm->tcm.data[mac];
 	mdata->rx.pkts[ac]++;
-	mdata->rx.airtime[ac] +=
-		le16_to_cpu(phy_info->frame_time);
+
+	/* count the airtime only once for each ampdu */
+	if (mdata->rx.last_ampdu_ref != mvm->ampdu_ref) {
+		mdata->rx.last_ampdu_ref = mvm->ampdu_ref;
+		mdata->rx.airtime[ac] +=
+			le16_to_cpu(phy_info->frame_time);
+	}
 	mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
 
 	if (!(rate_n_flags & (RATE_MCS_HT_POS | RATE_MCS_VHT_POS)))
