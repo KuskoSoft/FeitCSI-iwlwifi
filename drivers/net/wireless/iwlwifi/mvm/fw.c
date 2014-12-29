@@ -481,8 +481,6 @@ out:
 
 void iwl_mvm_fw_dbg_collect(struct iwl_mvm *mvm)
 {
-	lockdep_assert_held(&mvm->mutex);
-
 	/* stop recording */
 	if (mvm->cfg->device_family == IWL_DEVICE_FAMILY_7000) {
 		iwl_set_bits_prph(mvm->trans, MON_BUFF_SAMPLE_CTL, 0x100);
@@ -491,7 +489,7 @@ void iwl_mvm_fw_dbg_collect(struct iwl_mvm *mvm)
 		iwl_write_prph(mvm->trans, DBGC_OUT_CTRL, 0);
 	}
 
-	iwl_mvm_fw_error_dump(mvm);
+	schedule_work(&mvm->fw_error_dump_wk);
 
 	/* start recording again */
 	WARN_ON_ONCE(mvm->fw->dbg_dest_tlv &&
