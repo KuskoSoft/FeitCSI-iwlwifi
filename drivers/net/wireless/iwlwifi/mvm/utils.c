@@ -780,10 +780,18 @@ struct ieee80211_vif *iwl_mvm_get_bss_vif(struct iwl_mvm *mvm)
 }
 
 #ifdef CPTCFG_IWLMVM_TCM
+u8 iwl_mvm_tcm_load_percentage(u32 airtime, u32 elapsed)
+{
+	if (!elapsed)
+		return 0;
+
+	return (100 * airtime / elapsed) / USEC_PER_MSEC;
+}
+
 static enum iwl_mvm_vendor_load
 iwl_mvm_tcm_load(struct iwl_mvm *mvm, u32 airtime, unsigned long elapsed)
 {
-	unsigned long load = (100 * airtime / elapsed) / USEC_PER_MSEC;
+	u8 load = iwl_mvm_tcm_load_percentage(airtime, elapsed);
 
 	if (load > IWL_MVM_TCM_LOAD_HIGH_THRESH)
 		return IWL_MVM_VENDOR_LOAD_HIGH;
@@ -928,7 +936,7 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 	u32 total_airtime = 0;
 	int ac, mac;
 	bool low_latency = false;
-	u8 load;
+	enum iwl_mvm_vendor_load load;
 	bool handle_ll = time_after(ts, mvm->tcm.ll_ts + MVM_LL_PERIOD);
 
 	if (handle_ll)

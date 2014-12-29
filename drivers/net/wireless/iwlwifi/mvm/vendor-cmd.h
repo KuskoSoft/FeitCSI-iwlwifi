@@ -62,6 +62,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#ifndef __VENDOR_CMD_H__
+#define __VENDOR_CMD_H__
 
 #define INTEL_OUI	0x001735
 
@@ -135,3 +137,4 @@ enum iwl_mvm_vendor_attr {
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,
 };
+#endif /* __VENDOR_CMD_H__ */

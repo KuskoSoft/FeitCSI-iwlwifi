@@ -78,6 +78,7 @@
 #include "sta.h"
 #include "fw-api.h"
 #include "constants.h"
+#include "vendor-cmd.h"
 
 #ifdef CPTCFG_IWLMVM_TCM
 #include <linux/average.h>
@@ -575,8 +576,8 @@ struct iwl_mvm_tcm {
 	struct {
 		u32 elapsed; /* milliseconds for this TCM period */
 		u32 airtime[NUM_MAC_INDEX_DRIVER];
-		u8 load[NUM_MAC_INDEX_DRIVER];
-		u8 global_load;
+		enum iwl_mvm_vendor_load load[NUM_MAC_INDEX_DRIVER];
+		enum iwl_mvm_vendor_load global_load;
 		bool low_latency[NUM_MAC_INDEX_DRIVER];
 		bool change[NUM_MAC_INDEX_DRIVER];
 		bool global_change;
@@ -1513,6 +1514,7 @@ void iwl_mvm_pause_tcm(struct iwl_mvm *mvm);
 void iwl_mvm_resume_tcm(struct iwl_mvm *mvm);
 void iwl_mvm_tcm_add_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 void iwl_mvm_tcm_rm_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
+u8 iwl_mvm_tcm_load_percentage(u32 airtime, u32 elapsed);
 #endif
 
 void iwl_mvm_nic_restart(struct iwl_mvm *mvm, bool fw_error);
