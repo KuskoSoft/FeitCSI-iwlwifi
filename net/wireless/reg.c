@@ -2974,6 +2974,23 @@ int regulatory_set_wiphy_regd(struct wiphy *wiphy,
 }
 EXPORT_SYMBOL(regulatory_set_wiphy_regd);
 
+int regulatory_set_wiphy_regd_sync_rtnl(struct wiphy *wiphy,
+					struct ieee80211_regdomain *rd)
+{
+	int ret;
+
+	ASSERT_RTNL();
+
+	ret = regulatory_set_wiphy_regd(wiphy, rd);
+	if (ret)
+		return ret;
+
+	/* process the request immediately */
+	reg_process_self_managed_hints();
+	return 0;
+}
+EXPORT_SYMBOL(regulatory_set_wiphy_regd_sync_rtnl);
+
 void wiphy_regulatory_register(struct wiphy *wiphy)
 {
 	struct regulatory_request *lr;
