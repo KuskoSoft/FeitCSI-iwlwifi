@@ -142,6 +142,7 @@ static int reg_num_devs_support_basehint;
  * (protected by RTNL)
  */
 static bool reg_is_indoor;
+static spinlock_t reg_indoor_lock;
 
 /*
  * Used to track the userspace process that is controlling the indoor setting
@@ -2287,7 +2288,7 @@ int regulatory_hint_user(const char *alpha2,
 
 int regulatory_hint_indoor(bool is_indoor, u32 portid)
 {
-	rtnl_lock();
+	spin_lock(&reg_indoor_lock);
 
 	/*
 	 * Process only if there is a real change, so the original port ID is
@@ -2295,7 +2296,7 @@ int regulatory_hint_indoor(bool is_indoor, u32 portid)
 	 * indoor setting).
 	 */
 	if (reg_is_indoor != is_indoor) {
-		rtnl_unlock();
+		spin_unlock(&reg_indoor_lock);
 		return 0;
 	}
 
@@ -2305,7 +2306,7 @@ int regulatory_hint_indoor(bool is_indoor, u32 portid)
 	else
 		reg_is_indoor_portid = 0;
 
-	rtnl_unlock();
+	spin_unlock(&reg_indoor_lock);
 
 	if (!is_indoor)
 		reg_check_channels();
@@ -2315,17 +2316,17 @@ int regulatory_hint_indoor(bool is_indoor, u32 portid)
 
 void regulatory_netlink_notify(u32 portid)
 {
-	rtnl_lock();
+	spin_lock(&reg_indoor_lock);
 
 	if (reg_is_indoor_portid != portid) {
-		rtnl_unlock();
+		spin_unlock(&reg_indoor_lock);
 		return;
 	}
 
 	reg_is_indoor = false;
 	reg_is_indoor_portid = 0;
 
-	rtnl_unlock();
+	spin_unlock(&reg_indoor_lock);
 
 	reg_check_channels();
 }
@@ -3082,6 +3083,7 @@ int __init regulatory_init(void)
 
 	spin_lock_init(&reg_requests_lock);
 	spin_lock_init(&reg_pending_beacons_lock);
+	spin_lock_init(&reg_indoor_lock);
 
 	reg_regdb_size_check();
 
