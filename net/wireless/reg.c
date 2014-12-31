@@ -2295,7 +2295,7 @@ int regulatory_hint_indoor(bool is_indoor, u32 portid)
 	 * saved (to handle cases that several processes try to change the
 	 * indoor setting).
 	 */
-	if (reg_is_indoor != is_indoor) {
+	if (reg_is_indoor == is_indoor) {
 		spin_unlock(&reg_indoor_lock);
 		return 0;
 	}
