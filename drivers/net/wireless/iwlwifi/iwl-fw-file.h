@@ -382,6 +382,10 @@ enum iwl_fw_dbg_reg_operator {
 	PRPH_ASSIGN,
 	PRPH_SETBIT,
 	PRPH_CLEARBIT,
+
+	INDIRECT_ASSIGN,
+	INDIRECT_SETBIT,
+	INDIRECT_CLEARBIT,
 };
 
 /**
