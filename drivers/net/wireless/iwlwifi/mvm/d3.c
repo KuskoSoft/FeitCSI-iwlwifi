@@ -1881,14 +1881,7 @@ static int __iwl_mvm_resume(struct iwl_mvm *mvm, bool test)
 	 * Query the current location and source from the D3 firmware so we
 	 * can play it back when we re-intiailize the D0 firmware
 	 */
-	if (iwl_mvm_is_lar_supported(mvm)) {
-		struct ieee80211_regdomain *regd =
-					iwl_mvm_get_current_regdomain(mvm);
-		if (!IS_ERR_OR_NULL(regd)) {
-			regulatory_set_wiphy_regd(mvm->hw->wiphy, regd);
-			kfree(regd);
-		}
-	}
+	iwl_mvm_update_changed_regdom(mvm);
 
 	if (mvm->net_detect) {
 		iwl_mvm_query_netdetect_reasons(mvm, vif);
