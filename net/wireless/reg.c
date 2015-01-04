@@ -137,7 +137,7 @@ static int reg_num_devs_support_basehint;
  * relaxation, operation in an indoor environment allows instantiation of a P2P
  * GO on channels that have %IEEE80211_CHAN_INDOOR_ONLY set, and in addition
  * allows a P2P GO to continue operation on a channel that has
- * %IEEE80211_CHAN_GO_CONCURRENT set even if there is no longer a station
+ * %IEEE80211_CHAN_IR_CONCURRENT set even if there is no longer a station
  * interface connection that enables the NO_IR relaxation.
  * (protected by RTNL)
  */
@@ -993,8 +993,8 @@ static u32 map_regdom_flags(u32 rd_flags)
 		channel_flags |= IEEE80211_CHAN_NO_OFDM;
 	if (rd_flags & NL80211_RRF_NO_OUTDOOR)
 		channel_flags |= IEEE80211_CHAN_INDOOR_ONLY;
-	if (rd_flags & NL80211_RRF_GO_CONCURRENT)
-		channel_flags |= IEEE80211_CHAN_GO_CONCURRENT;
+	if (rd_flags & NL80211_RRF_IR_CONCURRENT)
+		channel_flags |= IEEE80211_CHAN_IR_CONCURRENT;
 	if (rd_flags & NL80211_RRF_NO_HT40MINUS)
 		channel_flags |= IEEE80211_CHAN_NO_HT40MINUS;
 	if (rd_flags & NL80211_RRF_NO_HT40PLUS)
