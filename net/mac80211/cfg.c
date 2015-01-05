@@ -1088,6 +1088,10 @@ static int sta_apply_parameters(struct ieee80211_local *local,
 		ieee80211_vht_cap_ie_to_sta_vht_cap(sdata, sband,
 						    params->vht_capa, sta);
 
+	if (test_sta_flag(sta, WLAN_STA_TDLS_PEER) &&
+	    (params->ht_capa || params->vht_capa))
+		ieee80211_sta_set_rx_nss(sta);
+
 	if (params->opmode_notif_used) {
 		/* returned value is only needed for rc update, but the
 		 * rc isn't initialized here yet, so ignore it
