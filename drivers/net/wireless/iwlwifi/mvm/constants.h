@@ -180,7 +180,6 @@
 #define IWL_MVM_UAPSD_AGGDETECT_MIN_PKTS	(mvm->trans->dbg_cfg.MVM_UAPSD_AGGDETECT_MIN_PKTS)
 #endif /* CPTCFG_IWLMVM_TCM */
 #define IWL_MVM_QUOTA_THRESHOLD			(mvm->trans->dbg_cfg.MVM_QUOTA_THRESHOLD)
-#define IWL_MVM_RRM_PRETEND_QUIET_SUPPORT	(mvm->trans->dbg_cfg.MVM_RRM_PRETEND_QUIET_SUPPORT)
 #define IWL_MVM_RS_RSSI_BASED_INIT_RATE         (mvm->trans->dbg_cfg.MVM_RS_RSSI_BASED_INIT_RATE)
 #define IWL_MVM_RS_DISABLE_P2P_MIMO             (mvm->trans->dbg_cfg.MVM_RS_DISABLE_P2P_MIMO)
 #define IWL_MVM_RS_NUM_TRY_BEFORE_ANT_TOGGLE    (mvm->trans->dbg_cfg.MVM_RS_NUM_TRY_BEFORE_ANT_TOGGLE)
