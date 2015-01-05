@@ -1211,6 +1211,9 @@ enum ieee80211_vif_flags {
  *	these need to be set (or cleared) when the interface is added
  *	or, if supported by the driver, the interface type is changed
  *	at runtime, mac80211 will never touch this field
+ * @filter_gratuitous_arp_unscol_na: User space configuration if to filter
+ *	gratuitous arp & unsolicited na packets
+ * @filter_gtk: User space configuration if to filter gtk packets
  * @hw_queue: hardware queue for each AC
  * @cab_queue: content-after-beacon (DTIM beacon really) queue, AP mode only
  * @chanctx_conf: The channel context this interface is assigned to, or %NULL
@@ -1237,6 +1240,9 @@ struct ieee80211_vif {
 	struct ieee80211_chanctx_conf __rcu *chanctx_conf;
 
 	u32 driver_flags;
+
+	bool filter_grat_arp_unsol_na;
+	bool filter_gtk;
 
 #ifdef CPTCFG_MAC80211_DEBUGFS
 	struct dentry *debugfs_dir;

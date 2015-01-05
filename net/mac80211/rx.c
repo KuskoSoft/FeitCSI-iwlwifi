@@ -23,6 +23,7 @@
 #include <asm/unaligned.h>
 
 #include "ieee80211_i.h"
+#include "packet_filtering.h"
 #include "driver-ops.h"
 #include "led.h"
 #include "mesh.h"
@@ -2022,6 +2023,22 @@ ieee80211_deliver_skb(struct ieee80211_rx_data *rx)
 
 	skb = rx->skb;
 	xmit_skb = NULL;
+
+	/*
+	 * Filter packets in case that configured to do so by user space,
+	 * and we are associated to an Hotspot AP and have an IP address.
+	 */
+	if (sdata->vif.filter_grat_arp_unsol_na &&
+	    sdata->vif.bss_conf.arp_addr_cnt &&
+	    ieee80211_is_gratuitous_arp_unsolicited_na(skb)) {
+		dev_kfree_skb(skb);
+		return;
+	}
+	if (sdata->vif.filter_gtk && sdata->vif.bss_conf.arp_addr_cnt &&
+	    ieee80211_is_shared_gtk(skb)) {
+		dev_kfree_skb(skb);
+		return;
+	}
 
 	if ((sdata->vif.type == NL80211_IFTYPE_AP ||
 	     sdata->vif.type == NL80211_IFTYPE_AP_VLAN) &&
