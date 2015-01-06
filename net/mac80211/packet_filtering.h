@@ -15,9 +15,11 @@
 
 #ifndef PACKET_FILTER_H
 #define PACKET_FILTER_H
-
+#include <linux/if_arp.h>
 #include <net/ip_fib.h>
 #include <net/ip.h>
+#include <net/ndisc.h>
+#include <net/ipv6.h>
 
 /**
  * ieee80211_is_shared_gtk - packet is GTK
