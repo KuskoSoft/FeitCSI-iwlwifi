@@ -2588,11 +2588,91 @@ static u32 iwl_trans_sdio_dump_csr(struct iwl_trans *trans,
 	return csr_len;
 }
 
-static
-struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
+/*
+ * Dump TXQ data, or just return the length of the data that would be written.
+ *
+ * @trans: the generic transport layer
+ * @max_len: maximal_length to return. Ignored if %data% is NULL.
+ * @data: where to dump the TXQ to, only if it isn't NULL.
+ *
+ * @return how many bytes were written to dump data (if %data% isn't NULL), or
+ *	how many bytes would have been written to the TLV (if it is NULL)
+ *	(including T and L part of the TLV in both cases)
+ */
+static u32 iwl_trans_sdio_dump_txq(struct iwl_trans *trans, u32 max_len,
+				   struct iwl_fw_error_dump_data **data)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct iwl_slv_tx_queue *txq = &trans_slv->txqs[trans_slv->cmd_queue];
+	u32 txq_data_len = 0;
+
+	if (data == NULL)
+		/* 15MB seems like a limit we shouldn't reach anyway... */
+		max_len = 0xffffff;
+
+	/* If got no room to write - we can return now... */
+	if (max_len == 0)
+		return 0;
+
+	/* Copy all sent TX commands in the queue */
+	spin_lock_bh(&trans_slv->txq_lock);
+	if (!list_empty(&txq->sent)) {
+		struct iwl_slv_txq_entry *txq_entry;
+		struct iwl_slv_tx_cmd_entry *queued_cmd;
+		struct iwl_device_cmd *dev_cmd;
+		struct iwl_fw_error_dump_txcmd *txcmd = NULL;
+		u16 cmdlen, caplen;
+
+		txq_data_len = sizeof(struct iwl_fw_error_dump_data);
+
+		if (data) {
+			(*data)->type = cpu_to_le32(IWL_FW_ERROR_DUMP_TXCMD);
+			txcmd = (void *)(*data)->data;
+		}
+
+		list_for_each_entry(txq_entry, &txq->sent, list) {
+			queued_cmd = list_entry(txq_entry,
+						struct iwl_slv_tx_cmd_entry,
+						txq_entry);
+
+			dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv,
+							    queued_cmd);
+
+			cmdlen = sizeof(*dev_cmd);
+			caplen = queued_cmd->txq_entry.dtu_meta.total_len;
+			caplen = min_t(u32, cmdlen, caplen);
+
+			txq_data_len += sizeof(struct iwl_fw_error_dump_txcmd) +
+					       caplen;
+			if (data) {
+				if (txq_data_len <= max_len) {
+					txcmd->cmdlen = cpu_to_le32(cmdlen);
+					txcmd->caplen = cpu_to_le32(caplen);
+					memcpy(txcmd->data, dev_cmd, caplen);
+					txcmd = (void *)((u8 *)txcmd->data +
+							 caplen);
+				} else {
+					txq_data_len -= (sizeof(*txcmd) +
+							 caplen);
+					break;
+				}
+			}
+		}
+
+		if (data) {
+			(*data)->len =
+				cpu_to_le32(txq_data_len - sizeof(**data));
+			*data = iwl_fw_error_next_data(*data);
+		}
+	}
+	spin_unlock_bh(&trans_slv->txq_lock);
+
+	return txq_data_len;
+}
+
+static
+struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
+{
 	struct iwl_fw_error_dump_data *data;
 	struct iwl_trans_dump_data *dump_data;
 	u32 base = 0;
@@ -2600,6 +2680,7 @@ struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
 	u32 base_addr = 0;
 	int monitor_len = 0;
 	u32 len;
+	u32 txq_len;
 
 	/* transport dump header */
 	len = sizeof(*dump_data);
@@ -2610,13 +2691,9 @@ struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
 	/* FH registers */
 	len += sizeof(*data) + (FH_MEM_UPPER_BOUND - FH_MEM_LOWER_BOUND);
 
-	/* host commands */
-	spin_lock_bh(&trans_slv->txq_lock);
-	if (!list_empty(&txq->waiting))
-		len += sizeof(*data) +
-		       (atomic_read(&txq->waiting_count) *
-			sizeof(struct iwl_device_cmd));
-	spin_unlock_bh(&trans_slv->txq_lock);
+	/* TXQ data */
+	txq_len = iwl_trans_sdio_dump_txq(trans, 0, NULL);
+	len += txq_len; /* txq_len already includes the sizeof(*data) */
 
 	/* FW monitor, assuming the registers can be accessed */
 	if (trans->dbg_dest_tlv) {
@@ -2649,42 +2726,7 @@ struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
 	data = (void *)dump_data->data;
 
 	/* Copy all waiting TX commands in the queue */
-	spin_lock_bh(&trans_slv->txq_lock);
-	if (!list_empty(&txq->waiting)) {
-		struct iwl_slv_txq_entry *txq_entry;
-		struct iwl_slv_tx_cmd_entry *queued_cmd;
-		struct iwl_device_cmd *dev_cmd;
-		struct iwl_fw_error_dump_txcmd *txcmd;
-		u32 txq_data_len = 0;
-		u16 cmdlen, caplen;
-
-		data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_TXCMD);
-
-		txcmd = (void *)data->data;
-		list_for_each_entry(txq_entry, &txq->waiting, list) {
-			queued_cmd = list_entry(txq_entry,
-						struct iwl_slv_tx_cmd_entry,
-						txq_entry);
-
-			dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv,
-							    queued_cmd);
-
-			cmdlen = sizeof(*dev_cmd);
-			caplen = queued_cmd->txq_entry.dtu_meta.total_len;
-			caplen = min_t(u32, cmdlen, caplen);
-			txcmd->cmdlen = cpu_to_le32(cmdlen);
-			txcmd->caplen = cpu_to_le32(caplen);
-			memcpy(txcmd->data, dev_cmd, caplen);
-			txcmd = (void *)((u8 *)txcmd->data + caplen);
-
-			txq_data_len += sizeof(*txcmd) + caplen;
-		}
-
-		data->len = cpu_to_le32(txq_data_len);
-		len += sizeof(*data) + txq_data_len;
-		data = iwl_fw_error_next_data(data);
-	}
-	spin_unlock_bh(&trans_slv->txq_lock);
+	len = iwl_trans_sdio_dump_txq(trans, txq_len, &data);
 
 	len += iwl_trans_sdio_dump_csr(trans, &data);
 	len += iwl_trans_sdio_fh_regs_dump(trans, &data);
