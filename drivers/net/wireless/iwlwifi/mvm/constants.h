@@ -109,7 +109,7 @@
 #define IWL_MVM_TCM_LOAD_HIGH_THRESH		50 /* percentage */
 #define IWL_MVM_TCM_LOWLAT_ENABLE_THRESH	100 /* packets/10 seconds */
 #define IWL_MVM_QUOTA_AIRTIME_THRESH		16 /* 16 percent */
-#define IWL_MVM_LOWLAT_QUOTA_LOWTRAF_PERCENT	80 /* for low BSS traffic */
+#define IWL_MVM_LOWLAT_QUOTA_LOWTRAF_PERCENT	64 /* for low BSS traffic */
 #define IWL_MVM_UAPSD_AGGDETECT_MIN_PKTS	50
 #endif /* CPTCFG_IWLMVM_TCM */
 #define IWL_MVM_RS_NUM_TRY_BEFORE_ANT_TOGGLE    1
