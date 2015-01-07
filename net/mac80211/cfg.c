@@ -3722,6 +3722,46 @@ static int ieee80211_del_tx_ts(struct wiphy *wiphy, struct net_device *dev,
 	return -ENOENT;
 }
 
+static void ieee80211_ratestats(struct wiphy *wiphy,
+				enum cfg80211_ratestats_ops op)
+{
+	struct ieee80211_local *local = wiphy_priv(wiphy);
+	struct sta_info *sta;
+	struct ieee80211_sta_ratestats *stats, *tmp;
+	LIST_HEAD(list);
+
+	mutex_lock(&local->sta_mtx);
+	switch (op) {
+	case CFG80211_RATESTATS_START:
+		local->ratestats_active = true;
+		list_for_each_entry(sta, &local->sta_list, list)
+			ieee80211_sta_start_ratestats(sta);
+		/* list stays empty */
+		break;
+	case CFG80211_RATESTATS_DUMP:
+		list_for_each_entry(sta, &local->sta_list, list) {
+			stats = ieee80211_sta_reset_ratestats(sta);
+			if (stats)
+				list_add_tail(&stats->list, &list);
+		}
+		break;
+	case CFG80211_RATESTATS_STOP:
+		local->ratestats_active = false;
+		list_for_each_entry(sta, &local->sta_list, list) {
+			stats = ieee80211_sta_stop_ratestats(sta);
+			if (stats)
+				list_add_tail(&stats->list, &list);
+		}
+		break;
+	}
+	mutex_unlock(&local->sta_mtx);
+
+	if (!list_empty(&list))
+		synchronize_rcu();
+	list_for_each_entry_safe(stats, tmp, &list, list)
+		ieee80211_sta_free_ratestats(stats, true);
+}
+
 const struct cfg80211_ops mac80211_config_ops = {
 	.add_virtual_intf = ieee80211_add_iface,
 	.del_virtual_intf = ieee80211_del_iface,
@@ -3806,4 +3846,5 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.set_ap_chanwidth = ieee80211_set_ap_chanwidth,
 	.add_tx_ts = ieee80211_add_tx_ts,
 	.del_tx_ts = ieee80211_del_tx_ts,
+	.ratestats = ieee80211_ratestats,
 };

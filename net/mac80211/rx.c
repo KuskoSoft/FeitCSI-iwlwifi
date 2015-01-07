@@ -2309,6 +2309,56 @@ ieee80211_rx_h_mesh_fwding(struct ieee80211_rx_data *rx)
 }
 #endif
 
+static noinline void
+ieee80211_rx_handle_ratestats(struct ieee80211_local *local,
+			      struct ieee80211_rx_status *status,
+			      struct ieee80211_sta_ratestats *rstats)
+{
+	u16 rate = sta_ratestats_encode_rate(status);
+	unsigned int start;
+	int i;
+
+	start = status->rate_idx;
+	/* for HT - use only the base index */
+	if (status->flag & RX_FLAG_HT)
+		start &= 0xF;
+	for (i = start; i < start + 3; i++) {
+		if (rstats->entries[i].rate == rate ||
+		    rstats->entries[i].rate == STA_RATESTATS_RATE_INVALID) {
+			if (rstats->entries[i].rate ==
+					STA_RATESTATS_RATE_INVALID)
+				rstats->entries[i].rate = rate;
+			if (rstats->entries[i].rx++ > 64000)
+				goto schedule_dump;
+			return;
+		}
+	}
+
+	/* The last six entries are only really used by legacy rates - so
+	 * not that performance sensitive.  For HT and VHT though, only the
+	 * first 24 (3*8) or 30 (3*10) entries can be used, so try the last
+	 * few in the list as "escape" entries. If any such entry is used
+	 * then schedule dumping to userspace unconditionally to avoid going
+	 * into this code path frequently.
+	 */
+	for (i = ARRAY_SIZE(rstats->entries) - 1;
+	     i > ARRAY_SIZE(rstats->entries) - 7; i--) {
+		if (rstats->entries[i].rate == rate ||
+		    rstats->entries[i].rate == STA_RATESTATS_RATE_INVALID) {
+			if (rstats->entries[i].rate ==
+					STA_RATESTATS_RATE_INVALID)
+				rstats->entries[i].rate = rate;
+			rstats->entries[i].rx++;
+			break;
+		}
+	}
+
+	/* if we still didn't find anything, drop the stats for this packet */
+
+ schedule_dump:
+	ieee80211_queue_work(&local->hw, &rstats->dump_wk);
+}
+
 static ieee80211_rx_result debug_noinline
 ieee80211_rx_h_data(struct ieee80211_rx_data *rx)
 {
@@ -2327,12 +2377,19 @@ ieee80211_rx_h_data(struct ieee80211_rx_data *rx)
 		return RX_DROP_MONITOR;
 
 	if (rx->sta) {
+		struct ieee80211_sta_ratestats *rstats;
+
 		/* The seqno index has the same property as needed
 		 * for the rx_msdu field, i.e. it is IEEE80211_NUM_TIDS
 		 * for non-QoS-data frames. Here we know it's a data
 		 * frame, so count MSDUs.
 		 */
 		rx->sta->rx_msdu[rx->seqno_idx]++;
+
+		rstats = rcu_dereference(rx->sta->ratestats);
+		if (rstats)
+			ieee80211_rx_handle_ratestats(local,
+				IEEE80211_SKB_RXCB(rx->skb), rstats);
 	}
 
 	/*

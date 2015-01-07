@@ -554,6 +554,9 @@ static int sta_info_insert_finish(struct sta_info *sta) __acquires(RCU)
 	local->sta_generation++;
 	smp_mb();
 
+	if (local->ratestats_active)
+		ieee80211_sta_start_ratestats(sta);
+
 	/* simplify things and don't accept BA sessions yet */
 	set_sta_flag(sta, WLAN_STA_BLOCK_BA);
 
@@ -939,6 +942,7 @@ static void __sta_info_destroy_part2(struct sta_info *sta)
 	struct ieee80211_local *local = sta->local;
 	struct ieee80211_sub_if_data *sdata = sta->sdata;
 	struct station_info sinfo = {};
+	struct ieee80211_sta_ratestats *stats;
 	int ret;
 
 	/*
@@ -975,6 +979,10 @@ static void __sta_info_destroy_part2(struct sta_info *sta)
 	}
 
 	sta_dbg(sdata, "Removed STA %pM\n", sta->sta.addr);
+
+	stats = ieee80211_sta_stop_ratestats(sta);
+	/* station was already unlinked and rcu sync'ed before getting here */
+	ieee80211_sta_free_ratestats(stats, true);
 
 	sta_set_sinfo(sta, &sinfo);
 	cfg80211_del_sta_sinfo(sdata->dev, sta->sta.addr, &sinfo, GFP_KERNEL);
@@ -2006,4 +2014,136 @@ void sta_set_sinfo(struct sta_info *sta, struct station_info *sinfo)
 		sinfo->filled |= BIT(NL80211_STA_INFO_EXPECTED_THROUGHPUT);
 		sinfo->expected_throughput = thr;
 	}
+}
+
+static void sta_ratestats_decode_rate(u16 r, struct ieee80211_local *local,
+				       struct rate_info *rinfo)
+{
+	rinfo->bw = (r & STA_RATESTATS_RATE_BW_MASK) >>
+		STA_RATESTATS_RATE_BW_SHIFT;
+
+	if (r & STA_RATESTATS_RATE_VHT) {
+		rinfo->flags = RATE_INFO_FLAGS_VHT_MCS;
+		rinfo->mcs = r & 0xf;
+		rinfo->nss = (r & 0xf0) >> 4;
+	} else if (r & STA_RATESTATS_RATE_HT) {
+		rinfo->flags = RATE_INFO_FLAGS_MCS;
+		rinfo->mcs = r & 0xff;
+	} else if (r & STA_RATESTATS_RATE_LEGACY) {
+		struct ieee80211_supported_band *sband;
+		u16 brate;
+		unsigned int shift;
+
+		sband = local->hw.wiphy->bands[(r >> 4) & 0xf];
+		brate = sband->bitrates[r & 0xf].bitrate;
+		if (rinfo->bw == RATE_INFO_BW_5)
+			shift = 2;
+		else if (rinfo->bw == RATE_INFO_BW_10)
+			shift = 1;
+		else
+			shift = 0;
+		rinfo->legacy = DIV_ROUND_UP(brate, 1 << shift);
+	}
+
+	if (r & STA_RATESTATS_RATE_SGI)
+		rinfo->flags |= RATE_INFO_FLAGS_SHORT_GI;
+}
+
+void ieee80211_sta_start_ratestats(struct sta_info *sta)
+{
+	struct ieee80211_sta_ratestats *stats;
+
+	stats = ieee80211_sta_reset_ratestats(sta);
+
+	if (WARN_ON_ONCE(stats)) {
+		/* error case - be really slow but correct */
+		synchronize_rcu();
+		ieee80211_sta_free_ratestats(stats, true);
+	}
+}
+
+static void ieee80211_sta_dump_ratestats_wk(struct work_struct *wk)
+{
+	struct ieee80211_sta_ratestats *stats, *stats2;
+
+	stats = container_of(wk, struct ieee80211_sta_ratestats, dump_wk);
+
+	mutex_lock(&stats->sta->local->sta_mtx);
+	stats2 = ieee80211_sta_reset_ratestats(stats->sta);
+	mutex_unlock(&stats->sta->local->sta_mtx);
+
+	if (!stats2)
+		return;
+
+	WARN_ON_ONCE(stats != stats2);
+
+	synchronize_rcu();
+	ieee80211_sta_free_ratestats(stats, false);
+}
+
+struct ieee80211_sta_ratestats * __must_check
+ieee80211_sta_reset_ratestats(struct sta_info *sta)
+{
+	struct ieee80211_sta_ratestats *stats, *new;
+
+	stats = rcu_dereference_protected(sta->ratestats,
+			lockdep_is_held(&sta->local->sta_mtx));
+
+	new = kzalloc(sizeof(*new), GFP_KERNEL);
+	if (!new)
+		return NULL;
+	new->sta = sta;
+	INIT_WORK(&new->dump_wk, ieee80211_sta_dump_ratestats_wk);
+
+	rcu_assign_pointer(sta->ratestats, new);
+
+	/* caller must wait for grace period and free data */
+	return stats;
+}
+
+struct ieee80211_sta_ratestats * __must_check
+ieee80211_sta_stop_ratestats(struct sta_info *sta)
+{
+	struct ieee80211_sta_ratestats *stats;
+
+	stats = rcu_dereference_protected(sta->ratestats,
+			lockdep_is_held(&sta->local->sta_mtx));
+
+	RCU_INIT_POINTER(sta->ratestats, NULL);
+
+	/* caller must wait for grace period and free data */
+	return stats;
+}
+
+void ieee80211_sta_free_ratestats(struct ieee80211_sta_ratestats *stats,
+				  bool flush)
+{
+	struct cfg80211_ratestats report;
+	struct sta_info *sta;
+	int i;
+
+	if (!stats)
+		return;
+
+	if (flush && flush_work(&stats->dump_wk))
+		return;
+
+	sta = stats->sta;
+
+	for (i = 0; i < ARRAY_SIZE(stats->entries); i++) {
+		if (stats->entries[i].rate == STA_RATESTATS_RATE_INVALID)
+			continue;
+
+		sta_ratestats_decode_rate(stats->entries[i].rate,
+					  stats->sta->local, &report.rate);
+
+		report.stats.filled = BIT(NL80211_TID_STATS_RX_MSDU);
+		report.stats.rx_msdu = stats->entries[i].rx;
+
+		cfg80211_report_ratestats(sta->local->hw.wiphy,
+					  &sta->sdata->wdev, sta->sta.addr,
+					  1, &report, GFP_KERNEL);
+	}
+
+	kfree(stats);
 }
