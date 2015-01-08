@@ -1220,11 +1220,17 @@ void iwl_trans_pcie_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
 		if (txq_id == trans_pcie->cmd_queue &&
 		    trans_pcie->scd_set_active)
 			iwl_scd_enable_set_active(trans, BIT(txq_id));
+
+		IWL_DEBUG_TX_QUEUES(trans,
+				    "Activate queue %d on FIFO %d WrPtr: %d\n",
+				    txq_id, fifo, ssn & 0xff);
+	} else {
+		IWL_DEBUG_TX_QUEUES(trans,
+				    "Activate queue %d WrPtr: %d\n",
+				    txq_id, ssn & 0xff);
 	}
 
 	trans_pcie->txq[txq_id].active = true;
-	IWL_DEBUG_TX_QUEUES(trans, "Activate queue %d on FIFO %d WrPtr: %d\n",
-			    txq_id, fifo, ssn & 0xff);
 }
 
 void iwl_trans_pcie_txq_disable(struct iwl_trans *trans, int txq_id,
