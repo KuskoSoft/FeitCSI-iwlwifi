@@ -596,7 +596,7 @@ void iwl_mvm_hwrate_to_tx_rate(u32 rate_n_flags,
 #ifdef CPTCFG_IWLMVM_TCM
 static void iwl_mvm_tx_airtime(struct iwl_mvm *mvm,
 			       struct iwl_mvm_sta *mvmsta,
-			       int tid, int airtime)
+			       int tid, int airtime, u8 frame_count)
 {
 	u32 ac = tid_to_mac80211_ac[tid];
 	int mac = mvmsta->mac_id_n_color & FW_CTXT_ID_MSK;
@@ -607,7 +607,7 @@ static void iwl_mvm_tx_airtime(struct iwl_mvm *mvm,
 
 	if (time_after(jiffies, mvm->tcm.ts + MVM_TCM_PERIOD))
 		iwl_mvm_recalc_tcm(mvm);
-	mdata->tx.pkts[ac]++;
+	mdata->tx.pkts[ac] += frame_count;
 	mdata->tx.airtime[ac] += airtime;
 }
 #endif
@@ -749,7 +749,8 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm *mvm,
 #ifdef CPTCFG_IWLMVM_TCM
 		iwl_mvm_tx_airtime(mvm, mvmsta,
 				   tid == IWL_TID_NON_QOS ? 0 : tid,
-				   le16_to_cpu(tx_resp->wireless_media_time));
+				   le16_to_cpu(tx_resp->wireless_media_time),
+				   1);
 #endif
 
 		if (tid != IWL_TID_NON_QOS) {
@@ -898,7 +899,8 @@ static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm *mvm,
 
 #ifdef CPTCFG_IWLMVM_TCM
 		iwl_mvm_tx_airtime(mvm, mvmsta, tid,
-				   le16_to_cpu(tx_resp->wireless_media_time));
+				   le16_to_cpu(tx_resp->wireless_media_time),
+				   tx_resp->frame_count);
 #endif
 	}
 
