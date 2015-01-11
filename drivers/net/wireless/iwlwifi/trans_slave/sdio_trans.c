@@ -1746,6 +1746,18 @@ static int iwl_sdio_load_cpu_sections_8000b(struct iwl_trans *trans,
 
 	*first_ucode_section = last_read_idx;
 
+	/* indicate to FW that CPUs sections loaded */
+	if (cpu == 1)
+		load_status = 0xFFFF;
+	else
+		load_status = 0xFFFFFFFF;
+
+	ret = iwl_sdio_ta_write(trans, FH_UCODE_LOAD_STATUS,
+				sizeof(u32), &load_status,
+				IWL_SDIO_TA_AC_DIRECT);
+	if (ret)
+		return ret;
+
 	return 0;
 }
 
@@ -2017,18 +2029,10 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 		sdio_claim_host(trans_sdio->func);
 #endif
 
-		/* Notify FW loading is done */
-		write_data = 0xFFFFFFFF;
-		ret = iwl_sdio_ta_write(trans, FH_UCODE_LOAD_STATUS,
-					sizeof(u32), &write_data,
-					IWL_SDIO_TA_AC_DIRECT);
-		if (ret)
-			goto exit_err;
-
 		/* wait for image verification to complete  */
 		/* polling on CSR_CPU_STATUS_LOADING_COMPLETED	*/
 		ret = iwl_sdio_poll_prph_bits(trans,
-					LMPM_SECURE_BOOT_CPU1_STATUS_ADDR_B0,
+					LMPM_SECURE_BOOT_CPU1_STATUS_ADDR,
 					LMPM_SECURE_BOOT_STATUS_SUCCESS,
 					LMPM_SECURE_BOOT_STATUS_SUCCESS,
 					LMPM_SECURE_TIME_OUT);
