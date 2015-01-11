@@ -1411,8 +1411,42 @@ static struct iwl_mvm_phy_ctxt *iwl_mvm_get_free_phy_ctxt(struct iwl_mvm *mvm)
 	return NULL;
 }
 
-static int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
-				s8 tx_power)
+static void iwl_mvm_tx_power_iterator(void *_data, u8 *mac,
+				      struct ieee80211_vif *vif)
+{
+	int *min_tx_power = _data;
+
+	*min_tx_power = min(vif->bss_conf.user_power_level, *min_tx_power);
+}
+
+static int iwl_mvm_set_tx_power_device(struct iwl_mvm *mvm,
+				       struct ieee80211_vif *vif,
+				       s16 tx_power)
+{
+	struct iwl_dev_tx_power_cmd cmd = {
+		.set_mode = 1,
+	};
+	s16 min_tx_power = IWL_USER_MAX_TX_POWER;
+
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_TX_POWER_DEV))
+		return 0;
+
+	ieee80211_iterate_active_interfaces_atomic(
+		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+		iwl_mvm_tx_power_iterator, &min_tx_power);
+
+	if (min_tx_power != IWL_USER_MAX_TX_POWER)
+		min_tx_power *= 8;
+	cmd.dev_24 = cpu_to_le16(min_tx_power);
+	cmd.dev_52_low = cpu_to_le16(min_tx_power);
+	cmd.dev_52_high = cpu_to_le16(min_tx_power);
+
+	return iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0,
+				    sizeof(cmd), &cmd);
+}
+
+static int iwl_mvm_set_tx_power_old(struct iwl_mvm *mvm,
+				    struct ieee80211_vif *vif, s8 tx_power)
 {
 	/* FW is in charge of regulatory enforcement */
 	struct iwl_reduce_tx_power_cmd reduce_txpwr_cmd = {
@@ -1423,6 +1457,25 @@ static int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	return iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0,
 				    sizeof(reduce_txpwr_cmd),
 				    &reduce_txpwr_cmd);
+}
+
+static int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
+				s16 tx_power)
+{
+	struct iwl_dev_tx_power_cmd cmd = {
+		.set_mode = 0,
+		.mac_context_id = iwl_mvm_vif_from_mac80211(vif)->id,
+		.pwr_restriction = cpu_to_le16(8 * tx_power),
+	};
+
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_TX_POWER_DEV))
+		return iwl_mvm_set_tx_power_old(mvm, vif, tx_power);
+
+	if (tx_power == IWL_DEFAULT_MAX_TX_POWER)
+		cmd.pwr_restriction = cpu_to_le16(IWL_USER_MAX_TX_POWER);
+
+	return iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0,
+				    sizeof(cmd), &cmd);
 }
 
 static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
@@ -2055,6 +2108,10 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 		iwl_mvm_set_tx_power(mvm, vif, bss_conf->txpower);
 	}
 
+	if (changes & BSS_CHANGED_USER_TXPOWER)
+		iwl_mvm_set_tx_power_device(mvm, vif,
+					    bss_conf->user_power_level);
+
 	if (changes & BSS_CHANGED_CQM) {
 		IWL_DEBUG_MAC80211(mvm, "cqm info_changed\n");
 		/* reset cqm events tracking */
@@ -2229,6 +2286,9 @@ iwl_mvm_bss_info_changed_ap_ibss(struct iwl_mvm *mvm,
 		iwl_mvm_set_tx_power(mvm, vif, bss_conf->txpower);
 	}
 
+	if (changes & BSS_CHANGED_USER_TXPOWER)
+		iwl_mvm_set_tx_power_device(mvm, vif,
+					    bss_conf->user_power_level);
 }
 
 static void iwl_mvm_bss_info_changed(struct ieee80211_hw *hw,
