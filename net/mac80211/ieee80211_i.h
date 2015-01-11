@@ -867,7 +867,6 @@ struct ieee80211_sub_if_data {
 	u8 needed_rx_chains;
 	enum ieee80211_smps_mode smps_mode;
 
-	int user_power_level; /* in dBm */
 	int ap_power_level; /* in dBm */
 
 	bool radar_required;
