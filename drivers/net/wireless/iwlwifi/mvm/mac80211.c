@@ -2305,7 +2305,7 @@ static void iwl_mvm_check_uapsd(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	}
 
 #ifdef CPTCFG_IWLMVM_TCM
-	for (i = 0; i < IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM; i++) {
+	for (i = 0; i < IWL_MVM_UAPSD_NOAGG_LIST_LEN; i++) {
 		if (ether_addr_equal(mvm->uapsd_noagg_bssids[i].addr, bssid)) {
 			vif->driver_flags &= ~IEEE80211_VIF_SUPPORTS_UAPSD;
 			return;

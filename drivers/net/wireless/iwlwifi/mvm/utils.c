@@ -878,7 +878,7 @@ static void iwl_mvm_tcm_uapsd_nonagg_detected_wk(struct work_struct *wk)
 	memcpy(mvm->uapsd_noagg_bssids[mvm->uapsd_noagg_bssid_write_idx].addr,
 	       vif->bss_conf.bssid, ETH_ALEN);
 	mvm->uapsd_noagg_bssid_write_idx++;
-	if (mvm->uapsd_noagg_bssid_write_idx >= IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM)
+	if (mvm->uapsd_noagg_bssid_write_idx >= IWL_MVM_UAPSD_NOAGG_LIST_LEN)
 		mvm->uapsd_noagg_bssid_write_idx = 0;
 
 	ieee80211_connection_loss(vif);

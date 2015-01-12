@@ -794,7 +794,6 @@ struct iwl_mvm {
 	bool temperature_test;  /* Debug test temperature is enabled */
 
 #ifdef CPTCFG_IWLMVM_TCM
-#define IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM	20
 	unsigned long bt_coex_last_tcm_ts;
 
 	u8 uapsd_noagg_bssid_write_idx;
