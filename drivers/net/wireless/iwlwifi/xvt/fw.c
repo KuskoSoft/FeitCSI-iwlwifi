@@ -214,7 +214,7 @@ static int iwl_xvt_load_ucode_wait_alive(struct iwl_xvt *xvt,
 	if (ucode_type == IWL_UCODE_REGULAR)
 		iwl_trans_ac_txq_enable(xvt->trans,
 					IWL_XVT_DEFAULT_TX_QUEUE,
-					IWL_XVT_DEFAULT_TX_FIFO);
+					IWL_XVT_DEFAULT_TX_FIFO, 0);
 
 	xvt->fw_running = true;
 

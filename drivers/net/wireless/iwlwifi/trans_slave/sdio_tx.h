@@ -233,7 +233,8 @@ int iwl_sdio_flush_dtus(struct iwl_trans *trans);
 void iwl_sdio_tx_free_dtu_mem(struct iwl_trans *trans, void **data);
 void iwl_sdio_tx_clean_dtu(struct iwl_trans *trans, void *data);
 void iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
-			       const struct iwl_trans_txq_scd_cfg *cfg);
+			       const struct iwl_trans_txq_scd_cfg *cfg,
+			       unsigned int wdg_timeout);
 void iwl_trans_sdio_txq_disable(struct iwl_trans *trans, int txq_id,
 				bool configure_scd);
 

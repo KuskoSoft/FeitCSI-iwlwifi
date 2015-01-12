@@ -157,7 +157,8 @@ void iwl_trans_sdio_txq_disable(struct iwl_trans *trans, int txq_id,
 }
 
 void iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
-			       const struct iwl_trans_txq_scd_cfg *cfg)
+			       const struct iwl_trans_txq_scd_cfg *cfg,
+			       unsigned int wdg_timeout)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
@@ -322,7 +323,7 @@ void iwl_sdio_tx_start(struct iwl_trans *trans, u32 scd_base_addr)
 
 	/* enable command queue */
 	iwl_trans_ac_txq_enable(trans, trans_slv->cmd_queue,
-				trans_slv->cmd_fifo);
+				trans_slv->cmd_fifo, 0);
 
 	iwl_scd_activate_fifos(trans);
 
