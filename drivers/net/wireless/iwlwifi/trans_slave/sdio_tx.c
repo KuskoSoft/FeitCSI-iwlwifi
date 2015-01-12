@@ -977,7 +977,7 @@ int iwl_sdio_flush_dtus(struct iwl_trans *trans)
 	ret = sdio_writesb(func, IWL_SDIO_DATA_ADDR, trans_sdio->send_buf,
 			   trans_sdio->send_buf_idx);
 	if (ret)
-		IWL_ERR(trans, "Cannot send buffer\n");
+		IWL_ERR(trans, "Cannot send buffer %d\n", ret);
 	else
 		trans_sdio->send_buf_idx = 0;
 

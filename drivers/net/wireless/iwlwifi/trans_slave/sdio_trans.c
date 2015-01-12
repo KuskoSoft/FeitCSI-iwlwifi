@@ -243,7 +243,8 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 	/* Test that input is valid */
 	if ((length > IWL_SDIO_MAX_PAYLOAD_SIZE) ||
 	    (target_addr > IWL_SDIO_TA_MAX_ADDRESS)) {
-		IWL_ERR(trans, "Cannot send buffer for TA command\n");
+		IWL_ERR(trans, "Bad parameters for TA write %d 0x%x\n",
+			length, target_addr);
 		return -EINVAL;
 	}
 
@@ -284,7 +285,7 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 			   &trans_sdio->ta_buff,
 			   sizeof(struct iwl_sdio_cmd_buffer));
 	if (ret)
-		IWL_ERR(trans, "Cannot send buffer for TA command\n");
+		IWL_ERR(trans, "Cannot send buffer for TA command %d\n", ret);
 
 	return ret;
 }
@@ -364,7 +365,8 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	/* Test that input is valid */
 	if ((length > IWL_SDIO_TA_MAX_LENGTH) ||
 	    (target_addr > IWL_SDIO_TA_MAX_ADDRESS)) {
-		IWL_ERR(trans, "Cannot send buffer for TA command\n");
+		IWL_ERR(trans, "Bad parameters for TA read command %d 0x%x\n",
+			length, target_addr);
 		return -EINVAL;
 	}
 
@@ -407,7 +409,8 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 			   &trans_sdio->ta_buff,
 			   sizeof(struct iwl_sdio_cmd_buffer));
 	if (ret)
-		IWL_ERR(trans, "Cannot send buffer for TA READ command\n");
+		IWL_ERR(trans, "Cannot send buffer for TA READ command %d\n",
+			ret);
 
 	/* Wait for wake up event after the TA read buffer has been received */
 	sdio_release_host(func);
@@ -1633,7 +1636,7 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 			   send_len + block_pad_len);
 
 	if (ret)
-		IWL_ERR(trans, "Cannot send buffer\n");
+		IWL_ERR(trans, "Cannot send buffer %d\n", ret);
 
 	IWL_DEBUG_FW(trans,
 		     "data buffer in SRAM; data len = %d, address = %x\n",
