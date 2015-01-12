@@ -90,6 +90,8 @@ struct iwl_dbg_cfg {
 #define IWL_DBG_CFG_BIN(name)		struct iwl_dbg_cfg_bin name;
 #define IWL_DBG_CFG_BINA(name, max)	struct iwl_dbg_cfg_bin name[max]; \
 					int n_ ## name;
+#define IWL_DBG_CFG_RANGE(type, name, min, max)	\
+					DBG_CFG_##type name;
 #endif /* DBG_CFG_REINCLUDE */
 #if IS_ENABLED(CPTCFG_IWLXVT)
 	IWL_DBG_CFG(u32, XVT_DEFAULT_DBGM_MEM_POWER)
@@ -237,6 +239,7 @@ struct iwl_dbg_cfg {
 #undef IWL_DBG_CFG_NODEF
 #undef IWL_DBG_CFG_BIN
 #undef IWL_DBG_CFG_BINA
+#undef IWL_DBG_CFG_RANGE
 #ifndef DBG_CFG_REINCLUDE
 };
 
