@@ -876,12 +876,12 @@ static void iwl_sdio_config_tfd(struct iwl_trans *trans,
 	int idx;
 
 	/*
-	 * In 8000 HW family starting from B-step the tb_base is relative
+	 * In 8000 HW family starting from B/C-step the tb_base is relative
 	 * rather than absolute as the other NICs and steps.
 	 */
 	tb_base = trans_sdio->sf_mem_addresses->tb_base_addr;
 	if ((trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) &&
-	    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_B_STEP))
+	    (CSR_HW_REV_STEP(trans->hw_rev) != SILICON_A_STEP))
 		tb_base -= IWL_SDIO_8000B_SF_MEM_BASE_ADDR;
 
 	tfd = (void *)((u8 *)dtu_info->ctrl_buf +

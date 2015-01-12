@@ -1367,7 +1367,7 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 
 		/*
 		 * Set SDTM CSR register to disabled read optimization on 8000
-		 * family B-step, as the optimization currently causes issues
+		 * family B/C-step, as the optimization currently causes issues
 		 */
 		if (CSR_HW_REV_STEP(trans->hw_rev) != SILICON_A_STEP) {
 			u32 val = 0x0;

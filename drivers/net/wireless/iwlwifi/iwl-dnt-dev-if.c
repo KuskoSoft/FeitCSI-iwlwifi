@@ -344,7 +344,8 @@ static int iwl_dnt_dev_if_retrieve_smem_monitor_data(struct iwl_dnt *dnt,
 	u32 base, end, wr_ptr, pos, chunks_num, wr_ptr_offset;
 	u8 *temp_buffer;
 
-	if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_B_STEP) {
+	if (CSR_HW_REV_STEP(trans->hw_rev) != SILICON_A_STEP) {
+		/* assuming B-step or C-step */
 		base_addr = cfg->dbg_mon_buff_base_addr_reg_addr_b_step;
 		end_addr = cfg->dbg_mon_buff_end_addr_reg_addr_b_step;
 		wr_ptr_addr = cfg->dbg_mon_wr_ptr_addr_b_step;
