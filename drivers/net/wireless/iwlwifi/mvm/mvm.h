@@ -1407,7 +1407,7 @@ static inline bool iwl_mvm_vif_low_latency(struct iwl_mvm_vif *mvmvif)
 /* hw scheduler queue config */
 void iwl_mvm_enable_txq(struct iwl_mvm *mvm, int queue, u16 ssn,
 			const struct iwl_trans_txq_scd_cfg *cfg);
-void iwl_mvm_disable_txq(struct iwl_mvm *mvm, int queue);
+void iwl_mvm_disable_txq(struct iwl_mvm *mvm, int queue, u8 flags);
 
 static inline void iwl_mvm_enable_ac_txq(struct iwl_mvm *mvm, int queue,
 					 u8 fifo)

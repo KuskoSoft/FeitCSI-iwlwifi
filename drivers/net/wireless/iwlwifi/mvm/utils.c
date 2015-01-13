@@ -558,7 +558,7 @@ void iwl_mvm_enable_txq(struct iwl_mvm *mvm, int queue, u16 ssn,
 	iwl_trans_txq_enable_cfg(mvm->trans, queue, ssn, NULL);
 }
 
-void iwl_mvm_disable_txq(struct iwl_mvm *mvm, int queue)
+void iwl_mvm_disable_txq(struct iwl_mvm *mvm, int queue, u8 flags)
 {
 	struct iwl_scd_txq_cfg_cmd cmd = {
 		.scd_queue = queue,
@@ -572,7 +572,7 @@ void iwl_mvm_disable_txq(struct iwl_mvm *mvm, int queue)
 	}
 
 	iwl_trans_txq_disable(mvm->trans, queue, false);
-	ret = iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, CMD_ASYNC,
+	ret = iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, flags,
 				   sizeof(cmd), &cmd);
 	if (ret)
 		IWL_ERR(mvm, "Failed to disable queue %d (ret=%d)\n",
