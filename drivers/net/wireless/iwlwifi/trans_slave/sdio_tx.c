@@ -161,78 +161,101 @@ void iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
-	u8 frame_limit = cfg->frame_limit;
 
 	/* make sure we finished to disable the queues before allocation */
 	flush_work(&trans_sdio->iwl_sdio_disable_txq_wk);
 
-	/* Disable the scheduler prior configuring the cmd queue */
-	if (txq_id == trans_slv->cmd_queue)
-		iwl_scd_enable_set_active(trans, 0);
+	if (cfg) {
+		/* Disable the scheduler prior configuring the cmd queue */
+		if (txq_id == trans_slv->cmd_queue)
+			iwl_scd_enable_set_active(trans, 0);
 
-	/* Stop this Tx queue before configuring it */
-	iwl_scd_txq_set_inactive(trans, txq_id);
+		/* Stop this Tx queue before configuring it */
+		iwl_scd_txq_set_inactive(trans, txq_id);
 
-	/* Set this queue as a chain-building queue unless it is CMD queue */
-	if (txq_id != trans_slv->cmd_queue)
-		iwl_scd_txq_set_chain(trans, txq_id);
-
-	/* If this queue is mapped to a certain station: it is an AGG queue */
-	if (cfg->aggregate) {
-		u16 ra_tid = BUILD_RAxTID(cfg->sta_id, cfg->tid);
-
-		/* Map receiver-address / traffic-ID to this queue */
-		iwl_sdio_txq_set_ratid_map(trans, ra_tid, txq_id);
-
-		/* enable aggregations for the queue */
-		iwl_scd_txq_enable_agg(trans, txq_id);
-	} else {
 		/*
-		 * disable aggregations for the queue, this will also make the
-		 * ra_tid mapping configuration irrelevant since it is now a
-		 * non-AGG queue.
+		 * Set this queue as a chain-building queue
+		 * unless it is CMD queue
 		 */
-		iwl_scd_txq_disable_agg(trans, txq_id);
-		ssn = trans_sdio->txq[txq_id].scd_write_ptr;
+		if (txq_id != trans_slv->cmd_queue)
+			iwl_scd_txq_set_chain(trans, txq_id);
+
+		/*
+		 * If this queue is mapped to a certain station:
+		 * it is an AGG queue
+		 */
+		if (cfg->aggregate) {
+			u16 ra_tid = BUILD_RAxTID(cfg->sta_id, cfg->tid);
+
+			/* Map receiver-address / traffic-ID to this queue */
+			iwl_sdio_txq_set_ratid_map(trans, ra_tid, txq_id);
+
+			/* enable aggregations for the queue */
+			iwl_scd_txq_enable_agg(trans, txq_id);
+		} else {
+			/*
+			 * disable aggregations for the queue, this will also
+			 * make the ra_tid mapping configuration irrelevant
+			 * since it is now a non-AGG queue.
+			 */
+			iwl_scd_txq_disable_agg(trans, txq_id);
+			ssn = trans_sdio->txq[txq_id].scd_write_ptr;
+		}
 	}
 
 	trans_sdio->txq[txq_id].scd_write_ptr = ssn & (TFD_QUEUE_SIZE_MAX - 1);
 	iwl_trans_slv_tx_set_ssn(trans, txq_id, ssn);
 
-	/* Configure first TFD  */
-	iwl_write_direct32(trans, HBUS_TARG_WRPTR,
-			   (ssn & (TFD_QUEUE_SIZE_MAX - 1)) | (txq_id << 8));
+	if (cfg) {
+		u8 frame_limit = cfg->frame_limit;
 
-	iwl_write_prph(trans, SCD_QUEUE_RDPTR(txq_id), ssn);
+		/* Configure first TFD  */
+		iwl_write_direct32(trans, HBUS_TARG_WRPTR,
+				   (ssn & (TFD_QUEUE_SIZE_MAX - 1)) |
+				   (txq_id << 8));
 
-	trans_sdio->txq[txq_id].ptfd_cur_row =
-		IWL_SDIO_SRAM_TABLE_EMPTY_PTFD_CELL;
-	trans_sdio->txq[txq_id].bye_count0 = 0;
-	trans_sdio->txq[txq_id].bye_count1 = 0;
+		iwl_write_prph(trans, SCD_QUEUE_RDPTR(txq_id), ssn);
 
-	/* tx window and frame sizes for this queue */
-	iwl_trans_write_mem32(trans, trans_sdio->scd_base_addr +
-			      SCD_CONTEXT_QUEUE_OFFSET(txq_id), 0);
-	iwl_trans_write_mem32(trans, trans_sdio->scd_base_addr +
-			      SCD_CONTEXT_QUEUE_OFFSET(txq_id) + sizeof(u32),
+		/* tx window and frame sizes for this queue */
+		iwl_trans_write_mem32(trans, trans_sdio->scd_base_addr +
+				      SCD_CONTEXT_QUEUE_OFFSET(txq_id), 0);
+		iwl_trans_write_mem32(trans, trans_sdio->scd_base_addr +
+			SCD_CONTEXT_QUEUE_OFFSET(txq_id) + sizeof(u32),
 			((frame_limit << SCD_QUEUE_CTX_REG2_WIN_SIZE_POS) &
 				SCD_QUEUE_CTX_REG2_WIN_SIZE_MSK) |
 			((frame_limit << SCD_QUEUE_CTX_REG2_FRAME_LIMIT_POS) &
 				SCD_QUEUE_CTX_REG2_FRAME_LIMIT_MSK));
 
-	/* Set up Status area in SRAM, map to Tx DMA/FIFO, activate the queue */
-	iwl_write_prph(trans, SCD_QUEUE_STATUS_BITS(txq_id),
-		       (1 << SCD_QUEUE_STTS_REG_POS_ACTIVE) |
-		       (cfg->fifo << SCD_QUEUE_STTS_REG_POS_TXF) |
-		       (1 << SCD_QUEUE_STTS_REG_POS_WSL) |
-		       SCD_QUEUE_STTS_REG_MSK);
+		/*
+		 * Set up Status area in SRAM, map to Tx DMA/FIFO,
+		 * activate the queue
+		 */
+		iwl_write_prph(trans, SCD_QUEUE_STATUS_BITS(txq_id),
+			       (1 << SCD_QUEUE_STTS_REG_POS_ACTIVE) |
+			       (cfg->fifo << SCD_QUEUE_STTS_REG_POS_TXF) |
+			       (1 << SCD_QUEUE_STTS_REG_POS_WSL) |
+			       SCD_QUEUE_STTS_REG_MSK);
 
-	/* Enable the scheduler by setting the cmd queue bit in ucode reg. */
-	if (txq_id == trans_slv->cmd_queue)
-		iwl_scd_enable_set_active(trans, BIT(txq_id));
+		/*
+		 * Enable the scheduler by setting the cmd queue bit in
+		 * ucode reg.
+		 */
+		if (txq_id == trans_slv->cmd_queue)
+			iwl_scd_enable_set_active(trans, BIT(txq_id));
 
-	IWL_DEBUG_TX_QUEUES(trans, "Activate queue %d on FIFO %d WrPtr: %d\n",
-			    txq_id, cfg->fifo, ssn & (TFD_QUEUE_SIZE_MAX - 1));
+		IWL_DEBUG_TX_QUEUES(trans,
+				    "Activate queue %d on FIFO %d WrPtr: %d\n",
+				    txq_id, cfg->fifo,
+				    ssn & (TFD_QUEUE_SIZE_MAX - 1));
+	} else {
+		IWL_DEBUG_TX_QUEUES(trans, "Activate queue %d WrPtr: %d\n",
+				    txq_id, ssn & (TFD_QUEUE_SIZE_MAX - 1));
+	}
+
+	trans_sdio->txq[txq_id].ptfd_cur_row =
+		IWL_SDIO_SRAM_TABLE_EMPTY_PTFD_CELL;
+	trans_sdio->txq[txq_id].bye_count0 = 0;
+	trans_sdio->txq[txq_id].bye_count1 = 0;
 }
 
 static void iwl_sdio_scd_reset(struct iwl_trans *trans, u32 scd_base_addr)
