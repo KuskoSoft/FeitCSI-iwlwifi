@@ -252,6 +252,7 @@ enum iwl_ucode_tlv_flag {
  * @IWL_UCODE_TLV_API_SINGLE_SCAN_EBS: EBS is supported for single scans too.
  * @IWL_UCODE_TLV_API_ASYNC_DTM: Async temperature notifications are supported.
  * @IWL_UCODE_TLV_API_LQ_SS_PARAMS: Configure STBC/BFER via LQ CMD ss_params
+ * @IWL_UCODE_TLV_API_STATS_V10: uCode supports/uses statistics API version 10
  */
 enum iwl_ucode_tlv_api {
 	IWL_UCODE_TLV_API_BT_COEX_SPLIT         = BIT(3),
@@ -267,6 +268,7 @@ enum iwl_ucode_tlv_api {
 	IWL_UCODE_TLV_API_SINGLE_SCAN_EBS	= BIT(16),
 	IWL_UCODE_TLV_API_ASYNC_DTM		= BIT(17),
 	IWL_UCODE_TLV_API_LQ_SS_PARAMS		= BIT(18),
+	IWL_UCODE_TLV_API_STATS_V10		= BIT(19),
 };
 
 /**
