@@ -249,6 +249,7 @@ enum iwl_ucode_tlv_flag {
  * @IWL_UCODE_TLV_API_SCD_CFG: This firmware can configure the scheduler
  *	through the dedicated host command.
  * @IWL_UCODE_TLV_API_SINGLE_SCAN_EBS: EBS is supported for single scans too.
+ * @IWL_UCODE_TLV_API_ASYNC_DTM: Async temperature notifications are supported.
  */
 enum iwl_ucode_tlv_api {
 	IWL_UCODE_TLV_API_BT_COEX_SPLIT         = BIT(3),
@@ -261,6 +262,7 @@ enum iwl_ucode_tlv_api {
 	IWL_UCODE_TLV_API_BASIC_DWELL		= BIT(13),
 	IWL_UCODE_TLV_API_SCD_CFG		= BIT(15),
 	IWL_UCODE_TLV_API_SINGLE_SCAN_EBS	= BIT(16),
+	IWL_UCODE_TLV_API_ASYNC_DTM		= BIT(17),
 };
 
 /**
