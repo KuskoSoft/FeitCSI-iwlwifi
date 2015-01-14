@@ -82,6 +82,7 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_OPPPS_WA] = { .type = NLA_FLAG },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -742,6 +743,50 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 	return 0;
 }
 
+#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
+static int iwl_mvm_oppps_wa_update_quota(struct iwl_mvm *mvm,
+					 struct ieee80211_vif *vif,
+					 bool enable)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	struct ieee80211_p2p_noa_attr *noa = &vif->bss_conf.p2p_noa_attr;
+	bool force_update = true;
+
+	if (enable && noa->oppps_ctwindow & IEEE80211_P2P_OPPPS_ENABLE_BIT)
+		mvm->p2p_opps_test_wa_vif = mvmvif;
+	else
+		mvm->p2p_opps_test_wa_vif = NULL;
+	return iwl_mvm_update_quotas(mvm, force_update, NULL);
+}
+
+static int iwl_mvm_oppps_wa(struct wiphy *wiphy,
+			    struct wireless_dev *wdev,
+			    const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	int err = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+
+	if (err)
+		return err;
+
+	if (!vif)
+		return -ENODEV;
+
+	mutex_lock(&mvm->mutex);
+	if (vif->type == NL80211_IFTYPE_STATION && vif->p2p) {
+		bool enable = !!tb[IWL_MVM_VENDOR_ATTR_OPPPS_WA];
+
+		err = iwl_mvm_oppps_wa_update_quota(mvm, vif, enable);
+	}
+	mutex_unlock(&mvm->mutex);
+
+	return err;
+}
+#endif
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -864,6 +909,17 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_vendor_set_nic_txpower_limit,
 	},
+#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_OPPPS_WA,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mvm_oppps_wa,
+	},
+#endif
 };
 
 #ifdef CPTCFG_IWLMVM_TCM

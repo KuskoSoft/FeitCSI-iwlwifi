@@ -769,7 +769,16 @@ static int iwl_mvm_mac_ctxt_cmd_sta(struct iwl_mvm *mvm,
 	if (vif->p2p) {
 		struct ieee80211_p2p_noa_attr *noa =
 			&vif->bss_conf.p2p_noa_attr;
-
+#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
+		/*
+		 * Pass CT window including OPPPS enable flag as part of a WA
+		 * to pass P2P OPPPS certification test. Refer to
+		 * IWLMVM_P2P_OPPPS_TEST_WA description in Kconfig.noupstream.
+		 */
+		if (mvm->p2p_opps_test_wa_vif)
+			cmd.p2p_sta.ctwin = cpu_to_le32(noa->oppps_ctwindow);
+		else
+#endif
 		cmd.p2p_sta.ctwin = cpu_to_le32(noa->oppps_ctwindow &
 					IEEE80211_P2P_OPPPS_CTWINDOW_MASK);
 		ctxt_sta = &cmd.p2p_sta.sta;

@@ -970,6 +970,14 @@ struct iwl_mvm {
 	struct iwl_dev_tx_power_cmd txp_cmd;
 
 	struct iwl_mvm_shared_mem_cfg shared_mem_cfg;
+#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
+	/*
+	 * Add the following as part of a WA to pass P2P OPPPS certification
+	 * test. Refer to IWLMVM_P2P_OPPPS_TEST_WA description in
+	 * Kconfig.noupstream for details.
+	 */
+	struct iwl_mvm_vif *p2p_opps_test_wa_vif;
+#endif
 };
 
 /* Extract MVM priv from op_mode and _hw */

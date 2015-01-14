@@ -1773,6 +1773,11 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 		goto out_release;
 	}
 
+#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
+	if (mvmvif == mvm->p2p_opps_test_wa_vif)
+		mvm->p2p_opps_test_wa_vif = NULL;
+#endif
+
 	if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
 		mvm->p2p_device_vif = NULL;
 		iwl_mvm_rm_bcast_sta(mvm, vif);
