@@ -552,10 +552,9 @@ void iwl_mvm_enable_txq(struct iwl_mvm *mvm, int queue, u16 ssn,
 		return;
 	}
 
+	iwl_trans_txq_enable_cfg(mvm->trans, queue, ssn, NULL);
 	WARN(iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, 0, sizeof(cmd), &cmd),
 	     "Failed to configure queue %d on FIFO %d\n", queue, cfg->fifo);
-
-	iwl_trans_txq_enable_cfg(mvm->trans, queue, ssn, NULL);
 }
 
 void iwl_mvm_disable_txq(struct iwl_mvm *mvm, int queue, u8 flags)
