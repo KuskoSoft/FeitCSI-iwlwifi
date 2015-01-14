@@ -206,13 +206,13 @@ void iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
 	trans_sdio->txq[txq_id].scd_write_ptr = ssn & (TFD_QUEUE_SIZE_MAX - 1);
 	iwl_trans_slv_tx_set_ssn(trans, txq_id, ssn);
 
+	/* Configure first TFD  */
+	iwl_write_direct32(trans, HBUS_TARG_WRPTR,
+			   (ssn & (TFD_QUEUE_SIZE_MAX - 1)) |
+			   (txq_id << 8));
+
 	if (cfg) {
 		u8 frame_limit = cfg->frame_limit;
-
-		/* Configure first TFD  */
-		iwl_write_direct32(trans, HBUS_TARG_WRPTR,
-				   (ssn & (TFD_QUEUE_SIZE_MAX - 1)) |
-				   (txq_id << 8));
 
 		iwl_write_prph(trans, SCD_QUEUE_RDPTR(txq_id), ssn);
 
