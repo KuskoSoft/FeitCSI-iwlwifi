@@ -74,10 +74,18 @@ ieee80211_tdls_add_subband(struct ieee80211_sub_if_data *sdata,
 						    &chandef,
 						    sdata->wdev.iftype)) {
 				ch_cnt++;
+				/*
+				 * check if the next channel is also part of
+				 * this allowed range
+				 */
 				continue;
 			}
 		}
 
+		/*
+		 * we've reached the end of a range, with allowed channels
+		 * found
+		 */
 		if (ch_cnt) {
 			u8 *pos = skb_put(skb, 2);
 			*pos++ = ieee80211_frequency_to_channel(subband_start);
@@ -88,6 +96,7 @@ ieee80211_tdls_add_subband(struct ieee80211_sub_if_data *sdata,
 		}
 	}
 
+	/* all channels in the requested range are allowed - add them here */
 	if (ch_cnt) {
 		u8 *pos = skb_put(skb, 2);
 		*pos++ = ieee80211_frequency_to_channel(subband_start);

@@ -109,7 +109,7 @@ static struct regulatory_request core_request_world = {
  * protected by RTNL (and can be accessed with RCU protection)
  */
 static struct regulatory_request __rcu *last_request =
-	(void __rcu *)&core_request_world;
+	(void __force __rcu *)&core_request_world;
 
 /* To trigger userspace events */
 static struct platform_device *reg_pdev;
@@ -1706,7 +1706,12 @@ static void handle_channel_custom(struct wiphy *wiphy,
 	if (IS_ERR(reg_rule)) {
 		REG_DBG_PRINT("Disabling freq %d MHz as custom regd has no rule that fits it\n",
 			      chan->center_freq);
-		chan->flags |= IEEE80211_CHAN_DISABLED;
+		if (wiphy->regulatory_flags & REGULATORY_WIPHY_SELF_MANAGED) {
+			chan->flags |= IEEE80211_CHAN_DISABLED;
+		} else {
+			chan->orig_flags |= IEEE80211_CHAN_DISABLED;
+			chan->flags = chan->orig_flags;
+		}
 		return;
 	}
 
@@ -1731,11 +1736,13 @@ static void handle_channel_custom(struct wiphy *wiphy,
 	chan->dfs_state = NL80211_DFS_USABLE;
 
 	chan->beacon_found = false;
-	chan->dfs_state_entered = jiffies;
-	chan->dfs_state = NL80211_DFS_USABLE;
 
-	chan->beacon_found = false;
-	chan->flags = map_regdom_flags(reg_rule->flags) | bw_flags;
+	if (wiphy->regulatory_flags & REGULATORY_WIPHY_SELF_MANAGED)
+		chan->flags = chan->orig_flags | bw_flags |
+			      map_regdom_flags(reg_rule->flags);
+	else
+		chan->flags |= map_regdom_flags(reg_rule->flags) | bw_flags;
+
 	chan->max_antenna_gain = (int) MBI_TO_DBI(power_rule->max_antenna_gain);
 	chan->max_reg_power = chan->max_power =
 		(int) MBM_TO_DBM(power_rule->max_eirp);
@@ -2126,16 +2133,20 @@ static bool reg_only_self_managed_wiphys(void)
 {
 	struct cfg80211_registered_device *rdev;
 	struct wiphy *wiphy;
+	bool self_managed_found = false;
 
 	ASSERT_RTNL();
 
 	list_for_each_entry(rdev, &cfg80211_rdev_list, list) {
 		wiphy = &rdev->wiphy;
-		if (!(wiphy->regulatory_flags & REGULATORY_WIPHY_SELF_MANAGED))
+		if (wiphy->regulatory_flags & REGULATORY_WIPHY_SELF_MANAGED)
+			self_managed_found = true;
+		else
 			return false;
 	}
 
-	return true;
+	/* make sure at least one self-managed wiphy exists */
+	return self_managed_found;
 }
 
 /*
@@ -2954,8 +2965,8 @@ int set_regdom(const struct ieee80211_regdomain *rd)
 	return 0;
 }
 
-int regulatory_set_wiphy_regd(struct wiphy *wiphy,
-			      struct ieee80211_regdomain *rd)
+static int __regulatory_set_wiphy_regd(struct wiphy *wiphy,
+				       struct ieee80211_regdomain *rd)
 {
 	const struct ieee80211_regdomain *regd;
 	const struct ieee80211_regdomain *prev_regd;
@@ -2985,6 +2996,16 @@ int regulatory_set_wiphy_regd(struct wiphy *wiphy,
 	spin_unlock(&reg_requests_lock);
 
 	kfree(prev_regd);
+	return 0;
+}
+
+int regulatory_set_wiphy_regd(struct wiphy *wiphy,
+			      struct ieee80211_regdomain *rd)
+{
+	int ret = __regulatory_set_wiphy_regd(wiphy, rd);
+
+	if (ret)
+		return ret;
 
 	schedule_work(&reg_work);
 	return 0;
@@ -2998,7 +3019,7 @@ int regulatory_set_wiphy_regd_sync_rtnl(struct wiphy *wiphy,
 
 	ASSERT_RTNL();
 
-	ret = regulatory_set_wiphy_regd(wiphy, rd);
+	ret = __regulatory_set_wiphy_regd(wiphy, rd);
 	if (ret)
 		return ret;
 

@@ -2019,8 +2019,8 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	/*
 	 * drop any frame before deauth/disassoc, this can be data or
 	 * management frame. Since we are disconnecting, we should not
-	 * insist on sending these frames which can take time and delay
-	 * the disconnection and possibly the roaming.
+	 * insist sending these frames which can take time and delay
+	 * the disconnection and possible the roaming.
 	 */
 	if (tx)
 		ieee80211_flush_queues(local, sdata, true);
