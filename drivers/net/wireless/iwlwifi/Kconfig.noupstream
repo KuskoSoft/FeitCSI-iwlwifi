@@ -92,3 +92,12 @@ config IWLMVM_SCAN_PRECEDENCE_LEVEL
 	  duration.
 	  Level 2: scan is of lower precedence, increasing overall scan
 	  duration.
+
+config IWLMVM_TDLS_PEER_CACHE
+	bool "enable TDLS peer caching and traffic monitoring"
+	depends on IWLMVM
+	default y
+	help
+	  This option enables (vendor) commands from userspace to monitor
+	  traffic to and from specific peers on the same BSS. These peers
+	  might be TDLS peers, or candidates to become such.

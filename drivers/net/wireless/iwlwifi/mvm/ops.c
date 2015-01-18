@@ -500,6 +500,10 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		ewma_init(&mvm->tcm.data[i].uapsd_nonagg_detect.rate, 16, 16);
 #endif
 
+#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
+	INIT_LIST_HEAD(&mvm->tdls_peer_cache_list);
+#endif
+
 	/*
 	 * Populate the state variables that the transport layer needs
 	 * to know about.
@@ -679,6 +683,10 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	del_timer_sync(&mvm->tcm.timer);
 	cancel_work_sync(&mvm->tcm.work);
 #endif
+
+#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
+	iwl_mvm_tdls_peer_cache_clear(mvm, NULL);
+#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
 	ieee80211_free_hw(mvm->hw);
 }

@@ -611,6 +611,20 @@ struct iwl_mvm_shared_mem_cfg {
 	u32 page_buff_size;
 };
 
+#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
+#define IWL_MVM_TDLS_CNT_MAX_PEERS 4
+
+struct iwl_mvm_tdls_peer_counter {
+	struct list_head list;
+	struct rcu_head rcu_head;
+
+	struct mac_address mac __aligned(2);
+	struct ieee80211_vif *vif;
+	u32 rx_bytes;
+	u32 tx_bytes;
+};
+#endif
+
 struct iwl_mvm {
 	/* for logger access */
 	struct device *dev;
@@ -832,6 +846,11 @@ struct iwl_mvm {
 		__aligned(2);
 
 	struct iwl_mvm_tcm tcm;
+#endif
+
+#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
+	struct list_head tdls_peer_cache_list;
+	u32 tdls_peer_cache_cnt;
 #endif
 
 	struct iwl_time_quota_cmd last_quota_cmd;
@@ -1537,6 +1556,15 @@ void iwl_mvm_tdls_cancel_channel_switch(struct ieee80211_hw *hw,
 int iwl_mvm_rx_tdls_notif(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
 			  struct iwl_device_cmd *cmd);
 void iwl_mvm_tdls_ch_switch_work(struct work_struct *work);
+
+#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
+void iwl_mvm_tdls_peer_cache_pkt(struct iwl_mvm *mvm, struct ieee80211_hdr *hdr,
+				 u32 len, bool tx);
+void iwl_mvm_tdls_peer_cache_clear(struct iwl_mvm *mvm,
+				   struct ieee80211_vif *vif);
+struct iwl_mvm_tdls_peer_counter *
+iwl_mvm_tdls_peer_cache_find(struct iwl_mvm *mvm, const u8 *addr);
+#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
 struct ieee80211_vif *iwl_mvm_get_bss_vif(struct iwl_mvm *mvm);
 

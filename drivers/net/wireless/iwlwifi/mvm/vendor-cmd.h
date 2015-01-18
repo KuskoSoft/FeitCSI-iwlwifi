@@ -83,6 +83,11 @@
  * @IWL_MVM_VENDOR_CMD_SET_COUNTRY: set a new mcc regulatory information
  * @IWL_MVM_VENDOR_CMD_PROXY_FRAME_FILTERING: filter GTK, gratuitous
  *	ARP & unsolicited NA
+ * @IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_ADD: add a peer to the TDLS peer cache
+ * @IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_DEL: delete a peer from the TDLS peer
+ *	cache
+ * @IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_QUERY: query traffic statistics for a
+ *	peer in the TDLS cache
  */
 
 enum iwl_mvm_vendor_cmd {
@@ -96,6 +101,9 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_LTE_COEX_WIFI_RPRTD_CHAN,
 	IWL_MVM_VENDOR_CMD_SET_COUNTRY,
 	IWL_MVM_VENDOR_CMD_PROXY_FRAME_FILTERING,
+	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_ADD,
+	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_DEL,
+	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_QUERY,
 };
 
 /**
@@ -127,6 +135,9 @@ enum iwl_mvm_vendor_load {
  * IWL_MVM_VENDOR_FILTER_ARP_NA: filter gratuitous ARP and unsolicited Neighbor
  *	Advertisement frames
  * IWL_MVM_VENDOR_FILTER_GTK: filter Filtering Frames Encrypted using the GTK
+ * @IWL_MVM_VENDOR_ATTR_ADDR: MAC address
+ * @IWL_MVM_VENDOR_ATTR_TX_BYTES: number of bytes transmitted to peer
+ * @IWL_MVM_VENDOR_ATTR_RX_BYTES: number of bytes received from peer
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
  */
@@ -141,6 +152,9 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_COUNTRY,
 	IWL_MVM_VENDOR_FILTER_ARP_NA,
 	IWL_MVM_VENDOR_FILTER_GTK,
+	IWL_MVM_VENDOR_ATTR_ADDR,
+	IWL_MVM_VENDOR_ATTR_TX_BYTES,
+	IWL_MVM_VENDOR_ATTR_RX_BYTES,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,

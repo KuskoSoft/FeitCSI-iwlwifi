@@ -62,6 +62,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <linux/etherdevice.h>
 #include <net/mac80211.h>
 #include <net/netlink.h>
 #include "mvm.h"
@@ -73,6 +74,7 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_COUNTRY] = { .type = NLA_STRING, .len = 2 },
 	[IWL_MVM_VENDOR_FILTER_ARP_NA] = { .type = NLA_FLAG },
 	[IWL_MVM_VENDOR_FILTER_GTK] = { .type = NLA_FLAG },
+	[IWL_MVM_VENDOR_ATTR_ADDR] = { .len = ETH_ALEN },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -190,6 +192,146 @@ static int iwl_vendor_frame_filter_cmd(struct wiphy *wiphy,
 	return 0;
 }
 
+#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
+static int iwl_vendor_tdls_peer_cache_add(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  const void *data, int data_len)
+{
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_mvm_tdls_peer_counter *cnt;
+	u8 *addr;
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+	int err = iwl_mvm_parse_vendor_data(tb, data, data_len);
+
+	if (err)
+		return err;
+
+	if (vif->type != NL80211_IFTYPE_STATION ||
+	    !tb[IWL_MVM_VENDOR_ATTR_ADDR])
+		return -EINVAL;
+
+	mutex_lock(&mvm->mutex);
+	if (mvm->tdls_peer_cache_cnt >= IWL_MVM_TDLS_CNT_MAX_PEERS) {
+		err = -ENOSPC;
+		goto out_unlock;
+	}
+
+	addr = nla_data(tb[IWL_MVM_VENDOR_ATTR_ADDR]);
+
+	rcu_read_lock();
+	cnt = iwl_mvm_tdls_peer_cache_find(mvm, addr);
+	rcu_read_unlock();
+	if (cnt) {
+		err = -EEXIST;
+		goto out_unlock;
+	}
+
+	cnt = kzalloc(sizeof(*cnt), GFP_KERNEL);
+	if (!cnt) {
+		err = -ENOMEM;
+		goto out_unlock;
+	}
+
+	IWL_DEBUG_TDLS(mvm, "Adding %pM to TDLS peer cache\n", addr);
+	ether_addr_copy(cnt->mac.addr, addr);
+	cnt->vif = vif;
+	list_add_tail_rcu(&cnt->list, &mvm->tdls_peer_cache_list);
+	mvm->tdls_peer_cache_cnt++;
+
+out_unlock:
+	mutex_unlock(&mvm->mutex);
+	return err;
+}
+
+static int iwl_vendor_tdls_peer_cache_del(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  const void *data, int data_len)
+{
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_mvm_tdls_peer_counter *cnt;
+	u8 *addr;
+	int err = iwl_mvm_parse_vendor_data(tb, data, data_len);
+
+	if (err)
+		return err;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_ADDR])
+		return -EINVAL;
+
+	addr = nla_data(tb[IWL_MVM_VENDOR_ATTR_ADDR]);
+
+	mutex_lock(&mvm->mutex);
+	rcu_read_lock();
+	cnt = iwl_mvm_tdls_peer_cache_find(mvm, addr);
+	if (!cnt) {
+		IWL_DEBUG_TDLS(mvm, "%pM not found in TDLS peer cache\n", addr);
+		err = -ENOENT;
+		goto out_unlock;
+	}
+
+	IWL_DEBUG_TDLS(mvm, "Removing %pM from TDLS peer cache\n", addr);
+	mvm->tdls_peer_cache_cnt--;
+	list_del_rcu(&cnt->list);
+	kfree_rcu(cnt, rcu_head);
+
+out_unlock:
+	rcu_read_unlock();
+	mutex_unlock(&mvm->mutex);
+	return err;
+}
+
+static int iwl_vendor_tdls_peer_cache_query(struct wiphy *wiphy,
+					    struct wireless_dev *wdev,
+					    const void *data, int data_len)
+{
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_mvm_tdls_peer_counter *cnt;
+	struct sk_buff *skb;
+	u32 rx_bytes, tx_bytes;
+	u8 *addr;
+	int err = iwl_mvm_parse_vendor_data(tb, data, data_len);
+
+	if (err)
+		return err;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_ADDR])
+		return -EINVAL;
+
+	addr = nla_data(tb[IWL_MVM_VENDOR_ATTR_ADDR]);
+
+	rcu_read_lock();
+	cnt = iwl_mvm_tdls_peer_cache_find(mvm, addr);
+	if (!cnt) {
+		IWL_DEBUG_TDLS(mvm, "%pM not found in TDLS peer cache\n",
+			       addr);
+		err = -ENOENT;
+	} else {
+		rx_bytes = cnt->rx_bytes;
+		tx_bytes = cnt->tx_bytes;
+	}
+	rcu_read_unlock();
+	if (err)
+		return err;
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 100);
+	if (!skb)
+		return -ENOMEM;
+	if (nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_TX_BYTES, tx_bytes) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_RX_BYTES, rx_bytes)) {
+		kfree_skb(skb);
+		return -ENOBUFS;
+	}
+
+	return cfg80211_vendor_cmd_reply(skb);
+}
+#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -227,6 +369,35 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_vendor_frame_filter_cmd,
 	},
+#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_ADD,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_tdls_peer_cache_add,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_DEL,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_tdls_peer_cache_del,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_QUERY,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_tdls_peer_cache_query,
+	},
+#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 };
 
 #ifdef CPTCFG_IWLMVM_TCM
