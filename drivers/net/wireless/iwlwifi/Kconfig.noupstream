@@ -78,6 +78,12 @@ config IWLMVM_TCM
 	  monitoring for low-latency and traffic thresholds, as well as
 	  their impact on quota and other submodules.
 
+config IWLWIFI_LTE_COEX
+        bool "enable lte coexistence support"
+        depends on IWLMVM
+	help
+	  This option enables LTE-Coexistence (vendor) commands
+
 config IWLMVM_SCAN_PRECEDENCE_LEVEL
 	int "define scan fragmentation level"
 	range 1 2
