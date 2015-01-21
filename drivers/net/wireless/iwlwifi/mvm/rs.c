@@ -2651,67 +2651,65 @@ static void rs_vht_init(struct iwl_mvm *mvm,
 }
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-static void iwl_mvm_reset_frame_stats(struct iwl_mvm *mvm,
-				      struct iwl_mvm_frame_stats *stats)
+static void iwl_mvm_reset_frame_stats(struct iwl_mvm *mvm)
 {
 	spin_lock_bh(&mvm->drv_stats_lock);
-	memset(stats, 0, sizeof(*stats));
+	memset(&mvm->drv_rx_stats, 0, sizeof(mvm->drv_rx_stats));
 	spin_unlock_bh(&mvm->drv_stats_lock);
 }
 
-void iwl_mvm_update_frame_stats(struct iwl_mvm *mvm,
-				struct iwl_mvm_frame_stats *stats,
-				u32 rate, bool agg)
+void iwl_mvm_update_frame_stats(struct iwl_mvm *mvm, u32 rate, bool agg)
 {
 	u8 nss = 0, mcs = 0;
 
 	spin_lock(&mvm->drv_stats_lock);
 
 	if (agg)
-		stats->agg_frames++;
+		mvm->drv_rx_stats.agg_frames++;
 
-	stats->success_frames++;
+	mvm->drv_rx_stats.success_frames++;
 
 	switch (rate & RATE_MCS_CHAN_WIDTH_MSK) {
 	case RATE_MCS_CHAN_WIDTH_20:
-		stats->bw_20_frames++;
+		mvm->drv_rx_stats.bw_20_frames++;
 		break;
 	case RATE_MCS_CHAN_WIDTH_40:
-		stats->bw_40_frames++;
+		mvm->drv_rx_stats.bw_40_frames++;
 		break;
 	case RATE_MCS_CHAN_WIDTH_80:
-		stats->bw_80_frames++;
+		mvm->drv_rx_stats.bw_80_frames++;
 		break;
 	default:
 		WARN_ONCE(1, "bad BW. rate 0x%x", rate);
 	}
 
 	if (rate & RATE_MCS_HT_MSK) {
-		stats->ht_frames++;
+		mvm->drv_rx_stats.ht_frames++;
 		mcs = rate & RATE_HT_MCS_RATE_CODE_MSK;
 		nss = ((rate & RATE_HT_MCS_NSS_MSK) >> RATE_HT_MCS_NSS_POS) + 1;
 	} else if (rate & RATE_MCS_VHT_MSK) {
-		stats->vht_frames++;
+		mvm->drv_rx_stats.vht_frames++;
 		mcs = rate & RATE_VHT_MCS_RATE_CODE_MSK;
 		nss = ((rate & RATE_VHT_MCS_NSS_MSK) >>
 		       RATE_VHT_MCS_NSS_POS) + 1;
 	} else {
-		stats->legacy_frames++;
+		mvm->drv_rx_stats.legacy_frames++;
 	}
 
 	if (nss == 1)
-		stats->siso_frames++;
+		mvm->drv_rx_stats.siso_frames++;
 	else if (nss == 2)
-		stats->mimo2_frames++;
+		mvm->drv_rx_stats.mimo2_frames++;
 
 	if (rate & RATE_MCS_SGI_MSK)
-		stats->sgi_frames++;
+		mvm->drv_rx_stats.sgi_frames++;
 	else
-		stats->ngi_frames++;
+		mvm->drv_rx_stats.ngi_frames++;
 
-	stats->last_rates[stats->last_frame_idx] = rate;
-	stats->last_frame_idx = (stats->last_frame_idx + 1) %
-		ARRAY_SIZE(stats->last_rates);
+	mvm->drv_rx_stats.last_rates[mvm->drv_rx_stats.last_frame_idx] = rate;
+	mvm->drv_rx_stats.last_frame_idx =
+		(mvm->drv_rx_stats.last_frame_idx + 1) %
+			ARRAY_SIZE(mvm->drv_rx_stats.last_rates);
 
 	spin_unlock(&mvm->drv_stats_lock);
 }
@@ -2799,7 +2797,7 @@ void iwl_mvm_rs_rate_init(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 	lq_sta->tx_agg_tid_en = IWL_AGG_ALL_TID;
 	lq_sta->is_agg = 0;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-	iwl_mvm_reset_frame_stats(mvm, &mvm->drv_rx_stats);
+	iwl_mvm_reset_frame_stats(mvm);
 #endif
 	rs_initialize_lq(mvm, sta, lq_sta, band, init);
 }
