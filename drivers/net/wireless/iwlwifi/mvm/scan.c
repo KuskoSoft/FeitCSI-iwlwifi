@@ -337,11 +337,11 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 			params->suspend_time = 105;
 			frag_passive_dwell = 40;
 			params->max_out_time = frag_passive_dwell;
-			break;
 		} else {
 			params->suspend_time = 120;
 			params->max_out_time = 120;
 		}
+		break;
 	case IWL_MVM_VENDOR_LOAD_MEDIUM:
 		if (CPTCFG_IWLMVM_SCAN_PRECEDENCE_LEVEL == 1) {
 			params->suspend_time = 250;
