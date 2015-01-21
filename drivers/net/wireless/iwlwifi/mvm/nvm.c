@@ -804,7 +804,7 @@ int iwl_mvm_init_mcc(struct iwl_mvm *mvm)
 		kfree(regd);
 		regd = iwl_mvm_get_regdomain(mvm->hw->wiphy, mcc,
 					     MCC_SOURCE_BIOS);
-		if (!IS_ERR_OR_NULL(regd))
+		if (IS_ERR_OR_NULL(regd))
 			return -EIO;
 	}
 
