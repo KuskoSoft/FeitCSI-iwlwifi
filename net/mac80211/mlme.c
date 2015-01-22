@@ -2016,6 +2016,9 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	/* disable per-vif ps */
 	ieee80211_recalc_ps_vif(sdata);
 
+	/* flush out all packets */
+	synchronize_net();
+
 	/*
 	 * drop any frame before deauth/disassoc, this can be data or
 	 * management frame. Since we are disconnecting, we should not
