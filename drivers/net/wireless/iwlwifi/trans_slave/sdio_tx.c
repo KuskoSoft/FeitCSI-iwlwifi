@@ -307,6 +307,10 @@ void iwl_sdio_tx_start(struct iwl_trans *trans, u32 scd_base_addr)
 	iwl_set_bits_prph(trans, SCD_GP_CTRL,
 			  SCD_GP_CTRL_AUTO_ACTIVE_MODE);
 
+	if (trans->cfg->base_params->num_of_queues > 20)
+		iwl_set_bits_prph(trans, SCD_GP_CTRL,
+				  SCD_GP_CTRL_ENABLE_31_QUEUES);
+
 	/* Set CB base pointer
 	 * Transaction to FH maps from PTFD entry in SNF to the actual TFD;
 	 * The FH assumes the data is address bits [35..8]
