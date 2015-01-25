@@ -1575,6 +1575,10 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans,
 	}
 #endif
 
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	iwl_tm_gnl_add(drv->trans);
+#endif
+
 	ret = iwl_request_firmware(drv, true);
 	if (ret) {
 		IWL_ERR(trans, "Couldn't request the fw\n");
@@ -1589,13 +1593,12 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans,
 	}
 #endif
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_tm_gnl_add(drv->trans);
-#endif
-
 	return drv;
 
 err_fw:
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	iwl_tm_gnl_remove(drv->trans);
+#endif
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 err_free_dbgfs:
 	debugfs_remove_recursive(drv->dbgfs_drv);
