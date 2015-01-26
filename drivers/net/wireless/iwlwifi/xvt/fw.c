@@ -93,6 +93,7 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 	struct iwl_xvt_alive_data *alive_data = data;
 	struct xvt_alive_resp *palive;
 	struct xvt_alive_resp_ver2 *palive2;
+	struct xvt_alive_resp_ver3 *palive3;
 
 	if (iwl_rx_packet_payload_len(pkt) == sizeof(*palive)) {
 		palive = (void *)pkt->data;
@@ -106,7 +107,7 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 		IWL_DEBUG_FW(xvt, "Alive ucode status 0x%04x revision 0x%01X "
 			     "0x%01X\n", le16_to_cpu(palive->status),
 			     palive->ver_type, palive->ver_subtype);
-	} else {
+	} else if (iwl_rx_packet_payload_len(pkt) == sizeof(*palive2)) {
 
 		palive2 = (void *)pkt->data;
 
@@ -128,6 +129,26 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 		IWL_DEBUG_FW(xvt,
 			     "UMAC version: Major - 0x%x, Minor - 0x%x\n",
 			     palive2->umac_major, palive2->umac_minor);
+	} else {
+		palive3 = (void *)pkt->data;
+
+		xvt->error_event_table =
+			le32_to_cpu(palive3->error_event_table_ptr);
+		alive_data->scd_base_addr = le32_to_cpu(palive3->scd_base_ptr);
+		xvt->sf_space.addr = le32_to_cpu(palive3->st_fwrd_addr);
+		xvt->sf_space.size = le32_to_cpu(palive3->st_fwrd_size);
+
+		alive_data->valid = le16_to_cpu(palive3->status) ==
+				    IWL_ALIVE_STATUS_OK;
+
+		IWL_DEBUG_FW(xvt,
+			     "Alive VER3 ucode status 0x%04x revision 0x%01X 0x%01X flags 0x%01X\n",
+			     le16_to_cpu(palive3->status), palive3->ver_type,
+			     palive3->ver_subtype, palive3->flags);
+
+		IWL_DEBUG_FW(xvt,
+			     "UMAC version: Major - 0x%x, Minor - 0x%x\n",
+			     palive3->umac_major, palive3->umac_minor);
 	}
 
 	return true;
