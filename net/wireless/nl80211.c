@@ -10420,7 +10420,11 @@ static void nl80211_do_ratestats(struct net *net,
 {
 	struct cfg80211_registered_device *rdev;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	rtnl_lock();
+#else
+	ASSERT_RTNL();
+#endif
 
 	list_for_each_entry(rdev, &cfg80211_rdev_list, list) {
 		if (wiphy_net(&rdev->wiphy) != net)
@@ -10433,7 +10437,9 @@ static void nl80211_do_ratestats(struct net *net,
 		rdev_ratestats(rdev, op);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
 	rtnl_unlock();
+#endif
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
