@@ -284,7 +284,10 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 
 	if (mdata->opened_rx_ba_sessions ||
 	    mdata->uapsd_nonagg_detect.detected ||
-	    !(mvmsta->vif->driver_flags & IEEE80211_VIF_SUPPORTS_UAPSD) ||
+	    (!mvmvif->queue_params[IEEE80211_AC_VO].uapsd &&
+	     !mvmvif->queue_params[IEEE80211_AC_VI].uapsd &&
+	     !mvmvif->queue_params[IEEE80211_AC_BE].uapsd &&
+	     !mvmvif->queue_params[IEEE80211_AC_BK].uapsd) ||
 	    mvmsta->sta_id != mvmvif->ap_sta_id)
 		return;
 
