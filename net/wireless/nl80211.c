@@ -11182,7 +11182,6 @@ static __genl_const struct genl_ops nl80211_ops[] = {
 		.cmd = NL80211_CMD_GET_RATESTATS,
 		.doit = nl80211_get_ratestats,
 		.policy = nl80211_policy,
-		.flags = GENL_ADMIN_PERM,
 		.internal_flags = NL80211_FLAG_NEED_RTNL,
 	},
 };
