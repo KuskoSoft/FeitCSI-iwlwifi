@@ -1013,12 +1013,23 @@ static void iwl_mvm_dump_fifos(struct iwl_mvm *mvm,
 	iwl_trans_release_nic_access(mvm->trans, &flags);
 }
 
+void iwl_mvm_free_fw_dump_desc(struct iwl_mvm *mvm)
+{
+	if (mvm->fw_dump_desc == &iwl_mvm_dump_desc_assert ||
+	    !mvm->fw_dump_desc)
+		return;
+
+	kfree(mvm->fw_dump_desc);
+	mvm->fw_dump_desc = NULL;
+}
+
 void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 {
 	struct iwl_fw_error_dump_file *dump_file;
 	struct iwl_fw_error_dump_data *dump_data;
 	struct iwl_fw_error_dump_info *dump_info;
 	struct iwl_fw_error_dump_mem *dump_mem;
+	struct iwl_fw_error_dump_trigger_desc *dump_trig;
 	struct iwl_mvm_dump_ptrs *fw_error_dump;
 	u32 sram_len, sram_ofs;
 	u32 file_len, fifo_data_len = 0;
@@ -1088,6 +1099,10 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 		   fifo_data_len +
 		   sizeof(*dump_info);
 
+	if (mvm->fw_dump_desc)
+		file_len += sizeof(*dump_data) + sizeof(*dump_trig) +
+			    mvm->fw_dump_desc->len;
+
 	/* Make room for the SMEM, if it exists */
 	if (smem_len)
 		file_len += sizeof(*dump_data) + sizeof(*dump_mem) + smem_len;
@@ -1099,6 +1114,7 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 	dump_file = vzalloc(file_len);
 	if (!dump_file) {
 		kfree(fw_error_dump);
+		iwl_mvm_free_fw_dump_desc(mvm);
 		return;
 	}
 
@@ -1126,6 +1142,19 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 	/* We only dump the FIFOs if the FW is in error state */
 	if (test_bit(STATUS_FW_ERROR, &mvm->trans->status))
 		iwl_mvm_dump_fifos(mvm, &dump_data);
+
+	if (mvm->fw_dump_desc) {
+		dump_data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_ERROR_INFO);
+		dump_data->len = cpu_to_le32(sizeof(*dump_trig) +
+					     mvm->fw_dump_desc->len);
+		dump_trig = (void *)dump_data->data;
+		memcpy(dump_trig, &mvm->fw_dump_desc->trig_desc,
+		       sizeof(*dump_trig) + mvm->fw_dump_desc->len);
+
+		/* now we can free this copy */
+		iwl_mvm_free_fw_dump_desc(mvm);
+		dump_data = iwl_fw_error_next_data(dump_data);
+	}
 
 	dump_data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_MEM);
 	dump_data->len = cpu_to_le32(sram_len + sizeof(*dump_mem));
@@ -1169,6 +1198,12 @@ void iwl_mvm_fw_error_dump(struct iwl_mvm *mvm)
 	clear_bit(IWL_MVM_STATUS_DUMPING_FW_LOG, &mvm->status);
 }
 
+struct iwl_mvm_dump_desc iwl_mvm_dump_desc_assert = {
+	.trig_desc = {
+		.type = cpu_to_le32(FW_DBG_TRIGGER_FW_ASSERT),
+	},
+};
+
 static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 {
 	/* clear the D3 reconfig, we only need it to avoid dumping a
@@ -1176,6 +1211,7 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 	 * on D3->D0 transition
 	 */
 	if (!test_and_clear_bit(IWL_MVM_STATUS_D3_RECONFIG, &mvm->status)) {
+		mvm->fw_dump_desc = &iwl_mvm_dump_desc_assert;
 		iwl_mvm_fw_error_dump(mvm);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
@@ -1393,6 +1429,7 @@ static void iwl_mvm_mac_stop(struct ieee80211_hw *hw)
 	flush_work(&mvm->d0i3_exit_work);
 	flush_work(&mvm->async_handlers_wk);
 	cancel_delayed_work_sync(&mvm->fw_dump_wk);
+	iwl_mvm_free_fw_dump_desc(mvm);
 
 	mutex_lock(&mvm->mutex);
 	__iwl_mvm_mac_stop(mvm);
