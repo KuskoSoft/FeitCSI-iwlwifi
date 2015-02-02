@@ -2116,34 +2116,21 @@ static int ieee80211_set_tx_power(struct wiphy *wiphy,
 	struct ieee80211_sub_if_data *sdata;
 
 	if (wdev) {
-		int old_user_level, new_user_level;
-		u32 change;
-
 		sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
-		old_user_level = sdata->vif.bss_conf.user_power_level;
-		new_user_level = old_user_level;
 
 		switch (type) {
 		case NL80211_TX_POWER_AUTOMATIC:
-			new_user_level = IEEE80211_UNSET_POWER_LEVEL;
+			sdata->user_power_level = IEEE80211_UNSET_POWER_LEVEL;
 			break;
 		case NL80211_TX_POWER_LIMITED:
 		case NL80211_TX_POWER_FIXED:
 			if (mbm < 0 || (mbm % 100))
 				return -EOPNOTSUPP;
-			new_user_level = MBM_TO_DBM(mbm);
+			sdata->user_power_level = MBM_TO_DBM(mbm);
 			break;
 		}
 
-		if (old_user_level == new_user_level)
-			return 0;
-
-		change = BSS_CHANGED_USER_TXPOWER;
-		sdata->vif.bss_conf.user_power_level = new_user_level;
-
-		if (__ieee80211_recalc_txpower(sdata))
-			change |= BSS_CHANGED_TXPOWER;
-		ieee80211_bss_info_change_notify(sdata, change);
+		ieee80211_recalc_txpower(sdata);
 
 		return 0;
 	}
@@ -2161,20 +2148,10 @@ static int ieee80211_set_tx_power(struct wiphy *wiphy,
 	}
 
 	mutex_lock(&local->iflist_mtx);
-	list_for_each_entry(sdata, &local->interfaces, list) {
-		u32 change = 0;
-
-		if (sdata->vif.bss_conf.user_power_level !=
-				local->user_power_level) {
-			change |= BSS_CHANGED_USER_TXPOWER;
-			sdata->vif.bss_conf.user_power_level =
-						local->user_power_level;
-		}
-		if (__ieee80211_recalc_txpower(sdata))
-			change |= BSS_CHANGED_TXPOWER;
-		if (change)
-			ieee80211_bss_info_change_notify(sdata, change);
-	}
+	list_for_each_entry(sdata, &local->interfaces, list)
+		sdata->user_power_level = local->user_power_level;
+	list_for_each_entry(sdata, &local->interfaces, list)
+		ieee80211_recalc_txpower(sdata);
 	mutex_unlock(&local->iflist_mtx);
 
 	return 0;
