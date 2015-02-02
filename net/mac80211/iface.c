@@ -58,8 +58,9 @@ bool __ieee80211_recalc_txpower(struct ieee80211_sub_if_data *sdata)
 	power = ieee80211_chandef_max_power(&chanctx_conf->def);
 	rcu_read_unlock();
 
-	if (sdata->user_power_level != IEEE80211_UNSET_POWER_LEVEL)
-		power = min(power, sdata->user_power_level);
+	if (sdata->vif.bss_conf.user_power_level !=
+	    IEEE80211_UNSET_POWER_LEVEL)
+		power = min(power, sdata->vif.bss_conf.user_power_level);
 
 	if (sdata->ap_power_level != IEEE80211_UNSET_POWER_LEVEL)
 		power = min(power, sdata->ap_power_level);
@@ -73,10 +74,9 @@ bool __ieee80211_recalc_txpower(struct ieee80211_sub_if_data *sdata)
 	return false;
 }
 
-void ieee80211_recalc_txpower(struct ieee80211_sub_if_data *sdata,
-			      bool update_bss)
+void ieee80211_recalc_txpower(struct ieee80211_sub_if_data *sdata)
 {
-	if (__ieee80211_recalc_txpower(sdata) || update_bss)
+	if (__ieee80211_recalc_txpower(sdata))
 		ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_TXPOWER);
 }
 
@@ -1765,7 +1765,7 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 	ieee80211_set_default_queues(sdata);
 
 	sdata->ap_power_level = IEEE80211_UNSET_POWER_LEVEL;
-	sdata->user_power_level = local->user_power_level;
+	sdata->vif.bss_conf.user_power_level = local->user_power_level;
 
 	sdata->encrypt_headroom = IEEE80211_ENCRYPT_HEADROOM;
 
