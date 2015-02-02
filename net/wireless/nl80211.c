@@ -443,6 +443,8 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_SMPS_MODE] = { .type = NLA_U8 },
 	[NL80211_ATTR_MAC_MASK] = { .len = ETH_ALEN },
 	[NL80211_ATTR_WIPHY_SELF_MANAGED_REG] = { .type = NLA_FLAG },
+	[NL80211_ATTR_NETNS_FD] = { .type = NLA_U32 },
+	[NL80211_ATTR_SCHED_SCAN_DELAY] = { .type = NLA_U32 },
 	[NL80211_ATTR_REG_INDOOR] = { .type = NLA_FLAG },
 };
 
@@ -2936,6 +2938,9 @@ static int nl80211_get_key(struct sk_buff *skb, struct genl_info *info)
 	if (!rdev->ops->get_key)
 		return -EOPNOTSUPP;
 
+	if (!pairwise && mac_addr && !(rdev->wiphy.flags & WIPHY_FLAG_IBSS_RSN))
+		return -ENOENT;
+
 	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
 	if (!msg)
 		return -ENOMEM;
@@ -2955,10 +2960,6 @@ static int nl80211_get_key(struct sk_buff *skb, struct genl_info *info)
 	if (mac_addr &&
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, mac_addr))
 		goto nla_put_failure;
-
-	if (pairwise && mac_addr &&
-	    !(rdev->wiphy.flags & WIPHY_FLAG_IBSS_RSN))
-		return -ENOENT;
 
 	err = rdev_get_key(rdev, dev, key_idx, pairwise, mac_addr, &cookie,
 			   get_key_callback);
@@ -3130,7 +3131,7 @@ static int nl80211_del_key(struct sk_buff *skb, struct genl_info *info)
 	wdev_lock(dev->ieee80211_ptr);
 	err = nl80211_key_allowed(dev->ieee80211_ptr);
 
-	if (key.type == NL80211_KEYTYPE_PAIRWISE && mac_addr &&
+	if (key.type == NL80211_KEYTYPE_GROUP && mac_addr &&
 	    !(rdev->wiphy.flags & WIPHY_FLAG_IBSS_RSN))
 		err = -ENOENT;
 
@@ -5858,7 +5859,7 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 		request->ssids = (void *)&request->channels[n_channels];
 	request->n_ssids = n_ssids;
 	if (ie_len) {
-		if (request->ssids)
+		if (n_ssids)
 			request->ie = (void *)(request->ssids + n_ssids);
 		else
 			request->ie = (void *)(request->channels + n_channels);
@@ -5914,7 +5915,7 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 	request->n_channels = i;
 
 	i = 0;
-	if (info->attrs[NL80211_ATTR_SCAN_SSIDS]) {
+	if (n_ssids) {
 		nla_for_each_nested(attr, info->attrs[NL80211_ATTR_SCAN_SSIDS], tmp) {
 			if (nla_len(attr) > IEEE80211_MAX_SSID_LEN) {
 				err = -EINVAL;
@@ -6112,7 +6113,7 @@ nl80211_parse_sched_scan(struct wiphy *wiphy, struct wireless_dev *wdev,
 		request->ssids = (void *)&request->channels[n_channels];
 	request->n_ssids = n_ssids;
 	if (ie_len) {
-		if (request->ssids)
+		if (n_ssids)
 			request->ie = (void *)(request->ssids + n_ssids);
 		else
 			request->ie = (void *)(request->channels + n_channels);
@@ -6121,7 +6122,7 @@ nl80211_parse_sched_scan(struct wiphy *wiphy, struct wireless_dev *wdev,
 	if (n_match_sets) {
 		if (request->ie)
 			request->match_sets = (void *)(request->ie + ie_len);
-		else if (request->ssids)
+		else if (n_ssids)
 			request->match_sets =
 				(void *)(request->ssids + n_ssids);
 		else
@@ -6180,7 +6181,7 @@ nl80211_parse_sched_scan(struct wiphy *wiphy, struct wireless_dev *wdev,
 	request->n_channels = i;
 
 	i = 0;
-	if (attrs[NL80211_ATTR_SCAN_SSIDS]) {
+	if (n_ssids) {
 		nla_for_each_nested(attr, attrs[NL80211_ATTR_SCAN_SSIDS],
 				    tmp) {
 			if (nla_len(attr) > IEEE80211_MAX_SSID_LEN) {
@@ -7857,14 +7858,19 @@ static int nl80211_wiphy_netns(struct sk_buff *skb, struct genl_info *info)
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
 	struct net *net;
 	int err;
-	u32 pid;
 
-	if (!info->attrs[NL80211_ATTR_PID])
+	if (info->attrs[NL80211_ATTR_PID]) {
+		u32 pid = nla_get_u32(info->attrs[NL80211_ATTR_PID]);
+
+		net = get_net_ns_by_pid(pid);
+	} else if (info->attrs[NL80211_ATTR_NETNS_FD]) {
+		u32 fd = nla_get_u32(info->attrs[NL80211_ATTR_NETNS_FD]);
+
+		net = get_net_ns_by_fd(fd);
+	} else {
 		return -EINVAL;
+	}
 
-	pid = nla_get_u32(info->attrs[NL80211_ATTR_PID]);
-
-	net = get_net_ns_by_pid(pid);
 	if (IS_ERR(net))
 		return PTR_ERR(net);
 

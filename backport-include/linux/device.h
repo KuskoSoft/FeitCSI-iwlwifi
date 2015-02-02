@@ -5,6 +5,13 @@
 
 #include <linux/version.h>
 
+/*
+ * string.h is usually included from the asm/ folder in most configuration,
+ * but on some older kernels it doesn't. As we're using memcpy() in the code
+ * below, we need to be safe and make sure string.h is indeed there.
+ */
+#include <linux/string.h>
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
 /* backport
  * commit 9f3b795a626ee79574595e06d1437fe0c7d51d29

@@ -24,4 +24,13 @@ net_ieee802154_lowpan(struct net *net)
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0) */
 #endif /* CPTCFG_IEEE802154_6LOWPAN */
 
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,20,0)
+#define get_net_ns_by_fd LINUX_BACKPORT(get_net_ns_by_fd)
+static inline struct net *get_net_ns_by_fd(int fd)
+{
+	return ERR_PTR(-EINVAL);
+}
+#endif
+
 #endif	/* _COMPAT_NET_NET_NAMESPACE_H */
