@@ -6,7 +6,6 @@ config MAC80211
 	depends on CRYPTO_ARC4
 	depends on CRYPTO_AES
 	select BPAUTO_CRYPTO_CCM
-	depends on CRYPTO_GCM
 	depends on CRC32
 	select BPAUTO_AVERAGE
 	---help---
