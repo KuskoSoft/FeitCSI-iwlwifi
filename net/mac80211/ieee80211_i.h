@@ -1166,8 +1166,6 @@ struct ieee80211_local {
 
 	bool use_chanctx;
 
-	bool ratestats_active;
-
 	/* protects the aggregated multicast list and filter calls */
 	spinlock_t filter_lock;
 

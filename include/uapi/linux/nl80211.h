@@ -35,7 +35,6 @@
 #define NL80211_MULTICAST_GROUP_MLME		"mlme"
 #define NL80211_MULTICAST_GROUP_VENDOR		"vendor"
 #define NL80211_MULTICAST_GROUP_TESTMODE	"testmode"
-#define NL80211_MULTICAST_GROUP_RATESTATS	"ratestats"
 
 /**
  * DOC: Station handling
@@ -799,10 +798,6 @@
  *	as an event to indicate changes for devices with wiphy-specific regdom
  *	management.
  *
- * @NL80211_CMD_GET_RATESTATS: This command can be used to trigger the rate
- *	statistics dump to userspace, which also clears the data in the kernel
- *	(driver). See the "per-rate statistics" documentation section.
- *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
  */
@@ -988,8 +983,6 @@ enum nl80211_commands {
 	NL80211_CMD_TDLS_CANCEL_CHANNEL_SWITCH,
 
 	NL80211_CMD_WIPHY_REG_CHANGE,
-
-	NL80211_CMD_GET_RATESTATS,
 
 	/* add new commands above here */
 
@@ -1749,9 +1742,6 @@ enum nl80211_commands {
  * @NL80211_ATTR_SCHED_SCAN_DELAY: delay before a scheduled scan (or a
  *	WoWLAN net-detect scan) is started, u32 in seconds.
  *
- * @NL80211_ATTR_RATESTATS: per-rate statistics container attribute, this is
- *	contains the attributes from &enum nl80211_ratestats.
- *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2120,8 +2110,6 @@ enum nl80211_attrs {
 	NL80211_ATTR_SCHED_SCAN_DELAY,
 	
 	NL80211_ATTR_REG_INDOOR,
-
-	NL80211_ATTR_RATESTATS,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -4350,13 +4338,10 @@ enum nl80211_feature_flags {
 /**
  * enum nl80211_ext_feature_index - bit index of extended features.
  *
- * @NL80211_EXT_FEATURE_RATESTATS: This device supports the per-rate
- *	statistics subscription API.
  * @NUM_NL80211_EXT_FEATURES: number of extended features.
  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
  */
 enum nl80211_ext_feature_index {
-	NL80211_EXT_FEATURE_RATESTATS,
 
 	/* add new features before the definition below */
 	NUM_NL80211_EXT_FEATURES,
@@ -4580,67 +4565,6 @@ enum nl80211_tdls_peer_capability {
 	NL80211_TDLS_PEER_HT = 1<<0,
 	NL80211_TDLS_PEER_VHT = 1<<1,
 	NL80211_TDLS_PEER_WMM = 1<<2,
-};
-
-/**
- * DOC: per-rate statistics
- *
- * The nl80211 API provides a way to subscribe to per-bitrate statistics. Since
- * there are many bitrates it isn't always desirable to keep statistics for all
- * of the rates in the kernel. As a consequence, the API allows the drivers to
- * dump the information to userspace and reset their internal values. As it can
- * also be expensive to keep the counters, this is only done when subscribers
- * exist.
- *
- * To use this facility, a userspace client must subscribe to the data using the
- * rate statistics multicast group (%NL80211_MULTICAST_GROUP_RATESTATS). This is
- * used by the kernel to start data collection. If, at this point, other clients
- * exist, those are also sent the current statistics in order to allow the new
- * client to collect only the data obtained while subscribed.
- *
- * While subscribed, the client must listen for %NL80211_CMD_GET_RATESTATS
- * events sent to the subscribed socket, and accumulate data retrieved in them.
- * Every time such an event is sent by the kernel, the in-kernel data is also
- * cleared. Therefore, to achieve data collection over longer periods of time,
- * the subscribers must accumulate data. No guarantees are made about how long
- * the kernel will collect data, but (as an implementation guideline) the data
- * shouldn't be sent out frequently, and only while traffic is keeping the CPU
- * busy anyway (i.e. it is recommended to not use timers in drivers supporting
- * this facility.)
- *
- * In order to obtain a sample or clear the statistics at a given point in time,
- * the %NL80211_CMD_GET_RATESTATS command can be used. This command can be
- * called by any nl80211 client (even non-subscribers) and causes the kernel
- * to send out and clear (atomically) the currently accumulated data to all of
- * the subscribers.
- *
- * Note that the data sent out in each notification contains only some data for
- * a single station (identified by the interface index and the station's MAC
- * address.) It is therefore expected that multiple messages will be received
- * by an application, possibly even multiple messages for the same station and
- * the same rate (e.g. for separate RX and TX counters), and subscribers need
- * to ensure that their socket buffers are big enough to retrieve all the data.
- */
-
-/**
- * enum nl80211_ratestats - per-rate statistics container attributes
- * @__NL80211_ATTR_RATESTATS_INVALID: attribute number 0 is reserved
- * @NL80211_ATTR_RATESTATS_RATE: bitrate definition, nested attribute
- *	containing the attributes from &enum nl80211_rate_info.
- * @NL80211_ATTR_RATESTATS_STATS: statistics values, nested attribute
- *	containing the attributes from &enum nl80211_tid_stats (even
- *	though the statistics are not per TID)
- * @NUM_NL80211_ATTR_RATESTATS: number of attributes here
- * @NL80211_ATTR_RATESTATS_MAX: highest numbered attribute here
- */
-enum nl80211_ratestats {
-	__NL80211_ATTR_RATESTATS_INVALID,
-	NL80211_ATTR_RATESTATS_RATE,
-	NL80211_ATTR_RATESTATS_STATS,
-
-	/* keep last */
-	NUM_NL80211_ATTR_RATESTATS,
-	NL80211_ATTR_RATESTATS_MAX = NUM_NL80211_ATTR_RATESTATS - 1
 };
 
 #endif /* __LINUX_NL80211_H */

@@ -2152,21 +2152,6 @@ struct cfg80211_qos_map {
 };
 
 /**
- * enum cfg80211_ratestats_ops - rate statistics operations
- *
- * @CFG80211_RATESTATS_START: start data collection
- * @CFG80211_RATESTATS_DUMP: atomically dump and clear the data
- *	(using cfg80211_report_ratestats() to report it); this
- *	should be done before the function call returns
- * @CFG80211_RATESTATS_STOP: stop data collection
- */
-enum cfg80211_ratestats_ops {
-	CFG80211_RATESTATS_START,
-	CFG80211_RATESTATS_DUMP,
-	CFG80211_RATESTATS_STOP,
-};
-
-/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -2434,9 +2419,6 @@ enum cfg80211_ratestats_ops {
  *	and returning to the base channel for communication with the AP.
  * @tdls_cancel_channel_switch: Stop channel-switching with a TDLS peer. Both
  *	peers must be on the base channel when the call completes.
- *
- * @ratestats: rate statistics operation - if supported all operations must be
- *	supported, see &enum cfg80211_ratestats_ops.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -2700,9 +2682,6 @@ struct cfg80211_ops {
 	void	(*tdls_cancel_channel_switch)(struct wiphy *wiphy,
 					      struct net_device *dev,
 					      const u8 *addr);
-
-	void	(*ratestats)(struct wiphy *wiphy,
-			     enum cfg80211_ratestats_ops op);
 };
 
 /*
@@ -5130,28 +5109,6 @@ wiphy_ext_feature_isset(struct wiphy *wiphy,
 	ft_byte = wiphy->ext_features[ftidx / 8];
 	return (ft_byte & BIT(ftidx % 8)) != 0;
 }
-
-/* rate statistics */
-struct cfg80211_ratestats {
-	struct rate_info rate;
-	struct cfg80211_tid_stats stats;
-};
-
-/**
- * cfg80211_report_ratestats - report rate statistics for a station
- * @wiphy: the wiphy that's reporting the data
- * @wdev: the virtual interface the data is reported for
- * @addr: the station MAC address
- * @n_stats: length of statistics array
- * @stats: array of per-rate statistics
- * @gfp: allocation flags
- *
- * Note that it is valid to call this function multiple times even for the
- * same station, if the data isn't actually stored in an array.
- */
-void cfg80211_report_ratestats(struct wiphy *wiphy, struct wireless_dev *wdev,
-			       const u8 *addr, unsigned int n_stats,
-			       struct cfg80211_ratestats *stats, gfp_t gfp);
 
 /* ethtool helper */
 void cfg80211_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info);

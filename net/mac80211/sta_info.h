@@ -382,7 +382,6 @@ struct ieee80211_tx_latency_stat {
  *	using IEEE80211_NUM_TID entry for non-QoS frames
  * @rx_msdu: MSDUs received from this station, using IEEE80211_NUM_TID
  *	entry for non-QoS frames
- * @ratestats: rate statistics pointer (if enabled)
  */
 struct sta_info {
 	/* General information, mostly static */
@@ -457,7 +456,6 @@ struct sta_info {
 	u64 tx_msdu_retries[IEEE80211_NUM_TIDS + 1];
 	u64 tx_msdu_failed[IEEE80211_NUM_TIDS + 1];
 	u64 rx_msdu[IEEE80211_NUM_TIDS + 1];
-	struct ieee80211_sta_ratestats __rcu *ratestats;
 
 	/*
 	 * Aggregation information, locked with lock.
@@ -701,62 +699,5 @@ u8 sta_info_tx_streams(struct sta_info *sta);
 void ieee80211_sta_ps_deliver_wakeup(struct sta_info *sta);
 void ieee80211_sta_ps_deliver_poll_response(struct sta_info *sta);
 void ieee80211_sta_ps_deliver_uapsd(struct sta_info *sta);
-
-/* rate statistics */
-void ieee80211_sta_start_ratestats(struct sta_info *sta);
-struct ieee80211_sta_ratestats * __must_check
-ieee80211_sta_reset_ratestats(struct sta_info *sta);
-struct ieee80211_sta_ratestats * __must_check
-ieee80211_sta_stop_ratestats(struct sta_info *sta);
-void ieee80211_sta_free_ratestats(struct ieee80211_sta_ratestats *stats,
-				  bool flush);
-
-struct ieee80211_sta_ratestats {
-	struct list_head list;
-	struct sta_info *sta;
-	struct work_struct dump_wk;
-	struct {
-#define STA_RATESTATS_RATE_INVALID	0
-#define STA_RATESTATS_RATE_VHT		0x8000
-#define STA_RATESTATS_RATE_HT		0x4000
-#define STA_RATESTATS_RATE_LEGACY	0x2000
-#define STA_RATESTATS_RATE_SGI		0x1000
-#define STA_RATESTATS_RATE_BW_SHIFT	9
-#define STA_RATESTATS_RATE_BW_MASK	(0x7 << STA_RATESTATS_RATE_BW_SHIFT)
-		u16 rate;
-		u16 rx;
-	/* 3 * rate_idx/MCS - using a few from the end as escape */
-	} entries[36];
-};
-
-static inline u16 sta_ratestats_encode_rate(struct ieee80211_rx_status *s)
-{
-	u16 r = s->rate_idx;
-
-	if (s->vht_flag & RX_VHT_FLAG_80MHZ)
-		r |= RATE_INFO_BW_80 << STA_RATESTATS_RATE_BW_SHIFT;
-	else if (s->vht_flag & RX_VHT_FLAG_160MHZ)
-		r |= RATE_INFO_BW_160 << STA_RATESTATS_RATE_BW_SHIFT;
-	else if (s->flag & RX_FLAG_40MHZ)
-		r |= RATE_INFO_BW_40 << STA_RATESTATS_RATE_BW_SHIFT;
-	else if (s->flag & RX_FLAG_10MHZ)
-		r |= RATE_INFO_BW_10 << STA_RATESTATS_RATE_BW_SHIFT;
-	else if (s->flag & RX_FLAG_5MHZ)
-		r |= RATE_INFO_BW_5 << STA_RATESTATS_RATE_BW_SHIFT;
-	else
-		r |= RATE_INFO_BW_20 << STA_RATESTATS_RATE_BW_SHIFT;
-
-	if (s->flag & RX_FLAG_SHORT_GI)
-		r |= STA_RATESTATS_RATE_SGI;
-
-	if (s->flag & RX_FLAG_VHT)
-		r |= STA_RATESTATS_RATE_VHT | (s->vht_nss << 4);
-	else if (s->flag & RX_FLAG_HT)
-		r |= STA_RATESTATS_RATE_HT;
-	else
-		r |= STA_RATESTATS_RATE_LEGACY | (s->band << 4);
-
-	return r;
-}
 
 #endif /* STA_INFO_H */
