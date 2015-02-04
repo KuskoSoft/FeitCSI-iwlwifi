@@ -288,6 +288,16 @@ DECLARE_EVENT_CLASS(wiphy_only_evt,
 	TP_printk(WIPHY_PR_FMT, WIPHY_PR_ARG)
 );
 
+DEFINE_EVENT(wiphy_only_evt, rdev_suspend_enter,
+	TP_PROTO(struct wiphy *wiphy),
+	TP_ARGS(wiphy)
+);
+
+DEFINE_EVENT(wiphy_only_evt, rdev_suspend_leave,
+	TP_PROTO(struct wiphy *wiphy),
+	TP_ARGS(wiphy)
+);
+
 DEFINE_EVENT(wiphy_only_evt, rdev_resume,
 	TP_PROTO(struct wiphy *wiphy),
 	TP_ARGS(wiphy)

@@ -106,6 +106,7 @@ static int wiphy_suspend(struct device *dev, pm_message_t state)
 	int ret = 0;
 
 	rdev->suspend_at = get_seconds();
+	trace_rdev_suspend_enter(&rdev->wiphy);
 
 	rtnl_lock();
 	if (rdev->wiphy.registered) {
@@ -119,6 +120,7 @@ static int wiphy_suspend(struct device *dev, pm_message_t state)
 			ret = rdev_suspend(rdev, NULL);
 		}
 	}
+	trace_rdev_suspend_leave(&rdev->wiphy);
 	rtnl_unlock();
 
 	return ret;
