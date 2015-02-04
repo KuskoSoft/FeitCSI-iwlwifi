@@ -199,6 +199,7 @@ struct iwl_trans_slv {
 	bool suspending;
 
 	struct device *d0i3_dev;
+	struct device *host_dev;
 	wait_queue_head_t d0i3_waitq;
 
 	bool wowlan_enabled;

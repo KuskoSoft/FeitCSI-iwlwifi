@@ -623,9 +623,11 @@ static int iwl_slv_rpm_runtime_suspend(struct device *dev)
 	struct iwl_slv_rpm_device *rpm_dev =
 			container_of(dev, struct iwl_slv_rpm_device, dev);
 	struct iwl_trans *trans = rpm_dev->trans;
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
 	IWL_DEBUG_RPM(trans, "entering d0i3\n");
 	iwl_slv_runtime_suspend(trans);
+	pm_runtime_allow(trans_slv->host_dev);
 	return 0;
 }
 
@@ -634,8 +636,10 @@ static int iwl_slv_rpm_runtime_resume(struct device *dev)
 	struct iwl_slv_rpm_device *rpm_dev =
 			container_of(dev, struct iwl_slv_rpm_device, dev);
 	struct iwl_trans *trans = rpm_dev->trans;
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
 	IWL_DEBUG_RPM(trans, "exiting d0i3\n");
+	pm_runtime_forbid(trans_slv->host_dev);
 	iwl_slv_runtime_resume(trans);
 	return 0;
 }
@@ -1872,7 +1876,7 @@ static ssize_t iwl_dbgfs_d0i3_timeout_write(struct file *file,
 #ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	trans_slv->rpm_config.autosuspend_delay = value;
 #else
-	pm_runtime_set_autosuspend_delay(trans->dev, value);
+	pm_runtime_set_autosuspend_delay(trans_slv->d0i3_dev, value);
 #endif
 	return count;
 }

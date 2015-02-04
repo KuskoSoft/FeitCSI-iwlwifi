@@ -195,9 +195,6 @@ static int iwl_sdio_probe(struct sdio_func *func,
 	if (ret)
 		goto out_free_drv;
 
-	/* enable sdio runtime pm */
-	pm_runtime_put_noidle(trans->dev);
-
 	IWL_INFO(trans, "SDIO probing completed successfully\n");
 	return 0;
 
@@ -227,9 +224,6 @@ static void iwl_sdio_remove(struct sdio_func *func)
 
 	/* Clear data in SDIO bus driver */
 	sdio_set_drvdata(func, NULL);
-
-	/* disable sdio runtime pm */
-	pm_runtime_get_noresume(trans->dev);
 
 	/* Release all BUS allocated memroy */
 	iwl_trans_sdio_free(trans);

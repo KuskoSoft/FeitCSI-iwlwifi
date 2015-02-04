@@ -156,11 +156,16 @@ static u32 iwl_sdio_get_addr_auto_inc_flag(u32 address)
 static void iwl_sdio_set_power(struct iwl_trans *trans, bool on)
 {
 	struct sdio_func *sdio_func = IWL_TRANS_SDIO_GET_FUNC(trans);
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
-	if (on)
+	if (on) {
+		pm_runtime_forbid(trans_slv->host_dev);
 		mmc_power_restore_host(sdio_func->card->host);
-	else
+	}
+	else {
 		mmc_power_save_host(sdio_func->card->host);
+		pm_runtime_allow(trans_slv->host_dev);
+	}
 }
 
 /*
@@ -2782,6 +2787,8 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 	int ret;
 	struct iwl_trans *trans;
 	struct iwl_trans_sdio *trans_sdio;
+	struct iwl_trans_slv *trans_slv;
+	struct mmc_card *card = func->card;
 
 	/* Alloc general + SDIO specific transport */
 	trans = kzalloc(sizeof(struct iwl_trans) +
@@ -2794,12 +2801,14 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 	}
 
 	trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	trans_sdio->func = func;
 	trans_sdio->trans = trans;
 
 	trans->ops = &trans_ops_sdio;
 	trans->cfg = cfg;
 	trans->dev = &func->dev;
+	trans_slv->host_dev = mmc_dev(card->host);
 
 	trans_lockdep_init(trans);
 
