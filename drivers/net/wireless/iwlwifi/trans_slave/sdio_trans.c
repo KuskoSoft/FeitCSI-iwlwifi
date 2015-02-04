@@ -69,7 +69,6 @@
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
 #include <linux/mmc/sdhci.h>
-#include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
 #include <linux/pm_runtime.h>
@@ -154,7 +153,6 @@ static u32 iwl_sdio_get_addr_auto_inc_flag(u32 address)
 	}
 }
 
-#ifdef CONFIG_X86_MRFLD
 static void iwl_sdio_set_power(struct iwl_trans *trans, bool on)
 {
 	struct sdio_func *sdio_func = IWL_TRANS_SDIO_GET_FUNC(trans);
@@ -164,10 +162,6 @@ static void iwl_sdio_set_power(struct iwl_trans *trans, bool on)
 	else
 		mmc_power_save_host(sdio_func->card->host);
 }
-#else
-static inline void iwl_sdio_set_power(struct iwl_trans *trans, bool on)
-{}
-#endif
 
 /*
  * Sets the target access command's access_control field based on the
@@ -2101,81 +2095,41 @@ static irqreturn_t sdio_irq_thread(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int iwl_setup_wifi_gpio(struct iwl_trans *trans, int gpio)
-{
-	int ret;
-
-	ret = gpio_request(gpio, "wifi_gpio");
-	if (ret < 0) {
-		IWL_ERR(trans, "Unable to request gpio %d\n", gpio);
-		return ret;
-	}
-
-	ret = gpio_direction_input(gpio);
-	if (ret < 0) {
-		IWL_ERR(trans, "Unable to set direction for gpio %d\n", gpio);
-		gpio_free(gpio);
-	}
-
-	return ret;
-}
-
-static int iwl_setup_oob_irq(struct iwl_trans *trans, int gpio)
+static int iwl_setup_oob_irq(struct iwl_trans *trans, int irq)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
-	int wlan_irq, ret;
+	int ret;
 
-	/* request gpio and set its direction */
-	ret = iwl_setup_wifi_gpio(trans, gpio);
+	IWL_DEBUG_INFO(trans, "request irq %d\n", irq);
+	ret = request_threaded_irq(irq, sdio_irq_handler,
+				   sdio_irq_thread,
+				   IRQF_TRIGGER_FALLING,
+				   DRV_NAME, trans);
 	if (ret)
 		return ret;
 
-	wlan_irq = gpio_to_irq(gpio);
-	if (wlan_irq < 0) {
-		IWL_ERR(trans, "Error getting irq from gpio %d\n", gpio);
-		ret = wlan_irq;
-		goto free_gpio;
-	}
-
-	IWL_DEBUG_INFO(trans, "request irq %d\n", wlan_irq);
-	ret = request_threaded_irq(wlan_irq, sdio_irq_handler,
-				   sdio_irq_thread,
-				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
-				   DRV_NAME, trans);
-	if (ret)
-		goto free_gpio;
-
-	trans_sdio->plat_data.irq = wlan_irq;
+	trans_sdio->plat_data.irq = irq;
 	return 0;
 
-free_gpio:
-	gpio_free(gpio);
-	return ret;
 }
 
 static int iwlwifi_plat_probe(struct platform_device *pdev)
 {
 	struct iwl_trans *trans = iwl_sdio_plat_trans;
-	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
-	int wlan_gpio, ret;
+	int wlan_irq, ret;
 
-	/*
-	 * The "wlan_irq" name is misleading - the resource
-	 * actually describes the wlan gpio!
-	 */
-	wlan_gpio = platform_get_irq_byname(pdev, "wlan_irq");
-	if (wlan_gpio < 0)
-		return wlan_gpio;
+	wlan_irq = platform_get_irq_byname(pdev, "wlan_irq");
+	if (wlan_irq < 0)
+		return wlan_irq;
 
-	IWL_DEBUG_INFO(trans, "wlan_gpio=%d\n", wlan_gpio);
+	IWL_INFO(trans, "wlan_irq=%d\n", wlan_irq);
 
-	ret = iwl_setup_oob_irq(trans, wlan_gpio);
+	ret = iwl_setup_oob_irq(trans, wlan_irq);
 	if (ret) {
 		IWL_ERR(trans, "Failed setting oob irq\n");
 		return ret;
 	}
 
-	trans_sdio->plat_data.gpio = wlan_gpio;
 	platform_set_drvdata(pdev, trans);
 
 	device_set_wakeup_capable(trans->dev, true);
@@ -2190,11 +2144,16 @@ static int iwlwifi_plat_remove(struct platform_device *pdev)
 
 	IWL_DEBUG_INFO(trans, "remove OOB IRQ\n");
 
-	gpio_free(trans_sdio->plat_data.gpio);
 	free_irq(trans_sdio->plat_data.irq, trans);
 
 	return 0;
 }
+#ifdef CONFIG_OF
+static const struct of_device_id iwlwifi_of_match[] = {
+	{ .compatible = "intel,iwlwifi_sdio_platform" },
+	{ }
+};
+#endif
 
 static struct platform_driver iwlwifi_plat_driver = {
 	.probe		= iwlwifi_plat_probe,
@@ -2202,6 +2161,9 @@ static struct platform_driver iwlwifi_plat_driver = {
 	.driver = {
 		.name	= "wlan",
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = iwlwifi_of_match,
+#endif
 	}
 };
 
