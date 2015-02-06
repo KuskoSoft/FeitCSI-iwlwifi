@@ -3989,7 +3989,7 @@ void ieee80211_mgd_quiesce(struct ieee80211_sub_if_data *sdata)
 	 * To work around this (for now) simply deauth here again if we're
 	 * now connected.
 	 */
-	if (ifmgd->associated) {
+	if (ifmgd->associated && !sdata->local->wowlan) {
 		u8 bssid[ETH_ALEN];
 		struct cfg80211_deauth_request req = {
 			.reason_code = WLAN_REASON_DEAUTH_LEAVING,
