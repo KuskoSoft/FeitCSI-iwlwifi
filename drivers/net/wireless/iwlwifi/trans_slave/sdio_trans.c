@@ -2102,8 +2102,7 @@ static int iwl_setup_oob_irq(struct iwl_trans *trans, int irq)
 
 	IWL_DEBUG_INFO(trans, "request irq %d\n", irq);
 	ret = request_threaded_irq(irq, sdio_irq_handler,
-				   sdio_irq_thread,
-				   IRQF_TRIGGER_FALLING,
+				   sdio_irq_thread, 0,
 				   DRV_NAME, trans);
 	if (ret)
 		return ret;
