@@ -321,13 +321,12 @@ struct iwl_reduce_tx_power_cmd {
  * @dev_52_high: device TX power restriction upper band - high
  */
 struct iwl_dev_tx_power_cmd {
-	u32 set_mode;
-	u8 mac_context_id;
+	__le32 set_mode;
+	__le32 mac_context_id;
 	__le16 pwr_restriction;
 	__le16 dev_24;
 	__le16 dev_52_low;
 	__le16 dev_52_high;
-	u8 reserved[3];
 } __packed; /* TX_REDUCED_POWER_API_S_VER_2 */
 
 /**

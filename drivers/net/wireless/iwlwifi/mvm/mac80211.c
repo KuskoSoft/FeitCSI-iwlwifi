@@ -1424,7 +1424,7 @@ static int iwl_mvm_set_tx_power_device(struct iwl_mvm *mvm,
 				       s16 tx_power)
 {
 	struct iwl_dev_tx_power_cmd cmd = {
-		.set_mode = 1,
+		.set_mode = cpu_to_le32(1),
 	};
 	s16 min_tx_power = IWL_USER_MAX_TX_POWER;
 
@@ -1464,7 +1464,8 @@ static int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 {
 	struct iwl_dev_tx_power_cmd cmd = {
 		.set_mode = 0,
-		.mac_context_id = iwl_mvm_vif_from_mac80211(vif)->id,
+		.mac_context_id =
+			cpu_to_le32(iwl_mvm_vif_from_mac80211(vif)->id),
 		.pwr_restriction = cpu_to_le16(8 * tx_power),
 	};
 
