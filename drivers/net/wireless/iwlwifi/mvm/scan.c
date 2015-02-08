@@ -1194,7 +1194,15 @@ int iwl_mvm_scan_offload_stop(struct iwl_mvm *mvm, bool notify)
 		return iwl_umac_scan_stop(mvm, IWL_UMAC_SCAN_UID_SCHED_SCAN,
 					  notify);
 
-	if (mvm->scan_status == IWL_MVM_SCAN_NONE)
+	/* Due to a race condition, it's possible that mac80211 asks
+	 * us to stop a sched_scan when it's already stopped.  This
+	 * can happen, for instance, if we stopped the scan ourselves,
+	 * called ieee80211_sched_scan_stopped() and the userspace called
+	 * stop sched scan scan before ieee80211_sched_scan_stopped_work()
+	 * could run.  To handle this, simply return if the scan is
+	 * not running.
+	 */
+	if (mvm->scan_status != IWL_MVM_SCAN_SCHED)
 		return 0;
 
 	if (iwl_mvm_is_radio_killed(mvm)) {
@@ -1638,7 +1646,14 @@ int iwl_mvm_cancel_scan(struct iwl_mvm *mvm)
 		return iwl_umac_scan_stop(mvm, IWL_UMAC_SCAN_UID_REG_SCAN,
 					  true);
 
-	if (mvm->scan_status == IWL_MVM_SCAN_NONE)
+	/* Due to a race condition, it's possible that mac80211 asks
+	 * us to stop a hw_scan when it's already stopped.  This can
+	 * happen, for instance, if we stopped the scan ourselves,
+	 * called ieee80211_scan_completed() and the userspace called
+	 * cancel scan scan before ieee80211_scan_work() could run.
+	 * To handle that, simply return if the scan is not running.
+	 */
+	if (mvm->scan_status != IWL_MVM_SCAN_OS)
 		return 0;
 
 	if (iwl_mvm_is_radio_killed(mvm)) {
