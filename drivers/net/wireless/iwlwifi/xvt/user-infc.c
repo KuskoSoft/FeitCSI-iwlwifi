@@ -132,9 +132,6 @@ int iwl_xvt_send_user_rx_notif(struct iwl_xvt *xvt,
 					IWL_TM_USER_CMD_NOTIF_COMMIT_STATISTICS,
 					data, size, GFP_ATOMIC);
 
-	case MONITOR_DATA_OVER_IDI_NOTIFICATION:
-		return iwl_dnt_dispatch_collect_interface_monitor(xvt->trans,
-								  rxb);
 	case REPLY_HD_PARAMS_CMD:
 		return iwl_xvt_user_send_notif(xvt,
 				IWL_TM_USER_CMD_NOTIF_BFE,
