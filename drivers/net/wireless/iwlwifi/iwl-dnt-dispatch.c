@@ -258,38 +258,6 @@ int iwl_dnt_dispatch_collect_ucode_message(struct iwl_trans *trans,
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_collect_ucode_message);
 
-int iwl_dnt_dispatch_collect_interface_monitor(struct iwl_trans *trans,
-					       struct iwl_rx_cmd_buffer *rxb)
-{
-	struct iwl_dnt *dnt = trans->tmdev->dnt;
-	struct iwl_rx_packet *pkt = rxb_addr(rxb);
-	struct iwl_dnt_dispatch *dispatch;
-	struct dnt_collect_db *db;
-	int data_size;
-
-	dispatch = &dnt->dispatch;
-	db = dispatch->dbgm_db;
-
-	if (dispatch->mon_in_mode != COLLECT) {
-		IWL_INFO(dnt, "Monitor packet ignored\n");
-		return 0;
-	}
-
-	if (dispatch->mon_out_mode != PUSH)
-		return iwl_dnt_dispatch_collect_data(dnt, db, pkt);
-
-	data_size = GET_RX_PACKET_SIZE(pkt);
-	if (dispatch->mon_output == FTRACE)
-		iwl_dnt_dispatch_push_ftrace_handler(dnt, pkt->data, data_size);
-	else if (dispatch->mon_output == NETLINK)
-		iwl_dnt_dispatch_push_netlink_handler(dnt, trans,
-				IWL_TM_USER_CMD_NOTIF_MONITOR_DATA,
-				pkt->data, data_size);
-
-	return 0;
-}
-IWL_EXPORT_SYMBOL(iwl_dnt_dispatch_collect_interface_monitor);
-
 void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans)
 {
 	struct iwl_dnt_dispatch *dispatch = &dnt->dispatch;

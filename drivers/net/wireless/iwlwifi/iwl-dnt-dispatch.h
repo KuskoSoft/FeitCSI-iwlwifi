@@ -76,9 +76,6 @@
 int iwl_dnt_dispatch_pull(struct iwl_trans *trans, u8 *buffer, u32 buffer_size,
 			  u32 input);
 
-int iwl_dnt_dispatch_collect_interface_monitor(struct iwl_trans *trans,
-					       struct iwl_rx_cmd_buffer *rxb);
-
 int iwl_dnt_dispatch_collect_ucode_message(struct iwl_trans *trans,
 					   struct iwl_rx_cmd_buffer *rxb);
 
