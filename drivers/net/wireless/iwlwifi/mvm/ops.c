@@ -120,13 +120,6 @@ static int iwl_mvm_rx_fw_logs(struct iwl_mvm *mvm,
 {
 	return iwl_dnt_dispatch_collect_ucode_message(mvm->trans, rxb);
 }
-
-static int iwl_mvm_dbg(struct iwl_mvm *mvm,
-		       struct iwl_rx_cmd_buffer *rxb,
-		       struct iwl_device_cmd *cmd)
-{
-	return iwl_dnt_dispatch_collect_interface_monitor(mvm->trans, rxb);
-}
 #endif
 
 /*
@@ -287,7 +280,6 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	RX_HANDLER(DEBUG_LOG_MSG, iwl_mvm_rx_fw_logs, false),
-	RX_HANDLER(MONITOR_DATA_OVER_IDI_NOTIFICATION, iwl_mvm_dbg, false),
 #endif
 };
 #undef RX_HANDLER
