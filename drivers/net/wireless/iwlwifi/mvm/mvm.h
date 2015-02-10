@@ -576,6 +576,7 @@ struct iwl_mvm_tcm {
 	spinlock_t lock; /* used when time elapsed */
 	unsigned long ts; /* timestamp when period ends */
 	unsigned long ll_ts;
+	unsigned long uapsd_nonagg_ts;
 	bool paused;
 	struct iwl_mvm_tcm_mac data[NUM_MAC_INDEX_DRIVER];
 	struct {
