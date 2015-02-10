@@ -552,6 +552,17 @@ struct iwl_fw_dbg_trigger_missed_bcon {
 };
 
 /**
+ * struct iwl_fw_dbg_trigger_cmd - configures trigger for messages from FW.
+ * cmd: the list of commands to trigger the collection on
+ */
+struct iwl_fw_dbg_trigger_cmd {
+	struct cmd {
+		u8 cmd_id;
+		u8 group_id;
+	} cmds[16];
+};
+
+/**
  * struct iwl_fw_dbg_conf_tlv - a TLV that describes a debug configuration.
  * @id: conf id
  * @usniffer: should the uSniffer image be used
