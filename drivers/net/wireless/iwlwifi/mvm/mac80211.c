@@ -1421,12 +1421,12 @@ static void iwl_mvm_tx_power_iterator(void *_data, u8 *mac,
 
 static int iwl_mvm_set_tx_power_device(struct iwl_mvm *mvm,
 				       struct ieee80211_vif *vif,
-				       s16 tx_power)
+				       int tx_power)
 {
 	struct iwl_dev_tx_power_cmd cmd = {
 		.set_mode = cpu_to_le32(1),
 	};
-	s16 min_tx_power = IWL_USER_MAX_TX_POWER;
+	int min_tx_power = IWL_USER_MAX_TX_POWER;
 
 	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_TX_POWER_DEV))
 		return 0;
@@ -1434,6 +1434,9 @@ static int iwl_mvm_set_tx_power_device(struct iwl_mvm *mvm,
 	ieee80211_iterate_active_interfaces_atomic(
 		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
 		iwl_mvm_tx_power_iterator, &min_tx_power);
+
+	if (min_tx_power < 0 || min_tx_power > IWL_USER_MAX_TX_POWER)
+		min_tx_power = IWL_USER_MAX_TX_POWER;
 
 	if (min_tx_power != IWL_USER_MAX_TX_POWER)
 		min_tx_power *= 8;
