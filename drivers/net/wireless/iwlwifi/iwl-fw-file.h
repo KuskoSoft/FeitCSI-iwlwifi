@@ -598,6 +598,20 @@ struct iwl_fw_dbg_trigger_mlme {
 };
 
 /**
+ * iwl_fw_dbg_trigger_stats - configures trigger for statistics
+ * @stop_offset: the offset of the value to be monitored
+ * @stop_threshold: the threshold above which to collect
+ * @start_offset: the offset of the value to be monitored
+ * @start_threshold: the threshold above which to start recording
+ */
+struct iwl_fw_dbg_trigger_stats {
+	__le32 stop_offset;
+	__le32 stop_threshold;
+	__le32 start_offset;
+	__le32 start_threshold;
+};
+
+/**
  * struct iwl_fw_dbg_conf_tlv - a TLV that describes a debug configuration.
  * @id: conf id
  * @usniffer: should the uSniffer image be used

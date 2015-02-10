@@ -247,6 +247,7 @@ iwl_fw_error_next_data(struct iwl_fw_error_dump_data *data)
  * @FW_DBG_TRIGGER_FW_NOTIF: trigger log collection when the firmware sends a
  *	command response or a notification.
  * @FW_DBG_TRIGGER_MLME: trigger log collection upon MLME event.
+ * @FW_DBG_TRIGGER_STATS: trigger log collection upon statistics threshold.
  */
 enum iwl_fw_dbg_trigger {
 	FW_DBG_TRIGGER_INVALID = 0,
@@ -256,6 +257,7 @@ enum iwl_fw_dbg_trigger {
 	FW_DBG_TRIGGER_CHANNEL_SWITCH,
 	FW_DBG_TRIGGER_FW_NOTIF,
 	FW_DBG_TRIGGER_MLME,
+	FW_DBG_TRIGGER_STATS,
 
 	/* must be last */
 	FW_DBG_TRIGGER_MAX,
