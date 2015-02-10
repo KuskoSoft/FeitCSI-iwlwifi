@@ -3098,6 +3098,8 @@ static void ieee80211_rx_mgmt_assoc_resp(struct ieee80211_sub_if_data *sdata,
 		sdata_info(sdata, "%pM denied association (code=%d)\n",
 			   mgmt->sa, status_code);
 		ieee80211_destroy_assoc_data(sdata, false);
+		drv_event_callback(sdata->local, sdata, ASSOC_EVENT,
+				   MLME_DENIED);
 	} else {
 		if (!ieee80211_assoc_success(sdata, bss, mgmt, len)) {
 			/* oops -- internal error -- send timeout for now */
@@ -3105,6 +3107,8 @@ static void ieee80211_rx_mgmt_assoc_resp(struct ieee80211_sub_if_data *sdata,
 			cfg80211_assoc_timeout(sdata->dev, bss);
 			return;
 		}
+		drv_event_callback(sdata->local, sdata, ASSOC_EVENT,
+				   MLME_SUCCESS);
 		sdata_info(sdata, "associated\n");
 
 		/*
@@ -3837,6 +3841,8 @@ void ieee80211_sta_work(struct ieee80211_sub_if_data *sdata)
 
 			ieee80211_destroy_assoc_data(sdata, false);
 			cfg80211_assoc_timeout(sdata->dev, bss);
+			drv_event_callback(local, sdata, ASSOC_EVENT,
+					   MLME_TIMEOUT);
 		}
 	} else if (ifmgd->assoc_data && ifmgd->assoc_data->timeout_started)
 		run_again(sdata, ifmgd->assoc_data->timeout);
