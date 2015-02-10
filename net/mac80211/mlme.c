@@ -2543,6 +2543,8 @@ static void ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 			   mgmt->sa, status_code);
 		ieee80211_destroy_auth_data(sdata, false);
 		cfg80211_rx_mlme_mgmt(sdata->dev, (u8 *)mgmt, len);
+		drv_event_callback(sdata->local, sdata, AUTH_EVENT,
+				   MLME_DENIED);
 		return;
 	}
 
@@ -2565,6 +2567,7 @@ static void ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 		return;
 	}
 
+	drv_event_callback(sdata->local, sdata, AUTH_EVENT, MLME_SUCCESS);
 	sdata_info(sdata, "authenticated\n");
 	ifmgd->auth_data->done = true;
 	ifmgd->auth_data->timeout = jiffies + IEEE80211_AUTH_WAIT_ASSOC;
@@ -3820,6 +3823,8 @@ void ieee80211_sta_work(struct ieee80211_sub_if_data *sdata)
 			ieee80211_destroy_auth_data(sdata, false);
 
 			cfg80211_auth_timeout(sdata->dev, bssid);
+			drv_event_callback(local, sdata, AUTH_EVENT,
+					   MLME_TIMEOUT);
 		}
 	} else if (ifmgd->auth_data && ifmgd->auth_data->timeout_started)
 		run_again(sdata, ifmgd->auth_data->timeout);

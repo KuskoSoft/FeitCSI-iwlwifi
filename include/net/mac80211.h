@@ -305,18 +305,26 @@ enum ieee80211_bss_change {
 /**
  * enum ieee80211_event - event to be notified to the low level driver
  * @RSSI_EVENT: AP's rssi crossed the a threshold set by the driver.
+ * @AUTH_EVENT: authentication finished, data will be MLME_*
  */
 enum ieee80211_event {
 	RSSI_EVENT,
+	AUTH_EVENT,
 };
 
 /**
  * enum ieee80211_event_data - data to be used with %enum ieee80211_event
  * @RSSI_EVENT: AP's rssi crossed the a threshold set by the driver.
+ * @MLME_SUCCESS: the MLME operation completed successfully.
+ * @MLME_DENIED: the MLME operation was denied by the peer.
+ * @MLME_TIMEOUT: the MLME operation timed out.
  */
 enum ieee80211_event_data {
 	RSSI_EVENT_LOW,
 	RSSI_EVENT_HIGH,
+	MLME_SUCCESS,
+	MLME_DENIED,
+	MLME_TIMEOUT,
 };
 
 /**
