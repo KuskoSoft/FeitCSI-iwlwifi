@@ -2513,6 +2513,10 @@ static void ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 	u8 bssid[ETH_ALEN];
 	u16 auth_alg, auth_transaction, status_code;
 	struct sta_info *sta;
+	struct ieee80211_event event = {
+		.type = MLME_EVENT,
+		.u.mlme.data = AUTH_EVENT,
+	};
 
 	sdata_assert_lock(sdata);
 
@@ -2545,6 +2549,9 @@ static void ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 			   mgmt->sa, status_code);
 		ieee80211_destroy_auth_data(sdata, false);
 		cfg80211_rx_mlme_mgmt(sdata->dev, (u8 *)mgmt, len);
+		event.u.mlme.status = MLME_DENIED;
+		event.u.mlme.reason = status_code;
+		drv_event_callback(sdata->local, sdata, &event);
 		return;
 	}
 
@@ -2567,6 +2574,8 @@ static void ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 		return;
 	}
 
+	event.u.mlme.status = MLME_SUCCESS;
+	drv_event_callback(sdata->local, sdata, &event);
 	sdata_info(sdata, "authenticated\n");
 	ifmgd->auth_data->done = true;
 	ifmgd->auth_data->timeout = jiffies + IEEE80211_AUTH_WAIT_ASSOC;
@@ -3824,12 +3833,18 @@ void ieee80211_sta_work(struct ieee80211_sub_if_data *sdata)
 			ieee80211_destroy_auth_data(sdata, false);
 		} else if (ieee80211_probe_auth(sdata)) {
 			u8 bssid[ETH_ALEN];
+			struct ieee80211_event event = {
+				.type = MLME_EVENT,
+				.u.mlme.data = AUTH_EVENT,
+				.u.mlme.status = MLME_TIMEOUT,
+			};
 
 			memcpy(bssid, ifmgd->auth_data->bss->bssid, ETH_ALEN);
 
 			ieee80211_destroy_auth_data(sdata, false);
 
 			cfg80211_auth_timeout(sdata->dev, bssid);
+			drv_event_callback(sdata->local, sdata, &event);
 		}
 	} else if (ifmgd->auth_data && ifmgd->auth_data->timeout_started)
 		run_again(sdata, ifmgd->auth_data->timeout);
