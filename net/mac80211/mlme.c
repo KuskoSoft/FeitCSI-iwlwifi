@@ -2388,6 +2388,8 @@ static void __ieee80211_disconnect(struct ieee80211_sub_if_data *sdata)
 
 	cfg80211_tx_mlme_mgmt(sdata->dev, frame_buf,
 			      IEEE80211_DEAUTH_FRAME_LEN);
+	drv_event_callback(sdata->local, sdata, DEAUTH_TX_EVENT,
+			   WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY);
 	sdata_unlock(sdata);
 }
 
@@ -2687,6 +2689,7 @@ static void ieee80211_rx_mgmt_deauth(struct ieee80211_sub_if_data *sdata,
 	ieee80211_set_disassoc(sdata, 0, 0, false, NULL);
 
 	cfg80211_rx_mlme_mgmt(sdata->dev, (u8 *)mgmt, len);
+	drv_event_callback(sdata->local, sdata, DEAUTH_RX_EVENT, reason_code);
 }
 
 
@@ -2713,6 +2716,7 @@ static void ieee80211_rx_mgmt_disassoc(struct ieee80211_sub_if_data *sdata,
 	ieee80211_set_disassoc(sdata, 0, 0, false, NULL);
 
 	cfg80211_rx_mlme_mgmt(sdata->dev, (u8 *)mgmt, len);
+	drv_event_callback(sdata->local, sdata, DEAUTH_RX_EVENT, reason_code);
 }
 
 static void ieee80211_get_rates(struct ieee80211_supported_band *sband,
@@ -3509,6 +3513,8 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 				       true, deauth_buf);
 		cfg80211_tx_mlme_mgmt(sdata->dev, deauth_buf,
 				      sizeof(deauth_buf));
+		drv_event_callback(sdata->local, sdata, DEAUTH_TX_EVENT,
+				   WLAN_REASON_DEAUTH_LEAVING);
 		return;
 	}
 
@@ -3628,6 +3634,7 @@ static void ieee80211_sta_connection_lost(struct ieee80211_sub_if_data *sdata,
 
 	cfg80211_tx_mlme_mgmt(sdata->dev, frame_buf,
 			      IEEE80211_DEAUTH_FRAME_LEN);
+	drv_event_callback(sdata->local, sdata, DEAUTH_TX_EVENT, reason);
 }
 
 static int ieee80211_probe_auth(struct ieee80211_sub_if_data *sdata)
@@ -4499,6 +4506,8 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 
 		cfg80211_tx_mlme_mgmt(sdata->dev, frame_buf,
 				      sizeof(frame_buf));
+		drv_event_callback(sdata->local, sdata, DEAUTH_TX_EVENT,
+				   WLAN_REASON_UNSPECIFIED);
 	}
 
 	sdata_info(sdata, "authenticate with %pM\n", req->bss->bssid);
@@ -4600,6 +4609,8 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 
 		cfg80211_tx_mlme_mgmt(sdata->dev, frame_buf,
 				      sizeof(frame_buf));
+		drv_event_callback(sdata->local, sdata, DEAUTH_TX_EVENT,
+				   WLAN_REASON_UNSPECIFIED);
 	}
 
 	if (ifmgd->auth_data && !ifmgd->auth_data->done) {
@@ -4906,6 +4917,8 @@ int ieee80211_mgd_deauth(struct ieee80211_sub_if_data *sdata,
 				       req->reason_code, tx, frame_buf);
 		cfg80211_tx_mlme_mgmt(sdata->dev, frame_buf,
 				      IEEE80211_DEAUTH_FRAME_LEN);
+		drv_event_callback(sdata->local, sdata, DEAUTH_TX_EVENT,
+				   req->reason_code);
 		return 0;
 	}
 
@@ -4939,6 +4952,8 @@ int ieee80211_mgd_disassoc(struct ieee80211_sub_if_data *sdata,
 
 	cfg80211_tx_mlme_mgmt(sdata->dev, frame_buf,
 			      IEEE80211_DEAUTH_FRAME_LEN);
+	drv_event_callback(sdata->local, sdata, DEAUTH_TX_EVENT,
+			   req->reason_code);
 
 	return 0;
 }
