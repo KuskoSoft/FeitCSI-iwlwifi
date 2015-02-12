@@ -1083,21 +1083,14 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 					    unsigned long ts)
 {
 	unsigned int elapsed = jiffies_to_msecs(ts - mvm->tcm.ts);
-	unsigned int uapsd_elapsed =
-		jiffies_to_msecs(ts - mvm->tcm.uapsd_nonagg_ts);
 	u32 total_airtime = 0;
 	int ac, mac;
 	bool low_latency = false;
 	enum iwl_mvm_vendor_load load;
 	bool handle_ll = time_after(ts, mvm->tcm.ll_ts + MVM_LL_PERIOD);
-	bool handle_uapsd =
-		time_after(ts, mvm->tcm.uapsd_nonagg_ts +
-			       msecs_to_jiffies(IWL_MVM_UAPSD_NONAGG_PERIOD));
 
 	if (handle_ll)
 		mvm->tcm.ll_ts = ts;
-	if (handle_uapsd)
-		mvm->tcm.uapsd_nonagg_ts = ts;
 
 	mvm->tcm.result.elapsed = elapsed;
 
@@ -1133,16 +1126,16 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm *mvm,
 		}
 		low_latency |= mvm->tcm.result.low_latency[mac];
 
-		if (!mvm->tcm.result.low_latency[mac] && handle_uapsd)
-			iwl_mvm_check_uapsd_agg_expected_tpt(mvm, uapsd_elapsed,
-							     mac);
+		if (mvm->tcm.data[mac].uapsd_nonagg_detect.rx_pkts >
+				IWL_MVM_UAPSD_AGGDETECT_MIN_PKTS &&
+		    !low_latency)
+			iwl_mvm_check_uapsd_agg_expected_tpt(mvm, elapsed, mac);
 
 		/* clear old data */
 		memset(&mdata->rx.airtime, 0, sizeof(mdata->rx.airtime));
 		memset(&mdata->tx.airtime, 0, sizeof(mdata->tx.airtime));
-		if (handle_uapsd)
-			memset(&mdata->uapsd_nonagg_detect, 0,
-			       sizeof(mdata->uapsd_nonagg_detect));
+		memset(&mdata->uapsd_nonagg_detect, 0,
+		       sizeof(mdata->uapsd_nonagg_detect));
 	}
 
 	load = iwl_mvm_tcm_load(mvm, total_airtime, elapsed);
