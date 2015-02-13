@@ -2791,7 +2791,6 @@ static int iwl_mvm_mac_sched_scan_start(struct ieee80211_hw *hw,
 		goto out;
 	}
 
-	/* Newest FW fixes sched scan while connected on another interface */
 	if (!vif->bss_conf.idle) {
 		ret = -EBUSY;
 		goto out;

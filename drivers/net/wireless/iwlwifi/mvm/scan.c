@@ -373,17 +373,6 @@ int iwl_mvm_max_scan_ie_len(struct iwl_mvm *mvm, bool is_sched_scan)
 	return max_ie_len;
 }
 
-int iwl_mvm_rx_scan_response(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
-			  struct iwl_device_cmd *cmd)
-{
-	struct iwl_rx_packet *pkt = rxb_addr(rxb);
-	struct iwl_cmd_response *resp = (void *)pkt->data;
-
-	IWL_DEBUG_SCAN(mvm, "Scan response received. status 0x%x\n",
-		       le32_to_cpu(resp->status));
-	return 0;
-}
-
 int iwl_mvm_rx_scan_offload_iter_complete_notif(struct iwl_mvm *mvm,
 						struct iwl_rx_cmd_buffer *rxb,
 						struct iwl_device_cmd *cmd)
@@ -394,29 +383,6 @@ int iwl_mvm_rx_scan_offload_iter_complete_notif(struct iwl_mvm *mvm,
 	IWL_DEBUG_SCAN(mvm,
 		       "Scan offload iteration complete: status=0x%x scanned channels=%d\n",
 		       notif->status, notif->scanned_channels);
-	return 0;
-}
-
-int iwl_mvm_rx_scan_complete(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb,
-			  struct iwl_device_cmd *cmd)
-{
-	struct iwl_rx_packet *pkt = rxb_addr(rxb);
-	struct iwl_scan_complete_notif *notif = (void *)pkt->data;
-
-	lockdep_assert_held(&mvm->mutex);
-
-	IWL_DEBUG_SCAN(mvm, "Scan complete: status=0x%x scanned channels=%d\n",
-		       notif->status, notif->scanned_channels);
-
-#ifdef CPTCFG_IWLMVM_TCM
-	iwl_mvm_resume_tcm(mvm);
-#endif
-	if (mvm->scan_status == IWL_MVM_SCAN_OS)
-		mvm->scan_status = IWL_MVM_SCAN_NONE;
-	ieee80211_scan_completed(mvm->hw, notif->status != SCAN_COMP_STATUS_OK);
-
-	iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
-
 	return 0;
 }
 
@@ -436,11 +402,8 @@ int iwl_mvm_rx_scan_offload_complete_notif(struct iwl_mvm *mvm,
 {
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	struct iwl_periodic_scan_complete *scan_notif;
-	u8 status, ebs_status;
 
 	scan_notif = (void *)pkt->data;
-	status = scan_notif->status;
-	ebs_status = scan_notif->ebs_status;
 
 	/* scan status must be locked for proper checking */
 	lockdep_assert_held(&mvm->mutex);
@@ -449,9 +412,9 @@ int iwl_mvm_rx_scan_offload_complete_notif(struct iwl_mvm *mvm,
 		       "%s completed, status %s, EBS status %s\n",
 		       mvm->scan_status == IWL_MVM_SCAN_SCHED ?
 				"Scheduled scan" : "Scan",
-		       status == IWL_SCAN_OFFLOAD_COMPLETED ?
+		       scan_notif->status == IWL_SCAN_OFFLOAD_COMPLETED ?
 				"completed" : "aborted",
-		       ebs_status == IWL_SCAN_EBS_SUCCESS ?
+		       scan_notif->ebs_status == IWL_SCAN_EBS_SUCCESS ?
 				"success" : "failed");
 
 
@@ -462,11 +425,11 @@ int iwl_mvm_rx_scan_offload_complete_notif(struct iwl_mvm *mvm,
 	} else if (mvm->scan_status == IWL_MVM_SCAN_OS) {
 		mvm->scan_status = IWL_MVM_SCAN_NONE;
 		ieee80211_scan_completed(mvm->hw,
-					 status == IWL_SCAN_OFFLOAD_ABORTED);
+				scan_notif->status == IWL_SCAN_OFFLOAD_ABORTED);
 		iwl_mvm_unref(mvm, IWL_MVM_REF_SCAN);
 	}
 
-	if (ebs_status)
+	if (scan_notif->ebs_status)
 		mvm->last_ebs_successful = false;
 
 	return 0;
@@ -611,33 +574,6 @@ static bool iwl_mvm_scan_pass_all(struct iwl_mvm *mvm,
 	return true;
 }
 
-int iwl_mvm_sched_scan_start(struct iwl_mvm *mvm,
-			     struct cfg80211_sched_scan_request *req)
-{
-	struct iwl_scan_offload_req scan_req = {
-		.watchdog = IWL_SCHED_SCAN_WATCHDOG,
-
-		.schedule_line[0].iterations = IWL_FAST_SCHED_SCAN_ITERATIONS,
-		.schedule_line[0].delay = cpu_to_le16(req->interval / 1000),
-		.schedule_line[0].full_scan_mul = 1,
-
-		.schedule_line[1].iterations = 0xff,
-		.schedule_line[1].delay = cpu_to_le16(req->interval / 1000),
-		.schedule_line[1].full_scan_mul = IWL_FULL_SCAN_MULTIPLIER,
-	};
-
-	if (iwl_mvm_scan_pass_all(mvm, req))
-		scan_req.flags |= cpu_to_le16(IWL_SCAN_OFFLOAD_FLAG_PASS_ALL);
-
-	if (mvm->last_ebs_successful &&
-	    mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_EBS_SUPPORT)
-		scan_req.flags |=
-			cpu_to_le16(IWL_SCAN_OFFLOAD_FLAG_EBS_ACCURATE_MODE);
-
-	return iwl_mvm_send_cmd_pdu(mvm, SCAN_OFFLOAD_REQUEST_CMD, 0,
-				    sizeof(scan_req), &scan_req);
-}
-
 int iwl_mvm_scan_offload_start(struct iwl_mvm *mvm,
 			       struct ieee80211_vif *vif,
 			       struct cfg80211_sched_scan_request *req,
@@ -713,11 +649,6 @@ int iwl_mvm_scan_offload_stop(struct iwl_mvm *mvm, bool notify)
 	if (iwl_mvm_is_radio_killed(mvm)) {
 		ret = 0;
 		goto out;
-	}
-
-	if (mvm->scan_status == IWL_MVM_SCAN_NONE) {
-		IWL_DEBUG_SCAN(mvm, "No scan to stop\n");
-		return 0;
 	}
 
 	iwl_init_notification_wait(&mvm->notif_wait, &wait_scan_done,
