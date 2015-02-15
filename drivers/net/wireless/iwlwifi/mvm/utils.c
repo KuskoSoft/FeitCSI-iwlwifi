@@ -447,11 +447,11 @@ struct iwl_umac_error_event_table {
 	u32 data1;		/* error-specific data */
 	u32 data2;		/* error-specific data */
 	u32 data3;		/* error-specific data */
-	u32 umac_fw_ver;	/* UMAC version */
-	u32 umac_fw_api_ver;	/* UMAC FW API ver */
+	u32 umac_major;
+	u32 umac_minor;
 	u32 frame_pointer;	/* core register 27*/
 	u32 stack_pointer;	/* core register 28 */
-	u32 cmd_header;	/* latest host cmd sent to UMAC */
+	u32 cmd_header;		/* latest host cmd sent to UMAC */
 	u32 nic_isr_pref;	/* ISR status register */
 } __packed;
 
@@ -492,8 +492,8 @@ static void iwl_mvm_dump_umac_error_log(struct iwl_mvm *mvm)
 	IWL_ERR(mvm, "0x%08X | umac data1\n", table.data1);
 	IWL_ERR(mvm, "0x%08X | umac data2\n", table.data2);
 	IWL_ERR(mvm, "0x%08X | umac data3\n", table.data3);
-	IWL_ERR(mvm, "0x%08X | umac version\n", table.umac_fw_ver);
-	IWL_ERR(mvm, "0x%08X | umac api version\n", table.umac_fw_api_ver);
+	IWL_ERR(mvm, "0x%08X | umac major\n", table.umac_major);
+	IWL_ERR(mvm, "0x%08X | umac minor\n", table.umac_minor);
 	IWL_ERR(mvm, "0x%08X | frame pointer\n", table.frame_pointer);
 	IWL_ERR(mvm, "0x%08X | stack pointer\n", table.stack_pointer);
 	IWL_ERR(mvm, "0x%08X | last host cmd\n", table.cmd_header);
