@@ -1613,7 +1613,7 @@ static inline bool
 iwl_fw_dbg_trigger_vif_match(struct iwl_fw_dbg_trigger_tlv *trig,
 			     struct ieee80211_vif *vif)
 {
-	u32 trig_vif = le32_to_cpu(trig->vif_id);
+	u32 trig_vif = le32_to_cpu(trig->vif_type);
 
 	return trig_vif == IWL_FW_DBG_CONF_VIF_ANY || vif->type == trig_vif;
 }

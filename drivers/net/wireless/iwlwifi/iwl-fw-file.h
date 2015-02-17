@@ -503,7 +503,7 @@ enum iwl_fw_dbg_trigger_vif_type {
 /**
  * struct iwl_fw_dbg_trigger_tlv - a TLV that describes the trigger
  * @id: %enum iwl_fw_dbg_trigger
- * @vif_id: %enum iwl_fw_dbg_trigger_vif_type
+ * @vif_type: %enum iwl_fw_dbg_trigger_vif_type
  * @stop_conf_ids: bitmap of configurations this trigger relates to.
  *	if the mode is %IWL_FW_DBG_TRIGGER_STOP, then if the bit corresponding
  *	to the currently running configuration is set, the data should be
@@ -517,7 +517,7 @@ enum iwl_fw_dbg_trigger_vif_type {
  */
 struct iwl_fw_dbg_trigger_tlv {
 	__le32 id;
-	__le32 vif_id;
+	__le32 vif_type;
 	__le32 stop_conf_ids;
 	__le32 stop_delay;
 	u8 mode;
