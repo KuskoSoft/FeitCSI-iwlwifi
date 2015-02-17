@@ -535,14 +535,12 @@ struct iwl_fw_dbg_trigger_tlv {
 /**
  * struct iwl_fw_dbg_trigger_missed_bcon - configures trigger for missed
  *	beacons.
- * @vif_type: %enum iwl_fw_dbg_trigger_vif_type
  * @stop_consec_missed_bcon: stop recording if threshold is crossed.
  * @stop_consec_missed_bcon_since_rx: stop recording if threshold is crossed.
  * @start_consec_missed_bcon: start recording if threshold is crossed.
  * @start_consec_missed_bcon_since_rx: start recording if threshold is crossed.
  */
 struct iwl_fw_dbg_trigger_missed_bcon {
-	__le32 vif_type;
 	__le32 stop_consec_missed_bcon;
 	__le32 stop_consec_missed_bcon_since_rx;
 	__le32 reserved2[2];
