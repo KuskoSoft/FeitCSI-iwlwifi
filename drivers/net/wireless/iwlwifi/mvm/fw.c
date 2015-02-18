@@ -642,7 +642,8 @@ int iwl_mvm_start_fw_dbg_conf(struct iwl_mvm *mvm, u8 conf_id)
 		return -EINVAL;
 
 	/* EARLY START - firmware's configuration is hard coded */
-	if (!mvm->fw->dbg_conf_tlv[conf_id] &&
+	if ((!mvm->fw->dbg_conf_tlv[conf_id] ||
+	     !mvm->fw->dbg_conf_tlv[conf_id]->num_of_hcmds) &&
 	    conf_id == FW_DBG_START_FROM_ALIVE) {
 		iwl_mvm_restart_early_start(mvm);
 		return 0;
