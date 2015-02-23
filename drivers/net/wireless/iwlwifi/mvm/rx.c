@@ -250,9 +250,9 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 	struct iwl_mvm_vif *mvmvif;
 	int mac;
 	int ac = IEEE80211_AC_BE; /* treat non-QoS as BE */
-	/* expected throughput in 500kbps, single stream, 20 MHz */
-	static const u16 thresh_tpt[] = {
-		3, 6, 10, 14, 20, 26, 30, 32, 40, 45,
+	/* expected throughput in 100kbps, single stream, 20 MHz */
+	static const u8 thresh_tpt[] = {
+		9, 18, 30, 42, 60, 78, 90, 96, 120, 135,
 	};
 	u16 thr;
 
