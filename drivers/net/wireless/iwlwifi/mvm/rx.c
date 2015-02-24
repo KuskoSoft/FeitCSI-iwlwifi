@@ -250,7 +250,7 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 	struct iwl_mvm_vif *mvmvif;
 	int mac;
 	int ac = IEEE80211_AC_BE; /* treat non-QoS as BE */
-	/* expected throughput in 100kbps, single stream, 20 MHz */
+	/* expected throughput in 100Kbps, single stream, 20 MHz */
 	static const u8 thresh_tpt[] = {
 		9, 18, 30, 42, 60, 78, 90, 96, 120, 135,
 	};
@@ -304,7 +304,7 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 					RATE_VHT_MCS_NSS_POS);
 	}
 
-	thr *= 1 + ((rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) >>
+	thr <<= ((rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) >>
 				RATE_MCS_CHAN_WIDTH_POS);
 
 	mdata->uapsd_nonagg_detect.rx_bytes += len;

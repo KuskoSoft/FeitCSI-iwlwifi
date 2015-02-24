@@ -1077,8 +1077,8 @@ static void iwl_mvm_check_uapsd_agg_expected_tpt(struct iwl_mvm *mvm,
 	    mvm->tcm.data[mac].uapsd_nonagg_detect.detected)
 		return;
 
-	tpt = 10 * 8 * bytes;
-	do_div(tpt, elapsed); /* 100kbps */
+	tpt = 100 * 8 * bytes;
+	do_div(tpt, elapsed); /* 100Kbps */
 
 	if (tpt < rate)
 		return;
