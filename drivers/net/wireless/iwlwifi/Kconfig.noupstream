@@ -42,6 +42,16 @@ config IWLWIFI_DEVICE_TESTMODE
 	default y if IWLMVM
 	select IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 
+config IWLWIFI_FRQ_MGR_TEST
+	bool "Enable Frequency Manager API - Test Mode"
+	depends on IWLMVM && IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	help
+	  This option enables running The Frequency Manager API
+	  in Debug Mode without having A Frequency Manager.
+	  In this mode you can run the Frequency Manager on any Platform,
+	  monitor the notifications that the driver send the Frequency Manager,
+	  and initiate notifications from the Frequency Manager.
+
 config IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	depends on IWLWIFI
 	bool "enable default value override (for debugging)"
