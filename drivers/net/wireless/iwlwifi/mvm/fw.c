@@ -762,6 +762,9 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 #endif
 
 	mvm->fw_dbg_conf = FW_DBG_INVALID;
+	/* if we have a destination, assume EARLY START */
+	if (mvm->fw->dbg_dest_tlv)
+		mvm->fw_dbg_conf = FW_DBG_START_FROM_ALIVE;
 	iwl_mvm_start_fw_dbg_conf(mvm, FW_DBG_START_FROM_ALIVE);
 
 	ret = iwl_send_tx_ant_cfg(mvm, iwl_mvm_get_valid_tx_ant(mvm));
