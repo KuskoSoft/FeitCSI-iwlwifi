@@ -656,6 +656,29 @@ tx_latency_threshold(struct ieee80211_local *local, struct sk_buff *skb,
 	}
 }
 
+static u32 ieee80211_calc_tx_latency(struct ieee80211_local *local,
+				     ktime_t skb_arv,
+				     struct ieee80211_tx_latency_bin_ranges
+				     *tx_lat)
+{
+	s64 tmp;
+	s64 ts[IEEE80211_TX_LAT_MAX_POINT];
+	u32 msrmnt;
+
+	ts[IEEE80211_TX_LAT_DEL] = ktime_to_ms(ktime_get());
+
+	/* extract previous time stamps */
+	ts[IEEE80211_TX_LAT_ENTER] = skb_arv.tv64 >> 32;
+	tmp = skb_arv.tv64 & 0xFFFFFFFF;
+	ts[IEEE80211_TX_LAT_WRITE] = (tmp >> 16) + ts[IEEE80211_TX_LAT_ENTER];
+	ts[IEEE80211_TX_LAT_ACK] = (tmp & 0xFFFF) + ts[IEEE80211_TX_LAT_ENTER];
+
+	/* calculate packet latency */
+	msrmnt = ts[tx_lat->points[1]] - ts[tx_lat->points[0]];
+
+	return msrmnt;
+}
+
 /*
  * 1) Measure Tx frame completion and removal time for Tx latency statistics
  * calculation. A single Tx frame latency should be measured from when it
@@ -702,7 +725,7 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	}
 
 	/* Calculate the latency */
-	msrmnt = ktime_to_ms(ktime_sub(ktime_get(), skb_arv));
+	msrmnt = ieee80211_calc_tx_latency(local, skb_arv, tx_latency);
 
 	/* update statistic regarding consecutive lost packets */
 	tx_consec_loss_msrmnt(tx_consec, sta, tid, msrmnt, pkt_loss,

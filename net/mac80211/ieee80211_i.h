@@ -1084,6 +1084,24 @@ enum ieee80211_tx_latency_iface {
 	IEEE80211_TX_LATENCY_P2P
 };
 
+/*
+ * enum ieee80211_tx_lat_msr_point - points where to measure the latency
+ *
+ * There are 4 points where we are capturing the timestamp:
+ * 1. Tx packet Enter the Kernel
+ * 2. Tx packet is written to the bus
+ * 3. Tx packet is acked by the AP
+ * 4. Tx packet is erased.
+ */
+enum ieee80211_tx_lat_msr_point {
+	IEEE80211_TX_LAT_ENTER,
+	IEEE80211_TX_LAT_WRITE,
+	IEEE80211_TX_LAT_ACK,
+	IEEE80211_TX_LAT_DEL,
+	/* should always be last */
+	IEEE80211_TX_LAT_MAX_POINT,
+};
+
 #define IEEE80211_IF_DISABLE_THSHLD -1
 
 /*
@@ -1102,6 +1120,7 @@ enum ieee80211_tx_latency_iface {
  *	(0) Internal  buffer - recording using the ucodes internal buffer
  *	(1) Continues recording - recording using MIPI
  * @monitor_collec_wind: collection window for monitor logs
+ * @points: start & end points from where to measure the latency.
  * @n_ranges: number of ranges that are taken in account
  * @ranges: the ranges that the user requested or NULL if disabled.
  */
@@ -1110,6 +1129,7 @@ struct ieee80211_tx_latency_bin_ranges {
 	u32 *thresholds_p2p;
 	u8 monitor_record_mode;
 	u16 monitor_collec_wind;
+	enum ieee80211_tx_lat_msr_point points[2];
 	int n_ranges;
 	u32 ranges[];
 };
