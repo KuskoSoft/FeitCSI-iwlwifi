@@ -340,7 +340,7 @@ enum secure_load_status_reg {
 #define LMPM_SECURE_CPU2_HDR_MEM_SPACE		(0x420400)
 #define LMPM_ROM_READ_ONLY_DATA_ADDR		(0x403010)
 
-#define LMPM_SECURE_TIME_OUT	(100) /* 10 micro */
+#define LMPM_SECURE_TIME_OUT	(400000) /* 40 msec */
 
 /* Rx FIFO */
 #define RXF_SIZE_ADDR			(0xa00c88)
