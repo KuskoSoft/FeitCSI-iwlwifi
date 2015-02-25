@@ -1258,9 +1258,25 @@ int iwl_sdio_read_hw_rev_nic_off(struct iwl_trans *trans)
 		goto disable_int;
 
 	/* Parse the HW revision according to the new HW_REV format */
-	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
+		u32 hw_step;
+
 		trans->hw_rev = (trans->hw_rev & 0xfff0) |
 				((trans->hw_rev << 2) & 0xc);
+
+		/*
+		 * in-order to recognize C step driver should read chip version
+		 * id located at the AUX bus MISC address space.
+		 */
+		hw_step = iwl_sdio_read_prph_no_claim(trans, WFPM_CTRL_REG);
+		hw_step |= ENABLE_WFPM;
+		iwl_sdio_write_prph_no_claim(trans, WFPM_CTRL_REG, hw_step);
+		hw_step = iwl_sdio_read_prph_no_claim(trans, AUX_MISC_REG);
+		hw_step = (hw_step >> HW_STEP_LOCATION_BITS) & 0xF;
+		if (hw_step == 0x3)
+			trans->hw_rev = (trans->hw_rev & 0xFFFFFFF3) |
+					(SILICON_C_STEP << 2);
+	}
 
 	IWL_INFO(trans, "Device HW revision 0x%x\n", trans->hw_rev);
 
