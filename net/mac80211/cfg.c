@@ -3239,12 +3239,6 @@ __ieee80211_channel_switch(struct wiphy *wiphy, struct net_device *dev,
 		goto out;
 	}
 
-	ch_switch.timestamp = 0;
-	ch_switch.device_timestamp = 0;
-	ch_switch.block_tx = params->block_tx;
-	ch_switch.chandef = params->chandef;
-	ch_switch.count = params->count;
-
 	chanctx = container_of(conf, struct ieee80211_chanctx, conf);
 	if (!chanctx) {
 		err = -EBUSY;
