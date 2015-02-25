@@ -727,6 +727,11 @@ static int iwl_pcie_load_cpu_sections_8000b(struct iwl_trans *trans,
 
 	*first_ucode_section = last_read_idx;
 
+	if (cpu == 1)
+		iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, 0xFFFF);
+	else
+		iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, 0xFFFFFFFF);
+
 	return 0;
 }
 
@@ -904,6 +909,10 @@ static int iwl_pcie_load_given_ucode_8000b(struct iwl_trans *trans,
 	if (trans->dbg_dest_tlv)
 		iwl_pcie_apply_destination(trans);
 
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+		iwl_dnt_configure(trans, image);
+#endif
+
 	/* configure the ucode to be ready to get the secured image */
 	/* release CPU reset */
 	iwl_write_prph(trans, RELEASE_CPU_RESET, RELEASE_CPU_RESET_BIT);
@@ -919,13 +928,6 @@ static int iwl_pcie_load_given_ucode_8000b(struct iwl_trans *trans,
 					       &first_ucode_section);
 	if (ret)
 		return ret;
-
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_configure(trans, image);
-#endif
-
-	/* Notify FW loading is done */
-	iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, 0xFFFFFFFF);
 
 	/* wait for image verification to complete  */
 	ret = iwl_poll_prph_bit(trans, LMPM_SECURE_BOOT_CPU1_STATUS_ADDR_B0,
