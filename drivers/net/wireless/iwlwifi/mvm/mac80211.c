@@ -2609,6 +2609,7 @@ static void iwl_mvm_check_uapsd(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	mdata = &mvm->tcm.data[iwl_mvm_vif_from_mac80211(vif)->id];
 	mdata->opened_rx_ba_sessions = false;
+	ewma_init(&mdata->uapsd_nonagg_detect.rate, 16, 16);
 #endif
 
 	if (!(mvm->fw->ucode_capa.flags & IWL_UCODE_TLV_FLAGS_UAPSD_SUPPORT))

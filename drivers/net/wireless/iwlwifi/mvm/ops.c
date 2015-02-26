@@ -417,9 +417,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	};
 	int err, scan_size;
 	u32 min_backoff;
-#ifdef CPTCFG_IWLMVM_TCM
-	int i;
-#endif
 
 	/*
 	 * We use IWL_MVM_STATION_COUNT to check the validity of the station
@@ -495,8 +492,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	mvm->tcm.ts = jiffies;
 	mvm->tcm.ll_ts = jiffies;
 	mvm->tcm.uapsd_nonagg_ts = jiffies;
-	for (i = 0; i < NUM_MAC_INDEX_DRIVER; i++)
-		ewma_init(&mvm->tcm.data[i].uapsd_nonagg_detect.rate, 16, 16);
 #endif
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
