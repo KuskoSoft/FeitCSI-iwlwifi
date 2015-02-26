@@ -279,7 +279,7 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 	}
 	mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
 
-	if (!(rate_n_flags & (RATE_MCS_HT_POS | RATE_MCS_VHT_POS)))
+	if (!(rate_n_flags & (RATE_MCS_HT_MSK | RATE_MCS_VHT_MSK)))
 		return;
 
 	if (mdata->opened_rx_ba_sessions ||
@@ -291,7 +291,7 @@ static void iwl_mvm_rx_handle_tcm(struct iwl_mvm *mvm,
 	    mvmsta->sta_id != mvmvif->ap_sta_id)
 		return;
 
-	if (rate_n_flags & RATE_MCS_HT_POS) {
+	if (rate_n_flags & RATE_MCS_HT_MSK) {
 		thr = thresh_tpt[rate_n_flags & RATE_HT_MCS_RATE_CODE_MSK];
 		thr *= 1 + ((rate_n_flags & RATE_HT_MCS_NSS_MSK) >>
 					RATE_HT_MCS_NSS_POS);
