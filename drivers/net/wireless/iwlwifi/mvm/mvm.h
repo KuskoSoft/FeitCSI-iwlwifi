@@ -585,7 +585,6 @@ struct iwl_mvm_tcm_mac {
 	struct {
 		/* track AP's transfer in client mode */
 		u64 rx_bytes;
-		u32 rx_pkts;
 		struct ewma rate;
 		bool detected;
 	} uapsd_nonagg_detect;
