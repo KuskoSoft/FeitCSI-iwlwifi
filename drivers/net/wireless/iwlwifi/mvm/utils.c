@@ -860,7 +860,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	mvmvif->low_latency = value;
 
-	res = iwl_mvm_update_quotas(mvm, NULL);
+	res = iwl_mvm_update_quotas(mvm, false, NULL);
 	if (res)
 		return res;
 
@@ -974,7 +974,7 @@ static void iwl_mvm_tcm_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
 
 	if (!mvm->tcm.result.change[mvmvif->id] &&
 	    mvmvif->low_latency == low_latency) {
-		iwl_mvm_update_quotas(mvm, NULL);
+		iwl_mvm_update_quotas(mvm, false, NULL);
 		return;
 	}
 
@@ -983,7 +983,7 @@ static void iwl_mvm_tcm_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
 		iwl_mvm_update_low_latency(mvm, vif, low_latency);
 	} else {
 		iwl_mvm_send_tcm_event(mvm, vif);
-		iwl_mvm_update_quotas(mvm, NULL);
+		iwl_mvm_update_quotas(mvm, false, NULL);
 	}
 
 	data->any_sent = true;
