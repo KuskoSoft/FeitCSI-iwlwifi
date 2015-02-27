@@ -1473,26 +1473,6 @@ out:
 	return count;
 }
 
-static ssize_t iwl_dbgfs_enable_scan_iteration_notif_write(struct iwl_mvm *mvm,
-							   char *buf,
-							   size_t count,
-							   loff_t *ppos)
-{
-	int val;
-
-	mutex_lock(&mvm->mutex);
-
-	if (kstrtoint(buf, 10, &val)) {
-		mutex_unlock(&mvm->mutex);
-		return -EINVAL;
-	}
-
-	mvm->scan_iter_notif_enabled = val;
-	mutex_unlock(&mvm->mutex);
-
-	return count;
-}
-
 #ifdef CPTCFG_IWLMVM_TCM
 static ssize_t
 iwl_dbgfs_uapsd_noagg_bssids_read(struct file *file, char __user *user_buf,
@@ -1538,7 +1518,6 @@ MVM_DEBUGFS_READ_WRITE_FILE_OPS(scan_ant_rxchain, 8);
 MVM_DEBUGFS_READ_WRITE_FILE_OPS(d0i3_refs, 8);
 MVM_DEBUGFS_READ_WRITE_FILE_OPS(fw_dbg_conf, 8);
 MVM_DEBUGFS_WRITE_FILE_OPS(fw_dbg_collect, 8);
-MVM_DEBUGFS_WRITE_FILE_OPS(enable_scan_iteration_notif, 8);
 
 #ifdef CPTCFG_IWLMVM_TCM
 MVM_DEBUGFS_READ_FILE_OPS(uapsd_noagg_bssids);
@@ -1586,8 +1565,11 @@ int iwl_mvm_dbgfs_register(struct iwl_mvm *mvm, struct dentry *dbgfs_dir)
 	MVM_DEBUGFS_ADD_FILE(d0i3_refs, mvm->debugfs_dir, S_IRUSR | S_IWUSR);
 	MVM_DEBUGFS_ADD_FILE(fw_dbg_conf, mvm->debugfs_dir, S_IRUSR | S_IWUSR);
 	MVM_DEBUGFS_ADD_FILE(fw_dbg_collect, mvm->debugfs_dir, S_IWUSR);
-	MVM_DEBUGFS_ADD_FILE(enable_scan_iteration_notif, mvm->debugfs_dir,
-			     S_IWUSR);
+	if (!debugfs_create_bool("enable_scan_iteration_notif",
+				 S_IRUSR | S_IWUSR,
+				 mvm->debugfs_dir,
+				 &mvm->scan_iter_notif_enabled))
+		goto err;
 
 #ifdef CPTCFG_IWLMVM_TCM
 	MVM_DEBUGFS_ADD_FILE(uapsd_noagg_bssids, mvm->debugfs_dir, S_IRUSR);
