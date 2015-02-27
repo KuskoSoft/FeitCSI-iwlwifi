@@ -524,19 +524,20 @@ struct iwl_fw_dbg_trigger_tlv {
 	__le32 reserved[2];
 
 	u8 data[0];
-};
+} __packed;
 
 #define FW_DBG_START_FROM_ALIVE	0
 #define FW_DBG_CONF_MAX		32
 #define FW_DBG_INVALID		0xff
 
 /**
- * struct iwl_fw_dbg_trigger_missed_bcon - configures trigger for missed
- *	beacons.
+ * struct iwl_fw_dbg_trigger_missed_bcon - configures trigger for missed beacons
  * @stop_consec_missed_bcon: stop recording if threshold is crossed.
  * @stop_consec_missed_bcon_since_rx: stop recording if threshold is crossed.
  * @start_consec_missed_bcon: start recording if threshold is crossed.
  * @start_consec_missed_bcon_since_rx: start recording if threshold is crossed.
+ * @reserved1: reserved
+ * @reserved2: reserved
  */
 struct iwl_fw_dbg_trigger_missed_bcon {
 	__le32 stop_consec_missed_bcon;
@@ -545,18 +546,18 @@ struct iwl_fw_dbg_trigger_missed_bcon {
 	__le32 start_consec_missed_bcon;
 	__le32 start_consec_missed_bcon_since_rx;
 	__le32 reserved1[2];
-};
+} __packed;
 
 /**
  * struct iwl_fw_dbg_trigger_cmd - configures trigger for messages from FW.
- * cmd: the list of commands to trigger the collection on
+ * cmds: the list of commands to trigger the collection on
  */
 struct iwl_fw_dbg_trigger_cmd {
 	struct cmd {
 		u8 cmd_id;
 		u8 group_id;
-	} cmds[16];
-};
+	} __packed cmds[16];
+} __packed;
 
 /**
  * struct iwl_fw_dbg_trigger_mlme - configures trigger for mlme events
@@ -572,6 +573,8 @@ struct iwl_fw_dbg_trigger_cmd {
  * @start_tx_deauth: number of Tx deauth to start recording
  * @start_assoc_denied: number of denied association to start recording
  * @start_assoc_timeout: number of association timeout to start recording
+ * @reserved2: reserved
+ * @reserved4: reserved
  */
 struct iwl_fw_dbg_trigger_mlme {
 	u8 stop_auth_denied;
@@ -591,7 +594,7 @@ struct iwl_fw_dbg_trigger_mlme {
 	u8 start_assoc_denied;
 	u8 start_assoc_timeout;
 	__le16 reserved4;
-};
+} __packed;
 
 /**
  * iwl_fw_dbg_trigger_stats - configures trigger for statistics
@@ -605,16 +608,15 @@ struct iwl_fw_dbg_trigger_stats {
 	__le32 stop_threshold;
 	__le32 start_offset;
 	__le32 start_threshold;
-};
+} __packed;
 
 /**
- * struct iwl_fw_dbg_trigger_low_rssi - configures trigger for low rssi
- *	of beacons.
- * @rssi:
+ * struct iwl_fw_dbg_trigger_low_rssi - trigger for low beacon RSSI
+ * @rssi: RSSI value to trigger at
  */
 struct iwl_fw_dbg_trigger_low_rssi {
 	__le32 rssi;
-};
+} __packed;
 
 /**
  * struct iwl_fw_dbg_conf_tlv - a TLV that describes a debug configuration.
