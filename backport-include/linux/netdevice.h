@@ -234,4 +234,8 @@ static inline struct sk_buff *napi_alloc_skb(struct napi_struct *napi,
 }
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
 
+#ifndef IFF_TX_SKB_SHARING
+#define IFF_TX_SKB_SHARING 0
+#endif
+
 #endif /* __BACKPORT_NETDEVICE_H */

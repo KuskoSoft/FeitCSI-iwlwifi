@@ -2126,7 +2126,6 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 		goto free;
 	}
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0))
 	if (unlikely(!multicast && skb->sk &&
 		     skb_shinfo(skb)->tx_flags & SKBTX_WIFI_STATUS)) {
 		struct sk_buff *ack_skb = skb_clone_sk(skb);
@@ -2148,7 +2147,6 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 			}
 		}
 	}
-#endif
 
 	/*
 	 * If the skb is shared we need to obtain our own copy.
