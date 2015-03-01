@@ -565,43 +565,6 @@ struct iwl_fw_dbg_trigger_cmd {
 } __packed;
 
 /**
- * struct iwl_fw_dbg_trigger_mlme - configures trigger for mlme events
- * @stop_auth_denied: number of denied authentication to collect
- * @stop_auth_timeout: number of authentication timeout to collect
- * @stop_rx_deauth: number of Rx deauth before to collect
- * @stop_tx_deauth: number of Tx deauth before to collect
- * @stop_assoc_denied: number of denied association to collect
- * @stop_assoc_timeout: number of association timeout to collect
- * @start_auth_denied: number of denied authentication to start recording
- * @start_auth_timeout: number of authentication timeout to start recording
- * @start_rx_deauth: number of Rx deauth to start recording
- * @start_tx_deauth: number of Tx deauth to start recording
- * @start_assoc_denied: number of denied association to start recording
- * @start_assoc_timeout: number of association timeout to start recording
- * @reserved2: reserved
- * @reserved4: reserved
- */
-struct iwl_fw_dbg_trigger_mlme {
-	u8 stop_auth_denied;
-	u8 stop_auth_timeout;
-	u8 stop_rx_deauth;
-	u8 stop_tx_deauth;
-
-	u8 stop_assoc_denied;
-	u8 stop_assoc_timeout;
-	__le16 reserved2;
-
-	u8 start_auth_denied;
-	u8 start_auth_timeout;
-	u8 start_rx_deauth;
-	u8 start_tx_deauth;
-
-	u8 start_assoc_denied;
-	u8 start_assoc_timeout;
-	__le16 reserved4;
-} __packed;
-
-/**
  * iwl_fw_dbg_trigger_stats - configures trigger for statistics
  * @stop_offset: the offset of the value to be monitored
  * @stop_threshold: the threshold above which to collect
