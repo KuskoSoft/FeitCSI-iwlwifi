@@ -305,15 +305,11 @@ enum ieee80211_bss_change {
  * @RSSI_EVENT: AP's rssi crossed the a threshold set by the driver.
  * @AUTH_EVENT: authentication finished, data will be MLME_*
  * @ASSOC_EVENT: association finished, data will be MLME_*
- * @DEAUTH_RX_EVENT: deauth received - data will be %enum ieee80211_reasoncode
- * @DEAUTH_TX_EVENT: deauth sent - data will be %enum ieee80211_reasoncode
  */
 enum ieee80211_event {
 	RSSI_EVENT,
 	AUTH_EVENT,
 	ASSOC_EVENT,
-	DEAUTH_RX_EVENT,
-	DEAUTH_TX_EVENT,
 };
 
 /**
