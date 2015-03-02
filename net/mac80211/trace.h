@@ -1256,31 +1256,28 @@ TRACE_EVENT(drv_set_rekey_data,
 		  LOCAL_PR_ARG, VIF_PR_ARG)
 );
 
-TRACE_EVENT(drv_event_callback,
+TRACE_EVENT(drv_rssi_callback,
 	TP_PROTO(struct ieee80211_local *local,
 		 struct ieee80211_sub_if_data *sdata,
-		 enum ieee80211_event _event,
-		 enum ieee80211_event_data _event_data),
+		 enum ieee80211_rssi_event rssi_event),
 
-	TP_ARGS(local, sdata, _event, _event_data),
+	TP_ARGS(local, sdata, rssi_event),
 
 	TP_STRUCT__entry(
 		LOCAL_ENTRY
 		VIF_ENTRY
-		__field(u32, _event)
-		__field(u32, _event_data)
+		__field(u32, rssi_event)
 	),
 
 	TP_fast_assign(
 		LOCAL_ASSIGN;
 		VIF_ASSIGN;
-		__entry->_event = _event;
-		__entry->_event_data = _event_data;
+		__entry->rssi_event = rssi_event;
 	),
 
 	TP_printk(
-		LOCAL_PR_FMT VIF_PR_FMT " event:%d data:%d",
-		LOCAL_PR_ARG, VIF_PR_ARG, __entry->_event, __entry->_event_data
+		LOCAL_PR_FMT VIF_PR_FMT " rssi_event:%d",
+		LOCAL_PR_ARG, VIF_PR_ARG, __entry->rssi_event
 	)
 );
 
