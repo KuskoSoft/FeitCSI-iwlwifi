@@ -1473,11 +1473,11 @@ struct iwl_sf_cfg_cmd {
 
 /**
  * struct iwl_mcc_update_cmd - Request the device to update geographic
- * regulatory profile according to the given MCC (Mobile Contry Code).
+ * regulatory profile according to the given MCC (Mobile Country Code).
  * The MCC is two letter-code, ascii upper case[A-Z] or '00' for world domain.
  * 'ZZ' MCC will be used to switch to NVM default profile; in this case, the
  * MCC in the cmd response will be the relevant MCC in the NVM.
- * @mcc: given mobile contry code
+ * @mcc: given mobile country code
  * @source_id: the source from where we got the MCC, see iwl_mcc_source
  * @reserved: reserved for alignment
  */
@@ -1517,11 +1517,11 @@ struct iwl_mcc_update_resp {
  * the cellular and connectivity cores that gets updates of the mcc, and
  * notifies the ucode directly of any mcc change.
  * The ucode requests the driver to request the device to update geographic
- * regulatory  profile according to the given MCC (Mobile Contry Code).
+ * regulatory  profile according to the given MCC (Mobile Country Code).
  * The MCC is two letter-code, ascii upper case[A-Z] or '00' for world domain.
  * 'ZZ' MCC will be used to switch to NVM default profile; in this case, the
  * MCC in the cmd response will be the relevant MCC in the NVM.
- * @mcc: given mobile contry code
+ * @mcc: given mobile country code
  * @source_id: identity of the change originator, see iwl_mcc_source
  * @reserved1: reserved for alignment
  */
