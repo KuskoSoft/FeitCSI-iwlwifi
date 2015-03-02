@@ -569,38 +569,16 @@ static void iwl_set_hw_address_family_8000(struct device *dev,
 
 	if (nvm_hw) {
 		/* read the MAC address from HW resisters */
-		if (!dev_is_pci(dev) || (data->nvm_version < 0xE08)) {
-			hw_addr = (const u8 *)&mac_addr0;
-			data->hw_addr[0] = hw_addr[3];
-			data->hw_addr[1] = hw_addr[2];
-			data->hw_addr[2] = hw_addr[1];
-			data->hw_addr[3] = hw_addr[0];
+		hw_addr = (const u8 *)&mac_addr0;
+		data->hw_addr[0] = hw_addr[3];
+		data->hw_addr[1] = hw_addr[2];
+		data->hw_addr[2] = hw_addr[1];
+		data->hw_addr[3] = hw_addr[0];
 
-			hw_addr = (const u8 *)&mac_addr1;
-			data->hw_addr[4] = hw_addr[1];
-			data->hw_addr[5] = hw_addr[0];
-		} else if ((data->nvm_version >= 0xE08) &&
-			   (data->nvm_version < 0xE0B)) {
-			hw_addr = (const u8 *)&mac_addr0;
-			data->hw_addr[5] = hw_addr[2];
-			data->hw_addr[4] = hw_addr[1];
-			data->hw_addr[3] = hw_addr[0];
+		hw_addr = (const u8 *)&mac_addr1;
+		data->hw_addr[4] = hw_addr[1];
+		data->hw_addr[5] = hw_addr[0];
 
-			hw_addr = (const u8 *)&mac_addr1;
-			data->hw_addr[2] = hw_addr[3];
-			data->hw_addr[1] = hw_addr[2];
-			data->hw_addr[0] = hw_addr[1];
-		} else {
-			hw_addr = (const u8 *)&mac_addr0;
-			data->hw_addr[5] = hw_addr[0];
-			data->hw_addr[4] = hw_addr[1];
-			data->hw_addr[3] = hw_addr[2];
-
-			hw_addr = (const u8 *)&mac_addr1;
-			data->hw_addr[2] = hw_addr[1];
-			data->hw_addr[1] = hw_addr[2];
-			data->hw_addr[0] = hw_addr[3];
-		}
 		if (!is_valid_ether_addr(data->hw_addr))
 			IWL_ERR_DEV(dev,
 				    "mac address from hw section is not valid\n");
