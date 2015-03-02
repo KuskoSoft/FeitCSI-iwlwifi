@@ -304,12 +304,10 @@ enum ieee80211_bss_change {
  * enum ieee80211_event - event to be notified to the low level driver
  * @RSSI_EVENT: AP's rssi crossed the a threshold set by the driver.
  * @AUTH_EVENT: authentication finished, data will be MLME_*
- * @ASSOC_EVENT: association finished, data will be MLME_*
  */
 enum ieee80211_event {
 	RSSI_EVENT,
 	AUTH_EVENT,
-	ASSOC_EVENT,
 };
 
 /**
