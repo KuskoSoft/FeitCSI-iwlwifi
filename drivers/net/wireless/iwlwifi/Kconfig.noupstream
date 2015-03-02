@@ -167,3 +167,11 @@ config IWLMVM_WAKELOCK
 	---help---
 	  This option allows to prevent the CPU from suspending while
 	  it is needed.
+
+config IWLWIFI_DISALLOW_OLDER_FW
+	bool "disallow fallback to older firmware images"
+	depends on IWLWIFI
+	help
+	  This Kconfig option allows disabling fallback to older firmware images
+	  to ensure tight coupling between driver and firmware releases. When
+	  enabled, the dbg-cfg framework can still override this setting.
