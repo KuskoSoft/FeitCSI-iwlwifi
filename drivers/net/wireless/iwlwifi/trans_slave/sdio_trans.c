@@ -1023,25 +1023,6 @@ static int iwl_sdio_config_adma(struct iwl_trans *trans)
 	return ret;
 }
 
-static int iwl_sdio_poll_prph_bits(struct iwl_trans *trans, u32 addr,
-				   u32 bits, u32 mask, unsigned int timeout)
-{
-	int t = 0;
-	u32 read_val;
-	do {
-		read_val = iwl_sdio_read_prph_no_claim(trans, addr);
-		IWL_DEBUG_INFO(trans,
-			       "iwl_sdio_poll_prph_bits: addr 0x%x, val 0x%x\n",
-			       addr, read_val);
-		if ((read_val != IWL_SDIO_READ_VAL_ERR) &&
-		    ((read_val & mask) == (bits & mask)))
-			return t;
-		udelay(IWL_SDIO_POLL_INTERVAL);
-		t += IWL_SDIO_POLL_INTERVAL;
-	} while (t < timeout);
-	return -ETIMEDOUT;
-}
-
 /*
  * Polls the requested bits with the requested mask waiting for the
  * value to be changed to the given value.
@@ -2043,18 +2024,6 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 						       &first_ucode_section);
 		if (ret)
 			goto exit_err;
-
-		/* wait for image verification to complete  */
-		/* polling on CSR_CPU_STATUS_LOADING_COMPLETED	*/
-		ret = iwl_sdio_poll_prph_bits(trans,
-					LMPM_SECURE_BOOT_CPU1_STATUS_ADDR,
-					LMPM_SECURE_BOOT_STATUS_SUCCESS,
-					LMPM_SECURE_BOOT_STATUS_SUCCESS,
-					LMPM_SECURE_TIME_OUT);
-		if (ret < 0)
-			IWL_ERR(trans, "Time out on secure boot process\n");
-		else /* ret = the time iwl_sdio_poll_prph_bits returned*/
-			ret = 0;
 	} else {
 		/* load to FW the binary NoN secured sections of CPU1 */
 		ret = iwl_sdio_load_cpu_sections(trans, image, 1,
