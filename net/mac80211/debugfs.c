@@ -18,6 +18,7 @@
 
 #define DEBUGFS_FORMAT_BUFFER_SIZE 100
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 #define TX_TIMING_STATS_BIN_DELIMTER_C ','
 #define TX_TIMING_STATS_BIN_DELIMTER_S ","
 #define TX_TIMING_STATS_BINS_DISABLED "enable(bins disabled)\n"
@@ -543,6 +544,7 @@ static const struct file_operations stats_tx_consecutive_loss_ops = {
 	.open = simple_open,
 	.llseek = generic_file_llseek,
 };
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 int mac80211_format_buffer(char __user *userbuf, size_t count,
 				  loff_t *ppos, char *fmt, ...)
@@ -836,9 +838,11 @@ void debugfs_hw_add(struct ieee80211_local *local)
 	DEBUGFS_DEVSTATS_ADD(dot11FCSErrorCount);
 	DEBUGFS_DEVSTATS_ADD(dot11RTSSuccessCount);
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	DEBUGFS_DEVSTATS_ADD(tx_latency);
 #ifdef CPTCFG_NL80211_TESTMODE
 	DEBUGFS_DEVSTATS_ADD(tx_latency_threshold);
 #endif
 	DEBUGFS_DEVSTATS_ADD(tx_consecutive_loss);
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 }

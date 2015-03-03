@@ -1042,6 +1042,7 @@ struct tpt_led_trigger {
 };
 #endif
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 /*
  * struct ieee80211_tx_consec_loss_ranges - Tx consecutive loss statistics
  * bins ranges
@@ -1099,6 +1100,7 @@ struct ieee80211_tx_latency_bin_ranges {
 	int n_ranges;
 	u32 ranges[];
 };
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 /**
  * mac80211 scan flags - currently active scan mode
@@ -1251,6 +1253,7 @@ struct ieee80211_local {
 	struct timer_list sta_cleanup;
 	int sta_generation;
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	/*
 	 * Tx latency & consecutive loss statistics parameters for
 	 * all stations.
@@ -1258,6 +1261,7 @@ struct ieee80211_local {
 	 */
 	struct ieee80211_tx_consec_loss_ranges __rcu *tx_consec;
 	struct ieee80211_tx_latency_bin_ranges __rcu *tx_latency;
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 	struct sk_buff_head pending[IEEE80211_MAX_QUEUES];
 	struct tasklet_struct tx_pending_tasklet;

@@ -1796,6 +1796,7 @@ fail:
 	return NETDEV_TX_OK; /* meaning, we dealt with the skb */
 }
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 /*
  * Measure Tx frame arrival time for Tx latency & Tx consecutive packet loss
  * statistics calculation.
@@ -1815,7 +1816,7 @@ static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
 		return;
 	skb->tstamp = ktime_get();
 }
-
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 /**
  * ieee80211_build_hdr - build 802.11 header in the given frame
  * @sdata: virtual interface to build the header for
@@ -2271,7 +2272,6 @@ void __ieee80211_subif_start_xmit(struct sk_buff *skb,
 				  u32 info_flags)
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
-	struct ieee80211_local *local = sdata->local;
 
 	if (unlikely(skb->len < ETH_HLEN)) {
 		kfree_skb(skb);
@@ -2280,8 +2280,16 @@ void __ieee80211_subif_start_xmit(struct sk_buff *skb,
 
 	rcu_read_lock();
 
-	/* Measure frame arrival for Tx latency statistics calculation */
-	ieee80211_tx_latency_start_msrmnt(local, skb);
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
+	{
+		struct ieee80211_local *local = sdata->local;
+
+		/* Measure frame arrival for Tx latency statistics
+		 * calculation
+		 */
+		ieee80211_tx_latency_start_msrmnt(local, skb);
+	}
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 	skb = ieee80211_build_hdr(sdata, skb, info_flags);
 	if (IS_ERR(skb))

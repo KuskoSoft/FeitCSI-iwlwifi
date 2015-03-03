@@ -232,6 +232,7 @@ void sta_info_free(struct ieee80211_local *local, struct sta_info *sta)
 	if (sta->rate_ctrl)
 		rate_control_free_sta(sta);
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	if (sta->tx_lat) {
 		int i;
 
@@ -249,6 +250,7 @@ void sta_info_free(struct ieee80211_local *local, struct sta_info *sta)
 		}
 		kfree(sta->tx_consec);
 	}
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 	sta_dbg(sta->sdata, "Destroyed STA %pM\n", sta->sta.addr);
 
@@ -305,9 +307,11 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_local *local = sdata->local;
 	struct sta_info *sta;
 	struct timespec uptime;
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
 	size_t size;
+#endif
 	int i;
 
 	sta = kzalloc(sizeof(*sta) + local->hw.sta_data_size, gfp);
@@ -347,6 +351,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 		return NULL;
 	}
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	rcu_read_lock();
 	tx_latency = rcu_dereference(local->tx_latency);
 	/* init stations Tx latency statistics && TID bins */
@@ -413,6 +418,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	}
 
 	rcu_read_unlock();
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 	for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
 		/*
@@ -460,6 +466,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 
 	return sta;
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 free:
 	if (sta->tx_lat) {
 		for (i = 0; i < IEEE80211_NUM_TIDS; i++)
@@ -477,6 +484,7 @@ free:
 
 	kfree(sta);
 	return NULL;
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 }
 
 static int sta_info_insert_check(struct sta_info *sta)

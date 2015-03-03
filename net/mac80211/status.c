@@ -513,6 +513,7 @@ static void ieee80211_report_used_skb(struct ieee80211_local *local,
 	}
 }
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 static void update_consec_bins(u32 *bins, u32 *bin_ranges, int bin_range_count,
 			       int msrmnt)
 {
@@ -718,6 +719,7 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	tx_latency_threshold(local, skb, tx_latency, sta, tid, msrmnt);
 #endif
 }
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 /*
  * Use a static threshold for now, best value to be determined
@@ -984,11 +986,13 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 			if (info->flags & IEEE80211_TX_STAT_ACK) {
 				send_fail = false;
 				if (sta->lost_packets) {
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 					/*
 					 * need to keep track of the amount for
 					 * timing statistics later on
 					 */
 					prev_loss_pkt = sta->lost_packets;
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 					sta->lost_packets = 0;
 				}
 
@@ -1003,9 +1007,11 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 		if (acked)
 			sta->last_ack_signal = info->status.ack_signal;
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 		/* Measure Tx latency & Tx consecutive loss statistics */
 		ieee80211_collect_tx_timing_stats(local, skb, sta, hdr,
 						  prev_loss_pkt, send_fail);
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 	}
 
 	rcu_read_unlock();

@@ -234,6 +234,7 @@ struct sta_ampdu_mlme {
 	u8 dialog_token_allocator;
 };
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 /*
  * struct ieee80211_tx_consec_loss_stat - Tx consecutive loss statistics
  *
@@ -279,6 +280,7 @@ struct ieee80211_tx_latency_stat {
 	u32 *bins;
 	u32 bin_count;
 };
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 /* Value to indicate no TID reservation */
 #define IEEE80211_TID_UNRESERVED	0xff
@@ -464,9 +466,11 @@ struct sta_info {
 	struct sta_ampdu_mlme ampdu_mlme;
 	u8 timer_to_tid[IEEE80211_NUM_TIDS];
 
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	struct ieee80211_tx_consec_loss_stat *tx_consec;
 	struct ieee80211_tx_latency_stat *tx_lat;
 	u32 *tx_lat_thrshld;
+#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 #ifdef CPTCFG_MAC80211_MESH
 	/*
