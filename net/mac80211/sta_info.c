@@ -229,18 +229,19 @@ struct sta_info *sta_info_get_by_idx(struct ieee80211_sub_if_data *sdata,
  */
 void sta_info_free(struct ieee80211_local *local, struct sta_info *sta)
 {
-	int i;
-
 	if (sta->rate_ctrl)
 		rate_control_free_sta(sta);
 
 	if (sta->tx_lat) {
+		int i;
+
 		for (i = 0; i < IEEE80211_NUM_TIDS; i++)
 			kfree(sta->tx_lat[i].bins);
 		kfree(sta->tx_lat);
 	}
 
 	if (sta->tx_consec) {
+		int i;
 		for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
 			kfree(sta->tx_consec[i].late_bins);
 			kfree(sta->tx_consec[i].loss_bins);
@@ -306,11 +307,45 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	struct timespec uptime;
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
-	size_t i, size;
+	size_t size;
+	int i;
 
 	sta = kzalloc(sizeof(*sta) + local->hw.sta_data_size, gfp);
 	if (!sta)
 		return NULL;
+
+	spin_lock_init(&sta->lock);
+	spin_lock_init(&sta->ps_lock);
+	INIT_WORK(&sta->drv_deliver_wk, sta_deliver_ps_frames);
+	INIT_WORK(&sta->ampdu_mlme.work, ieee80211_ba_session_work);
+	mutex_init(&sta->ampdu_mlme.mtx);
+#ifdef CPTCFG_MAC80211_MESH
+	if (ieee80211_vif_is_mesh(&sdata->vif) &&
+	    !sdata->u.mesh.user_mpm)
+		init_timer(&sta->plink_timer);
+	sta->nonpeer_pm = NL80211_MESH_POWER_ACTIVE;
+#endif
+
+	memcpy(sta->sta.addr, addr, ETH_ALEN);
+	sta->local = local;
+	sta->sdata = sdata;
+	sta->last_rx = jiffies;
+
+	sta->sta_state = IEEE80211_STA_NONE;
+
+	/* Mark TID as unreserved */
+	sta->reserved_tid = IEEE80211_TID_UNRESERVED;
+
+	ktime_get_ts(&uptime);
+	sta->last_connected = uptime.tv_sec;
+	ewma_init(&sta->avg_signal, 1024, 8);
+	for (i = 0; i < ARRAY_SIZE(sta->chain_signal_avg); i++)
+		ewma_init(&sta->chain_signal_avg[i], 1024, 8);
+
+	if (sta_prepare_rate_control(local, sta, gfp)) {
+		kfree(sta);
+		return NULL;
+	}
 
 	rcu_read_lock();
 	tx_latency = rcu_dereference(local->tx_latency);
@@ -379,37 +414,6 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 
 	rcu_read_unlock();
 
-	spin_lock_init(&sta->lock);
-	spin_lock_init(&sta->ps_lock);
-	INIT_WORK(&sta->drv_deliver_wk, sta_deliver_ps_frames);
-	INIT_WORK(&sta->ampdu_mlme.work, ieee80211_ba_session_work);
-	mutex_init(&sta->ampdu_mlme.mtx);
-#ifdef CPTCFG_MAC80211_MESH
-	if (ieee80211_vif_is_mesh(&sdata->vif) &&
-	    !sdata->u.mesh.user_mpm)
-		init_timer(&sta->plink_timer);
-	sta->nonpeer_pm = NL80211_MESH_POWER_ACTIVE;
-#endif
-
-	memcpy(sta->sta.addr, addr, ETH_ALEN);
-	sta->local = local;
-	sta->sdata = sdata;
-	sta->last_rx = jiffies;
-
-	sta->sta_state = IEEE80211_STA_NONE;
-
-	/* Mark TID as unreserved */
-	sta->reserved_tid = IEEE80211_TID_UNRESERVED;
-
-	ktime_get_ts(&uptime);
-	sta->last_connected = uptime.tv_sec;
-	ewma_init(&sta->avg_signal, 1024, 8);
-	for (i = 0; i < ARRAY_SIZE(sta->chain_signal_avg); i++)
-		ewma_init(&sta->chain_signal_avg[i], 1024, 8);
-
-	if (sta_prepare_rate_control(local, sta, gfp))
-		goto free;
-
 	for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
 		/*
 		 * timer_to_tid must be initialized with identity mapping
@@ -453,6 +457,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	}
 
 	sta_dbg(sdata, "Allocated STA %pM\n", sta->sta.addr);
+
 	return sta;
 
 free:
