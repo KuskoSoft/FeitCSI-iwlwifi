@@ -1692,6 +1692,48 @@ static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
 	return ret;
 }
 
+/*
+ * Driver Takes the ownership on secure machine before FW load
+ * and prevent race with the BT load.
+ * W/A for ROM bug. (should be remove in the next Si step)
+ */
+static int iwl_sdio_rsa_race_bug_wa(struct iwl_trans *trans)
+{
+	u32 val, loop = 1000;
+
+	/* Check that the WiFi firmware has been authentified */
+	val = iwl_sdio_read_prph_no_claim(trans, PREG_AUX_BUS_WPROT_0);
+	if (val & (BIT(1) || val & BIT(17)))
+		return 0;
+
+	/* if not, take ownership on the AUX IF */
+	iwl_sdio_write_prph_no_claim(trans, WFPM_CTRL_REG,
+				     WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK);
+	/* enable the AUX access */
+	iwl_sdio_write_prph_no_claim(trans, AUX_MISC_MASTER1_EN,
+				     AUX_MISC_MASTER1_EN_SBE_MSK);
+
+	do {
+		iwl_sdio_write_prph_no_claim(trans,
+					     AUX_MISC_MASTER1_SMPHR_STATUS,
+					     0x1);
+		val = iwl_sdio_read_prph_no_claim(
+						trans,
+						AUX_MISC_MASTER1_SMPHR_STATUS);
+		if (val == 0x1) {
+			/* move the RSA to enable */
+			iwl_sdio_write_prph_no_claim(trans, RSA_ENABLE, 0);
+			return 0;
+		}
+
+		udelay(10);
+		loop--;
+	} while (loop != 0);
+
+	IWL_ERR(trans, "Failed to take ownership on secure machine\n");
+	return -EIO;
+}
+
 static int iwl_sdio_load_cpu_sections_8000b(struct iwl_trans *trans,
 					    const struct fw_img *image,
 					    int cpu,
@@ -2009,6 +2051,11 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 
 	/* configure the ucode to be ready to get the secured image */
 	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
+		/* TODO: remove in the next Si step */
+		ret = iwl_sdio_rsa_race_bug_wa(trans);
+		if (ret)
+			goto exit_err;
+
 		/* Remove CSR reset to allow NIC to operate */
 		iwl_sdio_write_prph_no_claim(trans, RELEASE_CPU_RESET,
 					     RELEASE_CPU_RESET_BIT);

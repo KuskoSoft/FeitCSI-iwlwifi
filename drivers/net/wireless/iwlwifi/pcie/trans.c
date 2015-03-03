@@ -686,6 +686,40 @@ static int iwl_pcie_load_section(struct iwl_trans *trans, u8 section_num,
 	return ret;
 }
 
+/*
+ * Driver Takes the ownership on secure machine before FW load
+ * and prevent race with the BT load.
+ * W/A for ROM bug. (should be remove in the next Si step)
+ */
+static int iwl_pcie_rsa_race_bug_wa(struct iwl_trans *trans)
+{
+	u32 val, loop = 1000;
+
+	/* Check that the WiFi firmware has been authentified */
+	val = iwl_read_prph(trans, PREG_AUX_BUS_WPROT_0);
+	if (val & (BIT(1) | BIT(17)))
+		return 0;
+
+	/* if not, take ownership on the AUX IF */
+	iwl_write_prph(trans, WFPM_CTRL_REG, WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK);
+	iwl_write_prph(trans, AUX_MISC_MASTER1_EN, AUX_MISC_MASTER1_EN_SBE_MSK);
+
+	do {
+		iwl_write_prph(trans, AUX_MISC_MASTER1_SMPHR_STATUS, 0x1);
+		val = iwl_read_prph(trans, AUX_MISC_MASTER1_SMPHR_STATUS);
+		if (val == 0x1) {
+			iwl_write_prph(trans, RSA_ENABLE, 0);
+			return 0;
+		}
+
+		udelay(10);
+		loop--;
+	} while (loop > 0);
+
+	IWL_ERR(trans, "Failed to take ownership on secure machine\n");
+	return -EIO;
+}
+
 static int iwl_pcie_load_cpu_sections_8000b(struct iwl_trans *trans,
 					    const struct fw_img *image,
 					    int cpu,
@@ -911,6 +945,11 @@ static int iwl_pcie_load_given_ucode_8000b(struct iwl_trans *trans,
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 		iwl_dnt_configure(trans, image);
 #endif
+
+	/* TODO: remove in the next Si step */
+	ret = iwl_pcie_rsa_race_bug_wa(trans);
+	if (ret)
+		return ret;
 
 	/* configure the ucode to be ready to get the secured image */
 	/* release CPU reset */
