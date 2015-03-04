@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -75,6 +75,9 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA] = { .type = NLA_FLAG },
 	[IWL_MVM_VENDOR_ATTR_FILTER_GTK] = { .type = NLA_FLAG },
 	[IWL_MVM_VENDOR_ATTR_ADDR] = { .len = ETH_ALEN },
+	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H] = { .type = NLA_U32 },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -332,6 +335,61 @@ static int iwl_vendor_tdls_peer_cache_query(struct wiphy *wiphy,
 }
 #endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
+static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
+					    struct wireless_dev *wdev,
+					    const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_dev_tx_power_cmd cmd = {
+		.set_mode = cpu_to_le32(1),
+		.dev_24 = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
+		.dev_52_low = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
+		.dev_52_high = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
+	};
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	int err;
+
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_TX_POWER_DEV))
+		return -EOPNOTSUPP;
+
+	err = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (err)
+		return err;
+
+	if (tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24]) {
+		s32 txp = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24]);
+
+		if (txp < 0 || txp > IWL_DEV_MAX_TX_POWER)
+			return -EINVAL;
+		cmd.dev_24 = cpu_to_le16(txp);
+	}
+
+	if (tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L]) {
+		s32 txp = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L]);
+
+		if (txp < 0 || txp > IWL_DEV_MAX_TX_POWER)
+			return -EINVAL;
+		cmd.dev_52_low = cpu_to_le16(txp);
+	}
+
+	if (tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H]) {
+		s32 txp = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H]);
+
+		if (txp < 0 || txp > IWL_DEV_MAX_TX_POWER)
+			return -EINVAL;
+		cmd.dev_52_high = cpu_to_le16(txp);
+	}
+
+	mvm->txp_cmd = cmd;
+
+	err = iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0,
+				   sizeof(cmd), &cmd);
+	if (err)
+		IWL_ERR(mvm, "failed to update device TX power: %d\n", err);
+	return 0;
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -398,6 +456,15 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.doit = iwl_vendor_tdls_peer_cache_query,
 	},
 #endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_set_nic_txpower_limit,
+	},
 };
 
 #ifdef CPTCFG_IWLMVM_TCM

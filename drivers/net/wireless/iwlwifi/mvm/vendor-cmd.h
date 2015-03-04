@@ -88,6 +88,7 @@
  *	cache
  * @IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_QUERY: query traffic statistics for a
  *	peer in the TDLS cache
+ * @IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT: set the NIC's (SAR) TX power limit
  */
 
 enum iwl_mvm_vendor_cmd {
@@ -104,6 +105,7 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_ADD,
 	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_DEL,
 	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_QUERY,
+	IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT,
 };
 
 /**
@@ -139,6 +141,11 @@ enum iwl_mvm_vendor_load {
  * @IWL_MVM_VENDOR_ATTR_ADDR: MAC address
  * @IWL_MVM_VENDOR_ATTR_TX_BYTES: number of bytes transmitted to peer
  * @IWL_MVM_VENDOR_ATTR_RX_BYTES: number of bytes received from peer
+ * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24: TX power limit for 2.4 GHz
+ *	(s32 in units of 1/8 dBm)
+ * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L: TX power limit for 5.2 GHz low (as 2.4)
+ * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H: TX power limit for 5.2 GHz high (as 2.4)
+ *
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
  */
@@ -156,6 +163,9 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_ADDR,
 	IWL_MVM_VENDOR_ATTR_TX_BYTES,
 	IWL_MVM_VENDOR_ATTR_RX_BYTES,
+	IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24,
+	IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L,
+	IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,

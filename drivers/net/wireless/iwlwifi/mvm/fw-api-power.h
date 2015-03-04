@@ -329,6 +329,8 @@ struct iwl_dev_tx_power_cmd {
 	__le16 dev_52_high;
 } __packed; /* TX_REDUCED_POWER_API_S_VER_2 */
 
+#define IWL_DEV_MAX_TX_POWER 0x7FFF
+
 /**
  * struct iwl_beacon_filter_cmd
  * REPLY_BEACON_FILTERING_CMD = 0xd2 (command)
