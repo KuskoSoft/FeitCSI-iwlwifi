@@ -132,9 +132,10 @@ enum iwl_mvm_vendor_load {
  * @IWL_MVM_VENDOR_ATTR_VIF_LOAD: vif traffic load (u8, see load enum)
  * @IWL_MVM_VENDOR_ATTR_LOAD: global traffic load (u8, see load enum)
  * @IWL_MVM_VENDOR_ATTR_COUNTRY: MCC to set, for regulatory information (u16)
- * IWL_MVM_VENDOR_FILTER_ARP_NA: filter gratuitous ARP and unsolicited Neighbor
- *	Advertisement frames
- * IWL_MVM_VENDOR_FILTER_GTK: filter Filtering Frames Encrypted using the GTK
+ * IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA: filter gratuitous ARP and unsolicited
+ *	Neighbor Advertisement frames
+ * IWL_MVM_VENDOR_ATTR_FILTER_GTK: filter Filtering Frames Encrypted using
+ *	the GTK
  * @IWL_MVM_VENDOR_ATTR_ADDR: MAC address
  * @IWL_MVM_VENDOR_ATTR_TX_BYTES: number of bytes transmitted to peer
  * @IWL_MVM_VENDOR_ATTR_RX_BYTES: number of bytes received from peer
@@ -150,8 +151,8 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_VIF_LOAD,
 	IWL_MVM_VENDOR_ATTR_LOAD,
 	IWL_MVM_VENDOR_ATTR_COUNTRY,
-	IWL_MVM_VENDOR_FILTER_ARP_NA,
-	IWL_MVM_VENDOR_FILTER_GTK,
+	IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA,
+	IWL_MVM_VENDOR_ATTR_FILTER_GTK,
 	IWL_MVM_VENDOR_ATTR_ADDR,
 	IWL_MVM_VENDOR_ATTR_TX_BYTES,
 	IWL_MVM_VENDOR_ATTR_RX_BYTES,
@@ -159,4 +160,6 @@ enum iwl_mvm_vendor_attr {
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,
 };
+#define IWL_MVM_VENDOR_FILTER_ARP_NA IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA
+#define IWL_MVM_VENDOR_FILTER_GTK IWL_MVM_VENDOR_ATTR_FILTER_GTK
 #endif /* __VENDOR_CMD_H__ */

@@ -72,8 +72,8 @@ static const struct nla_policy
 iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_LOW_LATENCY] = { .type = NLA_FLAG },
 	[IWL_MVM_VENDOR_ATTR_COUNTRY] = { .type = NLA_STRING, .len = 2 },
-	[IWL_MVM_VENDOR_FILTER_ARP_NA] = { .type = NLA_FLAG },
-	[IWL_MVM_VENDOR_FILTER_GTK] = { .type = NLA_FLAG },
+	[IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA] = { .type = NLA_FLAG },
+	[IWL_MVM_VENDOR_ATTR_FILTER_GTK] = { .type = NLA_FLAG },
 	[IWL_MVM_VENDOR_ATTR_ADDR] = { .len = ETH_ALEN },
 };
 
@@ -186,8 +186,8 @@ static int iwl_vendor_frame_filter_cmd(struct wiphy *wiphy,
 	if (err)
 		return err;
 	vif->filter_grat_arp_unsol_na =
-		tb[IWL_MVM_VENDOR_FILTER_ARP_NA];
-	vif->filter_gtk = tb[IWL_MVM_VENDOR_FILTER_GTK];
+		tb[IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA];
+	vif->filter_gtk = tb[IWL_MVM_VENDOR_ATTR_FILTER_GTK];
 
 	return 0;
 }
