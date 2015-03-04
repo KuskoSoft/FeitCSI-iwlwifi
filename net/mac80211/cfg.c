@@ -2147,44 +2147,30 @@ static int ieee80211_set_tx_power(struct wiphy *wiphy,
 	struct ieee80211_local *local = wiphy_priv(wiphy);
 	struct ieee80211_sub_if_data *sdata;
 	enum nl80211_tx_power_setting txp_type = type;
+	bool update_txp_type = false;
 
 	if (wdev) {
-		int old_user_level, new_user_level;
-		u32 change = 0;
-
 		sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
-		old_user_level = sdata->vif.bss_conf.user_power_level;
-		new_user_level = old_user_level;
 
 		switch (type) {
 		case NL80211_TX_POWER_AUTOMATIC:
-			new_user_level = IEEE80211_UNSET_POWER_LEVEL;
+			sdata->user_power_level = IEEE80211_UNSET_POWER_LEVEL;
 			txp_type = NL80211_TX_POWER_LIMITED;
 			break;
 		case NL80211_TX_POWER_LIMITED:
 		case NL80211_TX_POWER_FIXED:
 			if (mbm < 0 || (mbm % 100))
 				return -EOPNOTSUPP;
-			new_user_level = MBM_TO_DBM(mbm);
+			sdata->user_power_level = MBM_TO_DBM(mbm);
 			break;
 		}
 
 		if (txp_type != sdata->vif.bss_conf.txpower_type) {
+			update_txp_type = true;
 			sdata->vif.bss_conf.txpower_type = txp_type;
-			change |= BSS_CHANGED_TXPOWER;
 		}
 
-		if (old_user_level != new_user_level) {
-			change |= BSS_CHANGED_USER_TXPOWER;
-			sdata->vif.bss_conf.user_power_level = new_user_level;
-		}
-
-		if (!change)
-			return 0;
-
-		if (__ieee80211_recalc_txpower(sdata))
-			change |= BSS_CHANGED_TXPOWER;
-		ieee80211_bss_info_change_notify(sdata, change);
+		ieee80211_recalc_txpower(sdata, update_txp_type);
 
 		return 0;
 	}
@@ -2204,23 +2190,13 @@ static int ieee80211_set_tx_power(struct wiphy *wiphy,
 
 	mutex_lock(&local->iflist_mtx);
 	list_for_each_entry(sdata, &local->interfaces, list) {
-		u32 change = 0;
-
-		if (sdata->vif.bss_conf.user_power_level !=
-				local->user_power_level) {
-			change |= BSS_CHANGED_USER_TXPOWER;
-			sdata->vif.bss_conf.user_power_level =
-						local->user_power_level;
-		}
-
-		if (__ieee80211_recalc_txpower(sdata) ||
-		    txp_type != sdata->vif.bss_conf.txpower_type)
-			change |= BSS_CHANGED_TXPOWER;
+		sdata->user_power_level = local->user_power_level;
+		if (txp_type != sdata->vif.bss_conf.txpower_type)
+			update_txp_type = true;
 		sdata->vif.bss_conf.txpower_type = txp_type;
-
-		if (change)
-			ieee80211_bss_info_change_notify(sdata, change);
 	}
+	list_for_each_entry(sdata, &local->interfaces, list)
+		ieee80211_recalc_txpower(sdata, update_txp_type);
 	mutex_unlock(&local->iflist_mtx);
 
 	return 0;

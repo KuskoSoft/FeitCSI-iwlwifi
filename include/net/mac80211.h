@@ -264,7 +264,6 @@ struct ieee80211_vif_chanctx_switch {
  *	note that this is only called when it changes after the channel
  *	context had been assigned.
  * @BSS_CHANGED_OCB: OCB join status changed
- * @BSS_CHANGED_USER_TXPOWER: User TX power setting changed for this interface
  */
 enum ieee80211_bss_change {
 	BSS_CHANGED_ASSOC		= 1<<0,
@@ -290,7 +289,6 @@ enum ieee80211_bss_change {
 	BSS_CHANGED_BEACON_INFO		= 1<<20,
 	BSS_CHANGED_BANDWIDTH		= 1<<21,
 	BSS_CHANGED_OCB                 = 1<<22,
-	BSS_CHANGED_USER_TXPOWER	= 1<<23,
 
 	/* when adding here, make sure to change ieee80211_reconfig */
 };
@@ -407,12 +405,6 @@ enum ieee80211_event_data {
  *	NL80211_TX_POWER_LIMITED (allow using less than specified from
  *	userspace), whereas TPC is disabled if %txpower_type is set to
  *	NL80211_TX_POWER_FIXED (use value configured from userspace)
- * @user_power_level: TX power limit requested by the user (in dBm).
- *	This must be used carefully, it isn't restricted by regulatory.
- *	However, it could be used for example for hardware scanning to limit
- *	the TX power to the user-requested level, while also limiting to the
- *	correct per-channel regulatory. Similarly for other out-of-channel
- *	activities where mac80211 cannot correctly set the TX power level.
  * @p2p_noa_attr: P2P NoA attribute for P2P powersave
  */
 struct ieee80211_bss_conf {
@@ -449,7 +441,6 @@ struct ieee80211_bss_conf {
 	bool hidden_ssid;
 	int txpower;
 	enum nl80211_tx_power_setting txpower_type;
-	int user_power_level;
 	struct ieee80211_p2p_noa_attr p2p_noa_attr;
 };
 
