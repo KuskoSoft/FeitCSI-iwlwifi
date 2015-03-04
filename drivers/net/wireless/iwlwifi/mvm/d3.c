@@ -1902,6 +1902,7 @@ static int __iwl_mvm_resume(struct iwl_mvm *mvm, bool test)
 	mutex_unlock(&mvm->mutex);
 
 out_iterate:
+	__maybe_unused;
 	if (!test)
 		ieee80211_iterate_active_interfaces_rtnl(mvm->hw,
 			IEEE80211_IFACE_ITER_NORMAL,
