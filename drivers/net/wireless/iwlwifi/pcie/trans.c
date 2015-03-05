@@ -1010,6 +1010,7 @@ static int iwl_trans_pcie_start_fw(struct iwl_trans *trans,
 	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF) {
 		struct iwl_trans_pcie *trans_pcie =
 			IWL_TRANS_GET_PCIE_TRANS(trans);
+
 		wake_lock(&trans_pcie->ref_wake_lock);
 	}
 #endif
