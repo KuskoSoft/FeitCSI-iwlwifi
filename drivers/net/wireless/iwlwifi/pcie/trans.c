@@ -695,12 +695,15 @@ static int iwl_pcie_rsa_race_bug_wa(struct iwl_trans *trans)
 {
 	u32 val, loop = 1000;
 
-	/* Check that the WiFi firmware has been authentified */
+	/* Check the RSA semaphore is accessible - if not, we are in trouble */
 	val = iwl_read_prph(trans, PREG_AUX_BUS_WPROT_0);
-	if (val & (BIT(1) | BIT(17)))
+	if (val & (BIT(1) | BIT(17))) {
+		IWL_ERR(trans,
+			"can't access the RSA semaphore it is write protected\n");
 		return 0;
+	}
 
-	/* if not, take ownership on the AUX IF */
+	/* take ownership on the AUX IF */
 	iwl_write_prph(trans, WFPM_CTRL_REG, WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK);
 	iwl_write_prph(trans, AUX_MISC_MASTER1_EN, AUX_MISC_MASTER1_EN_SBE_MSK);
 
