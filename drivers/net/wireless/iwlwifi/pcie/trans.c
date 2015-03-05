@@ -1007,8 +1007,11 @@ static int iwl_trans_pcie_start_fw(struct iwl_trans *trans,
 
 #ifdef CONFIG_HAS_WAKELOCK
 	/* The ref wakelock is locked on init */
-	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
+	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF) {
+		struct iwl_trans_pcie *trans_pcie =
+			IWL_TRANS_GET_PCIE_TRANS(trans);
 		wake_lock(&trans_pcie->ref_wake_lock);
+	}
 #endif
 	/* make sure rfkill handshake bits are cleared */
 	iwl_write32(trans, CSR_UCODE_DRV_GP1_CLR, CSR_UCODE_SW_BIT_RFKILL);
