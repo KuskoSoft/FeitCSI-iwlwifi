@@ -101,28 +101,19 @@
 #define IWL_SDIO_POLL_INTERVAL			1000 /* usec */
 #define IWL_SDIO_ENABLE_TIMEOUT		100 /* msec */
 
-static const struct iwl_sdio_sf_mem_addresses iwl8000b_sf_addresses = {
-	.tfd_base_addr = IWL_SDIO_8000B_SF_MEM_BASE_ADDR +
-			 IWL_SDIO_SF_MEM_TFD_OFFSET,
-	.tfdi_base_addr = IWL_SDIO_8000B_SF_MEM_BASE_ADDR +
-			  IWL_SDIO_SF_MEM_TFDI_OFFSET,
-	.bc_base_addr = IWL_SDIO_8000B_SF_MEM_BASE_ADDR +
-			IWL_SDIO_SF_MEM_BC_OFFSET,
-	.tg_buf_base_addr = IWL_SDIO_8000B_SF_MEM_BASE_ADDR +
-			    IWL_SDIO_SF_MEM_TG_BUF_OFFSET,
-	.adma_dsc_mem_base = IWL_SDIO_8000B_SF_MEM_BASE_ADDR +
-			     IWL_SDIO_SF_MEM_ADMA_DSC_OFFSET,
-	.tb_base_addr = IWL_SDIO_8000B_SF_MEM_BASE_ADDR +
-			IWL_SDIO_SF_MEM_TB_OFFSET,
-};
-
 static const struct iwl_sdio_sf_mem_addresses iwl8000_sf_addresses = {
-	.tfd_base_addr = IWL_SDIO_8000_SF_MEM_TFD_BASE_ADDR,
-	.tfdi_base_addr = IWL_SDIO_8000_SF_MEM_TFDI_BASE_ADDR,
-	.bc_base_addr = IWL_SDIO_8000_SF_MEM_BC_BASE_ADDR,
-	.tg_buf_base_addr = IWL_SDIO_8000_SF_MEM_TG_BUF_BASE_ADDR,
-	.adma_dsc_mem_base = IWL_SDIO_8000_SF_MEM_ADMA_DSC_MEM_BASE,
-	.tb_base_addr = IWL_SDIO_8000_SF_MEM_TB_BASE_ADDR,
+	.tfd_base_addr = IWL_SDIO_8000_SF_MEM_BASE_ADDR +
+			 IWL_SDIO_SF_MEM_TFD_OFFSET,
+	.tfdi_base_addr = IWL_SDIO_8000_SF_MEM_BASE_ADDR +
+			  IWL_SDIO_SF_MEM_TFDI_OFFSET,
+	.bc_base_addr = IWL_SDIO_8000_SF_MEM_BASE_ADDR +
+			IWL_SDIO_SF_MEM_BC_OFFSET,
+	.tg_buf_base_addr = IWL_SDIO_8000_SF_MEM_BASE_ADDR +
+			    IWL_SDIO_SF_MEM_TG_BUF_OFFSET,
+	.adma_dsc_mem_base = IWL_SDIO_8000_SF_MEM_BASE_ADDR +
+			     IWL_SDIO_SF_MEM_ADMA_DSC_OFFSET,
+	.tb_base_addr = IWL_SDIO_8000_SF_MEM_BASE_ADDR +
+			IWL_SDIO_SF_MEM_TB_OFFSET,
 };
 
 static const struct iwl_sdio_sf_mem_addresses iwl7000_sf_addresses = {
@@ -975,14 +966,10 @@ static int iwl_sdio_config_sdtm(struct iwl_trans *trans)
 	}
 
 	/* No default ADMA addr has been given in FW - use driver defaults */
-	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
-		if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP)
-			trans_sdio->sf_mem_addresses = &iwl8000_sf_addresses;
-		else
-			trans_sdio->sf_mem_addresses = &iwl8000b_sf_addresses;
-	} else {
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
+		trans_sdio->sf_mem_addresses = &iwl8000_sf_addresses;
+	else
 		trans_sdio->sf_mem_addresses = &iwl7000_sf_addresses;
-	}
 
 	ret = iwl_sdio_config_sdtm_register(trans);
 
@@ -1358,6 +1345,8 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 	 * in the old format.
 	 */
 	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
+		u32 val = 0x0;
+
 		trans->hw_rev = (trans->hw_rev & 0xfff0) |
 				((trans->hw_rev << 2) & 0xc);
 
@@ -1365,26 +1354,19 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 		 * Set SDTM CSR register to disabled read optimization on 8000
 		 * family B/C-step, as the optimization currently causes issues
 		 */
-		if (CSR_HW_REV_STEP(trans->hw_rev) != SILICON_A_STEP) {
-			u32 val = 0x0;
-
-			ret = iwl_sdio_ta_write(trans, CSR_SDTM_REG,
-						sizeof(u32), &val,
-						IWL_SDIO_TA_AC_DIRECT);
-			if (ret) {
-				IWL_ERR(trans,
-					"Failed to set SDIO to optimized reading\n");
-				goto release_hw;
-			}
+		ret = iwl_sdio_ta_write(trans, CSR_SDTM_REG, sizeof(u32), &val,
+					IWL_SDIO_TA_AC_DIRECT);
+		if (ret) {
+			IWL_ERR(trans,
+				"Failed to set SDIO to optimized reading\n");
+			goto release_hw;
 		}
 	}
 
-	/* Enable the retention for B step */
-	if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_B_STEP) {
-		ret = iwl_sdio_enter_retention_flow(trans);
-		if (ret)
-			goto release_hw;
-	}
+	/* Enable the retention */
+	ret = iwl_sdio_enter_retention_flow(trans);
+	if (ret)
+		goto release_hw;
 
 	/* Configure the SDTM  and ADMA in the SDIO AL */
 	ret = iwl_sdio_config_sdtm(trans);
@@ -1496,25 +1478,12 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 	dtu_hdr->hdr.seq_number = iwl_sdio_get_cmd_seq(trans_sdio, true);
 	dtu_hdr->hdr.signature = cpu_to_le16(IWL_SDIO_CMD_HEADER_SIGNATURE);
 
-	/*
-	 * From 8000 HW family B-step the dma_desc is enlarged by 4 bytes on
-	 * the expense of the reserved field that comes right after that
-	 */
-	if ((trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) ||
-	    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP))
-		dtu_hdr->dma_desc =
-			cpu_to_le32(FDL_DMA_DESC_ADDRESS |
-				    ((FDL_NUM_OF_DMA_DESC *
-				      sizeof(struct iwl_sdio_adma_desc)) <<
-				     IWL_SDIO_DMA_DESC_LEN_SHIFT));
-	else
-		*((__le64 *)&(dtu_hdr->dma_desc)) =
-			cpu_to_le64(
-			    ((u64)FDL_DMA_DESC_ADDRESS_B <<
-			     IWL_SDIO_DMA_DESC_8000_ADDR_SHIFT) |
-			    ((FDL_NUM_OF_DMA_DESC *
-			      sizeof(struct iwl_sdio_adma_desc)) <<
-			     IWL_SDIO_DMA_DESC_8000_LEN_SHIFT));
+	*((__le64 *)&dtu_hdr->dma_desc) = cpu_to_le64(
+		    ((u64)FDL_DMA_DESC_ADDRESS <<
+		     IWL_SDIO_DMA_DESC_8000_ADDR_SHIFT) |
+		    ((FDL_NUM_OF_DMA_DESC *
+		      sizeof(struct iwl_sdio_adma_desc)) <<
+		     IWL_SDIO_DMA_DESC_8000_LEN_SHIFT));
 
 	adma_list = dtu_hdr->adma_list;
 
@@ -1524,11 +1493,7 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 		IWL_SDIO_ADMA_ATTR_VALID | IWL_SDIO_ADMA_ATTR_ACT2;
 	adma_list[desc_idx].reserved = 0;
 	adma_list[desc_idx].length = cpu_to_le16(data_len);
-	if ((trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) ||
-	    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP))
-		adma_list[desc_idx].addr = cpu_to_le32(FDL_DATA_ADDRESS);
-	else
-		adma_list[desc_idx].addr = cpu_to_le32(FDL_DATA_ADDRESS_B);
+	adma_list[desc_idx].addr = cpu_to_le32(FDL_DATA_ADDRESS);
 	desc_idx++;
 
 	adma_list[desc_idx].attr =
@@ -1609,11 +1574,7 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 	/* fh control */
 	fh_desc = (struct iwl_sdio_fh_desc *)(data_ptr + data_len/4);
 	fh_desc->fh_first_word = cpu_to_le32(0);
-	if ((trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) ||
-	    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP))
-		fh_desc->ptr_in_sf = cpu_to_le32(FDL_DATA_ADDRESS);
-	else
-		fh_desc->ptr_in_sf = cpu_to_le32(FDL_DATA_ADDRESS_B);
+	fh_desc->ptr_in_sf = cpu_to_le32(FDL_DATA_ADDRESS);
 	fh_desc->image_size_in_byte = cpu_to_le32(data_len);
 	fh_desc->ptr_in_sram = cpu_to_le32(sram_address);
 	fh_desc->fh_cmd = cpu_to_le32(FDL_FH_CONTROL_CMD1);
@@ -1737,10 +1698,10 @@ static int iwl_sdio_rsa_race_bug_wa(struct iwl_trans *trans)
 	return -EIO;
 }
 
-static int iwl_sdio_load_cpu_sections_8000b(struct iwl_trans *trans,
-					    const struct fw_img *image,
-					    int cpu,
-					    int *first_ucode_section)
+static int iwl_sdio_load_cpu_sections_8000(struct iwl_trans *trans,
+					   const struct fw_img *image,
+					   int cpu,
+					   int *first_ucode_section)
 {
 	int shift_param;
 	u32 load_status;
@@ -2023,8 +1984,8 @@ exit_err:
 	return ret;
 }
 
-static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
-					   const struct fw_img *image)
+static int iwl_sdio_load_given_ucode_8000(struct iwl_trans *trans,
+					  const struct fw_img *image)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	int ret = 0;
@@ -2064,14 +2025,14 @@ static int iwl_sdio_load_given_ucode_8000b(struct iwl_trans *trans,
 					     RELEASE_CPU_RESET_BIT);
 
 		/* load to FW the binary Secured sections of CPU1 */
-		ret = iwl_sdio_load_cpu_sections_8000b(trans, image, 1,
-						       &first_ucode_section);
+		ret = iwl_sdio_load_cpu_sections_8000(trans, image, 1,
+						      &first_ucode_section);
 		if (ret)
 			goto exit_err;
 
 		/* load to FW the binary sections of CPU2 */
-		ret = iwl_sdio_load_cpu_sections_8000b(trans, image, 2,
-						       &first_ucode_section);
+		ret = iwl_sdio_load_cpu_sections_8000(trans, image, 2,
+						      &first_ucode_section);
 		if (ret)
 			goto exit_err;
 	} else {
@@ -2290,20 +2251,10 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 	/* really make sure rfkill handshake bits are cleared */
 
 	/* Load the given image to the HW */
-	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
-		IWL_INFO(trans,
-			 "Silicon Step = %X\n",
-			 ((trans->hw_rev>>2) & 0x3) + 0xA);
-
-		if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP)
-			/* A step */
-			ret = iwl_sdio_load_given_ucode(trans, fw);
-		else
-			ret = iwl_sdio_load_given_ucode_8000b(trans, fw);
-	} else {
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
+		ret = iwl_sdio_load_given_ucode_8000(trans, fw);
+	else
 		ret = iwl_sdio_load_given_ucode(trans, fw);
-	}
-
 	if (ret) {
 		IWL_ERR(trans, "Failed to load given FW Image\n");
 		goto free_tx;
@@ -2347,12 +2298,7 @@ static int iwl_trans_sdio_update_sf(struct iwl_trans *trans,
 	/* in case that alive ver2 doesn't update the memory space */
 	if (!st_fwrd_space->size) {
 		if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
-			if (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP)
-				st_fwrd_space->addr =
-					IWL_SDIO_8000_SF_MEM_TFD_BASE_ADDR;
-			else
-				st_fwrd_space->addr =
-					IWL_SDIO_8000B_SF_MEM_BASE_ADDR +
+			st_fwrd_space->addr = IWL_SDIO_8000_SF_MEM_BASE_ADDR +
 					IWL_SDIO_SF_MEM_TFD_OFFSET;
 			st_fwrd_space->size = IWL_SDIO_8000_SF_MEM_SIZE;
 		} else {

@@ -515,8 +515,7 @@ iwl_sdio_tx_get_resources(struct iwl_trans *trans, u8 txq_id,
 	 * The length range is different in 8000 HW family starting from B-step
 	 * than the other NICs
 	 */
-	if ((trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) ||
-	    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP))
+	if (trans->cfg->device_family != IWL_DEVICE_FAMILY_8000)
 		max_order = IWL_SDIO_MAX_ORDER;
 	else
 		max_order = IWL_SDIO_MAX_ORDER_8000;
@@ -642,11 +641,10 @@ static void iwl_sdio_config_adma(struct iwl_trans *trans,
 	int i;
 
 	/*
-	 * From 8000 HW family B-step the dma_desc is enlarged by 4 bytes on
+	 * From 8000 HW family the dma_desc is enlarged by 4 bytes on
 	 * the expense of the reserved field that comes right after that
 	 */
-	if ((trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) ||
-	    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP))
+	if (trans->cfg->device_family != IWL_DEVICE_FAMILY_8000)
 		dtu_hdr->dma_desc =
 			cpu_to_le32(
 			    adma_dsc_mem_base |
@@ -881,13 +879,12 @@ static void iwl_sdio_config_tfd(struct iwl_trans *trans,
 	int idx;
 
 	/*
-	 * In 8000 HW family starting from B/C-step the tb_base is relative
-	 * rather than absolute as the other NICs and steps.
+	 * In 8000 HW family the tb_base is relative rather than absolute
+	 * as the other NICs.
 	 */
 	tb_base = trans_sdio->sf_mem_addresses->tb_base_addr;
-	if ((trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) &&
-	    (CSR_HW_REV_STEP(trans->hw_rev) != SILICON_A_STEP))
-		tb_base -= IWL_SDIO_8000B_SF_MEM_BASE_ADDR;
+	if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000)
+		tb_base -= IWL_SDIO_8000_SF_MEM_BASE_ADDR;
 
 	tfd = (void *)((u8 *)dtu_info->ctrl_buf +
 		       sizeof(struct iwl_sdio_tx_dtu_hdr) +
@@ -968,12 +965,11 @@ int iwl_sdio_flush_dtus(struct iwl_trans *trans)
 		dtu_hdr->hdr.signature = cpu_to_le16(IWL_SDIO_CMD_HEADER_SIGNATURE);
 		memset(dtu_hdr->reserved, 0, sizeof(dtu_hdr->reserved));
 		/*
-		 * From 8000 HW family B-step the dma_desc is enlarged by 4
+		 * From 8000 HW family the dma_desc is enlarged by 4
 		 * bytes on the expense of the reserved field that comes right
 		 * after that
 		 */
-		if ((trans->cfg->device_family != IWL_DEVICE_FAMILY_8000) ||
-		    (CSR_HW_REV_STEP(trans->hw_rev) == SILICON_A_STEP))
+		if (trans->cfg->device_family != IWL_DEVICE_FAMILY_8000)
 			dtu_hdr->dma_desc =
 				cpu_to_le32(adma_dsc_mem_base |
 					    (sizeof(*dma_desc) <<
