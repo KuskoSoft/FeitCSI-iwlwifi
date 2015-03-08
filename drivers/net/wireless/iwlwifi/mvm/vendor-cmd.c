@@ -489,8 +489,10 @@ void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy)
 #ifdef CPTCFG_IWLMVM_TCM
 void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 {
-	struct sk_buff *msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, NULL,
-							  200, 0, GFP_ATOMIC);
+	struct sk_buff *msg =
+		cfg80211_vendor_event_alloc(mvm->hw->wiphy,
+					    ieee80211_vif_to_wdev(vif),
+					    200, 0, GFP_ATOMIC);
 
 	if (!msg)
 		return;
