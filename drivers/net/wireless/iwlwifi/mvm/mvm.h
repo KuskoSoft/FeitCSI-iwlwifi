@@ -360,6 +360,7 @@ struct iwl_mvm_vif_bf_data {
  * @beacon_stats: beacon statistics, containing the # of received beacons,
  *	# of received beacons accumulated over FW restart, and the current
  *	average signal of beacons retrieved from the firmware
+ * @csa_failed: CSA failed to schedule time event, report an error later
  */
 struct iwl_mvm_vif {
 	struct iwl_mvm *mvm;
@@ -443,6 +444,7 @@ struct iwl_mvm_vif {
 
 	/* Indicates that CSA countdown may be started */
 	bool csa_countdown;
+	bool csa_failed;
 };
 
 static inline struct iwl_mvm_vif *
