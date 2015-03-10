@@ -1168,11 +1168,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 	if (!conf) {
 		sdata_info(sdata,
 			   "no channel context assigned to vif?, disconnecting\n");
-		ieee80211_queue_work(&local->hw,
-				     &ifmgd->csa_connection_drop_work);
-		mutex_unlock(&local->chanctx_mtx);
-		mutex_unlock(&local->mtx);
-		return;
+		goto drop_connection;
 	}
 
 	chanctx = container_of(conf, struct ieee80211_chanctx, conf);
@@ -1181,11 +1177,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 	    !(local->hw.flags & IEEE80211_HW_CHANCTX_STA_CSA)) {
 		sdata_info(sdata,
 			   "driver doesn't support chan-switch with channel contexts\n");
-		ieee80211_queue_work(&local->hw,
-				     &ifmgd->csa_connection_drop_work);
-		mutex_unlock(&local->chanctx_mtx);
-		mutex_unlock(&local->mtx);
-		return;
+		goto drop_connection;
 	}
 
 	ch_switch.timestamp = timestamp;
@@ -1197,11 +1189,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 	if (drv_pre_channel_switch(sdata, &ch_switch)) {
 		sdata_info(sdata,
 			   "preparing for channel switch failed, disconnecting\n");
-		ieee80211_queue_work(&local->hw,
-				     &ifmgd->csa_connection_drop_work);
-		mutex_unlock(&local->chanctx_mtx);
-		mutex_unlock(&local->mtx);
-		return;
+		goto drop_connection;
 	}
 
 	res = ieee80211_vif_reserve_chanctx(sdata, &csa_ie.chandef,
@@ -1210,11 +1198,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 		sdata_info(sdata,
 			   "failed to reserve channel context for channel switch, disconnecting (err=%d)\n",
 			   res);
-		ieee80211_queue_work(&local->hw,
-				     &ifmgd->csa_connection_drop_work);
-		mutex_unlock(&local->chanctx_mtx);
-		mutex_unlock(&local->mtx);
-		return;
+		goto drop_connection;
 	}
 	mutex_unlock(&local->chanctx_mtx);
 
@@ -1244,6 +1228,11 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 		mod_timer(&ifmgd->chswitch_timer,
 			  TU_TO_EXP_TIME((csa_ie.count - 1) *
 					 cbss->beacon_interval));
+	return;
+ drop_connection:
+	ieee80211_queue_work(&local->hw, &ifmgd->csa_connection_drop_work);
+	mutex_unlock(&local->chanctx_mtx);
+	mutex_unlock(&local->mtx);
 }
 
 static bool
