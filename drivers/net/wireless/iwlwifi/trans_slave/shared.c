@@ -1740,8 +1740,41 @@ int iwl_trans_slv_send_cmd(struct iwl_trans *trans, struct iwl_host_cmd *cmd)
 	return iwl_slv_send_cmd_sync(trans, cmd);
 }
 
+#define IWL_FLUSH_WAIT_MS 2000
 int iwl_trans_slv_wait_txq_empty(struct iwl_trans *trans, u32 txq_bm)
 {
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+	unsigned long timeout = jiffies + msecs_to_jiffies(IWL_FLUSH_WAIT_MS);
+	int q_id;
+
+	for (q_id = 0; q_id < trans->cfg->base_params->num_of_queues; q_id++) {
+		struct iwl_slv_tx_queue *txq = &trans_slv->txqs[q_id];
+
+		if (q_id == trans_slv->cmd_queue)
+			continue;
+
+		if (!(BIT(q_id) & txq_bm))
+			continue;
+
+		IWL_DEBUG_TX_QUEUES(trans, "Emptying queue %d...\n", q_id);
+		while (!time_after(jiffies, timeout) &&
+		       (atomic_read(&txq->waiting_count) ||
+			atomic_read(&txq->sent_count)))
+			msleep(1);
+
+		if (atomic_read(&txq->waiting_count) ||
+		    atomic_read(&txq->sent_count)) {
+			IWL_ERR(trans,
+				"Fail to flush tx queue %d: waiting_cnt=%d, sent_count=%d\n",
+				q_id, atomic_read(&txq->waiting_count),
+				atomic_read(&txq->sent_count));
+			return -ETIMEDOUT;
+		}
+		IWL_DEBUG_TX_QUEUES(trans, "Q %d is now empty.\n", q_id);
+	}
+
+	IWL_ERR(trans, "All the queues are now empty\n");
+
 	return 0;
 }
 
