@@ -196,9 +196,11 @@ static void iwl_sdio_rx_handle_rb(struct iwl_trans *trans,
 		if (pkt->len_n_flags == cpu_to_le32(FH_RSCSR_FRAME_INVALID))
 			break;
 
-		IWL_DEBUG_RX(trans, "Handling RX packet %s (#%x, ofs %d)\n",
+		IWL_DEBUG_RX(trans,
+			     "Handling RX packet %s (#%x, ofs %d, seq 0x%x)\n",
 			     get_cmd_string(trans_sdio, pkt->hdr.cmd),
-			     pkt->hdr.cmd, offset);
+			     pkt->hdr.cmd, offset,
+			     le16_to_cpu(pkt->hdr.sequence));
 
 		if (pkt->hdr.cmd == 0xAC) {
 			IWL_ERR(trans, "Rx error - reached 0xAC in RB\n");
