@@ -2044,6 +2044,9 @@ ieee80211_deliver_skb(struct ieee80211_rx_data *rx)
 	struct sta_info *dsta;
 	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(rx->skb);
 
+	dev->stats.rx_packets++;
+	dev->stats.rx_bytes += rx->skb->len;
+
 	skb = rx->skb;
 	xmit_skb = NULL;
 
@@ -2190,8 +2193,6 @@ ieee80211_rx_h_amsdu(struct ieee80211_rx_data *rx)
 			dev_kfree_skb(rx->skb);
 			continue;
 		}
-		dev->stats.rx_packets++;
-		dev->stats.rx_bytes += rx->skb->len;
 
 		ieee80211_deliver_skb(rx);
 	}
@@ -2416,9 +2417,6 @@ ieee80211_rx_h_data(struct ieee80211_rx_data *rx)
 	}
 
 	rx->skb->dev = dev;
-
-	dev->stats.rx_packets++;
-	dev->stats.rx_bytes += rx->skb->len;
 
 	if (local->ps_sdata && local->hw.conf.dynamic_ps_timeout > 0 &&
 	    !is_multicast_ether_addr(
@@ -3145,6 +3143,12 @@ static void ieee80211_rx_handlers(struct ieee80211_rx_data *rx,
 			goto rxh_next;  \
 	} while (0);
 
+	/* Lock here to avoid hitting all of the data used in the RX
+	 * path (e.g. key data, station data, ...) concurrently when
+	 * a frame is released from the reorder buffer due to timeout
+	 * from the timer, potentially concurrently with RX from the
+	 * driver.
+	 */
 	spin_lock_bh(&rx->local->rx_path_lock);
 
 	while ((skb = __skb_dequeue(frames))) {
