@@ -3223,10 +3223,8 @@ struct wiphy {
 	const struct ieee80211_ht_cap *ht_capa_mod_mask;
 	const struct ieee80211_vht_cap *vht_capa_mod_mask;
 
-#ifdef CONFIG_NET_NS
 	/* the network namespace this phy lives in currently */
-	struct net *_net;
-#endif
+	possible_net_t _net;
 
 #ifdef CPTCFG_CFG80211_WEXT
 	const struct iw_handler_def *wext;
@@ -3248,12 +3246,12 @@ struct wiphy {
 
 static inline struct net *wiphy_net(struct wiphy *wiphy)
 {
-	return read_pnet(&wiphy->_net);
+	return possible_read_pnet(&wiphy->_net);
 }
 
 static inline void wiphy_net_set(struct wiphy *wiphy, struct net *net)
 {
-	write_pnet(&wiphy->_net, net);
+	possible_write_pnet(&wiphy->_net, net);
 }
 
 /**

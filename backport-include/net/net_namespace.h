@@ -33,4 +33,28 @@ static inline struct net *get_net_ns_by_fd(int fd)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
+typedef struct {
+#ifdef CONFIG_NET_NS
+	struct net *net;
+#endif
+} possible_net_t;
+
+static inline void possible_write_pnet(possible_net_t *pnet, struct net *net)
+{
+#ifdef CONFIG_NET_NS
+	pnet->net = net;
+#endif
+}
+
+static inline struct net *possible_read_pnet(const possible_net_t *pnet)
+{
+#ifdef CONFIG_NET_NS
+	return pnet->net;
+#else
+	return &init_net;
+#endif
+}
+#endif
+
 #endif	/* _COMPAT_NET_NET_NAMESPACE_H */

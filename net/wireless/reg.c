@@ -82,17 +82,12 @@
  *	be intersected with the current one.
  * @REG_REQ_ALREADY_SET: the regulatory request will not change the current
  *	regulatory settings, and no further processing is required.
- * @REG_REQ_USER_HINT_HANDLED: a non alpha2  user hint was handled and no
- *	further processing is required, i.e., not need to update last_request
- *	etc. This should be used for user hints that do not provide an alpha2
- *	but some other type of regulatory hint, i.e., indoor operation.
  */
 enum reg_request_treatment {
 	REG_REQ_OK,
 	REG_REQ_IGNORE,
 	REG_REQ_INTERSECT,
 	REG_REQ_ALREADY_SET,
-	REG_REQ_USER_HINT_HANDLED,
 };
 
 static struct regulatory_request core_request_world = {
@@ -133,20 +128,11 @@ static int reg_num_devs_support_basehint;
  * State variable indicating if the platform on which the devices
  * are attached is operating in an indoor environment. The state variable
  * is relevant for all registered devices.
- * If the NO_IR relaxation is enabled, and a device driver supports the
- * relaxation, operation in an indoor environment allows instantiation of a P2P
- * GO on channels that have %IEEE80211_CHAN_INDOOR_ONLY set, and in addition
- * allows a P2P GO to continue operation on a channel that has
- * %IEEE80211_CHAN_IR_CONCURRENT set even if there is no longer a station
- * interface connection that enables the NO_IR relaxation.
- * (protected by RTNL)
  */
 static bool reg_is_indoor;
 static spinlock_t reg_indoor_lock;
 
-/*
- * Used to track the userspace process that is controlling the indoor setting
- */
+/* Used to track the userspace process controlling the indoor setting */
 static u32 reg_is_indoor_portid;
 
 static const struct ieee80211_regdomain *get_cfg80211_regdom(void)
@@ -1896,8 +1882,7 @@ reg_process_hint_user(struct regulatory_request *user_request)
 
 	treatment = __reg_process_hint_user(user_request);
 	if (treatment == REG_REQ_IGNORE ||
-	    treatment == REG_REQ_ALREADY_SET ||
-	    treatment == REG_REQ_USER_HINT_HANDLED) {
+	    treatment == REG_REQ_ALREADY_SET) {
 		reg_free_request(user_request);
 		return treatment;
 	}
@@ -1958,7 +1943,6 @@ reg_process_hint_driver(struct wiphy *wiphy,
 	case REG_REQ_OK:
 		break;
 	case REG_REQ_IGNORE:
-	case REG_REQ_USER_HINT_HANDLED:
 		reg_free_request(driver_request);
 		return treatment;
 	case REG_REQ_INTERSECT:
@@ -2058,7 +2042,6 @@ reg_process_hint_country_ie(struct wiphy *wiphy,
 	case REG_REQ_OK:
 		break;
 	case REG_REQ_IGNORE:
-	case REG_REQ_USER_HINT_HANDLED:
 		/* fall through */
 	case REG_REQ_ALREADY_SET:
 		reg_free_request(country_ie_request);
@@ -2097,8 +2080,7 @@ static void reg_process_hint(struct regulatory_request *reg_request)
 	case NL80211_REGDOM_SET_BY_USER:
 		treatment = reg_process_hint_user(reg_request);
 		if (treatment == REG_REQ_IGNORE ||
-		    treatment == REG_REQ_ALREADY_SET ||
-		    treatment == REG_REQ_USER_HINT_HANDLED)
+		    treatment == REG_REQ_ALREADY_SET)
 			return;
 		return;
 	case NL80211_REGDOM_SET_BY_DRIVER:
@@ -2322,21 +2304,20 @@ int regulatory_hint_indoor(bool is_indoor, u32 portid)
 {
 	spin_lock(&reg_indoor_lock);
 
-	/*
-	 * Process only if there is a real change, so the original port ID is
-	 * saved (to handle cases that several processes try to change the
-	 * indoor setting).
+	/* It is possible that more than one user space process is trying to
+	 * configure the indoor setting. To handle such cases, clear the indoor
+	 * setting in case that some process does not think that the device
+	 * is operating in an indoor environment. In addition, if a user space
+	 * process indicates that it is controlling the indoor setting, save its
+	 * portid, i.e., make it the owner.
 	 */
-	if (reg_is_indoor == is_indoor) {
-		spin_unlock(&reg_indoor_lock);
-		return 0;
-	}
-
 	reg_is_indoor = is_indoor;
-	if (reg_is_indoor)
-		reg_is_indoor_portid = portid;
-	else
+	if (reg_is_indoor) {
+		if (!reg_is_indoor_portid)
+			reg_is_indoor_portid = portid;
+	} else {
 		reg_is_indoor_portid = 0;
+	}
 
 	spin_unlock(&reg_indoor_lock);
 
@@ -2528,6 +2509,18 @@ static void restore_regulatory_settings(bool reset_user)
 	struct cfg80211_registered_device *rdev;
 
 	ASSERT_RTNL();
+
+	/*
+	 * Clear the indoor setting in case that it is not controlled by user
+	 * space, as otherwise there is no guarantee that the device is still
+	 * operating in an indoor environment.
+	 */
+	spin_lock(&reg_indoor_lock);
+	if (reg_is_indoor && !reg_is_indoor_portid) {
+		reg_is_indoor = false;
+		reg_check_channels();
+	}
+	spin_unlock(&reg_indoor_lock);
 
 	reset_regdomains(true, &world_regdom);
 	restore_alpha2(alpha2, reset_user);

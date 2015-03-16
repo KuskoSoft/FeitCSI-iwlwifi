@@ -4997,6 +4997,8 @@ static int nl80211_req_set_reg(struct sk_buff *skb, struct genl_info *info)
 	char *data = NULL;
 	bool is_indoor;
 	enum nl80211_user_reg_hint_type user_reg_hint_type;
+	u32 owner_nlportid;
+
 
 	/*
 	 * You should only get this when cfg80211 hasn't yet initialized
@@ -5022,9 +5024,15 @@ static int nl80211_req_set_reg(struct sk_buff *skb, struct genl_info *info)
 		data = nla_data(info->attrs[NL80211_ATTR_REG_ALPHA2]);
 		return regulatory_hint_user(data, user_reg_hint_type);
 	case NL80211_USER_REG_HINT_INDOOR:
-		is_indoor = !!info->attrs[NL80211_ATTR_REG_INDOOR];
-		return regulatory_hint_indoor(is_indoor,
-					      genl_info_snd_portid(info));
+		if (info->attrs[NL80211_ATTR_SOCKET_OWNER]) {
+			owner_nlportid = genl_info_snd_portid(info);
+			is_indoor = !!info->attrs[NL80211_ATTR_REG_INDOOR];
+		} else {
+			owner_nlportid = 0;
+			is_indoor = true;
+		}
+
+		return regulatory_hint_indoor(is_indoor, owner_nlportid);
 	default:
 		return -EINVAL;
 	}
