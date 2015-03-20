@@ -1593,6 +1593,13 @@ static int iwl_mvm_check_running_scans(struct iwl_mvm *mvm, int type)
 		if (mvm->scan_status & IWL_MVM_SCAN_SCHED_MASK)
 			return -EBUSY;
 		return iwl_mvm_cancel_scan(mvm);
+	case IWL_MVM_SCAN_NETDETECT:
+		/* No need to stop anything for net-detect since the
+		 * firmware is restarted anyway.  This way, any sched
+		 * scans that were running will be restarted when we
+		 * resume.
+		*/
+		return 0;
 	default:
 		WARN_ON(1);
 		break;
@@ -1634,7 +1641,8 @@ int iwl_mvm_reg_scan_start(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 int iwl_mvm_sched_scan_start(struct iwl_mvm *mvm,
 			     struct ieee80211_vif *vif,
 			     struct cfg80211_sched_scan_request *req,
-			     struct ieee80211_scan_ies *ies)
+			     struct ieee80211_scan_ies *ies,
+			     int type)
 {
 	int ret;
 
@@ -1645,7 +1653,7 @@ int iwl_mvm_sched_scan_start(struct iwl_mvm *mvm,
 		return -EBUSY;
 	}
 
-	ret = iwl_mvm_check_running_scans(mvm, IWL_MVM_SCAN_SCHED);
+	ret = iwl_mvm_check_running_scans(mvm, type);
 	if (ret)
 		return ret;
 
