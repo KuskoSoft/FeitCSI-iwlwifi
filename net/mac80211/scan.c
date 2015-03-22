@@ -42,6 +42,7 @@ void ieee80211_rx_bss_put(struct ieee80211_local *local,
 static bool is_uapsd_supported(struct ieee802_11_elems *elems)
 {
 	u8 qos_info;
+	int i;
 
 	if (elems->wmm_info && elems->wmm_info_len == 7
 	    && elems->wmm_info[5] == 1)
@@ -53,6 +54,22 @@ static bool is_uapsd_supported(struct ieee802_11_elems *elems)
 		/* no valid wmm information or parameter element found */
 		return false;
 
+	/*
+	 * if the AP does not advertise MIMO capabilities -
+	 * disable U-APSD. iPhones, among others, advertise themselves
+	 * as U-APSD capable when they aren't. Avoid connecting to
+	 * those devices in U-APSD enabled.
+	 */
+	if (elems->parse_error || !elems->ht_cap_elem)
+		goto mimo;
+
+	for (i = 1; i < 4; i++) {
+		if (elems->ht_cap_elem->mcs.rx_mask[i])
+			goto mimo;
+	}
+	return false;
+
+mimo:
 	return qos_info & IEEE80211_WMM_IE_AP_QOSINFO_UAPSD;
 }
 
