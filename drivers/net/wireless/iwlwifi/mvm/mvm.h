@@ -641,6 +641,13 @@ struct iwl_mvm_tdls_peer_counter {
 };
 #endif
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+struct gscan_data {
+	struct wireless_dev *wdev;
+	struct iwl_gscan_start_cmd scan_params;
+};
+#endif
+
 struct iwl_mvm {
 	/* for logger access */
 	struct device *dev;
@@ -967,6 +974,10 @@ struct iwl_mvm {
 
 	u32 ciphers[6];
 	struct iwl_mvm_tof_data tof_data;
+
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	struct gscan_data gscan;
+#endif
 };
 
 /* Extract MVM priv from op_mode and _hw */
@@ -1711,5 +1722,10 @@ iwl_fw_dbg_trigger_simple_stop(struct iwl_mvm *mvm,
 
 	iwl_mvm_fw_dbg_collect_trig(mvm, trigger, NULL);
 }
+
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+int iwl_mvm_vendor_stop_gscan(struct wiphy *wiphy, struct wireless_dev *wdev,
+			      const void *data, int data_len);
+#endif
 
 #endif /* __IWL_MVM_H__ */

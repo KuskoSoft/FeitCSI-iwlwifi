@@ -83,6 +83,11 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_OPPPS_WA] = { .type = NLA_FLAG },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_MAC_ADDR] = { .len = ETH_ALEN },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_MAC_ADDR_MASK] = { .len = ETH_ALEN },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_MAX_AP_PER_SCAN] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_BUCKET_SPECS] = { .type = NLA_NESTED },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -836,6 +841,237 @@ static int iwl_vendor_gscan_get_capabilities(struct wiphy *wiphy,
 	return cfg80211_vendor_cmd_reply(skb);
 }
 
+static int iwl_vendor_gscan_parse_channels(struct nlattr *info,
+					   struct iwl_gscan_bucket_spec *bucket)
+{
+	struct nlattr *nl_chan;
+	struct nlattr *tb[MAX_IWL_MVM_VENDOR_CHANNEL_SPEC + 1];
+	struct iwl_gscan_channel_spec *chans = bucket->channels;
+	int rem_chan;
+	u8 i = 0;
+	static const struct nla_policy
+	chan_policy[MAX_IWL_MVM_VENDOR_CHANNEL_SPEC + 1] = {
+		[IWL_MVM_VENDOR_CHANNEL_SPEC_CHANNEL] = { .type = NLA_U8 },
+		[IWL_MVM_VENDOR_CHANNEL_SPEC_DWELL_TIME] = { .type = NLA_U16 },
+		[IWL_MVM_VENDOR_CHANNEL_SPEC_PASSIVE] = { .type = NLA_FLAG },
+	};
+
+	nla_for_each_nested(nl_chan, info, rem_chan) {
+		if (nla_parse_nested(tb, MAX_IWL_MVM_VENDOR_CHANNEL_SPEC,
+				     nl_chan, chan_policy) ||
+		    !tb[IWL_MVM_VENDOR_CHANNEL_SPEC_CHANNEL])
+			return -EINVAL;
+
+		chans[i].channel_number =
+			nla_get_u8(tb[IWL_MVM_VENDOR_CHANNEL_SPEC_CHANNEL]);
+
+		if (tb[IWL_MVM_VENDOR_CHANNEL_SPEC_DWELL_TIME]) {
+			u16 dwell_time =
+				nla_get_u16(tb[IWL_MVM_VENDOR_CHANNEL_SPEC_DWELL_TIME]);
+
+			chans[i].dwell_time = cpu_to_le16(dwell_time);
+		}
+
+		if (tb[IWL_MVM_VENDOR_CHANNEL_SPEC_PASSIVE])
+			chans[i].channel_flags |= IWL_GSCAN_CHANNEL_PASSIVE;
+
+		if (++i >= GSCAN_MAX_CHANNELS)
+			break;
+	}
+
+	bucket->channel_count = i;
+	return 0;
+}
+
+static int iwl_vendor_gscan_parse_buckets(struct nlattr *info, u32 max_buckets,
+					  struct iwl_gscan_start_cmd *cmd)
+{
+	struct nlattr *nl_bucket;
+	struct nlattr *tb[MAX_IWL_MVM_VENDOR_BUCKET_SPEC + 1];
+	struct iwl_gscan_bucket_spec *buckets = cmd->buckets;
+	int rem_bucket;
+	u32 i = 0;
+	static const struct nla_policy
+	bucket_policy[MAX_IWL_MVM_VENDOR_BUCKET_SPEC + 1] = {
+		[IWL_MVM_VENDOR_BUCKET_SPEC_INDEX] = { .type = NLA_U8 },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_BAND] = { .type = NLA_U32 },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD] = {.type = NLA_U32 },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_REPORT_MODE] = { .type = NLA_U32 },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_CHANNELS] = { .type = NLA_NESTED },
+	};
+
+	if (!max_buckets)
+		return -EINVAL;
+
+	nla_for_each_nested(nl_bucket, info, rem_bucket) {
+		u32 tmp;
+
+		if (nla_parse_nested(tb, MAX_IWL_MVM_VENDOR_BUCKET_SPEC,
+				     nl_bucket, bucket_policy) ||
+		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_INDEX] ||
+		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD] ||
+		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_REPORT_MODE])
+			return -EINVAL;
+
+		tmp = nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD]);
+		buckets[i].scan_interval = cpu_to_le32(tmp);
+		tmp = nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_REPORT_MODE]);
+		if (tmp >= NUM_IWL_MVM_VENDOR_GSCAN_REPORT)
+			return -EINVAL;
+
+		buckets[i].report_policy = cpu_to_le32(tmp);
+		buckets[i].index =
+			nla_get_u8(tb[IWL_MVM_VENDOR_BUCKET_SPEC_INDEX]);
+
+		/*
+		 * If a band is specified, the channel list is not used and all
+		 * channels in the specified band will be scanned. Parsing the
+		 * channel list is needed only if no band is specified.
+		 */
+		if (tb[IWL_MVM_VENDOR_BUCKET_SPEC_BAND]) {
+			tmp = nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_BAND]);
+			if (tmp >= NUM_IWL_GSCAN_BAND)
+				return -EINVAL;
+
+			buckets[i].band = cpu_to_le32(tmp);
+		} else {
+			if (!tb[IWL_MVM_VENDOR_BUCKET_SPEC_CHANNELS])
+				return -EINVAL;
+
+			buckets[i].band =
+				cpu_to_le32(IWL_GSCAN_BAND_UNSPECIFIED);
+
+			if (iwl_vendor_gscan_parse_channels(
+					tb[IWL_MVM_VENDOR_BUCKET_SPEC_CHANNELS],
+					&buckets[i]))
+				return -EINVAL;
+		}
+
+		if (++i >= max_buckets)
+			break;
+	}
+
+	cmd->bucket_count = cpu_to_le32(i);
+	return 0;
+}
+
+static int iwl_vendor_start_gscan(struct wiphy *wiphy,
+				  struct wireless_dev *wdev,
+				  const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	const struct iwl_gscan_capabilities *capa =
+		&mvm->fw->gscan_capa;
+	struct gscan_data *gscan = &mvm->gscan;
+	struct iwl_gscan_start_cmd *cmd = &gscan->scan_params;
+	struct iwl_host_cmd hcmd = {
+		.id = iwl_cmd_id(GSCAN_START_CMD, SCAN_GROUP, 0),
+		.len = { sizeof(*cmd), },
+		.dataflags = { IWL_HCMD_DFL_NOCOPY, },
+		.data = { cmd, },
+	};
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	int err;
+	u32 tmp;
+
+	if (!fw_has_capa(&mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
+		return -EOPNOTSUPP;
+
+	mutex_lock(&mvm->mutex);
+	if (cmd->bucket_count) {
+		err = -EBUSY;
+		goto unlock;
+	}
+
+	err = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (err)
+		goto unlock;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_GSCAN_MAX_AP_PER_SCAN] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_GSCAN_BUCKET_SPECS]) {
+		err = -EINVAL;
+		goto unlock;
+	}
+
+	if (tb[IWL_MVM_VENDOR_ATTR_GSCAN_MAC_ADDR] &&
+	    tb[IWL_MVM_VENDOR_ATTR_GSCAN_MAC_ADDR_MASK]) {
+		memcpy(cmd->mac_addr_template,
+		       nla_data(tb[IWL_MVM_VENDOR_ATTR_GSCAN_MAC_ADDR]),
+		       ETH_ALEN);
+		memcpy(cmd->mac_addr_mask,
+		       nla_data(tb[IWL_MVM_VENDOR_ATTR_GSCAN_MAC_ADDR_MASK]),
+		       ETH_ALEN);
+		cmd->flags = cpu_to_le32(IWL_GSCAN_START_FLAGS_MAC_RANDOMIZE);
+	}
+
+	tmp = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_GSCAN_MAX_AP_PER_SCAN]);
+	if (tmp > capa->max_ap_cache_per_scan)
+		tmp = capa->max_ap_cache_per_scan;
+
+	cmd->max_scan_aps = cpu_to_le32(tmp);
+
+	tmp = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD]);
+	if (tmp > capa->max_scan_reporting_threshold)
+		tmp = capa->max_scan_reporting_threshold;
+
+	cmd->report_threshold = cpu_to_le32(tmp);
+
+	err = iwl_vendor_gscan_parse_buckets(tb[IWL_MVM_VENDOR_ATTR_GSCAN_BUCKET_SPECS],
+					     capa->max_scan_buckets, cmd);
+	if (err)
+		goto unlock;
+
+	err = iwl_mvm_send_cmd(mvm, &hcmd);
+	if (err) {
+		IWL_ERR(mvm, "Failed to send gscan start command: %d\n", err);
+		goto unlock;
+	}
+
+	gscan->wdev = wdev;
+
+unlock:
+	mutex_unlock(&mvm->mutex);
+	return err;
+}
+
+int iwl_mvm_vendor_stop_gscan(struct wiphy *wiphy, struct wireless_dev *wdev,
+			      const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct gscan_data *gscan = &mvm->gscan;
+	struct iwl_host_cmd cmd = {
+		.id = iwl_cmd_id(GSCAN_STOP_CMD, SCAN_GROUP, 0),
+	};
+	int ret;
+
+	if (!fw_has_capa(&mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
+		return -EOPNOTSUPP;
+
+	mutex_lock(&mvm->mutex);
+	if (gscan->wdev != wdev) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	ret = iwl_mvm_send_cmd(mvm, &cmd);
+	if (ret) {
+		IWL_ERR(mvm, "Failed to send gscan stop command: %d\n", ret);
+		goto unlock;
+	}
+
+	memset(&gscan->scan_params, 0, sizeof(struct iwl_gscan_start_cmd));
+	gscan->wdev = NULL;
+
+unlock:
+	mutex_unlock(&mvm->mutex);
+	return ret;
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -977,6 +1213,24 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
 			WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_vendor_gscan_get_capabilities,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_START,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_start_gscan,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_STOP,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mvm_vendor_stop_gscan,
 	},
 };
 
