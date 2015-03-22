@@ -792,6 +792,50 @@ static int iwl_mvm_oppps_wa(struct wiphy *wiphy,
 }
 #endif
 
+static int iwl_vendor_gscan_get_capabilities(struct wiphy *wiphy,
+					     struct wireless_dev *wdev,
+					     const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	const struct iwl_gscan_capabilities *gscan_capa =
+		&mvm->fw->gscan_capa;
+	struct sk_buff *skb;
+
+	if (!fw_has_capa(&mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
+		return -EOPNOTSUPP;
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 100);
+	if (!skb)
+		return -ENOMEM;
+
+	if (nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SCAN_CACHE_SIZE,
+			gscan_capa->max_scan_cache_size) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SCAN_BUCKETS,
+			gscan_capa->max_scan_buckets) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_GSCAN_MAX_AP_CACHE_PER_SCAN,
+			gscan_capa->max_ap_cache_per_scan) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_GSCAN_MAX_RSSI_SAMPLE_SIZE,
+			gscan_capa->max_rssi_sample_size) ||
+	    nla_put_u32(skb,
+			IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SCAN_REPORTING_THRESHOLD,
+			gscan_capa->max_scan_reporting_threshold) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_GSCAN_MAX_HOTLIST_APS,
+			gscan_capa->max_hotlist_aps) ||
+	    nla_put_u32(skb,
+			IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SIGNIFICANT_CHANGE_APS,
+			gscan_capa->max_significant_change_aps) ||
+	    nla_put_u32(skb,
+			IWL_MVM_VENDOR_ATTR_GSCAN_MAX_BSSID_HISTORY_ENTRIES,
+			gscan_capa->max_bssid_history_entries)) {
+		kfree_skb(skb);
+		return -ENOBUFS;
+	}
+
+	return cfg80211_vendor_cmd_reply(skb);
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -925,6 +969,15 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.doit = iwl_mvm_oppps_wa,
 	},
 #endif
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_GET_CAPABILITIES,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
+			WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_gscan_get_capabilities,
+	},
 };
 
 enum iwl_mvm_vendor_events_idx {
