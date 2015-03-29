@@ -1773,7 +1773,7 @@ int iwl_trans_slv_wait_txq_empty(struct iwl_trans *trans, u32 txq_bm)
 		IWL_DEBUG_TX_QUEUES(trans, "Q %d is now empty.\n", q_id);
 	}
 
-	IWL_ERR(trans, "All the queues are now empty\n");
+	IWL_DEBUG_TX_QUEUES(trans, "All the queues are now empty\n");
 
 	return 0;
 }
