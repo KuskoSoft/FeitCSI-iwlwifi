@@ -948,6 +948,12 @@ unsigned int iwl_mvm_get_wd_timeout(struct iwl_mvm *mvm,
 	if (tdls)
 		return le32_to_cpu(txq_timer->tdls);
 
+	if (cmd_q)
+		return le32_to_cpu(txq_timer->command_queue);
+
+	if (WARN_ON(!vif))
+		return default_timeout;
+
 	switch (ieee80211_vif_type_p2p(vif)) {
 	case NL80211_IFTYPE_ADHOC:
 		return le32_to_cpu(txq_timer->ibss);
