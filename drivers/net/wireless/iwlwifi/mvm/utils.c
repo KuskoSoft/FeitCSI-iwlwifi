@@ -973,6 +973,30 @@ unsigned int iwl_mvm_get_wd_timeout(struct iwl_mvm *mvm,
 	}
 }
 
+void iwl_mvm_connection_loss(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
+			     const char *errmsg)
+{
+	struct iwl_fw_dbg_trigger_tlv *trig;
+	struct iwl_fw_dbg_trigger_mlme *trig_mlme;
+
+	if (!iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_MLME))
+		goto out;
+
+	trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_MLME);
+	trig_mlme = (void *)trig->data;
+	if (!iwl_fw_dbg_trigger_check_stop(mvm, vif, trig))
+		goto out;
+
+	if (trig_mlme->stop_connection_loss &&
+	    --trig_mlme->stop_connection_loss)
+		goto out;
+
+	iwl_mvm_fw_dbg_collect_trig(mvm, trig, "%s", errmsg);
+
+out:
+	ieee80211_connection_loss(vif);
+}
+
 #ifdef CPTCFG_IWLMVM_TCM
 u8 iwl_mvm_tcm_load_percentage(u32 airtime, u32 elapsed)
 {
@@ -1075,7 +1099,8 @@ static void iwl_mvm_tcm_uapsd_nonagg_detected_wk(struct work_struct *wk)
 	if (mvm->uapsd_noagg_bssid_write_idx >= IWL_MVM_UAPSD_NOAGG_LIST_LEN)
 		mvm->uapsd_noagg_bssid_write_idx = 0;
 
-	ieee80211_connection_loss(vif);
+	iwl_mvm_connection_loss(mvm, vif,
+				"AP isn't using AMPDU with uAPSD enabled");
 }
 
 static void iwl_mvm_uapsd_agg_disconnect_iter(void *data, u8 *mac,
