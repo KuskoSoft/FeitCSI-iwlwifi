@@ -1741,15 +1741,6 @@ static void handle_channel_custom(struct wiphy *wiphy,
 	}
 
 	chan->max_power = chan->max_reg_power;
-
-	if (chan->flags & IEEE80211_CHAN_RADAR) {
-		if (reg_rule->dfs_cac_ms)
-			chan->dfs_cac_ms = reg_rule->dfs_cac_ms;
-		else
-			chan->dfs_cac_ms = IEEE80211_DFS_MIN_CAC_TIME_MS;
-	}
-
-	chan->max_power = chan->max_reg_power;
 }
 
 static void handle_band_custom(struct wiphy *wiphy,
