@@ -1133,6 +1133,43 @@ static inline int iwl_sdio_exit_retention_flow(struct iwl_trans *trans)
 	return 0;
 }
 
+static inline int iwl_sdio_update_hw_rev(struct iwl_trans *trans)
+{
+	u32 hw_step;
+	int ret;
+
+	/* read HW rev from HW */
+	ret = iwl_sdio_ta_read(trans, CSR_HW_REV, sizeof(u32), &trans->hw_rev,
+			       IWL_SDIO_TA_AC_DIRECT);
+	if (ret)
+		return -EIO;
+
+	/*
+	 * In the 8000 HW family the format of the 4 bytes of CSR_HW_REV have
+	 * changed, and now the revision step also includes bit 0-1 (no more
+	 * "dash" value). To keep hw_rev backwards compatible - we'll store it
+	 * in the old format.
+	 */
+	trans->hw_rev = (trans->hw_rev & 0xfff0) | ((trans->hw_rev << 2) & 0xc);
+
+	/*
+	 * in-order to recognize C step driver should read chip version
+	 * id located at the AUX bus MISC address space.
+	 */
+	hw_step = iwl_sdio_read_prph_no_claim(trans, WFPM_CTRL_REG);
+	hw_step |= ENABLE_WFPM;
+	iwl_sdio_write_prph_no_claim(trans, WFPM_CTRL_REG, hw_step);
+	hw_step = iwl_sdio_read_prph_no_claim(trans, AUX_MISC_REG);
+	hw_step = (hw_step >> HW_STEP_LOCATION_BITS) & 0xF;
+	if (hw_step == 0x3)
+		trans->hw_rev = (trans->hw_rev & 0xFFFFFFF3) |
+				 (SILICON_C_STEP << 2);
+
+	IWL_INFO(trans, "Device HW revision 0x%x\n", trans->hw_rev);
+
+	return 0;
+}
+
 /*
  * Enter retention flow
  *
@@ -1179,7 +1216,6 @@ int iwl_sdio_read_hw_rev_nic_off(struct iwl_trans *trans)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
-	u32 hw_step;
 	int ret;
 
 	iwl_sdio_set_power(trans, true);
@@ -1206,30 +1242,9 @@ int iwl_sdio_read_hw_rev_nic_off(struct iwl_trans *trans)
 		goto disable_hw;
 	}
 
-	/* Read HW rev from HW */
-	ret = iwl_sdio_ta_read(trans, CSR_HW_REV, sizeof(u32), &trans->hw_rev,
-			       IWL_SDIO_TA_AC_DIRECT);
+	ret = iwl_sdio_update_hw_rev(trans);
 	if (ret)
 		goto disable_int;
-
-	/* Parse the HW revision according to the new HW_REV format */
-	trans->hw_rev = (trans->hw_rev & 0xfff0) |
-			((trans->hw_rev << 2) & 0xc);
-
-	/*
-	 * in-order to recognize C step driver should read chip version
-	 * id located at the AUX bus MISC address space.
-	 */
-	hw_step = iwl_sdio_read_prph_no_claim(trans, WFPM_CTRL_REG);
-	hw_step |= ENABLE_WFPM;
-	iwl_sdio_write_prph_no_claim(trans, WFPM_CTRL_REG, hw_step);
-	hw_step = iwl_sdio_read_prph_no_claim(trans, AUX_MISC_REG);
-	hw_step = (hw_step >> HW_STEP_LOCATION_BITS) & 0xF;
-	if (hw_step == 0x3)
-		trans->hw_rev = (trans->hw_rev & 0xFFFFFFF3) |
-				(SILICON_C_STEP << 2);
-
-	IWL_INFO(trans, "Device HW revision 0x%x\n", trans->hw_rev);
 
 disable_int:
 	/* Disable and Release the interrupts registration */
@@ -1316,20 +1331,9 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 	 */
 	trans->hw_rev = 0;
 
-	/* read HW rev from HW */
-	ret = iwl_sdio_ta_read(trans, CSR_HW_REV, sizeof(u32), &trans->hw_rev,
-			       IWL_SDIO_TA_AC_DIRECT);
+	ret = iwl_sdio_update_hw_rev(trans);
 	if (ret)
 		goto release_hw;
-
-	/*
-	 * In the 8000 HW family the format of the 4 bytes of CSR_HW_REV have
-	 * changed, and now the revision step also includes bit 0-1 (no more
-	 * "dash" value). To keep hw_rev backwards compatible - we'll store it
-	 * in the old format.
-	 */
-	trans->hw_rev = (trans->hw_rev & 0xfff0) |
-			((trans->hw_rev << 2) & 0xc);
 
 	/*
 	 * Set SDTM CSR register to disabled read optimization on 8000
