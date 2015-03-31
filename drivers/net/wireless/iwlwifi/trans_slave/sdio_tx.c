@@ -614,7 +614,7 @@ static int iwl_sdio_alloc_dtu_mem(struct iwl_trans *trans,
 
 }
 
-/* set ADMA descriptors defining the distination of the data stream */
+/* set ADMA descriptors defining the destination of the data stream */
 static void iwl_sdio_config_adma(struct iwl_trans *trans,
 				 struct iwl_slv_txq_entry *txq_entry, u8 txq_id)
 {

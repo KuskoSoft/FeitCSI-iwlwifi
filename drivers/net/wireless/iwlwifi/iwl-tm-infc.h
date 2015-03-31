@@ -284,7 +284,7 @@ struct iwl_tm_dev_info {
  * @pkt_end: end time of triggering pkt
  * @msrmnt: the tx latency of the pkt
  * @tid: tid of the pkt
- * @mode: recording mode (internal buffer or continuos recording).
+ * @mode: recording mode (internal buffer or continuous recording).
  */
 struct iwl_tm_thrshld_md {
 	__u16 monitor_collec_wind;
@@ -327,7 +327,7 @@ struct iwl_tm_build_info {
 	__u8 build_time[MAX_BUILD_DATE_LEN];
 } __packed __aligned(4);
 
-/* xVT defeinitions */
+/* xVT definitions */
 
 #define IWL_XVT_RFKILL_OFF	0
 #define IWL_XVT_RFKILL_ON	1

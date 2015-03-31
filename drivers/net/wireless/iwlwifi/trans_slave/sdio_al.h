@@ -316,8 +316,8 @@ enum iwl_sdio_ta_width {
 };
 
 /*
- * This flag defines the three mode of the accesss control that can be
- * done by the SDTM in the tarrrget access command.
+ * This flag defines the three mode of the access control that can be
+ * done by the SDTM in the target access command.
 */
 enum iwl_sdio_ta_ac_flags {
 	IWL_SDIO_TA_AC_DIRECT,
@@ -363,7 +363,7 @@ struct iwl_sdio_ta_cmd {
 	__le32 access_control;
 } __packed;
 
-/* Max payload for a single transaction - dependant in the SDIO BLOCK SIZE */
+/* Max payload for a single transaction - dependent in the SDIO BLOCK SIZE */
 #define IWL_SDIO_MAX_PAYLOAD_SIZE \
 		(IWL_SDIO_BLOCK_SIZE - sizeof(struct iwl_sdio_ta_cmd))
 

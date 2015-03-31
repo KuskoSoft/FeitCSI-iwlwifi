@@ -340,7 +340,7 @@ static void iwl_remove_sysfs_file(struct iwl_drv *drv)
 #define IWL_DEFAULT_SCAN_CHANNELS 40
 
 /*
- * struct fw_sec: Just for the image parsing proccess.
+ * struct fw_sec: Just for the image parsing process.
  * For the fw storage we are using struct fw_desc.
  */
 struct fw_sec {

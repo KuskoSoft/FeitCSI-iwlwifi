@@ -118,7 +118,7 @@ static const struct iwl_sdio_sf_mem_addresses iwl_sf_addresses = {
 
 /*
  * Returns the correct flag for the access control field in the target
- * access commnad according to the given address.
+ * access command according to the given address.
  */
 static u32 iwl_sdio_get_addr_auto_inc_flag(u32 address)
 {
@@ -363,7 +363,7 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	 * and shared resources with the TA write are in use */
 	WARN_ON(test_and_set_bit(STATUS_TA_ACTIVE, &trans->status));
 
-	/* Fill target acess command */
+	/* Fill target access command */
 	ta_read_cmd = &trans_sdio->ta_buff.ta_cmd;
 	ta_read_cmd->hdr.op_code = IWL_SDIO_OP_CODE_READ | IWL_SDIO_EOT_BIT;
 	seq_number = iwl_sdio_get_cmd_seq(trans_sdio, false);
@@ -423,7 +423,7 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 
 	/*
 	 * Clear the buffer before next use.
-	 * The actuall data has already been copied to the given buffer
+	 * The actual data has already been copied to the given buffer
 	 */
 	trans_sdio->ta_read_buff = NULL;
 	IWL_DEBUG_INFO(trans, "Target access read has successfully finished\n");
@@ -443,7 +443,7 @@ static void iwl_trans_sdio_write8(struct iwl_trans *trans, u32 ofs, u8 val)
 
 	sdio_claim_host(func);
 
-	/* Use target acces through the SDTM for indirect write */
+	/* Use target access through the SDTM for indirect write */
 	ret = iwl_sdio_ta_write(trans, ofs, sizeof(u8), &val,
 				IWL_SDIO_TA_AC_INDIRECT);
 	if (ret)
@@ -506,7 +506,7 @@ static u32 iwl_trans_sdio_read32(struct iwl_trans *trans, u32 ofs)
 
 /*
  * Perform peripheral access write to the NIC.
- * Uses the SDTM in ordr to perform the access.
+ * Uses the SDTM in order to perform the access.
  * No need to grab NIC access before, it will be performed by the SDTM.
  *
  * Since it's an API function assumes that the host is not claimed.
@@ -519,7 +519,7 @@ static void iwl_trans_sdio_write_prph(struct iwl_trans *trans, u32 addr,
 
 	sdio_claim_host(func);
 
-	/* Use standard target access - The SDTM will perfrom the prph flow */
+	/* Use standard target access - The SDTM will perform the prph flow */
 	ret = iwl_sdio_ta_write(trans, addr, sizeof(u32), &val,
 				IWL_SDIO_TA_AC_PRPH);
 	if (ret)
@@ -536,13 +536,13 @@ static void iwl_trans_sdio_write_prph(struct iwl_trans *trans, u32 addr,
 
 /*
  * Perform peripheral access write to the NIC.
- * Uses the SDTM in ordr to perform the access.
+ * Uses the SDTM in order to perform the access.
  * No need to grab NIC access before, it will be performed by the SDTM.
  */
 static void iwl_sdio_write_prph_no_claim(struct iwl_trans *trans, u32 addr,
 					 u32 val)
 {
-	/* Use standard target access - The SDTM will perfrom the prph flow */
+	/* Use standard target access - The SDTM will perform the prph flow */
 	int ret = iwl_sdio_ta_write(trans, addr, sizeof(u32), &val,
 				IWL_SDIO_TA_AC_PRPH);
 	if (ret) {
@@ -558,7 +558,7 @@ static void iwl_sdio_write_prph_no_claim(struct iwl_trans *trans, u32 addr,
 
 /*
  * Perform peripheral access read to the NIC.
- * Uses the SDTM in ordr to perform the access.
+ * Uses the SDTM in order to perform the access.
  * No need to grab NIC access before, it will be performed by the SDTM.
  *
  * Since it's an API function assumes that the host is not claimed.
@@ -592,7 +592,7 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 
 /*
  * Perform peripheral access read to the NIC.
- * Uses the SDTM in ordr to perform the access.
+ * Uses the SDTM in order to perform the access.
  * No need to grab NIC access before, it will be performed by the SDTM.
  */
  static u32 iwl_sdio_read_prph_no_claim(struct iwl_trans *trans, u32 addr)
@@ -600,7 +600,7 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 	u32 ret_val;
 	int ret;
 
-	/* Use standard target access - The SDTM will perfrom the prph flow */
+	/* Use standard target access - The SDTM will perform the prph flow */
 	ret = iwl_sdio_ta_read(trans, addr, sizeof(u32), &ret_val,
 			       IWL_SDIO_TA_AC_PRPH);
 
@@ -620,7 +620,7 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 /*
  * Generic method to read and write consecutive memory in the NIC.
  *
- * The access is done in bytes accroding to the nubmer of DWORDS given.
+ * The access is done in bytes according to the number of DWORDS given.
  * The register lock should not be held when calling to this function.
  */
 static int iwl_sdio_access_cons_mem(struct iwl_trans *trans, u32 addr,
@@ -776,7 +776,7 @@ static int iwl_sdio_clear_interrupts(struct iwl_trans *trans)
  * The host should be claimed before calling this function.
  *
  *@trans - the generic transport layer.
- * If succesded returns 0, else return a negative value desribing the error.
+ * If succeeded returns 0, else return a negative value describing the error.
  */
 static int iwl_sdio_release_hw(struct iwl_trans *trans)
 {
@@ -1002,7 +1002,7 @@ static int iwl_sdio_config_adma(struct iwl_trans *trans)
  * Polls the requested bits with the requested mask waiting for the
  * value to be changed to the given value.
  *
- * returns 0 if the polling was successfull, else the error value or ETIMEDOUT.
+ * returns 0 if the polling was successful, else the error value or ETIMEDOUT.
  */
 static int iwl_sdio_poll_bits(struct iwl_trans *trans,
 			      unsigned int reg_addr, u8 value,

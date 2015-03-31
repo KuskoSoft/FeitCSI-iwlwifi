@@ -498,7 +498,7 @@ iwl_vendor_lte_coex_wifi_reported_channel_cmd(struct wiphy *wiphy,
 	}
 
 	IWL_DEBUG_COEX(mvm, "LTE-COEX: wifi reported channel cmd:\n"
-		       "\tchannel: %d, bandwith: %d\n", cmd->chan,
+		       "\tchannel: %d, bandwidth: %d\n", cmd->chan,
 		       cmd->bandwidth);
 
 	if (!in_range(cmd->chan, LTE_RC_CHAN_MIN, LTE_RC_CHAN_MAX) ||

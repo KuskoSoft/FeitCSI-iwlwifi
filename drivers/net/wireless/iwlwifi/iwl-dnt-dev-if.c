@@ -157,7 +157,7 @@ static void iwl_dnt_dev_if_configure_dbgc_registers(struct iwl_trans *trans,
 
 		/*
 		 * SMEM requires the same internal configuration as MARBH,
-		 * which preceeded it.
+		 * which preceded it.
 		 */
 		iwl_dnt_dev_if_configure_marbh(trans);
 		break;
