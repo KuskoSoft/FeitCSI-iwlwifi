@@ -1681,8 +1681,7 @@ iwl_fw_dbg_trigger_check_stop(struct iwl_mvm *mvm,
 static inline void
 iwl_fw_dbg_trigger_simple_stop(struct iwl_mvm *mvm,
 			       struct ieee80211_vif *vif,
-			       enum iwl_fw_dbg_trigger trig,
-			       const char *str, size_t len)
+			       enum iwl_fw_dbg_trigger trig)
 {
 	struct iwl_fw_dbg_trigger_tlv *trigger;
 
@@ -1693,7 +1692,7 @@ iwl_fw_dbg_trigger_simple_stop(struct iwl_mvm *mvm,
 	if (!iwl_fw_dbg_trigger_check_stop(mvm, vif, trigger))
 		return;
 
-	iwl_mvm_fw_dbg_collect_trig(mvm, trigger, str, len);
+	iwl_mvm_fw_dbg_collect_trig(mvm, trigger, NULL, 0);
 }
 
 #endif /* __IWL_MVM_H__ */
