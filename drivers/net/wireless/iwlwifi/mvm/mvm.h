@@ -645,6 +645,7 @@ struct iwl_mvm_tdls_peer_counter {
 struct gscan_data {
 	struct wireless_dev *wdev;
 	struct iwl_gscan_start_cmd scan_params;
+	struct iwl_gscan_bssid_hotlist_cmd hotlist_params;
 };
 #endif
 
@@ -1729,6 +1730,10 @@ int iwl_mvm_vendor_stop_gscan(struct wiphy *wiphy, struct wireless_dev *wdev,
 
 void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
 					struct iwl_rx_cmd_buffer *rxb);
+
+int iwl_mvm_vendor_send_reset_hotlist_cmd(struct iwl_mvm *mvm,
+					  struct wireless_dev *wdev);
+
 #endif
 
 #endif /* __IWL_MVM_H__ */

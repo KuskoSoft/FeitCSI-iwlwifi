@@ -1906,8 +1906,10 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 #endif
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-	if (wdev && mvm->gscan.wdev == wdev)
+	if (wdev && mvm->gscan.wdev == wdev) {
 		iwl_mvm_vendor_stop_gscan(wdev->wiphy, wdev, NULL, 0);
+		iwl_mvm_vendor_send_reset_hotlist_cmd(mvm, wdev);
+	}
 #endif
 
 	mutex_lock(&mvm->mutex);
