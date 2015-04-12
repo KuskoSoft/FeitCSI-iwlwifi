@@ -862,7 +862,8 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	struct ieee80211_supported_band *sband;
 	struct ieee80211_sub_if_data *sdata;
 	struct net_device *prev_dev = NULL;
-	struct sta_info *sta, *tmp;
+	struct sta_info *sta;
+	struct rhash_head *tmp;
 	int retry_count;
 	int rates_idx;
 	bool send_to_cooked;
@@ -871,6 +872,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	int rtap_len;
 	int shift = 0;
 	int tid = IEEE80211_NUM_TIDS;
+	const struct bucket_table *tbl;
 	int prev_loss_pkt;
 	bool send_fail = true;
 
@@ -881,7 +883,9 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	sband = local->hw.wiphy->bands[info->band];
 	fc = hdr->frame_control;
 
-	for_each_sta_info(local, hdr->addr1, sta, tmp) {
+	tbl = rht_dereference_rcu(local->sta_hash.tbl, &local->sta_hash);
+
+	for_each_sta_info(local, tbl, hdr->addr1, sta, tmp) {
 		/* skip wrong virtual interface */
 		if (!ether_addr_equal(hdr->addr2, sta->sdata->vif.addr))
 			continue;
