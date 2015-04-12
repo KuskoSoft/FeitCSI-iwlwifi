@@ -276,6 +276,10 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 		   true),
 	RX_HANDLER(MFUART_LOAD_NOTIFICATION, iwl_mvm_rx_mfuart_notif, false),
 	RX_HANDLER(TOF_NOTIFICATION, iwl_mvm_tof_resp_handler, true),
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	RX_HANDLER_GRP(SCAN_GROUP, GSCAN_RESULTS_AVAILABLE_EVENT,
+		       iwl_mvm_rx_gscan_results_available, true),
+#endif
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	RX_HANDLER(DEBUG_LOG_MSG, iwl_mvm_rx_fw_logs, false),

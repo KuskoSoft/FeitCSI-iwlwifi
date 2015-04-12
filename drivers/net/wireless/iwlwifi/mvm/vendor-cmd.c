@@ -1238,6 +1238,7 @@ enum iwl_mvm_vendor_events_idx {
 #ifdef CPTCFG_IWLMVM_TCM
 	IWL_MVM_VENDOR_EVENT_IDX_TCM,
 #endif
+	IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS,
 	NUM_IWL_MVM_VENDOR_EVENT_IDX
 };
 
@@ -1249,6 +1250,10 @@ iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
 		.subcmd = IWL_MVM_VENDOR_CMD_TCM_EVENT,
 	},
 #endif
+	[IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS] = {
+		.vendor_id = INTEL_OUI,
+		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_RESULTS_EVENT,
+	},
 };
 
 void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy)
@@ -1295,3 +1300,84 @@ void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 	kfree_skb(msg);
 }
 #endif
+
+static int iwl_vendor_put_one_result(struct sk_buff *skb,
+				     struct iwl_gscan_scan_result *res)
+{
+	/* FW sends RSSI as absolute values, so negate here to get dB values */
+	if (nla_put_s8(skb, IWL_MVM_VENDOR_GSCAN_RESULT_RSSI, -res->rssi) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_GSCAN_RESULT_TIMESTAMP,
+			le32_to_cpu(res->timestamp)) ||
+	    nla_put_u8(skb, IWL_MVM_VENDOR_GSCAN_RESULT_CHANNEL,
+		       res->channel) ||
+	    nla_put(skb, IWL_MVM_VENDOR_GSCAN_RESULT_BSSID, ETH_ALEN,
+		    res->bssid) ||
+	    nla_put(skb, IWL_MVM_VENDOR_GSCAN_RESULT_SSID,
+		    IEEE80211_MAX_SSID_LEN, res->ssid))
+		return -ENOBUFS;
+
+	return 0;
+}
+
+void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
+					struct iwl_rx_cmd_buffer *rxb)
+{
+	struct gscan_data *gscan = &mvm->gscan;
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_gscan_results_event *event = (void *)pkt->data;
+	enum iwl_mvm_vendor_results_event_type event_type;
+	struct sk_buff *msg;
+	struct nlattr *results;
+	u32 num_res = le32_to_cpu(event->num_res);
+	int i, start_idx = 0;
+
+	lockdep_assert_held(&mvm->mutex);
+
+	if (WARN_ON(!gscan->wdev))
+		return;
+
+	while (start_idx < num_res) {
+		msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, gscan->wdev,
+						  3500,
+						  IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS,
+						  GFP_KERNEL);
+		if (!msg)
+			return;
+
+		event_type = le32_to_cpu(event->event_type);
+		if (event_type >= NUM_IWL_VENDOR_RESULTS_NOTIF_EVENT_TYPE ||
+		    nla_put_u32(msg,
+				IWL_MVM_VENDOR_ATTR_GSCAN_RESULTS_EVENT_TYPE,
+				event_type)) {
+			kfree_skb(msg);
+			return;
+		}
+
+		results = nla_nest_start(msg,
+					 IWL_MVM_VENDOR_ATTR_GSCAN_RESULTS);
+		if (!results) {
+			kfree_skb(msg);
+			return;
+		}
+
+		for (i = start_idx; i < num_res; i++) {
+			struct nlattr *result = nla_nest_start(msg, i + 1);
+
+			if (!result)
+				break;
+
+			if (iwl_vendor_put_one_result(msg,
+						      &event->results[i])) {
+				nla_nest_cancel(msg, result);
+				break;
+			}
+
+			nla_nest_end(msg, result);
+		}
+
+		nla_nest_end(msg, results);
+
+		start_idx = i;
+		cfg80211_vendor_event(msg, GFP_KERNEL);
+	}
+}

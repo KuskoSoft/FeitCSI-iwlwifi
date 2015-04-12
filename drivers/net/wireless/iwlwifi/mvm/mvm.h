@@ -1726,6 +1726,9 @@ iwl_fw_dbg_trigger_simple_stop(struct iwl_mvm *mvm,
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 int iwl_mvm_vendor_stop_gscan(struct wiphy *wiphy, struct wireless_dev *wdev,
 			      const void *data, int data_len);
+
+void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
+					struct iwl_rx_cmd_buffer *rxb);
 #endif
 
 #endif /* __IWL_MVM_H__ */
