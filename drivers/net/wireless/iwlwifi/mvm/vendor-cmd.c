@@ -1541,6 +1541,7 @@ enum iwl_mvm_vendor_events_idx {
 	IWL_MVM_VENDOR_EVENT_IDX_TCM,
 #endif
 	IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS,
+	IWL_MVM_VENDOR_EVENT_IDX_HOTLIST_CHANGE,
 	NUM_IWL_MVM_VENDOR_EVENT_IDX
 };
 
@@ -1555,6 +1556,10 @@ iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
 	[IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS] = {
 		.vendor_id = INTEL_OUI,
 		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_RESULTS_EVENT,
+	},
+	[IWL_MVM_VENDOR_EVENT_IDX_HOTLIST_CHANGE] = {
+		.vendor_id = INTEL_OUI,
+		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_HOTLIST_CHANGE_EVENT,
 	},
 };
 
@@ -1682,4 +1687,61 @@ void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
 		start_idx = i;
 		cfg80211_vendor_event(msg, GFP_KERNEL);
 	}
+}
+
+static int iwl_vendor_put_hotlist_results(struct sk_buff *msg, u32 num_res,
+					  struct iwl_gscan_scan_result *results)
+{
+	struct nlattr *res;
+	u32 i;
+
+	res = nla_nest_start(msg, IWL_MVM_VENDOR_ATTR_GSCAN_RESULTS);
+	if (!res)
+		return -ENOBUFS;
+
+	for (i = 0; i < num_res; i++) {
+		struct nlattr *result = nla_nest_start(msg, i + 1);
+
+		if (!result ||
+		    iwl_vendor_put_one_result(msg, &results[i]))
+			return -ENOBUFS;
+
+		nla_nest_end(msg, result);
+	}
+
+	nla_nest_end(msg, res);
+	return 0;
+}
+
+void iwl_mvm_rx_gscan_hotlist_change_event(struct iwl_mvm *mvm,
+					   struct iwl_rx_cmd_buffer *rxb)
+{
+	struct gscan_data *gscan = &mvm->gscan;
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_gscan_hotlist_change_event *event = (void *)pkt->data;
+	enum iwl_mvm_vendor_hotlist_ap_status ap_status;
+	struct sk_buff *msg;
+	u32 num_res = le32_to_cpu(event->num_res);
+
+	lockdep_assert_held(&mvm->mutex);
+
+	if (WARN_ON(!gscan->wdev))
+		return;
+
+	msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, gscan->wdev, 1024,
+					  IWL_MVM_VENDOR_EVENT_IDX_HOTLIST_CHANGE,
+					  GFP_KERNEL);
+	if (!msg)
+		return;
+
+	ap_status = le32_to_cpu(event->status);
+	if (ap_status >= NUM_IWL_MVM_VENDOR_HOTLIST_AP_STATUS ||
+	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_GSCAN_HOTLIST_AP_STATUS,
+			ap_status) ||
+	    iwl_vendor_put_hotlist_results(msg, num_res, event->results)) {
+		kfree_skb(msg);
+		return;
+	}
+
+	cfg80211_vendor_event(msg, GFP_KERNEL);
 }

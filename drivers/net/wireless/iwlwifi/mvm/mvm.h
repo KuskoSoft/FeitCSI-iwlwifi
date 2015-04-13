@@ -1737,6 +1737,9 @@ int iwl_mvm_vendor_send_reset_hotlist_cmd(struct iwl_mvm *mvm,
 
 int iwl_mvm_vendor_send_reset_sig_change_cmd(struct iwl_mvm *mvm,
 					     struct wireless_dev *wdev);
+
+void iwl_mvm_rx_gscan_hotlist_change_event(struct iwl_mvm *mvm,
+					   struct iwl_rx_cmd_buffer *rxb);
 #endif
 
 #endif /* __IWL_MVM_H__ */

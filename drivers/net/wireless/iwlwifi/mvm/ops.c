@@ -279,6 +279,8 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	RX_HANDLER_GRP(SCAN_GROUP, GSCAN_RESULTS_AVAILABLE_EVENT,
 		       iwl_mvm_rx_gscan_results_available, true),
+	RX_HANDLER_GRP(SCAN_GROUP, GSCAN_HOTLIST_CHANGE_EVENT,
+		       iwl_mvm_rx_gscan_hotlist_change_event, true),
 #endif
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
