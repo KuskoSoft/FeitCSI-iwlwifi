@@ -214,6 +214,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(u32, dbgc_hb_base_addr)
 	IWL_DBG_CFG_NODEF(u32, dbgc_hb_end_addr)
 	IWL_DBG_CFG_NODEF(u32, dbgc_dram_wrptr_addr)
+	IWL_DBG_CFG_NODEF(u32, dbgc_wrap_count_addr)
 	IWL_DBG_CFG_NODEF(u32, dbg_mipi_conf_reg)
 	IWL_DBG_CFG_NODEF(u32, dbg_mipi_conf_mask)
 	IWL_DBG_CFG_NODEF(u32, dbgc_hb_base_val_smem)
