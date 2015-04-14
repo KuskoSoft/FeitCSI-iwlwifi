@@ -108,13 +108,25 @@ static void iwl_pcie_free_fw_monitor(struct iwl_trans *trans)
 	trans_pcie->fw_mon_size = 0;
 }
 
-static void iwl_pcie_alloc_fw_monitor(struct iwl_trans *trans)
+static void iwl_pcie_alloc_fw_monitor(struct iwl_trans *trans, u8 max_power)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	struct page *page = NULL;
 	dma_addr_t phys;
-	u32 size;
+	u32 size = 0;
 	u8 power;
+
+	if (!max_power) {
+		/* default max_power is maximum */
+		max_power = 26;
+	} else {
+		max_power += 11;
+	}
+
+	if (WARN(max_power > 26,
+		 "External buffer size for monitor is too big %d, check the FW TLV\n",
+		 max_power))
+		return;
 
 	if (trans_pcie->fw_mon_page) {
 		dma_sync_single_for_device(trans->dev, trans_pcie->fw_mon_phys,
@@ -124,7 +136,7 @@ static void iwl_pcie_alloc_fw_monitor(struct iwl_trans *trans)
 	}
 
 	phys = 0;
-	for (power = 26; power >= 11; power--) {
+	for (power = max_power; power >= 11; power--) {
 		int order;
 
 		size = BIT(power);
@@ -149,6 +161,11 @@ static void iwl_pcie_alloc_fw_monitor(struct iwl_trans *trans)
 
 	if (WARN_ON_ONCE(!page))
 		return;
+
+	if (power != max_power)
+		IWL_ERR(trans,
+			"Sorry - debug buffer is only %dK while you requested %dK\n",
+			BIT(power - 10), BIT(max_power - 10));
 
 	trans_pcie->fw_mon_page = page;
 	trans_pcie->fw_mon_phys = phys;
@@ -841,7 +858,7 @@ static void iwl_pcie_apply_destination(struct iwl_trans *trans)
 		 get_fw_dbg_mode_string(dest->monitor_mode));
 
 	if (dest->monitor_mode == EXTERNAL_MODE)
-		iwl_pcie_alloc_fw_monitor(trans);
+		iwl_pcie_alloc_fw_monitor(trans, dest->size_power);
 	else
 		IWL_WARN(trans, "PCI should have external buffer debug\n");
 
@@ -915,7 +932,7 @@ static int iwl_pcie_load_given_ucode(struct iwl_trans *trans,
 	/* supported for 7000 only for the moment */
 	if (iwlwifi_mod_params.fw_monitor &&
 	    trans->cfg->device_family == IWL_DEVICE_FAMILY_7000) {
-		iwl_pcie_alloc_fw_monitor(trans);
+		iwl_pcie_alloc_fw_monitor(trans, 0);
 
 		if (trans_pcie->fw_mon_size) {
 			iwl_write_prph(trans, MON_BUFF_BASE_ADDR,
