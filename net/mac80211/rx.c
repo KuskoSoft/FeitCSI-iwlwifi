@@ -2461,6 +2461,9 @@ ieee80211_rx_h_ctrl(struct ieee80211_rx_data *rx, struct sk_buff_head *frames)
 		struct {
 			__le16 control, start_seq_num;
 		} __packed bar_data;
+		struct ieee80211_event event = {
+			.type = BAR_RX_EVENT,
+		};
 
 		if (!rx->sta)
 			return RX_DROP_MONITOR;
@@ -2476,6 +2479,9 @@ ieee80211_rx_h_ctrl(struct ieee80211_rx_data *rx, struct sk_buff_head *frames)
 			return RX_DROP_MONITOR;
 
 		start_seq_num = le16_to_cpu(bar_data.start_seq_num) >> 4;
+		event.u.ba.tid = tid;
+		event.u.ba.ssn = start_seq_num;
+		event.u.ba.sta = &rx->sta->sta;
 
 		/* reset session timer */
 		if (tid_agg_rx->timeout)
@@ -2487,6 +2493,8 @@ ieee80211_rx_h_ctrl(struct ieee80211_rx_data *rx, struct sk_buff_head *frames)
 		ieee80211_release_reorder_frames(rx->sdata, tid_agg_rx,
 						 start_seq_num, frames);
 		spin_unlock(&tid_agg_rx->reorder_lock);
+
+		drv_event_callback(rx->local, rx->sdata, &event);
 
 		kfree_skb(skb);
 		return RX_QUEUED;
