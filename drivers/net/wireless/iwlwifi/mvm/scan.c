@@ -197,10 +197,9 @@ static void iwl_mvm_scan_condition_iterator(void *data, u8 *mac,
 		*global_cnt += 1;
 }
 
-static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
-				     struct ieee80211_vif *vif,
-				     int n_ssids, u32 flags,
-				     struct iwl_mvm_scan_params *params)
+static void iwl_mvm_scan_calc_dwell(struct iwl_mvm *mvm,
+				    struct ieee80211_vif *vif,
+				    struct iwl_mvm_scan_params *params)
 {
 	int global_cnt = 0;
 	enum ieee80211_band band;
@@ -210,9 +209,6 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 					    IEEE80211_IFACE_ITER_NORMAL,
 					    iwl_mvm_scan_condition_iterator,
 					    &global_cnt);
-	params->n_ssids = n_ssids;
-	params->flags = flags;
-
 	if (!global_cnt)
 		goto not_bound;
 
@@ -310,7 +306,7 @@ static void iwl_mvm_scan_calc_params(struct iwl_mvm *mvm,
 		}
 	}
 
-	if ((flags & NL80211_SCAN_FLAG_LOW_PRIORITY) &&
+	if ((params->flags & NL80211_SCAN_FLAG_LOW_PRIORITY) &&
 	    (params->max_out_time > 200))
 		params->max_out_time = 200;
 
@@ -322,8 +318,8 @@ not_bound:
 
 		params->dwell[band].passive = iwl_mvm_get_passive_dwell(mvm,
 									band);
-		params->dwell[band].active = iwl_mvm_get_active_dwell(mvm, band,
-								      n_ssids);
+		params->dwell[band].active =
+			iwl_mvm_get_active_dwell(mvm, band, params->n_ssids);
 	}
 
 	IWL_DEBUG_SCAN(mvm,
@@ -1512,8 +1508,8 @@ int iwl_mvm_reg_scan_start(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	if (!iwl_mvm_scan_fits(mvm, req->n_ssids, ies, req->n_channels))
 		return -ENOBUFS;
 
-	iwl_mvm_scan_calc_params(mvm, vif, req->n_ssids, req->flags, &params);
-
+	params.n_ssids = req->n_ssids;
+	params.flags = req->flags;
 	params.n_channels = req->n_channels;
 	params.delay = 0;
 	params.interval = 0;
@@ -1525,6 +1521,8 @@ int iwl_mvm_reg_scan_start(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	params.pass_all = true;
 	params.n_match_sets = 0;
 	params.match_sets = NULL;
+
+	iwl_mvm_scan_calc_dwell(mvm, vif, &params);
 
 	if (mvm->fw->ucode_capa.capa[0] & IWL_UCODE_TLV_CAPA_UMAC_SCAN) {
 		hcmd.id = SCAN_REQ_UMAC;
@@ -1587,8 +1585,8 @@ int iwl_mvm_sched_scan_start(struct iwl_mvm *mvm,
 	if (!iwl_mvm_scan_fits(mvm, req->n_ssids, ies, req->n_channels))
 		return -ENOBUFS;
 
-	iwl_mvm_scan_calc_params(mvm, vif, req->n_ssids, req->flags, &params);
-
+	params.n_ssids = req->n_ssids;
+	params.flags = req->flags;
 	params.n_channels = req->n_channels;
 	params.delay = req->delay;
 	params.ssids = req->ssids;
@@ -1607,6 +1605,8 @@ int iwl_mvm_sched_scan_start(struct iwl_mvm *mvm,
 	} else {
 		params.interval = req->interval / MSEC_PER_SEC;
 	}
+
+	iwl_mvm_scan_calc_dwell(mvm, vif, &params);
 
 	ret = iwl_mvm_config_sched_scan_profiles(mvm, req);
 	if (ret)
