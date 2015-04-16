@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1685,6 +1685,39 @@ static int iwl_sdio_rsa_race_bug_wa(struct iwl_trans *trans)
 	return -EIO;
 }
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+static int iwl_sdio_override_secure_boot_cfg(struct iwl_trans *trans)
+{
+	u32 val;
+
+	if (!trans->dbg_cfg.secure_boot_cfg)
+		return 0;
+
+	/* Verify AUX address space is not locked */
+	val = iwl_sdio_read_prph_no_claim(trans, PREG_AUX_BUS_WPROT_0);
+	if (val & BIT((SB_CFG_OVERRIDE_ADDR - SB_CFG_BASE_OVERRIDE) >> 10)) {
+		IWL_ERR(trans, "AUX address space is locked for override\n");
+		return -EIO;
+	}
+
+	/* take ownership on the AUX IF */
+	val = iwl_sdio_read_prph_no_claim(trans, WFPM_CTRL_REG);
+	iwl_sdio_write_prph_no_claim(trans, WFPM_CTRL_REG,
+				     WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK | val);
+
+	/* indicate secure boot cfg override */
+	val = iwl_sdio_read_prph_no_claim(trans, SB_CFG_OVERRIDE_ADDR);
+	iwl_sdio_write_prph_no_claim(trans, SB_CFG_OVERRIDE_ADDR,
+				     SB_CFG_OVERRIDE_ENABLE | val);
+
+	/* Modify secure boot cfg flags */
+	iwl_sdio_write_prph_no_claim(trans, SB_MODIFY_CFG_FLAG,
+				     trans->dbg_cfg.secure_boot_cfg);
+
+	return 0;
+}
+#endif
+
 static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 				      const struct fw_img *image,
 				      int cpu,
@@ -1878,6 +1911,12 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 	ret = iwl_sdio_rsa_race_bug_wa(trans);
 	if (ret)
 		goto exit_err;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	ret = iwl_sdio_override_secure_boot_cfg(trans);
+	if (ret)
+		return ret;
+#endif
 
 	/* Remove CSR reset to allow NIC to operate */
 	iwl_sdio_write_prph_no_claim(trans, RELEASE_CPU_RESET,

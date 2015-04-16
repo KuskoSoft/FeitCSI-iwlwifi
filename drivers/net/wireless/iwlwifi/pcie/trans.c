@@ -749,6 +749,37 @@ static int iwl_pcie_rsa_race_bug_wa(struct iwl_trans *trans)
 	return -EIO;
 }
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+static int iwl_pcie_override_secure_boot_cfg(struct iwl_trans *trans)
+{
+	u32 val;
+
+	if (!trans->dbg_cfg.secure_boot_cfg)
+		return 0;
+
+	/* Verify AUX address space is not locked */
+	val = iwl_read_prph(trans, PREG_AUX_BUS_WPROT_0);
+	if (val & BIT((SB_CFG_OVERRIDE_ADDR - SB_CFG_BASE_OVERRIDE) >> 10)) {
+		IWL_ERR(trans, "AUX address space is locked for override\n");
+		return -EIO;
+	}
+
+	/* take ownership on the AUX IF */
+	iwl_set_bits_prph(trans, WFPM_CTRL_REG,
+			  WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK);
+
+	/* indicate secure boot cfg override */
+	iwl_set_bits_prph(trans, SB_CFG_OVERRIDE_ADDR,
+			  SB_CFG_OVERRIDE_ENABLE);
+
+	/* Modify secure boot cfg flags */
+	iwl_write_prph(trans, SB_MODIFY_CFG_FLAG,
+		       trans->dbg_cfg.secure_boot_cfg);
+
+	return 0;
+}
+#endif
+
 static int iwl_pcie_load_cpu_sections_8000(struct iwl_trans *trans,
 					   const struct fw_img *image,
 					   int cpu,
@@ -975,6 +1006,12 @@ static int iwl_pcie_load_given_ucode_8000(struct iwl_trans *trans,
 	ret = iwl_pcie_rsa_race_bug_wa(trans);
 	if (ret)
 		return ret;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	ret = iwl_pcie_override_secure_boot_cfg(trans);
+	if (ret)
+		return ret;
+#endif
 
 	/* configure the ucode to be ready to get the secured image */
 	/* release CPU reset */

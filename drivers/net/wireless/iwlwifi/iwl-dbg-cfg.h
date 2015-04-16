@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -235,6 +235,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(u8, wakelock_mode)
 	IWL_DBG_CFG_NODEF(u32, d0i3_debug)
 	IWL_DBG_CFG_NODEF(u32, valid_ants)
+	IWL_DBG_CFG_NODEF(u32, secure_boot_cfg)
 #ifdef CONFIG_HAS_WAKELOCK
 	IWL_DBG_CFG(u32, WAKELOCK_TIMEOUT_MS)
 #endif /* CONFIG_HAS_WAKELOCK */

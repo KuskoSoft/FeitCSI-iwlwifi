@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -375,13 +375,15 @@ enum {
 };
 
 #define AUX_MISC_MASTER1_EN		0xA20818
-enum aux_misc_master1_en {
-	AUX_MISC_MASTER1_EN_SBE_MSK	= 0x1,
-};
+#define AUX_MISC_MASTER1_EN_SBE_MSK	0x1
 
 #define AUX_MISC_MASTER1_SMPHR_STATUS	0xA20800
 #define RSA_ENABLE			0xA24B08
 #define PREG_AUX_BUS_WPROT_0		0xA04CC0
+#define SB_CFG_OVERRIDE_ADDR		0xA26C78
+#define SB_CFG_OVERRIDE_ENABLE		0x8000
+#define SB_CFG_BASE_OVERRIDE		0xA20000
+#define SB_MODIFY_CFG_FLAG		0xA03088
 
 /* FW chicken bits */
 #define LMPM_CHICK			0xA01FF8
