@@ -156,7 +156,7 @@ TRACE_EVENT(iwlwifi_dev_ucode_error,
 		__entry->gp1 = gp1;
 		__entry->gp2 = gp2;
 		__entry->gp3 = gp3;
-		__entry->minor = major;
+		__entry->major = major;
 		__entry->minor = minor;
 		__entry->hw_ver = hw_ver;
 		__entry->brd_ver = brd_ver;
