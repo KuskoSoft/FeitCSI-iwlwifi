@@ -541,6 +541,8 @@ static int iwl_vendor_frame_filter_cmd(struct wiphy *wiphy,
 
 	if (err)
 		return err;
+	if (!vif)
+		return -EINVAL;
 	vif->filter_grat_arp_unsol_na =
 		tb[IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA];
 	vif->filter_gtk = tb[IWL_MVM_VENDOR_ATTR_FILTER_GTK];
