@@ -346,6 +346,7 @@ struct ieee80211_tx_latency_stat {
  * @tid_seq: per-TID sequence numbers for sending to this STA
  * @ampdu_mlme: A-MPDU state machine state
  * @timer_to_tid: identity mapping to ID timers
+ * @plink_lock: serialize access to plink fields
  * @tx_consec: Tx consecutive loss statistics
  * @tx_lat: Tx latency statistics
  * @tx_lat_threshold: Tx threshold information
