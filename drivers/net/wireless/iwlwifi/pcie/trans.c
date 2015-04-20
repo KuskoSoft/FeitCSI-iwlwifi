@@ -950,7 +950,7 @@ static int iwl_pcie_load_given_ucode_8000(struct iwl_trans *trans,
 		iwl_pcie_apply_destination(trans);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-		iwl_dnt_configure(trans, image);
+	iwl_dnt_configure(trans, image);
 #endif
 
 	/* TODO: remove in the next Si step */
