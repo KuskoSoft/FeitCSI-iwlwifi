@@ -413,12 +413,11 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	} else {
 		ret = 0; /* Clear the time left after waiting */
 
-	IWL_DEBUG_INFO(trans,
-		"### TA READ COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
-		ta_read_cmd->address, ta_read_cmd->length,
-		ta_read_cmd->hdr.seq_number,
-		*((u32 *)trans_sdio->ta_read_buff));
-
+		IWL_DEBUG_INFO(trans,
+			       "### TA READ COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
+			       ta_read_cmd->address, ta_read_cmd->length,
+			       ta_read_cmd->hdr.seq_number,
+			       *((u32 *)trans_sdio->ta_read_buff));
 	}
 
 	/*
