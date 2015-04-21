@@ -145,7 +145,6 @@ enum {
 	IWL_XVT_CMD_FREE_DMA,
 	IWL_XVT_CMD_GET_CHIP_ID,
 	IWL_XVT_CMD_APMG_PD_MODE,
-	IWL_XVT_CMD_GET_FW_INFO,
 
 	/* Driver notifications */
 	IWL_XVT_CMD_SEND_REPLY_ALIVE = XVT_CMD_NOTIF_BASE,
@@ -472,25 +471,6 @@ struct iwl_xvt_get_dma {
  */
 struct iwl_xvt_chip_id {
 	__u32 registers[3];
-} __packed __aligned(4);
-
-/**
- * struct iwl_xvt_get_fw_info - get the FW info
- * @fw_major_ver: the fw major version
- * @fw_minor_ver: the fw minor version
- * @fw_capa_flags: the fw capabilities flags
- * @fw_capa_api_len: the fw capabilities api length in data
- * @fw_capa_len: the fw capabilities length in data
- * @data: fw_capa_api and fa_capa data (length defined by fw_capa_api_len
- *	+ fw_capa_len)
- */
-struct iwl_xvt_get_fw_info {
-	__u32 fw_major_ver;
-	__u32 fw_minor_ver;
-	__u32 fw_capa_flags;
-	__u32 fw_capa_api_len;
-	__u32 fw_capa_len;
-	__u8 data[];
 } __packed __aligned(4);
 
 /**

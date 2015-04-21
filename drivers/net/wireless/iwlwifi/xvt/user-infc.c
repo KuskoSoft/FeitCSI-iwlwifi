@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1081,7 +1081,7 @@ static int iwl_xvt_get_chip_id(struct iwl_xvt *xvt,
 static int iwl_xvt_get_fw_info(struct iwl_xvt *xvt,
 			       struct iwl_tm_data *data_out)
 {
-	struct iwl_xvt_get_fw_info *fw_info;
+	struct iwl_tm_get_fw_info *fw_info;
 	u32 api_len, capa_len;
 
 	api_len = IWL_API_ARRAY_SIZE * sizeof(u32);
@@ -1145,6 +1145,9 @@ int iwl_xvt_user_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
 	case IWL_TM_USER_CMD_SV_IO_TOGGLE:
 		ret = iwl_xvt_sdio_io_toggle(xvt, data_in, data_out);
 		break;
+	case IWL_TM_USER_CMD_GET_FW_INFO:
+		ret = iwl_xvt_get_fw_info(xvt, data_out);
+		break;
 
 	/* xVT cases */
 
@@ -1197,9 +1200,6 @@ int iwl_xvt_user_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
 		break;
 	case IWL_XVT_CMD_GET_CHIP_ID:
 		ret = iwl_xvt_get_chip_id(xvt, data_out);
-		break;
-	case IWL_XVT_CMD_GET_FW_INFO:
-		ret = iwl_xvt_get_fw_info(xvt, data_out);
 		break;
 	default:
 		ret = -EOPNOTSUPP;
