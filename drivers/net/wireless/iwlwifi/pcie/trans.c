@@ -164,8 +164,9 @@ static void iwl_pcie_alloc_fw_monitor(struct iwl_trans *trans, u8 max_power)
 
 	if (power != max_power)
 		IWL_ERR(trans,
-			"Sorry - debug buffer is only %dK while you requested %dK\n",
-			BIT(power - 10), BIT(max_power - 10));
+			"Sorry - debug buffer is only %luK while you requested %luK\n",
+			(unsigned long)BIT(power - 10),
+			(unsigned long)BIT(max_power - 10));
 
 	trans_pcie->fw_mon_page = page;
 	trans_pcie->fw_mon_phys = phys;
