@@ -927,6 +927,11 @@ u16 iwl_mvm_coex_agg_time_limit(struct iwl_mvm *mvm,
 	if (IWL_COEX_IS_TTC_ON(mvm->last_bt_notif.ttc_rrc_status, phy_ctxt->id))
 		return LINK_QUAL_AGG_TIME_LIMIT_DEF;
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	/* 2G coex */
+	if (mvm->coex_2g_enabled)
+		return LINK_QUAL_AGG_TIME_LIMIT_BT_ACT;
+#endif
 	if (le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) <
 	    BT_HIGH_TRAFFIC)
 		return LINK_QUAL_AGG_TIME_LIMIT_DEF;

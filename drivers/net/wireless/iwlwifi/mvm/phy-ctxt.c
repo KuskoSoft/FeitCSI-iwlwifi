@@ -226,6 +226,10 @@ int iwl_mvm_phy_ctxt_add(struct iwl_mvm *mvm, struct iwl_mvm_phy_ctxt *ctxt,
 
 	ctxt->channel = chandef->chan;
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	ctxt->fm_tx_power_limit = IWL_DEFAULT_MAX_TX_POWER;
+#endif
+
 	return iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef,
 				      chains_static, chains_dynamic,
 				      FW_CTXT_ACTION_ADD, 0);

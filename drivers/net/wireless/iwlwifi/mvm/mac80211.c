@@ -1323,6 +1323,15 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 	mvm->ps_disabled = false;
 	mvm->calibrating = false;
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	/*
+	 * In case that 2g coex was enabled - and now the FW is being
+	 * restarted, we need to disable 2g coex mode in the driver as well
+	 * so that the fw & driver will be synced on the mode.
+	 */
+	mvm->coex_2g_enabled = false;
+#endif
+
 	/* just in case one was running */
 	ieee80211_remain_on_channel_expired(mvm->hw);
 
@@ -1577,6 +1586,18 @@ static int iwl_mvm_set_tx_power_old(struct iwl_mvm *mvm,
 		.pwr_restriction = cpu_to_le16(tx_power),
 	};
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+	/*
+	 * if set Tx power request did not come from Frequency Manager(FM)
+	 * Take minimum between wanted Tx power to FM Tx power limit
+	 */
+	if (mvmvif->phy_ctxt && tx_power > mvmvif->phy_ctxt->fm_tx_power_limit)
+		reduce_txpwr_cmd.pwr_restriction =
+			cpu_to_le16(mvmvif->phy_ctxt->fm_tx_power_limit);
+#endif
+
 	return iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0,
 				    sizeof(reduce_txpwr_cmd),
 				    &reduce_txpwr_cmd);
@@ -1592,6 +1613,18 @@ static int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		.pwr_restriction = cpu_to_le16(8 * tx_power),
 	};
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+	/*
+	 * if set Tx power request did not come from Frequency Manager(FM)
+	 * Take minimum between wanted Tx power to FM Tx power limit
+	 */
+	if (mvmvif->phy_ctxt && tx_power > mvmvif->phy_ctxt->fm_tx_power_limit)
+		cmd.pwr_restriction =
+			cpu_to_le16(mvmvif->phy_ctxt->fm_tx_power_limit);
+#endif
+
 	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_TX_POWER_DEV))
 		return iwl_mvm_set_tx_power_old(mvm, vif, tx_power);
 
@@ -1601,6 +1634,35 @@ static int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	return iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0,
 				    sizeof(cmd), &cmd);
 }
+
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+int iwl_mvm_fm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
+			    s8 txpower)
+{
+	int ret;
+
+	mutex_lock(&mvm->mutex);
+	/* set Tx power to min between drivers limit and FM limit */
+	ret = iwl_mvm_set_tx_power(mvm, vif, min_t(s8, txpower,
+						   vif->bss_conf.txpower));
+	mutex_unlock(&mvm->mutex);
+	return ret;
+}
+
+/*
+ * Updates Tx power limitation for the mac if FM has already limited
+ * the Tx power on the channel that this mac is using.
+ */
+static void iwl_mvm_update_ctx_tx_power_limit(struct iwl_mvm *mvm,
+					      struct ieee80211_vif *vif,
+					      struct iwl_mvm_phy_ctxt *phy_ctxt)
+{
+	/* Tx power has not been limited by FM */
+	if (phy_ctxt->fm_tx_power_limit == IWL_DEFAULT_MAX_TX_POWER)
+		return;
+	iwl_mvm_set_tx_power(mvm, vif, phy_ctxt->fm_tx_power_limit);
+}
+#endif
 
 static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 				     struct ieee80211_vif *vif)
@@ -1702,6 +1764,10 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 		ret = iwl_mvm_binding_add_vif(mvm, vif);
 		if (ret)
 			goto out_unref_phy;
+
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+		iwl_mvm_update_ctx_tx_power_limit(mvm, vif, mvmvif->phy_ctxt);
+#endif
 
 		ret = iwl_mvm_add_bcast_sta(mvm, vif);
 		if (ret)
@@ -2331,6 +2397,10 @@ static int iwl_mvm_start_ap_ibss(struct ieee80211_hw *hw,
 	ret = iwl_mvm_binding_add_vif(mvm, vif);
 	if (ret)
 		goto out_remove;
+
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	iwl_mvm_update_ctx_tx_power_limit(mvm, vif, mvmvif->phy_ctxt);
+#endif
 
 	/* Send the bcast station. At this stage the TBTT and DTIM time events
 	 * are added and applied to the scheduler */
@@ -3317,6 +3387,10 @@ static int __iwl_mvm_add_chanctx(struct iwl_mvm *mvm,
 	iwl_mvm_phy_ctxt_ref(mvm, phy_ctxt);
 	*phy_ctxt_id = phy_ctxt->id;
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_ADD_CHANCTX);
+#endif
+
 out:
 	return ret;
 }
@@ -3343,6 +3417,9 @@ static void __iwl_mvm_remove_chanctx(struct iwl_mvm *mvm,
 	lockdep_assert_held(&mvm->mutex);
 
 	iwl_mvm_phy_ctxt_unref(mvm, phy_ctxt);
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_REMOVE_CHANCTX);
+#endif
 }
 
 static void iwl_mvm_remove_chanctx(struct ieee80211_hw *hw,
@@ -3377,6 +3454,9 @@ static void iwl_mvm_change_chanctx(struct ieee80211_hw *hw,
 	iwl_mvm_phy_ctxt_changed(mvm, phy_ctxt, &ctx->min_def,
 				 ctx->rx_chains_static,
 				 ctx->rx_chains_dynamic);
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_CHANGE_CHANCTX);
+#endif
 	mutex_unlock(&mvm->mutex);
 }
 
@@ -3422,6 +3502,10 @@ static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm *mvm,
 	ret = iwl_mvm_binding_add_vif(mvm, vif);
 	if (ret)
 		goto out;
+
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	iwl_mvm_update_ctx_tx_power_limit(mvm, vif, mvmvif->phy_ctxt);
+#endif
 
 	/*
 	 * Power state must be updated before quotas,

@@ -473,6 +473,17 @@ struct iwl_bt_coex_profile_notif_old {
 	__le32 bt_activity_grading;
 } __packed; /* BT_COEX_PROFILE_NTFY_API_S_VER_3 */
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+/*
+ * struct iwl_config_2g_coex_cmd - 2G Coex configuration command
+ * (CONFIG_2G_COEX_CMD = 0x71)
+ * @enabled: 2g coex is enabled/disabled
+ */
+struct iwl_config_2g_coex_cmd {
+	__le32 enabled;
+} __packed; /* CONFIG_2G_COEX_CMD_API_S_VER_1 */
+#endif
+
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 
 #define WIFI_BAND_24_NUM_CHANNELS       14

@@ -610,6 +610,12 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	memset(&mvm->rx_stats, 0, sizeof(struct mvm_statistics_rx));
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	err = iwl_mvm_fm_register(mvm);
+	if (err)
+		pr_err("Unable to register with Frequency Manager: %d\n", err);
+#endif
+
 	/* rpm starts with a taken ref. only set the appropriate bit here. */
 	mvm->refs[IWL_MVM_REF_UCODE_DOWN] = 1;
 
@@ -640,6 +646,10 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	iwl_mvm_tt_exit(mvm);
 
 	ieee80211_unregister_hw(mvm->hw);
+
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	iwl_mvm_fm_unregister(mvm);
+#endif
 
 	kfree(mvm->scan_cmd);
 	kfree(mvm->mcast_filter_cmd);
