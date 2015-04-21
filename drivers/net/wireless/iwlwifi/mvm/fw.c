@@ -132,6 +132,10 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 
 		alive_data->valid = le16_to_cpu(palive1->status) ==
 				    IWL_ALIVE_STATUS_OK;
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+		mvm->fw_major_ver = palive1->ucode_major;
+		mvm->fw_minor_ver = palive1->ucode_minor;
+#endif
 		IWL_DEBUG_FW(mvm,
 			     "Alive VER1 ucode status 0x%04x revision 0x%01X 0x%01X flags 0x%01X\n",
 			     le16_to_cpu(palive1->status), palive1->ver_type,
@@ -154,6 +158,10 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 		if (mvm->umac_error_event_table)
 			mvm->support_umac_log = true;
 
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+		mvm->fw_major_ver = palive2->ucode_major;
+		mvm->fw_minor_ver = palive2->ucode_minor;
+#endif
 		IWL_DEBUG_FW(mvm,
 			     "Alive VER2 ucode status 0x%04x revision 0x%01X 0x%01X flags 0x%01X\n",
 			     le16_to_cpu(palive2->status), palive2->ver_type,
@@ -180,6 +188,10 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 		if (mvm->umac_error_event_table)
 			mvm->support_umac_log = true;
 
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+		mvm->fw_major_ver = le32_to_cpu(palive->ucode_major);
+		mvm->fw_minor_ver = le32_to_cpu(palive->ucode_minor);
+#endif
 		IWL_DEBUG_FW(mvm,
 			     "Alive VER3 ucode status 0x%04x revision 0x%01X 0x%01X flags 0x%01X\n",
 			     le16_to_cpu(palive->status), palive->ver_type,

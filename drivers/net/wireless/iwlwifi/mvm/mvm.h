@@ -943,6 +943,10 @@ struct iwl_mvm {
 	 */
 	struct iwl_mvm_vif *p2p_opps_test_wa_vif;
 #endif
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	u32 fw_major_ver;
+	u32 fw_minor_ver;
+#endif
 };
 
 /* Extract MVM priv from op_mode and _hw */
