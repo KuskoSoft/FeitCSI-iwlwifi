@@ -282,6 +282,7 @@ struct iwl_sdio_sf_mem_addresses {
 #define IWL_SDIO_OP_CODE_MASK			0xF
 #define IWL_SDIO_DMA_DESC_ADDR_SHIFT		32
 #define IWL_SDIO_DMA_DESC_LEN_SHIFT		16
+#define IWL_SDIO_DMA_TB_LEN_SHIFT		20
 #define IWL_SDIO_MAX_ORDER		(8 * sizeof(u32) - \
 					 IWL_SDIO_DMA_DESC_LEN_SHIFT)
 

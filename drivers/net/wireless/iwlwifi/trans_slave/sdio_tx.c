@@ -664,7 +664,7 @@ static void iwl_sdio_config_adma(struct iwl_trans *trans,
 			IWL_SDIO_ADMA_ATTR_VALID | IWL_SDIO_ADMA_ATTR_ACT2;
 		adma_list[desc_idx].reserved = 0;
 		tb_len = le32_to_cpu(tfd->tbs[i]) >>
-			IWL_SDIO_DMA_DESC_LEN_SHIFT;
+			IWL_SDIO_DMA_TB_LEN_SHIFT;
 		aligned_len = round_up(tb_len, 4);
 		dtu_info->data_pad_len = aligned_len - tb_len;
 		adma_list[desc_idx].length = cpu_to_le16(aligned_len);
@@ -879,7 +879,7 @@ static void iwl_sdio_config_tfd(struct iwl_trans *trans,
 			cur_len -= IWL_SDIO_TB_SIZE;
 			cur_len += last_tb;
 		}
-		tb_len = cur_len << IWL_SDIO_DMA_DESC_LEN_SHIFT;
+		tb_len = cur_len << IWL_SDIO_DMA_TB_LEN_SHIFT;
 		tb_addr = tb_base +
 			  dtu_info->sram_alloc.fragments[idx].index *
 			  IWL_SDIO_TB_SIZE;
