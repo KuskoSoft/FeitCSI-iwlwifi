@@ -777,7 +777,7 @@ static int iwl_sdio_clear_interrupts(struct iwl_trans *trans)
  *@trans - the generic transport layer.
  * If succeeded returns 0, else return a negative value describing the error.
  */
-static int iwl_sdio_release_hw(struct iwl_trans *trans)
+static int iwl_sdio_release_hw(struct iwl_trans *trans, bool low_power)
 {
 	int ret = 0;
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
@@ -801,7 +801,8 @@ static int iwl_sdio_release_hw(struct iwl_trans *trans)
 
 	/* Release Bus function access from the driver */
 	sdio_release_host(func);
-	iwl_sdio_set_power(trans, false);
+	if (low_power)
+		iwl_sdio_set_power(trans, false);
 
 	return ret;
 }
@@ -1274,7 +1275,7 @@ clear_locks:
  *
  *@trans - the generic transport layer.
  */
-static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
+static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
@@ -1288,7 +1289,8 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 	 */
 	pm_runtime_get_sync(trans->dev);
 
-	iwl_sdio_set_power(trans, true);
+	if (low_power)
+		iwl_sdio_set_power(trans, true);
 	mutex_lock(&trans_sdio->target_access_mtx);
 	sdio_claim_host(func);
 	func->enable_timeout = IWL_SDIO_ENABLE_TIMEOUT;
@@ -1370,7 +1372,7 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans)
 	return ret;
 
 release_hw:
-	iwl_sdio_release_hw(trans);
+	iwl_sdio_release_hw(trans, true);
 	mutex_unlock(&trans_sdio->target_access_mtx);
 	pm_runtime_put(trans->dev);
 	return ret;
@@ -2268,7 +2270,7 @@ static void iwl_trans_sdio_fw_alive(struct iwl_trans *trans, u32 scd_addr)
 	iwl_sdio_tx_start(trans, scd_addr);
 }
 
-static void iwl_trans_sdio_stop_device(struct iwl_trans *trans)
+static void iwl_trans_sdio_stop_device(struct iwl_trans *trans, bool low_power)
 {
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
@@ -2290,7 +2292,7 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans)
 
 	/* Stop HW and power down */
 	sdio_claim_host(func);
-	iwl_sdio_release_hw(trans);
+	iwl_sdio_release_hw(trans, low_power);
 
 	/* we no longer need the sdio card active - release it */
 	pm_runtime_put(trans->dev);
