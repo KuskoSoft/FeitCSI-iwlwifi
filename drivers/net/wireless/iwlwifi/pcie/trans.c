@@ -1196,7 +1196,7 @@ static void iwl_trans_pcie_stop_device(struct iwl_trans *trans, bool low_power)
 	{
 		struct iwl_trans_platform_ops *ops = trans_pcie->platform_ops;
 
-		if (ops && ops->disable_regulator) {
+		if (low_power && ops && ops->disable_regulator) {
 			pci_save_state(trans_pcie->pci_dev);
 			pci_disable_device(trans_pcie->pci_dev);
 			pci_set_power_state(trans_pcie->pci_dev, PCI_D3hot);
@@ -1312,7 +1312,7 @@ static int iwl_trans_pcie_start_hw(struct iwl_trans *trans, bool low_power)
 		struct iwl_trans_platform_ops *ops = trans_pcie->platform_ops;
 		int err;
 
-		if (ops && ops->enable_regulator) {
+		if (low_power && ops && ops->enable_regulator) {
 			ops->enable_regulator();
 			pci_set_power_state(trans_pcie->pci_dev, PCI_D0);
 			err = pci_enable_device(trans_pcie->pci_dev);
