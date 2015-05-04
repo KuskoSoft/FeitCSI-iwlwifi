@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -122,6 +122,33 @@ static void iwl_mvm_fm_iface_iterator(void *_data, u8 *mac,
 
 		iwl_mvm_fm_set_tx_power(g_mvm, vif,
 					data->chan_txpwr->max_tx_pwr);
+		return;
+	}
+
+	rcu_read_unlock();
+}
+
+/*
+ * Search for an interface with a given frequency
+ */
+static void iwl_mvm_fm_chan_vldt_iter(void *_data, u8 *mac,
+				      struct ieee80211_vif *vif)
+{
+	struct chan_ifaces *data = _data;
+	struct ieee80211_chanctx_conf *chanctx_conf;
+
+	rcu_read_lock();
+
+	chanctx_conf = rcu_dereference(vif->chanctx_conf);
+	/* make sure the channel context is assigned */
+	if (!chanctx_conf) {
+		rcu_read_unlock();
+		return;
+	}
+
+	if (chanctx_conf->min_def.center_freq1 ==
+	    KHZ_TO_MHZ(data->chan_txpwr->frequency)) {
+		data->num_of_vif++;
 		return;
 	}
 
@@ -320,6 +347,53 @@ sofia_xmm:
 }
 
 /*
+ * Check if the list of channels that the FM supplied is valid
+ */
+static bool iwl_mvm_fm_invalid_channel_list(struct iui_fm_wlan_mitigation *mit)
+{
+	struct iui_fm_wlan_channel_tx_power *chan_txpwr_list =
+		mit->channel_tx_pwr;
+	u32 num_channels = mit->num_channels;
+	u8 i, j;
+
+	/* Check if the same frequency appears twice */
+	for (i = 0; i < num_channels; i++) {
+		for (j = 0; j < num_channels; j++) {
+			if (chan_txpwr_list[i].frequency ==
+			    chan_txpwr_list[j].frequency && i != j) {
+				int freq;
+
+				freq = chan_txpwr_list[i].frequency;
+				IWL_DEBUG_EXTERNAL(g_mvm,
+						   "FM: Invalid channel list: duplicated frequencies (freq = %d)\n",
+						   freq);
+				return true;
+			}
+		}
+	}
+
+	/* Check that all of the channels are used */
+	for (i = 0; i < num_channels; i++) {
+		struct chan_ifaces chan_ifaces = {
+			.chan_txpwr = &chan_txpwr_list[i],
+			.num_of_vif = 0,
+		};
+		ieee80211_iterate_active_interfaces(g_mvm->hw,
+						    IEEE80211_IFACE_ITER_NORMAL,
+						    iwl_mvm_fm_chan_vldt_iter,
+						    &chan_ifaces);
+		if (!chan_ifaces.num_of_vif) {
+			IWL_DEBUG_EXTERNAL(g_mvm,
+					   "FM: Invalid channel list: frequency is not in use (freq = %d)\n",
+					   chan_txpwr_list[i].frequency);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/*
  * Frequency Mitigation Callback function implementation.
  * Frequency Manager can ask to:
  * 1. Limit Tx power on specific channels
@@ -346,6 +420,9 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 		return IUI_FM_MITIGATION_ERROR;
 
 	mit = mitigation->info.wlan_mitigation;
+
+	if (iwl_mvm_fm_invalid_channel_list(mit))
+		return IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
 
 	/* Enable/Disable 2G coex mode */
 	ret = iwl_mvm_fm_2g_coex(mit);
