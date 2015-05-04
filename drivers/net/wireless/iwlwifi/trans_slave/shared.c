@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -685,6 +685,27 @@ static int iwl_slv_rpm_suspend(struct device *dev)
 
 	return 0;
 }
+
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
+void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
+				 u8 txq_id,
+				 struct iwl_slv_txq_entry *txq_entry)
+{
+	s64 temp = ktime_to_ms(ktime_get());
+	s64 ts_1;
+	s64 diff;
+	struct iwl_slv_tx_data_entry *data_entry;
+
+	if (txq_id == trans_slv->cmd_queue)
+		return;
+
+	IWL_SLV_TXQ_GET_ENTRY(txq_entry, data_entry);
+
+	ts_1 = data_entry->skb->tstamp.tv64 >> 32;
+	diff = temp - ts_1;
+	data_entry->skb->tstamp.tv64 += diff << 16;
+}
+#endif
 
 static int iwl_slv_rpm_resume(struct device *dev)
 {

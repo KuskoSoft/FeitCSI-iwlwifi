@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1058,6 +1058,10 @@ int iwl_sdio_process_dtu(struct iwl_trans_slv *trans_slv, u8 txq_id)
 
 	ret = iwl_sdio_send_dtu(trans_sdio->trans, txq_entry, txq_id);
 	/* FIXME: what if there is a failure here ? */
+
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
+	iwl_slv_tx_lat_add_ts_write(trans_slv, txq_id, txq_entry);
+#endif
 
 	iwl_slv_txq_add_to_sent(trans_slv, txq_id, txq_entry);
 

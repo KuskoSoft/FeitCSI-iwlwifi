@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,7 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -385,6 +385,12 @@ trans_slv_get_cmd_string(struct iwl_trans_slv *trans_slv, u8 cmd)
 		return "UNKNOWN";
 	return trans_slv->command_names[cmd];
 }
+
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
+void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
+				 u8 txq_id,
+				 struct iwl_slv_txq_entry *txq_entry);
+#endif
 
 void iwl_trans_slv_tx_set_ssn(struct iwl_trans *trans, int txq_id, int ssn);
 int iwl_trans_slv_send_cmd(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
