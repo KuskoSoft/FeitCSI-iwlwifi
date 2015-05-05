@@ -924,23 +924,29 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 #endif
 };
 
+enum iwl_mvm_vendor_events_idx {
 #ifdef CPTCFG_IWLMVM_TCM
-static const struct nl80211_vendor_cmd_info iwl_mvm_vendor_events[] = {
-	{
+	IWL_MVM_VENDOR_EVENT_IDX_TCM,
+#endif
+	NUM_IWL_MVM_VENDOR_EVENT_IDX
+};
+
+static const struct nl80211_vendor_cmd_info
+iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
+#ifdef CPTCFG_IWLMVM_TCM
+	[IWL_MVM_VENDOR_EVENT_IDX_TCM] = {
 		.vendor_id = INTEL_OUI,
 		.subcmd = IWL_MVM_VENDOR_CMD_TCM_EVENT,
 	},
-};
 #endif
+};
 
 void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy)
 {
 	wiphy->vendor_commands = iwl_mvm_vendor_commands;
 	wiphy->n_vendor_commands = ARRAY_SIZE(iwl_mvm_vendor_commands);
-#ifdef CPTCFG_IWLMVM_TCM
 	wiphy->vendor_events = iwl_mvm_vendor_events;
 	wiphy->n_vendor_events = ARRAY_SIZE(iwl_mvm_vendor_events);
-#endif
 }
 
 #ifdef CPTCFG_IWLMVM_TCM
@@ -949,7 +955,8 @@ void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 	struct sk_buff *msg =
 		cfg80211_vendor_event_alloc(mvm->hw->wiphy,
 					    ieee80211_vif_to_wdev(vif),
-					    200, 0, GFP_ATOMIC);
+					    200, IWL_MVM_VENDOR_EVENT_IDX_TCM,
+					    GFP_ATOMIC);
 
 	if (!msg)
 		return;
