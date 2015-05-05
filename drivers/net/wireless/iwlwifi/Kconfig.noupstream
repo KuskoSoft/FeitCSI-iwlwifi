@@ -101,9 +101,21 @@ config IWLMVM_P2P_OPPPS_TEST_WA
 	  user space to mimic power management behavior. Update quota to normal
 	  value otherwise.
 
+config IWLMVM_VENDOR_CMDS
+	bool "enable vendor commands"
+	depends on IWLMVM
+	default y
+	help
+	  This option enables support for vendor commands, including some
+	  that don't have their own Kconfig option. Other Kconfig options
+	  depend on this one as well.
+
+	  This option mostly exists for non-upstream tagging, so best
+	  leave it set to Y.
+
 config IWLMVM_TCM
 	bool "enable traffic conditions monitoring"
-	depends on IWLMVM
+	depends on IWLMVM_VENDOR_CMDS
 	default y
 	help
 	  This option enables (vendor) events to userspace and traffic
@@ -112,7 +124,7 @@ config IWLMVM_TCM
 
 config IWLWIFI_LTE_COEX
         bool "enable lte coexistence support"
-        depends on IWLMVM
+        depends on IWLMVM_VENDOR_CMDS
 	help
 	  This option enables LTE-Coexistence (vendor) commands
 
@@ -133,7 +145,7 @@ config IWLMVM_SCAN_PRECEDENCE_LEVEL
 
 config IWLMVM_TDLS_PEER_CACHE
 	bool "enable TDLS peer caching and traffic monitoring"
-	depends on IWLMVM
+	depends on IWLMVM_VENDOR_CMDS
 	default y
 	help
 	  This option enables (vendor) commands from userspace to monitor

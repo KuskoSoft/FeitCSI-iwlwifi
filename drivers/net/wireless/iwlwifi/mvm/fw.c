@@ -863,11 +863,13 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	iwl_mvm_send_lte_commands(mvm);
 #endif
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	/* set_mode must be 1 if this was ever initialized */
 	if (mvm->txp_cmd.set_mode &&
 	    iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD, 0,
 				 sizeof(mvm->txp_cmd), &mvm->txp_cmd))
 		IWL_ERR(mvm, "failed to update TX power\n");
+#endif
 
 	IWL_DEBUG_INFO(mvm, "RT uCode started.\n");
 	return 0;

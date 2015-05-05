@@ -618,7 +618,9 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	mvm->bcast_filters = iwl_mvm_default_bcast_filters;
 #endif
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	iwl_mvm_set_wiphy_vendor_commands(hw->wiphy);
+#endif
 
 	ret = iwl_mvm_leds_init(mvm);
 	if (ret)

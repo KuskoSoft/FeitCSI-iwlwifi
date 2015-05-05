@@ -932,7 +932,9 @@ struct iwl_mvm {
 		} peer;
 	} tdls_cs;
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	struct iwl_dev_tx_power_cmd txp_cmd;
+#endif
 
 	struct iwl_mvm_shared_mem_cfg shared_mem_cfg;
 #ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
