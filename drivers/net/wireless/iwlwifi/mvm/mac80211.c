@@ -4143,9 +4143,6 @@ static void iwl_mvm_event_mlme_callback(struct iwl_mvm *mvm,
 	if (!iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_MLME))
 		return;
 
-	if (event->u.mlme.status == MLME_SUCCESS)
-		return;
-
 	trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_MLME);
 	trig_mlme = (void *)trig->data;
 	if (!iwl_fw_dbg_trigger_check_stop(mvm, vif, trig))
