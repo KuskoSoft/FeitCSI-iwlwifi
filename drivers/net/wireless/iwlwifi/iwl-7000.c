@@ -267,7 +267,7 @@ static const struct iwl_ht_params iwl7265_ht_params = {
 
 const struct iwl_cfg iwl3165_2ac_cfg = {
 	.name = "Intel(R) Dual Band Wireless AC 3165",
-	.fw_name_pre = IWL7265_FW_PRE,
+	.fw_name_pre = IWL7265D_FW_PRE,
 	IWL_DEVICE_7000,
 	/* sparse doens't like the re-assignment but it is safe */
 #ifndef __CHECKER__
