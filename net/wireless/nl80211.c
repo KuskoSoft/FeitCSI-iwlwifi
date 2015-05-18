@@ -2012,7 +2012,8 @@ static int __nl80211_set_channel(struct cfg80211_registered_device *rdev,
 	switch (iftype) {
 	case NL80211_IFTYPE_AP:
 	case NL80211_IFTYPE_P2P_GO:
-		if (!cfg80211_reg_can_beacon(&rdev->wiphy, &chandef, iftype)) {
+		if (!cfg80211_reg_can_beacon_relax(&rdev->wiphy, &chandef,
+						   iftype)) {
 			result = -EINVAL;
 			break;
 		}
@@ -3430,8 +3431,8 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 	} else if (!nl80211_get_ap_channel(rdev, &params))
 		return -EINVAL;
 
-	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &params.chandef,
-				     wdev->iftype))
+	if (!cfg80211_reg_can_beacon_relax(&rdev->wiphy, &params.chandef,
+					   wdev->iftype))
 		return -EINVAL;
 
 	if (info->attrs[NL80211_ATTR_ACL_POLICY]) {
@@ -6519,8 +6520,8 @@ skip_beacons:
 	if (err)
 		return err;
 
-	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &params.chandef,
-				     wdev->iftype))
+	if (!cfg80211_reg_can_beacon_relax(&rdev->wiphy, &params.chandef,
+					   wdev->iftype))
 		return -EINVAL;
 
 	err = cfg80211_chandef_dfs_required(wdev->wiphy,
@@ -10214,7 +10215,8 @@ static int nl80211_tdls_channel_switch(struct sk_buff *skb,
 		return -EINVAL;
 
 	/* we will be active on the TDLS link */
-	if (!cfg80211_reg_can_beacon(&rdev->wiphy, &chandef, wdev->iftype))
+	if (!cfg80211_reg_can_beacon_relax(&rdev->wiphy, &chandef,
+					   wdev->iftype))
 		return -EINVAL;
 
 	/* don't allow switching to DFS channels */
