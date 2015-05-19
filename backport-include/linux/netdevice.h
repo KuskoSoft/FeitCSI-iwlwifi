@@ -81,6 +81,7 @@ static inline void dev_consume_skb_any(struct sk_buff *skb)
 	dev_kfree_skb_any(skb);
 }
 
+#if (LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI < 24)
 struct pcpu_sw_netstats {
 	u64     rx_packets;
 	u64     rx_bytes;
@@ -88,6 +89,7 @@ struct pcpu_sw_netstats {
 	u64     tx_bytes;
 	struct u64_stats_sync   syncp;
 };
+#endif
 
 #define netdev_tstats(dev)	((struct pcpu_sw_netstats *)dev->ml_priv)
 #define netdev_assign_tstats(dev, e)	dev->ml_priv = (e);
