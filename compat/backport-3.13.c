@@ -93,6 +93,7 @@ EXPORT_SYMBOL_GPL(devm_regulator_unregister);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)) */
 
 /************* generic netlink backport *****************/
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
 
 #undef genl_register_family
 #undef genl_unregister_family
@@ -153,6 +154,8 @@ int backport_genl_unregister_family(struct genl_family *family)
 	return err;
 }
 EXPORT_SYMBOL_GPL(backport_genl_unregister_family);
+
+#endif /* RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0) */
 
 #ifdef __BACKPORT_NET_GET_RANDOM_ONCE
 struct __net_random_once_work {

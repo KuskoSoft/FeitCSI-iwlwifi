@@ -57,6 +57,9 @@ static inline struct net *possible_read_pnet(const possible_net_t *pnet)
 	return &init_net;
 #endif
 }
+#else
+#define possible_write_pnet(pnet, net) write_pnet(pnet, net)
+#define possible_read_pnet(pnet) read_pnet(pnet)
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0) */
 
 #endif	/* _COMPAT_NET_NET_NAMESPACE_H */

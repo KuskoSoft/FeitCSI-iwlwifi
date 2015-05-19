@@ -2,6 +2,7 @@
 #define __BACKPORT_DEBUGFS_H_
 #include_next <linux/debugfs.h>
 #include <linux/version.h>
+#include <linux/device.h>
 #include <generated/utsrelease.h>
 
 #if defined(CONFIG_DEBUG_FS)

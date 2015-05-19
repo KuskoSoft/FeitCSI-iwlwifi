@@ -745,7 +745,7 @@ static bool cfg80211_ir_permissive_chan(struct wiphy *wiphy,
 
 		wdev_lock(wdev);
 		if (wdev->iftype == NL80211_IFTYPE_STATION &&
-		    netif_running(wdev->netdev) && wdev->current_bss)
+		    wdev->current_bss)
 			other_chan = wdev->current_bss->pub.channel;
 
 		/*
@@ -756,8 +756,8 @@ static bool cfg80211_ir_permissive_chan(struct wiphy *wiphy,
 		 * we're not outdoor on an indoor-only channel.
 		 */
 		if (iftype == NL80211_IFTYPE_P2P_GO &&
-		    wdev->iftype == NL80211_IFTYPE_P2P_GO && wdev->netdev &&
-		    netif_running(wdev->netdev) && wdev->beacon_interval &&
+		    wdev->iftype == NL80211_IFTYPE_P2P_GO &&
+		    wdev->beacon_interval &&
 		    !(chan->flags & IEEE80211_CHAN_INDOOR_ONLY))
 			other_chan = wdev->chandef.chan;
 		wdev_unlock(wdev);

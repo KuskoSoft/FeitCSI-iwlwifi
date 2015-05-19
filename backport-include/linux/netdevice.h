@@ -80,6 +80,20 @@ static inline void dev_consume_skb_any(struct sk_buff *skb)
 {
 	dev_kfree_skb_any(skb);
 }
+
+struct pcpu_sw_netstats {
+	u64     rx_packets;
+	u64     rx_bytes;
+	u64     tx_packets;
+	u64     tx_bytes;
+	struct u64_stats_sync   syncp;
+};
+
+#define netdev_tstats(dev)	((struct pcpu_sw_netstats *)dev->ml_priv)
+#define netdev_assign_tstats(dev, e)	dev->ml_priv = (e);
+#else
+#define netdev_tstats(dev)	dev->tstats
+#define netdev_assign_tstats(dev, e)	dev->tstats = (e);
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,8)
@@ -253,5 +267,27 @@ static inline struct sk_buff *napi_alloc_skb(struct napi_struct *napi,
 #ifndef IFF_TX_SKB_SHARING
 #define IFF_TX_SKB_SHARING 0
 #endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
+netdev_features_t passthru_features_check(struct sk_buff *skb,
+					  struct net_device *dev,
+					  netdev_features_t features);
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0) */
+
+#ifndef netdev_alloc_pcpu_stats
+#define netdev_alloc_pcpu_stats(type)				\
+({								\
+	typeof(type) __percpu *pcpu_stats = alloc_percpu(type); \
+	if (pcpu_stats)	{					\
+		int i;						\
+		for_each_possible_cpu(i) {			\
+			typeof(type) *stat;			\
+			stat = per_cpu_ptr(pcpu_stats, i);	\
+			u64_stats_init(&stat->syncp);		\
+		}						\
+	}							\
+	pcpu_stats;						\
+})
+#endif /* netdev_alloc_pcpu_stats */
 
 #endif /* __BACKPORT_NETDEVICE_H */

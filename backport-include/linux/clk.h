@@ -86,4 +86,31 @@ static inline struct clk *clk_get_parent(struct clk *clk)
 
 #endif /* #if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0) */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0) && \
+    LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#define clk_prepare_enable LINUX_BACKPORT(clk_prepare_enable)
+/* clk_prepare_enable helps cases using clk_enable in non-atomic context. */
+static inline int clk_prepare_enable(struct clk *clk)
+{
+	int ret;
+
+	ret = clk_prepare(clk);
+	if (ret)
+		return ret;
+	ret = clk_enable(clk);
+	if (ret)
+		clk_unprepare(clk);
+
+	return ret;
+}
+
+#define clk_disable_unprepare LINUX_BACKPORT(clk_disable_unprepare)
+/* clk_disable_unprepare helps cases using clk_disable in non-atomic context. */
+static inline void clk_disable_unprepare(struct clk *clk)
+{
+	clk_disable(clk);
+	clk_unprepare(clk);
+}
+#endif /* < 3,3,0 && >= 3,2,0 */
+
 #endif /* __LINUX_CLK_H */

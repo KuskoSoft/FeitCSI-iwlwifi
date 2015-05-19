@@ -18,7 +18,7 @@
 #define genl_dump_check_consistent(cb, user_hdr, family)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
 static inline int __real_genl_register_family(struct genl_family *family)
 {
 	return genl_register_family(family);

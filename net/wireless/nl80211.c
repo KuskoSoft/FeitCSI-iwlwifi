@@ -2907,8 +2907,7 @@ static int nl80211_get_key(struct sk_buff *skb, struct genl_info *info)
 	if (!msg)
 		return -ENOMEM;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_NEW_KEY);
 	if (!hdr)
 		goto nla_put_failure;
@@ -4089,7 +4088,8 @@ int cfg80211_check_station_change(struct wiphy *wiphy,
 			return -EINVAL;
 		break;
 	case CFG80211_STA_MESH_PEER_USER:
-		if (params->plink_action != NL80211_PLINK_ACTION_NO_ACTION)
+		if (params->plink_action != NL80211_PLINK_ACTION_NO_ACTION &&
+		    params->plink_action != NL80211_PLINK_ACTION_BLOCK)
 			return -EINVAL;
 		break;
 	}
@@ -5072,8 +5072,7 @@ static int nl80211_get_mesh_config(struct sk_buff *skb,
 	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
 	if (!msg)
 		return -ENOMEM;
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_GET_MESH_CONFIG);
 	if (!hdr)
 		goto out;
@@ -5490,8 +5489,7 @@ static int nl80211_get_reg_do(struct sk_buff *skb, struct genl_info *info)
 	if (!msg)
 		return -ENOBUFS;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_GET_REG);
 	if (!hdr)
 		goto put_failure;
@@ -5552,8 +5550,7 @@ static int nl80211_send_regdom(struct sk_buff *msg, struct netlink_callback *cb,
 			       u32 seq, int flags, struct wiphy *wiphy,
 			       const struct ieee80211_regdomain *regdom)
 {
-	void *hdr = nl80211hdr_put(msg, NETLINK_CB_PORTID(cb->skb), seq,
-				   flags,
+	void *hdr = nl80211hdr_put(msg, NETLINK_CB_PORTID(cb->skb), seq, flags,
 				   NL80211_CMD_GET_REG);
 
 	if (!hdr)
@@ -8032,8 +8029,7 @@ static int nl80211_remain_on_channel(struct sk_buff *skb,
 	if (!msg)
 		return -ENOMEM;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_REMAIN_ON_CHANNEL);
 	if (!hdr) {
 		err = -ENOBUFS;
@@ -8342,8 +8338,7 @@ static int nl80211_register_mgmt(struct sk_buff *skb, struct genl_info *info)
 	if (!rdev->ops->mgmt_tx)
 		return -EOPNOTSUPP;
 
-	return cfg80211_mlme_register_mgmt(wdev, genl_info_snd_portid(info),
-					   frame_type,
+	return cfg80211_mlme_register_mgmt(wdev, genl_info_snd_portid(info), frame_type,
 			nla_data(info->attrs[NL80211_ATTR_FRAME_MATCH]),
 			nla_len(info->attrs[NL80211_ATTR_FRAME_MATCH]));
 }
@@ -8558,8 +8553,7 @@ static int nl80211_get_power_save(struct sk_buff *skb, struct genl_info *info)
 	if (!msg)
 		return -ENOMEM;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_GET_POWER_SAVE);
 	if (!hdr) {
 		err = -ENOBUFS;
@@ -8933,8 +8927,7 @@ static int nl80211_get_wowlan(struct sk_buff *skb, struct genl_info *info)
 	if (!msg)
 		return -ENOMEM;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_GET_WOWLAN);
 	if (!hdr)
 		goto nla_put_failure;
@@ -9432,8 +9425,7 @@ static int nl80211_get_coalesce(struct sk_buff *skb, struct genl_info *info)
 	if (!msg)
 		return -ENOMEM;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_GET_COALESCE);
 	if (!hdr)
 		goto nla_put_failure;
@@ -9716,8 +9708,7 @@ static int nl80211_probe_client(struct sk_buff *skb,
 	if (!msg)
 		return -ENOMEM;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_PROBE_CLIENT);
 	if (!hdr) {
 		err = -ENOBUFS;
@@ -9841,8 +9832,7 @@ static int nl80211_get_protocol_features(struct sk_buff *skb,
 	if (!msg)
 		return -ENOMEM;
 
-	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq,
-			     0,
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_GET_PROTOCOL_FEATURES);
 	if (!hdr)
 		goto nla_put_failure;
