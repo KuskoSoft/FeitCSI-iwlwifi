@@ -3,7 +3,7 @@
  * Copyright 2005, Devicescape Software, Inc.
  * Copyright 2006-2007	Jiri Benc <jbenc@suse.cz>
  * Copyright 2007-2010	Johannes Berg <johannes@sipsolutions.net>
- * Copyright 2013-2014  Intel Mobile Communications GmbH
+ * Copyright 2013-2015  Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1111,7 +1111,6 @@ enum ieee80211_tx_lat_msr_point {
  *	(0) Internal  buffer - recording using the ucodes internal buffer
  *	(1) Continues recording - recording using MIPI
  * @monitor_collec_wind: collection window for monitor logs
- * @points: start & end points from where to measure the latency.
  * @n_ranges: number of ranges that are taken in account
  * @ranges: the ranges that the user requested or NULL if disabled.
  */
@@ -1120,7 +1119,6 @@ struct ieee80211_tx_latency_bin_ranges {
 	u32 *thresholds_p2p;
 	u8 monitor_record_mode;
 	u16 monitor_collec_wind;
-	enum ieee80211_tx_lat_msr_point points[2];
 	int n_ranges;
 	u32 ranges[];
 };
@@ -1285,6 +1283,8 @@ struct ieee80211_local {
 	 */
 	struct ieee80211_tx_consec_loss_ranges __rcu *tx_consec;
 	struct ieee80211_tx_latency_bin_ranges __rcu *tx_latency;
+	/* start & end points from where to measure the latency. */
+	enum ieee80211_tx_lat_msr_point tx_msrmnt_points[2];
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 	struct sk_buff_head pending[IEEE80211_MAX_QUEUES];

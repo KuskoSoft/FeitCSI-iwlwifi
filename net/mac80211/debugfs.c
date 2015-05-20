@@ -3,7 +3,7 @@
  * mac80211 debugfs for wireless PHYs
  *
  * Copyright 2007	Johannes Berg <johannes@sipsolutions.net>
- * Copyright 2013-2014  Intel Mobile Communications GmbH
+ * Copyright 2013-2015  Intel Mobile Communications GmbH
  *
  * GPLv2
  *
@@ -217,9 +217,9 @@ static ssize_t sta_tx_latency_points_read(struct file *file,
 	}
 
 	pos += scnprintf(buf + pos, bufsz - pos, "start: %u\n",
-			 tx_latency->points[0]);
+			 local->tx_msrmnt_points[0]);
 	pos += scnprintf(buf + pos, bufsz - pos, "end: %u\n",
-			 tx_latency->points[1]);
+			 local->tx_msrmnt_points[1]);
 
 unlock:
 	rcu_read_unlock();
@@ -280,8 +280,8 @@ static ssize_t sta_tx_latency_points_write(struct file *file,
 	if (!tx_latency)
 		goto unlock;
 
-	tx_latency->points[0] = start;
-	tx_latency->points[1] = end;
+	local->tx_msrmnt_points[0] = start;
+	local->tx_msrmnt_points[1] = end;
 
 	rcu_assign_pointer(local->tx_latency, tx_latency);
 unlock:
@@ -445,8 +445,8 @@ static ssize_t sta_tx_latency_stat_write(struct file *file,
 	}
 
 	/* set default measurement points */
-	tx_latency->points[0] = IEEE80211_TX_LAT_ENTER;
-	tx_latency->points[1] = IEEE80211_TX_LAT_DEL;
+	local->tx_msrmnt_points[0] = IEEE80211_TX_LAT_ENTER;
+	local->tx_msrmnt_points[1] = IEEE80211_TX_LAT_DEL;
 
 	rcu_assign_pointer(local->tx_latency, tx_latency);
 
@@ -635,6 +635,11 @@ static ssize_t sta_tx_consecutive_loss_write(struct file *file,
 		}
 		prev_bin = tx_consec->ranges[i];
 	}
+
+	/* set default measurement points */
+	local->tx_msrmnt_points[0] = IEEE80211_TX_LAT_ENTER;
+	local->tx_msrmnt_points[1] = IEEE80211_TX_LAT_DEL;
+
 	rcu_assign_pointer(local->tx_consec, tx_consec);
 
 unlock:

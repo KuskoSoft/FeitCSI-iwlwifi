@@ -3,7 +3,7 @@
  * Copyright 2005-2006, Devicescape Software, Inc.
  * Copyright 2006-2007	Jiri Benc <jbenc@suse.cz>
  * Copyright 2008-2010	Johannes Berg <johannes@sipsolutions.net>
- * Copyright 2013-2014  Intel Mobile Communications GmbH
+ * Copyright 2013-2015  Intel Mobile Communications GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -657,9 +657,7 @@ tx_latency_threshold(struct ieee80211_local *local, struct sk_buff *skb,
 #endif
 
 static u32 ieee80211_calc_tx_latency(struct ieee80211_local *local,
-				     ktime_t skb_arv,
-				     struct ieee80211_tx_latency_bin_ranges
-				     *tx_lat)
+				     ktime_t skb_arv)
 {
 	s64 tmp;
 	s64 ts[IEEE80211_TX_LAT_MAX_POINT];
@@ -674,7 +672,8 @@ static u32 ieee80211_calc_tx_latency(struct ieee80211_local *local,
 	ts[IEEE80211_TX_LAT_ACK] = (tmp & 0xFFFF) + ts[IEEE80211_TX_LAT_ENTER];
 
 	/* calculate packet latency */
-	msrmnt = ts[tx_lat->points[1]] - ts[tx_lat->points[0]];
+	msrmnt = ts[local->tx_msrmnt_points[1]] -
+		ts[local->tx_msrmnt_points[0]];
 
 	return msrmnt;
 }
@@ -725,7 +724,7 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 	}
 
 	/* Calculate the latency */
-	msrmnt = ieee80211_calc_tx_latency(local, skb_arv, tx_latency);
+	msrmnt = ieee80211_calc_tx_latency(local, skb_arv);
 
 	/* update statistic regarding consecutive lost packets */
 	tx_consec_loss_msrmnt(tx_consec, sta, tid, msrmnt, pkt_loss,
