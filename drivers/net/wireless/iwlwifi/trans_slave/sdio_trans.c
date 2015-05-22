@@ -2654,26 +2654,18 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 	struct mmc_card *card = func->card;
 
 	/* Alloc general + SDIO specific transport */
-	trans = kzalloc(sizeof(struct iwl_trans) +
-			sizeof(struct iwl_trans_slv) +
-			sizeof(struct iwl_trans_sdio),
-			GFP_KERNEL);
-	if (!trans) {
-		ret = -ENOMEM;
-		goto exit_err;
-	}
+	trans = iwl_trans_alloc(sizeof(struct iwl_trans_slv) +
+				sizeof(struct iwl_trans_sdio),
+				&func->dev, cfg, &trans_ops_sdio, 0);
+	if (!trans)
+		return ERR_PTR(-ENOMEM);
 
 	trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	trans_sdio->func = func;
 	trans_sdio->trans = trans;
 
-	trans->ops = &trans_ops_sdio;
-	trans->cfg = cfg;
-	trans->dev = &func->dev;
 	trans_slv->host_dev = mmc_dev(card->host);
-
-	trans_lockdep_init(trans);
 
 	/*
 	 * SDIO can't access registers from atomic context. But our current MVM
@@ -2713,22 +2705,6 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 		 sizeof(trans->hw_id_str),
 		 "SDIO ID: 0x%04X\n", func->device);
 
-	/* Command pool creation */
-	snprintf(trans->dev_cmd_pool_name,
-		 sizeof(trans->dev_cmd_pool_name),
-		 "iwl_cmd_pool:%s\n", dev_name(trans->dev));
-	trans->dev_cmd_pool =
-		kmem_cache_create(trans->dev_cmd_pool_name,
-				  sizeof(struct iwl_device_cmd)
-				  + trans->dev_cmd_headroom,
-				  sizeof(void *),
-				  SLAB_HWCACHE_ALIGN,
-				  NULL);
-	if (!trans->dev_cmd_pool) {
-		ret = -ENOMEM;
-		goto free_rx_desc;
-	}
-
 	trans->d0i3_mode = IWL_D0I3_MODE_ON_IDLE;
 
 	IWL_DEBUG_INFO(trans,
@@ -2737,11 +2713,8 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 		 trans->hw_id_str, trans->hw_id);
 	return trans;
 
-free_rx_desc:
-	kmem_cache_destroy(trans_sdio->rx_mem_desc_pool);
 free_trans:
-	kfree(trans);
-exit_err:
+	iwl_trans_free(trans);
 	return ERR_PTR(ret);
 }
 
@@ -2755,9 +2728,6 @@ void iwl_trans_sdio_free(struct iwl_trans *trans)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
-	/* Free command pool */
-	kmem_cache_destroy(trans->dev_cmd_pool);
-
 	/* Free all of the SDIO RX  memory */
 	iwl_sdio_free_rx_mem(trans);
 
@@ -2768,7 +2738,7 @@ void iwl_trans_sdio_free(struct iwl_trans *trans)
 		netif_napi_del(&trans_sdio->napi);
 
 	/* free generic + specific transport */
-	kfree(trans);
+	iwl_trans_free(trans);
 }
 
 /*
