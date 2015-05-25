@@ -408,16 +408,14 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 	enum iui_fm_mitigation_status ret;
 	struct iui_fm_wlan_mitigation *mit;
 
+	if (WARN_ON(!g_mvm))
+		return IUI_FM_MITIGATION_ERROR;
+
 	if (macro_id != IUI_FM_MACRO_ID_WLAN ||
 	    mitigation->type != IUI_FM_MITIGATION_TYPE_WLAN) {
-		if (WARN_ON(!g_mvm))
-			return IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
 		ret = IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
 		goto end;
 	}
-
-	if (WARN_ON(!g_mvm))
-		return IUI_FM_MITIGATION_ERROR;
 
 	mit = mitigation->info.wlan_mitigation;
 
