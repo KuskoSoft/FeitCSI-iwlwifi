@@ -871,6 +871,10 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 		IWL_ERR(mvm, "failed to update TX power\n");
 #endif
 
+#ifdef CPTCFG_IWLWIFI_FRQ_MGR
+	iwl_mvm_fm_notify_current_dcdc();
+#endif
+
 	IWL_DEBUG_INFO(mvm, "RT uCode started.\n");
 	return 0;
  error:

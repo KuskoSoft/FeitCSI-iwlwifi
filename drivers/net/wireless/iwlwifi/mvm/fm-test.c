@@ -109,6 +109,7 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 	size_t buf_size = sizeof(buf);
 	int mitigate_2g;
 	int ret;
+	int mitigate_dcdc;
 
 	mitigation.info.wlan_mitigation = &wm;
 	mitigation.type = IUI_FM_MITIGATION_TYPE_WLAN;
@@ -118,7 +119,7 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 
 	/* All platforms that are not xmm6321 & SOFIA 3G */
 	if (IUI_FM_WLAN_MAX_CHANNELS == 4) {
-		if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
+		if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
 			   &wm.num_channels,
 			   &wm.channel_tx_pwr[0].frequency,
 			   &wm.channel_tx_pwr[0].max_tx_pwr,
@@ -128,8 +129,11 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 			   &wm.channel_tx_pwr[2].max_tx_pwr,
 			   &wm.channel_tx_pwr[3].frequency,
 			   &wm.channel_tx_pwr[3].max_tx_pwr,
+			   &mitigate_dcdc,
+			   &wm.dcdc_div0,
+			   &wm.dcdc_div1,
 			   &mitigate_2g,
-			   &wm.wlan_2g_coex_enable) != 11)
+			   &wm.wlan_2g_coex_enable) != 14)
 			return -EINVAL;
 	} else if (sscanf(buf, "%d,%d,%d,%d,%d", &wm.num_channels,
 			   &wm.channel_tx_pwr[0].frequency,
@@ -152,6 +156,8 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 		wm.mask |= IUI_FM_WLAN_MITIG_TX_POWER;
 	if (mitigate_2g)
 		wm.mask |= IUI_FM_WLAN_MITIG_2G_COEX;
+	if (mitigate_dcdc)
+		wm.mask |= IUI_FM_WLAN_MITIG_DCDC;
 
 	ret = fm_callback(IUI_FM_MACRO_ID_WLAN, &mitigation, 0);
 	pr_info("FM[test-mode]: mitigation callback %s (mask = 0x%x)\n",
@@ -176,6 +182,11 @@ iwl_mvm_fm_debug_notify_read(struct file *file, char __user *userbuf,
 				 "channel=%d, bandwidth=%d\n",
 				 fm_notif.channel_info[i].frequency,
 				 fm_notif.channel_info[i].bandwidth);
+
+	pos += scnprintf(buf + pos, bufsz - pos, "dcdc_div0=%d\n",
+			 fm_notif.dcdc_div0);
+	pos += scnprintf(buf + pos, bufsz - pos, "dcdc_div1=%d\n",
+			 fm_notif.dcdc_div1);
 
 	return simple_read_from_buffer(userbuf, count, ppos, buf, pos);
 }

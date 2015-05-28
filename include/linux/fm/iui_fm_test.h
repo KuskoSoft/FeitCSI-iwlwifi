@@ -221,12 +221,17 @@ struct iui_fm_wlan_channel_info {
  *                num_channels elements are valid.
  * @wlan_adc_dac_freq   Current WLAN ADC/DAC frequency in KHz. Available
  *                      values: 0 (parameter not yet supported).
+ * @dcdc_div0:	  DCDC frequency divider - digital domain
+ * @dcdc_div1:	  DCDC frequency divider - analog domain (should be the same as
+ *		  dcdc_div0)
  */
 struct iui_fm_wlan_info {
 	uint32_t mask;
 	uint32_t num_channels;
 	struct iui_fm_wlan_channel_info channel_info[IUI_FM_WLAN_MAX_CHANNELS];
 	uint32_t wlan_adc_dac_freq;
+	uint32_t dcdc_div0;
+	uint32_t dcdc_div1;
 };
 
 /**
@@ -289,6 +294,9 @@ enum iui_fm_wlan_rx_gain_behavior {
  * @rx_gain_reduction  Amount by which to reduce the WLAN RX Gain (in dB) if
  *                     the rx_gain_bahavior field is set to
  *                     IUI_FM_WLAN_RX_GAIN_REDUCE_SPECIFIED (NOT SUPPORTED).
+ * @dcdc_div0:		DCDC frequency divider - digital domain
+ * @dcdc_div1:		DCDC frequency divider - analog domain (should be
+ *			the same as dcdc_div0)
  */
 struct iui_fm_wlan_mitigation {
 	uint32_t mask;
@@ -298,6 +306,8 @@ struct iui_fm_wlan_mitigation {
 	uint32_t wlan_adc_dac_freq;
 	enum iui_fm_wlan_rx_gain_behavior rx_gain_behavior;
 	uint32_t wlan_2g_coex_enable;
+	uint32_t dcdc_div0;
+	uint32_t dcdc_div1;
 /*	uint32_t rx_gain_reduction; */
 };
 
@@ -312,6 +322,7 @@ enum iui_fm_wlan_mitigation_bit_mask {
 	IUI_FM_WLAN_MITIG_ADC_DAC       = 2,
 	IUI_FM_WLAN_MITIG_RX_GAIN       = 4,
 	IUI_FM_WLAN_MITIG_2G_COEX	 = 8,
+	IUI_FM_WLAN_MITIG_DCDC		= 16,
 };
 
 /**
@@ -323,6 +334,7 @@ enum iui_fm_wlan_mitigation_bit_mask {
 enum iui_fm_wlan_notify_bit_mask {
 	IUI_FM_WLAN_NOTIF_CHAN_CHANGE   = 1,
 	IUI_FM_WLAN_NOTIF_ADC_DAC	= 2,
+	IUI_FM_WLAN_NOTIF_DCDC		= 4,
 };
 
 /**

@@ -86,6 +86,10 @@ struct chan_list {
 
 /* last reported channel notification to the FM */
 struct iui_fm_wlan_info last_chan_notif;
+/* last dcdc values requested by the FM */
+int g_dcdc_div0;
+int g_dcdc_div1;
+
 /*
  * Search for an interface with a given frequency
  */
@@ -369,6 +373,128 @@ sofia_xmm:
 	return ret;
 }
 
+static int iwl_mvm_fm_send_dcdc_cmd(u32 div0, u32 div1, u32 flags)
+{
+	int ret;
+	struct iwl_dc2dc_config_resp *resp;
+	struct iwl_rx_packet *pkt;
+	struct iwl_dc2dc_config_cmd dcdc = {
+		.flags = cpu_to_le32(flags),
+		.dc2dc_freq_tune0 = cpu_to_le32(div0),
+		.dc2dc_freq_tune1 = cpu_to_le32(div1),
+	};
+	struct iwl_host_cmd cmd = {
+		.id = DC2DC_CONFIG_CMD,
+		.flags = CMD_WANT_SKB,
+		.data = { &dcdc },
+		.len = { sizeof(struct iwl_dc2dc_config_cmd) },
+	};
+
+	/* fw does not support the dcdc cmd */
+	 if (!fw_has_capa(&g_mvm->fw->ucode_capa,
+			  IWL_UCODE_TLV_CAPA_DC2DC_CONFIG_SUPPORT))
+		return -EINVAL;
+
+	ret = iwl_mvm_send_cmd(g_mvm, &cmd);
+
+	if (ret) {
+		IWL_ERR(g_mvm, "FM: Failed to send dcdc cmd (ret = %d)\n", ret);
+		goto out;
+	}
+
+	pkt = cmd.resp_pkt;
+	if (!pkt) {
+		IWL_ERR(g_mvm, "FM: Error DCDC cmd response is NULL\n");
+		ret = -EINVAL;
+		goto out;
+	}
+	resp = (void *)pkt->data;
+
+	/* update the current dcdc values */
+	g_dcdc_div0 = resp->dc2dc_freq_tune0;
+	g_dcdc_div1 = resp->dc2dc_freq_tune1;
+
+out:
+	return ret;
+}
+
+/*
+ * Enables/Disable DCDC mitigation
+ * In some scenarios, DCDC inserts noise to FMR due to its (DCDC's)
+ * internal clock rate. When WiFi is ON the noise level is very high,
+ * and therefore DCDC needs to change its clock rate.
+ */
+static enum iui_fm_mitigation_status
+iwl_mvm_fm_mitig_dcdc(struct iui_fm_wlan_mitigation *mit)
+{
+	enum iui_fm_mitigation_status ret = IUI_FM_MITIGATION_COMPLETE_OK;
+
+	/* Not required to mitigate dcdc */
+	if (!(mit->mask & IUI_FM_WLAN_MITIG_DCDC))
+		return ret;
+
+	/* Current dcdc values match requested values */
+	if (mit->dcdc_div0 == g_dcdc_div0 && mit->dcdc_div1 == g_dcdc_div0) {
+		IWL_DEBUG_EXTERNAL(g_mvm,
+				   "FM DCDC: Current dcdc values match requested values - not mitigating\n");
+		goto out;
+	}
+
+	mutex_lock(&g_mvm->mutex);
+	ret = iwl_mvm_fm_send_dcdc_cmd(mit->dcdc_div0, mit->dcdc_div1,
+				       DCDC_FREQ_TUNE_SET);
+	mutex_unlock(&g_mvm->mutex);
+
+	if (ret)
+		ret = IUI_FM_MITIGATION_ERROR;
+
+out:
+	IWL_DEBUG_EXTERNAL(g_mvm,
+			   "FM DCDC: mitigation %s (div0 = %d, div1 = %d)\n",
+			   ret ? "failed" : "succeeded", g_dcdc_div0,
+			   g_dcdc_div1);
+
+	return ret;
+}
+
+/*
+ * Send the FM the original DCDC values, so that FM can know when to activate
+ * the DCDC mitigation.
+ */
+void iwl_mvm_fm_notify_current_dcdc(void)
+{
+	int ret;
+	struct iui_fm_freq_notification notification;
+	struct iui_fm_wlan_info winfo;
+
+	if (WARN_ON(!g_mvm))
+		return;
+
+	memset(&winfo, 0, sizeof(struct iui_fm_wlan_info));
+
+	/* Get current DCDC from the FW */
+	ret = iwl_mvm_fm_send_dcdc_cmd(0, 0, 0);
+	if (ret)
+		goto out;
+
+	winfo.dcdc_div0 = g_dcdc_div0;
+	winfo.dcdc_div1 = g_dcdc_div1;
+
+	/* mark the change that we are reporting */
+	winfo.mask |= IUI_FM_WLAN_NOTIF_DCDC;
+
+	notification.type = IUI_FM_FREQ_NOTIFICATION_TYPE_WLAN;
+	notification.info.wlan_info = &winfo;
+
+	ret = iwl_mvm_fm_notify_frequency(debug_mode, IUI_FM_MACRO_ID_WLAN,
+					  &notification);
+
+out:
+	IWL_DEBUG_EXTERNAL(g_mvm,
+			   "FM: notified fm about dcdc div0 = %d div1 = %d (fail = %d)\n",
+			   winfo.dcdc_div0, winfo.dcdc_div1, ret);
+}
+
 /*
  * Check if the list of channels that the FM supplied is valid
  */
@@ -422,6 +548,8 @@ static bool iwl_mvm_fm_invalid_channel_list(struct iui_fm_wlan_mitigation *mit)
  * 1. Limit Tx power on specific channels
  * 2. Change ADC/DAC frequency - Currently not supported
  * 3. Request Rx Gain behavior - Currently not supported
+ * 4. Enter 2G coex mode
+ * 5. Change dcdc clock values
  */
 static enum iui_fm_mitigation_status
 iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
@@ -458,6 +586,10 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 	 * the channel list mit->channel_tx_pwr received from the FM.
 	 */
 	ret = iwl_mvm_fm_mitig_txpwr(mit);
+	if (ret)
+		goto end;
+
+	ret = iwl_mvm_fm_mitig_dcdc(mit);
 	if (ret)
 		goto end;
 
