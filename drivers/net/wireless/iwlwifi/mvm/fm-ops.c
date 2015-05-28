@@ -216,11 +216,17 @@ static void iwl_mvm_fm_chan_iterator(struct ieee80211_hw *hw,
  * Reducing the Tx power of all interfaces that use a specific channel.
  */
 static enum iui_fm_mitigation_status
-iwl_mvm_fm_mitig_txpwr(struct iui_fm_wlan_channel_tx_power *chan_txpwr_list,
-		       u32 num_channels)
+iwl_mvm_fm_mitig_txpwr(struct iui_fm_wlan_mitigation *mit)
 {
 	int i;
 	struct chan_ifaces chan_ifaces;
+	struct iui_fm_wlan_channel_tx_power *chan_txpwr_list =
+		mit->channel_tx_pwr;
+	u32 num_channels = mit->num_channels;
+
+	/* Not required to mitigate tx power */
+	if (!(mit->mask & IUI_FM_WLAN_MITIG_TX_POWER))
+		goto ret;
 
 	if (IUI_FM_WLAN_MAX_CHANNELS < num_channels)
 		return IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
@@ -240,7 +246,7 @@ iwl_mvm_fm_mitig_txpwr(struct iui_fm_wlan_channel_tx_power *chan_txpwr_list,
 				   chan_ifaces.num_of_vif,
 				   chan_ifaces.chan_txpwr->frequency);
 	}
-
+ret:
 	return IUI_FM_MITIGATION_COMPLETE_OK;
 }
 
@@ -249,13 +255,19 @@ iwl_mvm_fm_mitig_txpwr(struct iui_fm_wlan_channel_tx_power *chan_txpwr_list,
  * TODO: implement
  */
 static enum iui_fm_mitigation_status
-iwl_mvm_fm_mitig_adc_dac_freq(u32 adc_dac_freq)
+iwl_mvm_fm_mitig_adc_dac_freq(struct iui_fm_wlan_mitigation *mit)
 {
+	u32 adc_dac_freq = mit->wlan_adc_dac_freq;
+
+	/* Not required to mitigate adc dac */
+	if (!(mit->mask & IUI_FM_WLAN_MITIG_ADC_DAC))
+		goto ret;
+
 	if (adc_dac_freq != 0)
 		return IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
 
 	IWL_DEBUG_EXTERNAL(g_mvm, "FM: adc - dac mitigation\n");
-
+ret:
 	return IUI_FM_MITIGATION_COMPLETE_OK;
 }
 
@@ -264,13 +276,20 @@ iwl_mvm_fm_mitig_adc_dac_freq(u32 adc_dac_freq)
  * TODO: implement
  */
 static enum iui_fm_mitigation_status
-iwl_mvm_fm_mitig_rxgain_behavior(enum iui_fm_wlan_rx_gain_behavior rx_gain)
+iwl_mvm_fm_mitig_rxgain_behavior(struct iui_fm_wlan_mitigation *mit)
 {
+	enum iui_fm_wlan_rx_gain_behavior rx_gain = mit->rx_gain_behavior;
+
+	/* Not required to mitigate rx gain */
+	if (!(mit->mask & IUI_FM_WLAN_MITIG_RX_GAIN))
+		goto ret;
+
 	if (rx_gain != IUI_FM_WLAN_RX_GAIN_NORMAL)
 		return IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
 
 	IWL_DEBUG_EXTERNAL(g_mvm,
 			   "FM: rxgain behaviour mitigation - not implemented\n");
+ret:
 	return IUI_FM_MITIGATION_COMPLETE_OK;
 }
 
@@ -287,6 +306,10 @@ iwl_mvm_fm_2g_coex(struct iui_fm_wlan_mitigation *mit)
 	struct iui_fm_wlan_channel_tx_power *chan_txpwr_list =
 		mit->channel_tx_pwr;
 	u32 num_channels = mit->num_channels;
+
+	/* Not required to mitigate 2g coex */
+	if (!(mit->mask & IUI_FM_WLAN_MITIG_2G_COEX))
+		return ret;
 
 	/* fw does not support the 2g coex cmd */
 	if (fw_has_capa(&g_mvm->fw->ucode_capa,
@@ -422,6 +445,9 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 	if (iwl_mvm_fm_invalid_channel_list(mit))
 		return IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
 
+	IWL_DEBUG_EXTERNAL(g_mvm, "FM: fm mitigation callback bit mask 0x%x\n",
+			   mit->mask);
+
 	/* Enable/Disable 2G coex mode */
 	ret = iwl_mvm_fm_2g_coex(mit);
 	if (ret)
@@ -431,16 +457,16 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 	 * Going to mitigate the Tx power of all stations using the channels in
 	 * the channel list mit->channel_tx_pwr received from the FM.
 	 */
-	ret = iwl_mvm_fm_mitig_txpwr(mit->channel_tx_pwr, mit->num_channels);
+	ret = iwl_mvm_fm_mitig_txpwr(mit);
 	if (ret)
 		goto end;
 
-	ret = iwl_mvm_fm_mitig_adc_dac_freq(mit->wlan_adc_dac_freq);
+	ret = iwl_mvm_fm_mitig_adc_dac_freq(mit);
 
 	if (ret)
 		goto end;
 
-	ret = iwl_mvm_fm_mitig_rxgain_behavior(mit->rx_gain_behavior);
+	ret = iwl_mvm_fm_mitig_rxgain_behavior(mit);
 end:
 	IWL_DEBUG_EXTERNAL(g_mvm, "FM: fm mitigation callback %s\n",
 			   ret ? "failed" : "succeeded");
@@ -596,6 +622,9 @@ int iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
 	/* Do not report to FM if no change happened */
 	if (!iwl_mvm_fm_channel_changed(&winfo))
 		return 0;
+
+	/* mark the change that we are reporting */
+	winfo.mask = IUI_FM_WLAN_NOTIF_CHAN_CHANGE;
 
 	ret =  iwl_mvm_fm_notify_frequency(debug_mode, IUI_FM_MACRO_ID_WLAN,
 					   &notification);

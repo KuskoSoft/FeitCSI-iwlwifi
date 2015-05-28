@@ -107,6 +107,8 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 	struct iui_fm_wlan_mitigation wm;
 	char buf[128];
 	size_t buf_size = sizeof(buf);
+	int mitigate_2g;
+	int ret;
 
 	mitigation.info.wlan_mitigation = &wm;
 	mitigation.type = IUI_FM_MITIGATION_TYPE_WLAN;
@@ -116,7 +118,7 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 
 	/* All platforms that are not xmm6321 & SOFIA 3G */
 	if (IUI_FM_WLAN_MAX_CHANNELS == 4) {
-		if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
+		if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
 			   &wm.num_channels,
 			   &wm.channel_tx_pwr[0].frequency,
 			   &wm.channel_tx_pwr[0].max_tx_pwr,
@@ -126,7 +128,8 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 			   &wm.channel_tx_pwr[2].max_tx_pwr,
 			   &wm.channel_tx_pwr[3].frequency,
 			   &wm.channel_tx_pwr[3].max_tx_pwr,
-			   &wm.wlan_2g_coex_enable) != 10)
+			   &mitigate_2g,
+			   &wm.wlan_2g_coex_enable) != 11)
 			return -EINVAL;
 	} else if (sscanf(buf, "%d,%d,%d,%d,%d", &wm.num_channels,
 			   &wm.channel_tx_pwr[0].frequency,
@@ -142,8 +145,17 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 	wm.wlan_adc_dac_freq = 0;
 	wm.rx_gain_behavior = IUI_FM_WLAN_RX_GAIN_NORMAL;
 
-	if (fm_callback(IUI_FM_MACRO_ID_WLAN, &mitigation, 0))
-		pr_info("FM: Callback failed (debug mode)\n");
+	wm.mask = 0;
+
+	/* Set bit mask to indicate the required mitigations */
+	if (wm.num_channels)
+		wm.mask |= IUI_FM_WLAN_MITIG_TX_POWER;
+	if (mitigate_2g)
+		wm.mask |= IUI_FM_WLAN_MITIG_2G_COEX;
+
+	ret = fm_callback(IUI_FM_MACRO_ID_WLAN, &mitigation, 0);
+	pr_info("FM[test-mode]: mitigation callback %s (mask = 0x%x)\n",
+		ret ? "failed" : "succeeded", wm.mask);
 
 	return count;
 }
@@ -241,7 +253,8 @@ iwl_mvm_fm_test_notify_frequency(const enum iui_fm_macro_id macro_id,
 	memcpy(&fm_notif, notification->info.wlan_info,
 	       sizeof(struct iui_fm_wlan_info));
 
-	pr_info("FM[test-mode]: notifying fm about channel change\n");
+	pr_info("FM[test-mode]: notifying fm about change (mask = 0x%x)\n",
+		notification->info.wlan_info->mask);
 
 	return 0;
 }

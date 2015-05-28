@@ -211,6 +211,9 @@ struct iui_fm_wlan_channel_info {
 /**
  * @brief Structure used for Frequency Notification by the WLAN macro.
  *
+ * @mask	  Bit mask of the notifications that are being reported on,
+ *		  Any field that is not turned on in the bit mask should be
+ *		  ignored (bit mask values - struct iui_fm_wlan_notify_bit_mask)
  * @num_channels  Number of valid elements in the channel_info array, set to
  *                the number of channels currently in use by the WLAN macro, or
  *                0 if WLAN is not in transfer/receive mode.
@@ -220,6 +223,7 @@ struct iui_fm_wlan_channel_info {
  *                      values: 0 (parameter not yet supported).
  */
 struct iui_fm_wlan_info {
+	uint32_t mask;
 	uint32_t num_channels;
 	struct iui_fm_wlan_channel_info channel_info[IUI_FM_WLAN_MAX_CHANNELS];
 	uint32_t wlan_adc_dac_freq;
@@ -268,6 +272,10 @@ enum iui_fm_wlan_rx_gain_behavior {
 /**
  * @brief Mitigation information structure for the WLAN macro.
  *
+ * @mask	       Bit mask of the required mitigations, any field that is
+ *		       not turned on in the bit mask should be ignored.
+ *		       (bit mask values -
+ *		       struct iui_fm_wlan_mitigation_bit_mask)
  * @num_channels       Number of valid elements in the channel_tx_pwr array,
  *                     set to the number of channels for which the maximum
  *                     allowed transmit power is being set.
@@ -283,6 +291,7 @@ enum iui_fm_wlan_rx_gain_behavior {
  *                     IUI_FM_WLAN_RX_GAIN_REDUCE_SPECIFIED (NOT SUPPORTED).
  */
 struct iui_fm_wlan_mitigation {
+	uint32_t mask;
 	uint32_t num_channels;
 	struct iui_fm_wlan_channel_tx_power
 		channel_tx_pwr[IUI_FM_WLAN_MAX_CHANNELS];
@@ -290,6 +299,30 @@ struct iui_fm_wlan_mitigation {
 	enum iui_fm_wlan_rx_gain_behavior rx_gain_behavior;
 	uint32_t wlan_2g_coex_enable;
 /*	uint32_t rx_gain_reduction; */
+};
+
+/**
+ * @brief Enum representing the different mitigations for the WLAN macro.
+ *	  When the FM will request the WLAN macro to preform mitigations,
+ *	  it will set the bit of the required mitigations - if a
+ *	  mitigation's bit will not be set it will be ignored.
+ */
+enum iui_fm_wlan_mitigation_bit_mask {
+	IUI_FM_WLAN_MITIG_TX_POWER       = 1,
+	IUI_FM_WLAN_MITIG_ADC_DAC       = 2,
+	IUI_FM_WLAN_MITIG_RX_GAIN       = 4,
+	IUI_FM_WLAN_MITIG_2G_COEX	 = 8,
+};
+
+/**
+ * @brief Enum representing the different notifications from the WLAN macro.
+ *	  When the WLAN macro will notify the FM about its activities,
+ *	  it will set the bit of the required notification - if a
+ *	  notification's bit will not be set it should be ignored.
+ */
+enum iui_fm_wlan_notify_bit_mask {
+	IUI_FM_WLAN_NOTIF_CHAN_CHANGE   = 1,
+	IUI_FM_WLAN_NOTIF_ADC_DAC	= 2,
 };
 
 /**
