@@ -43,4 +43,8 @@
 	BUILD_BUG_ON((size) > FIELD_SIZEOF(struct sk_buff, cb))
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+#define sk_alloc(net, family, priority, prot, kern) sk_alloc(net, family, priority, prot)
+#endif
+
 #endif /* __BACKPORT_NET_SOCK_H */

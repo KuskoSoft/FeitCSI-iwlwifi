@@ -97,4 +97,9 @@ bool __net_get_random_once(void *buf, int nbytes, bool *done,
 
 #endif /* __BACKPORT_NET_GET_RANDOM_ONCE */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+#define sock_create_kern(net, family, type, proto, res) \
+	__sock_create(net, family, type, proto, res, 1)
+#endif
+
 #endif /* __BACKPORT_LINUX_NET_H */

@@ -15,6 +15,7 @@
 #include <linux/netdevice.h>
 #include <linux/debugfs.h>
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,12)
 static inline bool is_kthread_should_stop(void)
 {
 	return (current->flags & PF_KTHREAD) && kthread_should_stop();
@@ -79,6 +80,7 @@ int woken_wake_function(wait_queue_t *wait, unsigned mode, int sync, void *key)
 	return default_wake_function(wait, mode, sync, key);
 }
 EXPORT_SYMBOL(woken_wake_function);
+#endif
 
 #ifdef __BACKPORT_NETDEV_RSS_KEY_FILL
 u8 netdev_rss_key[NETDEV_RSS_KEY_LEN];
