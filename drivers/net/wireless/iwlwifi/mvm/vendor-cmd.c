@@ -705,7 +705,7 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
 	int err;
 
-	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_TX_POWER_DEV))
+	if (!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_TX_POWER_DEV))
 		return -EOPNOTSUPP;
 
 	err = iwl_mvm_parse_vendor_data(tb, data, data_len);
