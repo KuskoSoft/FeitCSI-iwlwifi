@@ -161,3 +161,12 @@ config IWLWIFI_PLATFORM_DATA
 	  for power function handlings (GPIO toggling)
 
 	  If unsure, select N.
+
+config IWLMVM_TOF_TSF_WA
+	bool "maintain hashtable of TSF diff between GP2 and beacons/probes"
+	depends on IWLMVM
+	default y
+	help
+	  This option enables hashtable of differences between TSF values
+	  form beacon/probes and the corresponding GP2; it's a workaround
+	  until FW implements it.
