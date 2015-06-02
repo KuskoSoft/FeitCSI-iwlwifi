@@ -81,6 +81,7 @@
 #include "fw-api.h"
 #include "constants.h"
 #include "vendor-cmd.h"
+#include "tof.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 #include "lte-coex.h"
@@ -764,6 +765,7 @@ struct iwl_mvm {
 
 	struct iwl_mvm_frame_stats drv_rx_stats;
 	spinlock_t drv_stats_lock;
+	struct iwl_mvm_tof_data tof_data;
 	u16 dbgfs_rx_phyinfo;
 #endif
 
