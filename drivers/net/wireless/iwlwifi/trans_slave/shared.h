@@ -416,7 +416,7 @@ int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans,
 				 struct dentry *dir);
 void iwl_trans_slv_ref(struct iwl_trans *trans);
 void iwl_trans_slv_unref(struct iwl_trans *trans);
-void iwl_trans_slv_suspend(struct iwl_trans *trans);
+int iwl_trans_slv_suspend(struct iwl_trans *trans);
 void iwl_trans_slv_resume(struct iwl_trans *trans);
 int iwl_slv_get_next_queue(struct iwl_trans_slv *trans_slv);
 /* mini runtime pm */

@@ -490,7 +490,7 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 		if (trans_slv->policy_wq)
 			queue_work(trans_slv->policy_wq,
 				   &trans_slv->policy_trigger);
-		return 0;
+		return -EBUSY;
 	}
 	if (ret)
 		goto err;
@@ -624,9 +624,14 @@ static int iwl_slv_rpm_runtime_suspend(struct device *dev)
 			container_of(dev, struct iwl_slv_rpm_device, dev);
 	struct iwl_trans *trans = rpm_dev->trans;
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+	int ret;
 
 	IWL_DEBUG_RPM(trans, "entering d0i3\n");
-	iwl_slv_runtime_suspend(trans);
+	ret = iwl_slv_runtime_suspend(trans);
+	if (ret) {
+		IWL_DEBUG_RPM(trans, "error entering d0i3: %d\n", ret);
+		return ret;
+	}
 	pm_runtime_allow(trans_slv->host_dev);
 	return 0;
 }
@@ -1985,19 +1990,23 @@ void iwl_trans_slv_unref(struct iwl_trans *trans)
 #endif
 }
 
-void iwl_trans_slv_suspend(struct iwl_trans *trans)
+int iwl_trans_slv_suspend(struct iwl_trans *trans)
 {
 #ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
+	int ret;
 
 	IWL_DEBUG_RPM(trans, "suspending: %d, rpm counter: %d\n",
 		      trans_slv->suspending,
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
 
 	/* set the device back into d0i3 (see iwl_slv_rpm_suspend()) */
-	iwl_slv_fw_enter_d0i3(trans);
+	ret = iwl_slv_fw_enter_d0i3(trans);
+	if (ret)
+		return ret;
 #endif
 	trans_slv->wowlan_enabled = true;
+	return 0;
 }
 
 void iwl_trans_slv_resume(struct iwl_trans *trans)
