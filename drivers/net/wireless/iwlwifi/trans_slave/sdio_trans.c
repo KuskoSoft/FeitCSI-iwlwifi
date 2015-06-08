@@ -68,7 +68,6 @@
 #include <linux/mmc/host.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
-#include <linux/mmc/sdhci.h>
 #include <linux/platform_device.h>
 #include <linux/vmalloc.h>
 #include <linux/pm_runtime.h>
