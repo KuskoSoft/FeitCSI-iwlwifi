@@ -149,19 +149,17 @@ iwl_mvm_fm_debug_mitigate_write(struct file *file,
 	wm.wlan_adc_dac_freq = 0;
 	wm.rx_gain_behavior = IUI_FM_WLAN_RX_GAIN_NORMAL;
 
-	wm.mask = 0;
+	wm.bitmask = 0;
 
-	/* Set bit mask to indicate the required mitigations */
-	if (wm.num_channels)
-		wm.mask |= IUI_FM_WLAN_MITIG_TX_POWER;
-	if (mitigate_2g)
-		wm.mask |= IUI_FM_WLAN_MITIG_2G_COEX;
+	/* Set bit bitmask to indicate the required mitigations */
+	if (wm.num_channels || mitigate_2g)
+		wm.bitmask |= WLAN_MITI;
 	if (mitigate_dcdc)
-		wm.mask |= IUI_FM_WLAN_MITIG_DCDC;
+		wm.bitmask |= DCDC_MITI;
 
 	ret = fm_callback(IUI_FM_MACRO_ID_WLAN, &mitigation, 0);
-	pr_info("FM[test-mode]: mitigation callback %s (mask = 0x%x)\n",
-		ret ? "failed" : "succeeded", wm.mask);
+	pr_info("FM[test-mode]: mitigation callback %s (bitmask = 0x%x)\n",
+		ret ? "failed" : "succeeded", wm.bitmask);
 
 	return count;
 }
@@ -265,7 +263,7 @@ iwl_mvm_fm_test_notify_frequency(const enum iui_fm_macro_id macro_id,
 	       sizeof(struct iui_fm_wlan_info));
 
 	pr_info("FM[test-mode]: notifying fm about change (mask = 0x%x)\n",
-		notification->info.wlan_info->mask);
+		notification->info.wlan_info->bitmask);
 
 	return 0;
 }

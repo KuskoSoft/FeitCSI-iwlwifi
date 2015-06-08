@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _IUI_FM_8000_H
-#define _IUI_FM_8000_H
+#ifndef _IUI_FM_H
+#define _IUI_FM_H
 
 /**
  * @file iui_fm.h
@@ -89,8 +89,8 @@ enum iui_fm_macro_id {
  *                                        processes.
  */
 enum iui_fm_mitigation_priority {
-  IUI_FM_MITIGATION_PRIORITY_NORMAL    = 0,
-  IUI_FM_MITIGATION_PRIORITY_EMERGENCY = 1
+	IUI_FM_MITIGATION_PRIORITY_NORMAL    = 0,
+	IUI_FM_MITIGATION_PRIORITY_EMERGENCY = 1
 };
 
 /**
@@ -157,8 +157,8 @@ enum iui_fm_emmc_clock_src {
  * @clk_src    SD/eMMC Clock Source. Values in enum iui_fm_emmc_clock_src.
  */
 struct iui_fm_emmc_freq_bitfield {
-	uint32_t frequency :28;
-	uint32_t clk_src   :4;
+	uint32_t frequency:28;
+	uint32_t clk_src:4;
 };
 
 /**
@@ -168,7 +168,8 @@ struct iui_fm_emmc_freq_bitfield {
  * @emmc_frequency  Array of frequency information for each EMMC device.
  */
 struct iui_fm_emmc_freq_info {
-	struct iui_fm_emmc_freq_bitfield emmc_frequency[IUI_FM_EMMC_DEVICE_ID_MAX];
+	struct iui_fm_emmc_freq_bitfield
+		emmc_frequency[IUI_FM_EMMC_DEVICE_ID_MAX];
 };
 
 /**
@@ -185,7 +186,7 @@ enum iui_fm_wlan_bandwidth {
 	IUI_FM_WLAN_BW_20MHZ   = 0,
 	IUI_FM_WLAN_BW_40MHZ   = 1,
 	IUI_FM_WLAN_BW_80MHZ   = 2,
-	IUI_FM_WLAN_BW_160MHZ   = 3
+	IUI_FM_WLAN_BW_160MHZ  = 3
 };
 
 /**
@@ -207,13 +208,14 @@ struct iui_fm_wlan_channel_info {
   * Maximum number of channels that can be used by the WLAN macro at a time.
   */
 #define IUI_FM_WLAN_MAX_CHANNELS 4
+#define DCDC_UPDATE    1
+#define WLAN_UPDATE    2
+#define DCDC_MITI      DCDC_UPDATE
+#define WLAN_MITI      WLAN_UPDATE
 
 /**
  * @brief Structure used for Frequency Notification by the WLAN macro.
  *
- * @mask	  Bit mask of the notifications that are being reported on,
- *		  Any field that is not turned on in the bit mask should be
- *		  ignored (bit mask values - struct iui_fm_wlan_notify_bit_mask)
  * @num_channels  Number of valid elements in the channel_info array, set to
  *                the number of channels currently in use by the WLAN macro, or
  *                0 if WLAN is not in transfer/receive mode.
@@ -221,17 +223,14 @@ struct iui_fm_wlan_channel_info {
  *                num_channels elements are valid.
  * @wlan_adc_dac_freq   Current WLAN ADC/DAC frequency in KHz. Available
  *                      values: 0 (parameter not yet supported).
- * @dcdc_div0:	  DCDC frequency divider - digital domain
- * @dcdc_div1:	  DCDC frequency divider - analog domain (should be the same as
- *		  dcdc_div0)
  */
 struct iui_fm_wlan_info {
-	uint32_t mask;
 	uint32_t num_channels;
 	struct iui_fm_wlan_channel_info channel_info[IUI_FM_WLAN_MAX_CHANNELS];
 	uint32_t wlan_adc_dac_freq;
 	uint32_t dcdc_div0;
 	uint32_t dcdc_div1;
+	uint32_t bitmask;
 };
 
 /**
@@ -277,10 +276,6 @@ enum iui_fm_wlan_rx_gain_behavior {
 /**
  * @brief Mitigation information structure for the WLAN macro.
  *
- * @mask	       Bit mask of the required mitigations, any field that is
- *		       not turned on in the bit mask should be ignored.
- *		       (bit mask values -
- *		       struct iui_fm_wlan_mitigation_bit_mask)
  * @num_channels       Number of valid elements in the channel_tx_pwr array,
  *                     set to the number of channels for which the maximum
  *                     allowed transmit power is being set.
@@ -294,47 +289,18 @@ enum iui_fm_wlan_rx_gain_behavior {
  * @rx_gain_reduction  Amount by which to reduce the WLAN RX Gain (in dB) if
  *                     the rx_gain_bahavior field is set to
  *                     IUI_FM_WLAN_RX_GAIN_REDUCE_SPECIFIED (NOT SUPPORTED).
- * @dcdc_div0:		DCDC frequency divider - digital domain
- * @dcdc_div1:		DCDC frequency divider - analog domain (should be
- *			the same as dcdc_div0)
  */
 struct iui_fm_wlan_mitigation {
-	uint32_t mask;
 	uint32_t num_channels;
 	struct iui_fm_wlan_channel_tx_power
 		channel_tx_pwr[IUI_FM_WLAN_MAX_CHANNELS];
 	uint32_t wlan_adc_dac_freq;
 	enum iui_fm_wlan_rx_gain_behavior rx_gain_behavior;
+/*	uint32_t rx_gain_reduction; */
 	uint32_t wlan_2g_coex_enable;
 	uint32_t dcdc_div0;
 	uint32_t dcdc_div1;
-/*	uint32_t rx_gain_reduction; */
-};
-
-/**
- * @brief Enum representing the different mitigations for the WLAN macro.
- *	  When the FM will request the WLAN macro to preform mitigations,
- *	  it will set the bit of the required mitigations - if a
- *	  mitigation's bit will not be set it will be ignored.
- */
-enum iui_fm_wlan_mitigation_bit_mask {
-	IUI_FM_WLAN_MITIG_TX_POWER       = 1,
-	IUI_FM_WLAN_MITIG_ADC_DAC       = 2,
-	IUI_FM_WLAN_MITIG_RX_GAIN       = 4,
-	IUI_FM_WLAN_MITIG_2G_COEX	 = 8,
-	IUI_FM_WLAN_MITIG_DCDC		= 16,
-};
-
-/**
- * @brief Enum representing the different notifications from the WLAN macro.
- *	  When the WLAN macro will notify the FM about its activities,
- *	  it will set the bit of the required notification - if a
- *	  notification's bit will not be set it should be ignored.
- */
-enum iui_fm_wlan_notify_bit_mask {
-	IUI_FM_WLAN_NOTIF_CHAN_CHANGE   = 1,
-	IUI_FM_WLAN_NOTIF_ADC_DAC	= 2,
-	IUI_FM_WLAN_NOTIF_DCDC		= 4,
+	uint32_t bitmask;
 };
 
 /**
@@ -503,7 +469,7 @@ struct iui_fm_gnss_info {
  *                   66196 KHz
  */
 struct iui_fm_gnss_mitigation {
-  enum iui_fm_mitigation_priority priority;
+	enum iui_fm_mitigation_priority priority;
 	uint32_t bus_frequency;
 	uint32_t pll_frequency;
 	uint32_t adc_frequency;
@@ -773,7 +739,7 @@ typedef enum iui_fm_mitigation_status (*iui_fm_mitigation_cb) (
  * @return 0 if callback (de)registration was successful, or a negative error
  *         code otherwise.
  */
-int32_t iui_fm_register_mitigation_callback (
+int32_t iui_fm_register_mitigation_callback(
 				const enum iui_fm_macro_id macro_id,
 				const iui_fm_mitigation_cb mitigation_cb);
 
@@ -788,7 +754,7 @@ int32_t iui_fm_register_mitigation_callback (
  * @return 0 if the Frequency Notification was received successfully, or a
  *         negative error code otherwise.
  */
-int32_t iui_fm_notify_frequency (const enum iui_fm_macro_id macro_id,
+int32_t iui_fm_notify_frequency(const enum iui_fm_macro_id macro_id,
 		const struct iui_fm_freq_notification * const notification);
 
 /**
@@ -818,7 +784,7 @@ int32_t iui_fm_notify_frequency (const enum iui_fm_macro_id macro_id,
  * @return 0 if the Frequency Change Response was received successfully, or a
  *         negative error code otherwise.
  */
-int32_t iui_fm_mitigation_complete (const enum iui_fm_macro_id macro_id,
+int32_t iui_fm_mitigation_complete(const enum iui_fm_macro_id macro_id,
 			const enum iui_fm_mitigation_status status,
 			const struct iui_fm_mitigation * const mitigation,
 			const uint32_t sequence);
@@ -829,4 +795,4 @@ int32_t iui_fm_mitigation_complete (const enum iui_fm_macro_id macro_id,
 
 /** @} */
 
-#endif  /* _IUI_FM_8000_H */
+#endif  /* _IUI_FM_H */

@@ -229,7 +229,7 @@ iwl_mvm_fm_mitig_txpwr(struct iui_fm_wlan_mitigation *mit)
 	u32 num_channels = mit->num_channels;
 
 	/* Not required to mitigate tx power */
-	if (!(mit->mask & IUI_FM_WLAN_MITIG_TX_POWER))
+	if (!(mit->bitmask & WLAN_MITI))
 		goto ret;
 
 	if (IUI_FM_WLAN_MAX_CHANNELS < num_channels)
@@ -264,7 +264,7 @@ iwl_mvm_fm_mitig_adc_dac_freq(struct iui_fm_wlan_mitigation *mit)
 	u32 adc_dac_freq = mit->wlan_adc_dac_freq;
 
 	/* Not required to mitigate adc dac */
-	if (!(mit->mask & IUI_FM_WLAN_MITIG_ADC_DAC))
+	if (!(mit->bitmask & WLAN_MITI))
 		goto ret;
 
 	if (adc_dac_freq != 0)
@@ -285,7 +285,7 @@ iwl_mvm_fm_mitig_rxgain_behavior(struct iui_fm_wlan_mitigation *mit)
 	enum iui_fm_wlan_rx_gain_behavior rx_gain = mit->rx_gain_behavior;
 
 	/* Not required to mitigate rx gain */
-	if (!(mit->mask & IUI_FM_WLAN_MITIG_RX_GAIN))
+	if (!(mit->bitmask & WLAN_MITI))
 		goto ret;
 
 	if (rx_gain != IUI_FM_WLAN_RX_GAIN_NORMAL)
@@ -312,7 +312,7 @@ iwl_mvm_fm_2g_coex(struct iui_fm_wlan_mitigation *mit)
 	u32 num_channels = mit->num_channels;
 
 	/* Not required to mitigate 2g coex */
-	if (!(mit->mask & IUI_FM_WLAN_MITIG_2G_COEX))
+	if (!(mit->bitmask & WLAN_MITI))
 		return ret;
 
 	/* fw does not support the 2g coex cmd */
@@ -430,7 +430,7 @@ iwl_mvm_fm_mitig_dcdc(struct iui_fm_wlan_mitigation *mit)
 	enum iui_fm_mitigation_status ret = IUI_FM_MITIGATION_COMPLETE_OK;
 
 	/* Not required to mitigate dcdc */
-	if (!(mit->mask & IUI_FM_WLAN_MITIG_DCDC))
+	if (!(mit->bitmask & DCDC_MITI))
 		return ret;
 
 	/* Current dcdc values match requested values */
@@ -481,7 +481,7 @@ void iwl_mvm_fm_notify_current_dcdc(void)
 	winfo.dcdc_div1 = g_dcdc_div1;
 
 	/* mark the change that we are reporting */
-	winfo.mask |= IUI_FM_WLAN_NOTIF_DCDC;
+	winfo.bitmask |= DCDC_UPDATE;
 
 	notification.type = IUI_FM_FREQ_NOTIFICATION_TYPE_WLAN;
 	notification.info.wlan_info = &winfo;
@@ -574,7 +574,7 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 		return IUI_FM_MITIGATION_ERROR_INVALID_PARAM;
 
 	IWL_DEBUG_EXTERNAL(g_mvm, "FM: fm mitigation callback bit mask 0x%x\n",
-			   mit->mask);
+			   mit->bitmask);
 
 	/* Enable/Disable 2G coex mode */
 	ret = iwl_mvm_fm_2g_coex(mit);
@@ -756,7 +756,7 @@ int iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
 		return 0;
 
 	/* mark the change that we are reporting */
-	winfo.mask = IUI_FM_WLAN_NOTIF_CHAN_CHANGE;
+	winfo.bitmask = WLAN_UPDATE;
 
 	ret =  iwl_mvm_fm_notify_frequency(debug_mode, IUI_FM_MACRO_ID_WLAN,
 					   &notification);
