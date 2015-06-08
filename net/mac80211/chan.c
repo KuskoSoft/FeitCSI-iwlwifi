@@ -262,8 +262,16 @@ ieee80211_get_chanctx_max_required_bw(struct ieee80211_local *local,
 		switch (vif->type) {
 		case NL80211_IFTYPE_AP:
 		case NL80211_IFTYPE_AP_VLAN:
-		case NL80211_IFTYPE_STATION:
 			width = ieee80211_get_max_required_bw(sdata);
+			break;
+		case NL80211_IFTYPE_STATION:
+			/*
+			 * The ap's sta->bandwidth is not set yet at this
+			 * point, so take the width from the chandef, but
+			 * account also for TDLS peers
+			 */
+			width = max(vif->bss_conf.chandef.width,
+				    ieee80211_get_max_required_bw(sdata));
 			break;
 		case NL80211_IFTYPE_P2P_DEVICE:
 			continue;
