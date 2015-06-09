@@ -1217,7 +1217,12 @@ static void iwl_slv_tx_copy_hcmd(struct iwl_device_cmd *out_cmd,
 				 struct iwl_host_cmd *cmd)
 {
 	int i;
-	u8 *cmd_dest = out_cmd->payload;
+	u8 *cmd_dest;
+
+	if (out_cmd->hdr_wide.group_id)
+		cmd_dest = out_cmd->payload_wide;
+	else
+		cmd_dest = out_cmd->payload;
 
 	for (i = 0; i < IWL_MAX_CMD_TBS_PER_TFD; i++) {
 		if (!cmd->len[i])
@@ -1242,14 +1247,20 @@ iwl_slv_tx_set_meta_for_hcmd(struct iwl_trans *trans,
 	struct iwl_slv_tx_dtu_meta *dtu_meta = &txq_entry->dtu_meta;
 	struct iwl_slv_tx_chunk_info *const chunk_info = dtu_meta->chunk_info;
 	int i, idx, ret;
-
+	int group_id = iwl_cmd_groupid(cmd->id);
 	bool had_nocopy = false;
 	bool had_dup = false;
+	bool wide_cmd = trans_slv->wide_cmd_header && group_id != 0;
 
 	hcmd_meta = &cmd_entry->hcmd_meta;
 	hcmd_meta->dup_buf = NULL;
-	hcmd_meta->copy_size = sizeof(struct iwl_cmd_header);
-	hcmd_meta->hcmd_size = sizeof(struct iwl_cmd_header);
+	if (wide_cmd) {
+		hcmd_meta->copy_size = sizeof(struct iwl_cmd_header_wide);
+		hcmd_meta->hcmd_size = sizeof(struct iwl_cmd_header_wide);
+	} else {
+		hcmd_meta->copy_size = sizeof(struct iwl_cmd_header);
+		hcmd_meta->hcmd_size = sizeof(struct iwl_cmd_header);
+	}
 	ret = 0;
 
 	/* the first block is always the copied part of dev cmd */
@@ -1360,9 +1371,14 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 	struct iwl_device_cmd *dev_cmd;
 	u16 seq_num;
 	int ret;
+	int group_id = iwl_cmd_groupid(cmd->id);
 
 	BUG_ON(!trans_slv->txqs);
 	BUG_ON(!cmd);
+
+	if (WARN(!trans_slv->wide_cmd_header && group_id != 0,
+		 "unsupported wide command %#x\n", cmd->id))
+		return -EINVAL;
 
 	IWL_DEBUG_HC(trans, "Enqueue cmd %s (0x%x), flags 0x%x\n",
 		     trans_slv_get_cmd_string(trans_slv, cmd->id),
@@ -1382,9 +1398,21 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 		goto error_free;
 	}
 	dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv, cmd_entry);
+
+	if (group_id != 0) {
+		dev_cmd->hdr_wide.cmd = iwl_cmd_opcode(cmd->id);
+		dev_cmd->hdr_wide.group_id = group_id;
+		dev_cmd->hdr_wide.version = iwl_cmd_version(cmd->id);
+		dev_cmd->hdr_wide.length =
+			cpu_to_le16(cmd_entry->hcmd_meta.hcmd_size -
+				    sizeof(struct iwl_cmd_header_wide));
+		dev_cmd->hdr_wide.reserved = 0;
+	} else {
+		dev_cmd->hdr.cmd = iwl_cmd_opcode(cmd->id);
+		dev_cmd->hdr.group_id = 0;
+	}
+
 	iwl_slv_tx_copy_hcmd(dev_cmd, cmd);
-	dev_cmd->hdr.cmd = cmd->id;
-	dev_cmd->hdr.reserved = 0;
 
 	spin_lock_bh(&trans_slv->txq_lock);
 
@@ -1407,7 +1435,7 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 	txq->waiting_last_idx &= (trans_slv->config.queue_size - 1);
 
 	trace_iwlwifi_dev_hcmd(trans->dev, cmd, cmd_entry->hcmd_meta.hcmd_size,
-			       &dev_cmd->hdr);
+			       &dev_cmd->hdr_wide);
 
 	/* put high priority commands at the front of the queue, behind other
 	 * high priority commands.
