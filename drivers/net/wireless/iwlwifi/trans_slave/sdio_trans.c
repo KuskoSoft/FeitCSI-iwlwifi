@@ -1431,11 +1431,10 @@ static void iwl_trans_sdio_configure(struct iwl_trans *trans,
 	 * As this function may be called again in some corner cases don't
 	 * do anything if NAPI was already initialized.
 	 */
-	if (!trans_sdio->napi.poll && trans->op_mode->ops->napi_add) {
+	if (!trans_sdio->napi.poll) {
 		init_dummy_netdev(&trans_sdio->napi_dev);
-		iwl_op_mode_napi_add(trans->op_mode, &trans_sdio->napi,
-				     &trans_sdio->napi_dev, iwl_sdio_napi_poll,
-				     64);
+		netif_napi_add(&trans_sdio->napi_dev, &trans_sdio->napi,
+			       iwl_sdio_napi_poll, 64);
 	}
 
 	IWL_DEBUG_INFO(trans, "Configured the SDIO transport layer\n");

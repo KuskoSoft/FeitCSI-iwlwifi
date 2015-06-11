@@ -1840,7 +1840,7 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 			trans_slv->config.rx_dma_idle(trans);
 
 		local_bh_disable();
-		iwl_op_mode_rx(trans->op_mode, rxcb);
+		iwl_op_mode_rx(trans->op_mode, NULL, rxcb);
 		local_bh_enable();
 		if (!rxcb->_page_stolen)
 			iwl_slv_tx_cmd_complete(trans, rxcb, cmd_entry);
@@ -1876,7 +1876,7 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 		if (take_ref)
 			iwl_trans_slv_ref(trans);
 		local_bh_disable();
-		iwl_op_mode_rx(trans->op_mode, rxcb);
+		iwl_op_mode_rx(trans->op_mode, NULL, rxcb);
 		local_bh_enable();
 		if (take_ref)
 			iwl_trans_slv_unref(trans);

@@ -764,6 +764,7 @@ static inline void iwl_mvm_rx_check_trigger(struct iwl_mvm *mvm,
 }
 
 static void iwl_mvm_rx_dispatch(struct iwl_op_mode *op_mode,
+				struct napi_struct *napi,
 				struct iwl_rx_cmd_buffer *rxb)
 {
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
@@ -781,7 +782,7 @@ static void iwl_mvm_rx_dispatch(struct iwl_op_mode *op_mode,
 #endif
 
 	if (likely(pkt->hdr.cmd == REPLY_RX_MPDU_CMD)) {
-		iwl_mvm_rx_rx_mpdu(mvm, rxb);
+		iwl_mvm_rx_rx_mpdu(mvm, napi, rxb);
 		return;
 	}
 
@@ -1377,18 +1378,6 @@ int iwl_mvm_exit_d0i3(struct iwl_op_mode *op_mode)
 	return _iwl_mvm_exit_d0i3(mvm);
 }
 
-static void iwl_mvm_napi_add(struct iwl_op_mode *op_mode,
-			     struct napi_struct *napi,
-			     struct net_device *napi_dev,
-			     int (*poll)(struct napi_struct *, int),
-			     int weight)
-{
-	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
-
-	netif_napi_add(napi_dev, napi, poll, weight);
-	mvm->napi = napi;
-}
-
 static const struct iwl_op_mode_ops iwl_mvm_ops = {
 	.start = iwl_op_mode_mvm_start,
 	.stop = iwl_op_mode_mvm_stop,
@@ -1410,5 +1399,4 @@ static const struct iwl_op_mode_ops iwl_mvm_ops = {
 #endif
 	.enter_d0i3 = iwl_mvm_enter_d0i3,
 	.exit_d0i3 = iwl_mvm_exit_d0i3,
-	.napi_add = iwl_mvm_napi_add,
 };
