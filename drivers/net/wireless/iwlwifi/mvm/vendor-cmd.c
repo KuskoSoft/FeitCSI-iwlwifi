@@ -602,7 +602,9 @@ static int iwl_vendor_tdls_peer_cache_add(struct wiphy *wiphy,
 		goto out_unlock;
 	}
 
-	cnt = kzalloc(sizeof(*cnt), GFP_KERNEL);
+	cnt = kzalloc(sizeof(*cnt) +
+		      sizeof(cnt->rx[0]) * mvm->trans->num_rx_queues,
+		      GFP_KERNEL);
 	if (!cnt) {
 		err = -ENOMEM;
 		goto out_unlock;
@@ -686,8 +688,12 @@ static int iwl_vendor_tdls_peer_cache_query(struct wiphy *wiphy,
 			       addr);
 		err = -ENOENT;
 	} else {
-		rx_bytes = cnt->rx_bytes;
+		int q;
+
 		tx_bytes = cnt->tx_bytes;
+		rx_bytes = 0;
+		for (q = 0; q < mvm->trans->num_rx_queues; q++)
+			rx_bytes += cnt->rx[q].bytes;
 	}
 	rcu_read_unlock();
 	if (err)
