@@ -68,11 +68,11 @@
 
 #include <linux/errno.h>
 
-#ifdef IUI_FM /* Platform has FM - use platform h file */
+#ifdef CONFIG_IUI_FM /* Platform has FM - use platform h file */
 # include_next <linux/fm/iui_fm.h>
 #else /* Platform doesn't have FM - use test h file */
 # include "iui_fm_test.h"
-#endif /* IUI_FM */
+#endif /* CONFIG_IUI_FM */
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR_TEST
 int32_t
@@ -103,12 +103,12 @@ int32_t iwl_mvm_fm_register_callback(bool dbg_mode,
 							 mitigation_cb);
 #endif /* CPTCFG_IWLWIFI_FRQ_MGR_TEST */
 
-#ifdef IUI_FM /* Platform has a FM */
+#ifdef CONFIG_IUI_FM /* Platform has a FM */
 	/* Calling the FM  notify function - test mode was not requested */
 	return iui_fm_register_mitigation_callback(macro_id, mitigation_cb);
 #else
 	return -EPERM; /* fm_debug_mode was not set */
-#endif /* IUI_FM */
+#endif /* CONFIG_IUI_FM */
 }
 
 /*
@@ -131,12 +131,12 @@ int32_t iwl_mvm_fm_notify_frequency(bool dbg_mode,
 							notification);
 #endif /* CPTCFG_IWLWIFI_FRQ_MGR_TEST */
 
-#ifdef IUI_FM /* Platform has a FM */
+#ifdef CONFIG_IUI_FM /* Platform has a FM */
 	/* Calling the FM  notify function - test mode was not requested */
 	return iui_fm_notify_frequency(macro_id, notification);
 #else
 	return -EPERM; /* fm_debug_mode was not set */
-#endif /* IUI_FM */
+#endif /*CONFIG_IUI_FM */
 }
 
 #endif /* __FM_IUI_H */
