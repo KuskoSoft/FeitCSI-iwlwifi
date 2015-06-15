@@ -467,7 +467,7 @@ void iwl_mvm_fm_notify_current_dcdc(void)
 	struct iui_fm_freq_notification notification;
 	struct iui_fm_wlan_info winfo;
 
-	if (WARN_ON(!g_mvm))
+	if (!g_mvm)
 		return;
 
 	memset(&winfo, 0, sizeof(struct iui_fm_wlan_info));
