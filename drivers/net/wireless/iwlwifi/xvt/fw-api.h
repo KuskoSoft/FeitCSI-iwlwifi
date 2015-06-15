@@ -6,6 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2015 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -31,6 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2015 Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -303,6 +305,7 @@ enum {
 	NVM_SECTION_TYPE_CALIBRATION,
 	NVM_SECTION_TYPE_PRODUCTION,
 	NVM_SECTION_TYPE_POST_FCS_CALIB,
+	NVM_SECTION_TYPE_MAC_OVERRIDE = 11,
 	NVM_NUM_OF_SECTIONS,
 };
 

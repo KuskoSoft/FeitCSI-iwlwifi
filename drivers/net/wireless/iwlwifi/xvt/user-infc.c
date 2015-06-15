@@ -7,6 +7,7 @@
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright (C) 2015 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -33,6 +34,7 @@
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright (C) 2015 Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,6 +70,8 @@
 #include <linux/module.h>
 #include <linux/dma-mapping.h>
 #include <linux/pci_ids.h>
+#include <linux/if_ether.h>
+#include <linux/etherdevice.h>
 
 #include "iwl-drv.h"
 #include "iwl-prph.h"
@@ -1119,6 +1123,71 @@ static int iwl_xvt_get_fw_info(struct iwl_xvt *xvt,
 	return 0;
 }
 
+static int iwl_xvt_get_mac_addr_info(struct iwl_xvt *xvt,
+				     struct iwl_tm_data *data_out)
+{
+	struct iwl_xvt_mac_addr_info *mac_addr_info;
+	u32 mac_addr0, mac_addr1;
+	__u8 temp_mac_addr[ETH_ALEN];
+	const u8 *hw_addr;
+
+	mac_addr_info = kmalloc(sizeof(*mac_addr_info), GFP_KERNEL);
+	if (!mac_addr_info)
+		return -ENOMEM;
+
+	memset(mac_addr_info, 0, sizeof(*mac_addr_info));
+
+	if (xvt->cfg->device_family != IWL_DEVICE_FAMILY_8000) {
+		memcpy(mac_addr_info->mac_addr, xvt->nvm_hw_addr,
+		       sizeof(mac_addr_info->mac_addr));
+	} else {
+		/* MAC address in family 8000 */
+		if (xvt->is_nvm_mac_override) {
+			if (is_valid_ether_addr(xvt->nvm_mac_addr)) {
+				memcpy(mac_addr_info->mac_addr,
+				       xvt->nvm_mac_addr,
+				       sizeof(mac_addr_info->mac_addr));
+			} else {
+				IWL_ERR(xvt, "override mac addr is invalid\n");
+				goto eth_error;
+			}
+		} else {
+			/* read the mac address from WFMP registers */
+			mac_addr0 = iwl_trans_read_prph(xvt->trans,
+							WFMP_MAC_ADDR_0);
+			mac_addr1 = iwl_trans_read_prph(xvt->trans,
+							WFMP_MAC_ADDR_1);
+
+			hw_addr = (const u8 *)&mac_addr0;
+			temp_mac_addr[0] = hw_addr[3];
+			temp_mac_addr[1] = hw_addr[2];
+			temp_mac_addr[2] = hw_addr[1];
+			temp_mac_addr[3] = hw_addr[0];
+
+			hw_addr = (const u8 *)&mac_addr1;
+			temp_mac_addr[4] = hw_addr[1];
+			temp_mac_addr[5] = hw_addr[0];
+
+			if (is_valid_ether_addr(temp_mac_addr)) {
+				memcpy(mac_addr_info->mac_addr, temp_mac_addr,
+				       sizeof(mac_addr_info->mac_addr));
+			} else {
+				IWL_ERR(xvt, "registers mac addr is invalid\n");
+				goto eth_error;
+			}
+		}
+	}
+
+	data_out->data = mac_addr_info;
+	data_out->len = sizeof(*mac_addr_info);
+
+	return 0;
+
+eth_error:
+	kfree(mac_addr_info);
+	return -EINVAL;
+}
+
 int iwl_xvt_user_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
 			     struct iwl_tm_data *data_in,
 			     struct iwl_tm_data *data_out)
@@ -1215,6 +1284,11 @@ int iwl_xvt_user_cmd_execute(struct iwl_op_mode *op_mode, u32 cmd,
 	case IWL_XVT_CMD_GET_CHIP_ID:
 		ret = iwl_xvt_get_chip_id(xvt, data_out);
 		break;
+
+	case IWL_XVT_CMD_GET_MAC_ADDR_INFO:
+		ret = iwl_xvt_get_mac_addr_info(xvt, data_out);
+		break;
+
 	default:
 		ret = -EOPNOTSUPP;
 		break;

@@ -7,6 +7,7 @@
  *
  * Copyright(c) 2010 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2015 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -33,6 +34,7 @@
  *
  * Copyright(c) 2010 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2015 Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -66,6 +68,7 @@
 #define __iwl_tm_infc__
 
 #include <linux/types.h>
+#include <linux/if_ether.h>
 
 /*
  * Testmode GNL family command.
@@ -145,6 +148,7 @@ enum {
 	IWL_XVT_CMD_FREE_DMA,
 	IWL_XVT_CMD_GET_CHIP_ID,
 	IWL_XVT_CMD_APMG_PD_MODE,
+	IWL_XVT_CMD_GET_MAC_ADDR_INFO,
 
 	/* Driver notifications */
 	IWL_XVT_CMD_SEND_REPLY_ALIVE = XVT_CMD_NOTIF_BASE,
@@ -482,6 +486,14 @@ struct iwl_xvt_chip_id {
 struct iwl_tm_crash_data {
 	__u32 size;
 	__u8 data[];
+} __packed __aligned(4);
+
+/**
+ * struct iwl_xvt_curr_mac_addr_info - Current mac address data
+ * @curr_mac_addr:	the current mac address
+ */
+struct iwl_xvt_mac_addr_info {
+	__u8 mac_addr[ETH_ALEN];
 } __packed __aligned(4);
 
 #endif

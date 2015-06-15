@@ -6,6 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2015 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -31,6 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
+ * Copyright(c) 2015 Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -63,6 +65,7 @@
 #ifndef __iwl_xvt_h__
 #define __iwl_xvt_h__
 
+#include <linux/if_ether.h>
 #include "iwl-drv.h"
 #include "iwl-trans.h"
 #include "iwl-op-mode.h"
@@ -254,6 +257,10 @@ struct iwl_xvt {
 	u32 tx_counter;
 	u32 tot_tx;
 	wait_queue_head_t mod_tx_done_wq;
+
+	bool is_nvm_mac_override;
+	u8 nvm_hw_addr[ETH_ALEN];
+	u8 nvm_mac_addr[ETH_ALEN];
 };
 
 #define IWL_OP_MODE_GET_XVT(_op_mode) \
