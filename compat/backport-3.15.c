@@ -15,6 +15,7 @@
 #include <linux/string.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <net/net_namespace.h>
 
 #if IS_ENABLED(CPTCFG_IEEE802154_6LOWPAN)
