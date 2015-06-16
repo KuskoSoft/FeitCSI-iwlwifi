@@ -1920,7 +1920,6 @@ ieee80211_rx_h_defragment(struct ieee80211_rx_data *rx)
 
 	/* Complete frame has been reassembled - process it now */
 	status = IEEE80211_SKB_RXCB(rx->skb);
-	status->rx_flags |= IEEE80211_RX_FRAGMENTED;
 
  out:
 	ieee80211_led_rx(rx->local);
@@ -3057,7 +3056,6 @@ ieee80211_rx_h_mgmt(struct ieee80211_rx_data *rx)
 	return RX_QUEUED;
 }
 
-/* TODO: use IEEE80211_RX_FRAGMENTED */
 static void ieee80211_rx_cooked_monitor(struct ieee80211_rx_data *rx,
 					struct ieee80211_rate *rate)
 {
