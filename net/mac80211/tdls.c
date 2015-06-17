@@ -1814,8 +1814,9 @@ out:
 	return ret;
 }
 
-void ieee80211_process_tdls_channel_switch(struct ieee80211_sub_if_data *sdata,
-					   struct sk_buff *skb)
+static void
+ieee80211_process_tdls_channel_switch(struct ieee80211_sub_if_data *sdata,
+				      struct sk_buff *skb)
 {
 	struct ieee80211_tdls_data *tf = (void *)skb->data;
 	struct wiphy *wiphy = sdata->local->hw.wiphy;
