@@ -576,6 +576,10 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 	IWL_DEBUG_EXTERNAL(g_mvm, "FM: fm mitigation callback bit mask 0x%x\n",
 			   mit->bitmask);
 
+	ret = iwl_mvm_fm_mitig_dcdc(mit);
+	if (ret)
+		goto end;
+
 	/* Enable/Disable 2G coex mode */
 	ret = iwl_mvm_fm_2g_coex(mit);
 	if (ret)
@@ -586,10 +590,6 @@ iwl_mvm_fm_wlan_mitigation(const enum iui_fm_macro_id macro_id,
 	 * the channel list mit->channel_tx_pwr received from the FM.
 	 */
 	ret = iwl_mvm_fm_mitig_txpwr(mit);
-	if (ret)
-		goto end;
-
-	ret = iwl_mvm_fm_mitig_dcdc(mit);
 	if (ret)
 		goto end;
 
