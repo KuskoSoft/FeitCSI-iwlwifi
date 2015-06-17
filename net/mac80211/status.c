@@ -1015,9 +1015,11 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 			sta->tx_retry_count += retry_count;
 
 			if (ieee80211_is_data_present(fc)) {
+				u64_stats_update_begin(&sta->status_sync);
 				if (!acked)
 					sta->tx_msdu_failed[tid]++;
 				sta->tx_msdu_retries[tid] += retry_count;
+				u64_stats_update_end(&sta->status_sync);
 			}
 		}
 

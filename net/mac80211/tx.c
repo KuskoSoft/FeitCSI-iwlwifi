@@ -825,8 +825,11 @@ ieee80211_tx_h_sequence(struct ieee80211_tx_data *tx)
 		/* for pure STA mode without beacons, we can do it */
 		hdr->seq_ctrl = cpu_to_le16(tx->sdata->sequence_number);
 		tx->sdata->sequence_number += 0x10;
-		if (tx->sta)
+		if (tx->sta) {
+			u64_stats_update_begin(&tx->sta->tx_sync);
 			tx->sta->tx_msdu[IEEE80211_NUM_TIDS]++;
+			u64_stats_update_end(&tx->sta->tx_sync);
+		}
 		return TX_CONTINUE;
 	}
 
@@ -842,7 +845,9 @@ ieee80211_tx_h_sequence(struct ieee80211_tx_data *tx)
 
 	qc = ieee80211_get_qos_ctl(hdr);
 	tid = *qc & IEEE80211_QOS_CTL_TID_MASK;
+	u64_stats_update_begin(&tx->sta->tx_sync);
 	tx->sta->tx_msdu[tid]++;
+	u64_stats_update_end(&tx->sta->tx_sync);
 
 	if (!tx->sta->sta.txq[0])
 		hdr->seq_ctrl = ieee80211_tx_next_seq(tx->sta, tid);
@@ -994,12 +999,14 @@ ieee80211_tx_h_stats(struct ieee80211_tx_data *tx)
 	if (!tx->sta)
 		return TX_CONTINUE;
 
+	u64_stats_update_begin(&tx->sta->tx_sync);
 	skb_queue_walk(&tx->skbs, skb) {
 		ac = skb_get_queue_mapping(skb);
 		tx->sta->tx_bytes[ac] += skb->len;
 	}
 	if (ac >= 0)
 		tx->sta->tx_packets[ac]++;
+	u64_stats_update_end(&tx->sta->tx_sync);
 
 	return TX_CONTINUE;
 }
@@ -2798,8 +2805,6 @@ static bool ieee80211_xmit_fast(struct ieee80211_sub_if_data *sdata,
 		sdata->sequence_number += 0x10;
 	}
 
-	sta->tx_msdu[tid]++;
-
 	info->hw_queue = sdata->vif.hw_queue[skb_get_queue_mapping(skb)];
 
 	__skb_queue_head_init(&tx.skbs);
@@ -2829,8 +2834,11 @@ static bool ieee80211_xmit_fast(struct ieee80211_sub_if_data *sdata,
 	/* statistics normally done by ieee80211_tx_h_stats (but that
 	 * has to consider fragmentation, so is more complex)
 	 */
+	u64_stats_update_begin(&sta->tx_sync);
 	sta->tx_bytes[skb_get_queue_mapping(skb)] += skb->len;
 	sta->tx_packets[skb_get_queue_mapping(skb)]++;
+	sta->tx_msdu[tid]++;
+	u64_stats_update_end(&sta->tx_sync);
 
 	if (fast_tx->pn_offs) {
 		u64 pn;
