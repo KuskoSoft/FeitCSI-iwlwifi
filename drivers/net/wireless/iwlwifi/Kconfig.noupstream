@@ -115,21 +115,6 @@ config IWLWIFI_LTE_COEX
 	help
 	  This option enables LTE-Coexistence (vendor) commands
 
-config IWLMVM_SCAN_PRECEDENCE_LEVEL
-	int "define scan fragmentation level"
-	range 1 2
-	default 1
-	depends on IWLMVM
-	help
-	  Scan precedence level defines relative priority of scan comparing to
-	  on channel activities.
-	  This level is expressed in terms of scan timing - out-of-channel time
-	  and scan suspend time.
-	  Level 1: scan is of higher precedence, decreasing overall scan
-	  duration.
-	  Level 2: scan is of lower precedence, increasing overall scan
-	  duration.
-
 config IWLMVM_TDLS_PEER_CACHE
 	bool "enable TDLS peer caching and traffic monitoring"
 	depends on IWLMVM_VENDOR_CMDS
