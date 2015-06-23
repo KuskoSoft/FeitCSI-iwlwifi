@@ -398,10 +398,6 @@ int iwl_trans_slv_tx_data_send(struct iwl_trans *trans, struct sk_buff *skb,
 			       struct iwl_device_cmd *dev_cmd, int txq_id);
 void iwl_trans_slv_tx_data_reclaim(struct iwl_trans *trans, int txq_id,
 				   int ssn, struct sk_buff_head *skbs);
-void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
-			     struct iwl_rx_cmd_buffer *rxcb,
-			     struct iwl_slv_tx_cmd_entry *cmd_entry,
-			     int handler_status);
 int iwl_trans_slv_wait_txq_empty(struct iwl_trans *trans, u32 txq_bm);
 int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 			       struct iwl_rx_cmd_buffer *rxcb);

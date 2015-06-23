@@ -1095,10 +1095,9 @@ int iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
  * called from the Rx flow. DTU resources are freed in
  * iwl_slv_tx_get_cmd_entry.
  */
-void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
-			     struct iwl_rx_cmd_buffer *rxcb,
-			     struct iwl_slv_tx_cmd_entry *cmd_entry,
-			     int handler_status)
+static void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
+				    struct iwl_rx_cmd_buffer *rxcb,
+				    struct iwl_slv_tx_cmd_entry *cmd_entry)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct iwl_device_cmd *dev_cmd;
@@ -1118,8 +1117,6 @@ void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
 					(unsigned long)page_address(p);
 		cmd_entry->hcmd_meta.source->_rx_page_order =
 					rxcb->_rx_page_order;
-		cmd_entry->hcmd_meta.source->handler_status =
-							handler_status;
 	}
 
 	dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv, cmd_entry);
@@ -1843,12 +1840,10 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 			trans_slv->config.rx_dma_idle(trans);
 
 		local_bh_disable();
-		ret = iwl_op_mode_rx(trans->op_mode, rxcb,
-				     iwl_cmd_entry_get_dev_cmd(trans_slv,
-							       cmd_entry));
+		iwl_op_mode_rx(trans->op_mode, rxcb);
 		local_bh_enable();
 		if (!rxcb->_page_stolen)
-			iwl_slv_tx_cmd_complete(trans, rxcb, cmd_entry, ret);
+			iwl_slv_tx_cmd_complete(trans, rxcb, cmd_entry);
 		else
 			IWL_WARN(trans, "Claim null rxb?\n");
 	} else {
@@ -1881,7 +1876,7 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 		if (take_ref)
 			iwl_trans_slv_ref(trans);
 		local_bh_disable();
-		iwl_op_mode_rx(trans->op_mode, rxcb, NULL);
+		iwl_op_mode_rx(trans->op_mode, rxcb);
 		local_bh_enable();
 		if (take_ref)
 			iwl_trans_slv_unref(trans);
