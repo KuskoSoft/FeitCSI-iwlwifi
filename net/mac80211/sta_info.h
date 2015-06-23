@@ -17,7 +17,6 @@
 #include <linux/average.h>
 #include <linux/etherdevice.h>
 #include <linux/rhashtable.h>
-#include <linux/u64_stats_sync.h>
 #include "key.h"
 
 /**
@@ -470,6 +469,7 @@ struct sta_info {
 
 	/* Updated from RX path only, no locking requirements */
 	unsigned long rx_packets;
+	u64 rx_bytes;
 	unsigned long last_rx;
 	long last_connected;
 	unsigned long num_duplicates;
@@ -478,10 +478,6 @@ struct sta_info {
 	int last_signal;
 	struct ewma avg_signal;
 	int last_ack_signal;
-
-	struct u64_stats_sync rx_sync;
-	u64 rx_bytes;
-	u64 rx_msdu[IEEE80211_NUM_TIDS + 1];
 
 	u8 chains;
 	s8 chain_signal_last[IEEE80211_MAX_CHAINS];
@@ -496,22 +492,19 @@ struct sta_info {
 	/* moving percentage of failed MSDUs */
 	unsigned int fail_avg;
 
-	struct u64_stats_sync status_sync;
-	u64 tx_msdu_retries[IEEE80211_NUM_TIDS + 1];
-	u64 tx_msdu_failed[IEEE80211_NUM_TIDS + 1];
-
 	/* Updated from TX path only, no locking requirements */
-	struct u64_stats_sync tx_sync;
 	u64 tx_packets[IEEE80211_NUM_ACS];
 	u64 tx_bytes[IEEE80211_NUM_ACS];
-	u64 tx_msdu[IEEE80211_NUM_TIDS + 1];
-
 	struct ieee80211_tx_rate last_tx_rate;
 	int last_rx_rate_idx;
 	u32 last_rx_rate_flag;
 	u32 last_rx_rate_vht_flag;
 	u8 last_rx_rate_vht_nss;
 	u16 tid_seq[IEEE80211_QOS_CTL_TID_MASK + 1];
+	u64 tx_msdu[IEEE80211_NUM_TIDS + 1];
+	u64 tx_msdu_retries[IEEE80211_NUM_TIDS + 1];
+	u64 tx_msdu_failed[IEEE80211_NUM_TIDS + 1];
+	u64 rx_msdu[IEEE80211_NUM_TIDS + 1];
 
 	/*
 	 * Aggregation information, locked with lock.
