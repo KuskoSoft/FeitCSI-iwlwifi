@@ -646,6 +646,7 @@ struct gscan_data {
 	struct wireless_dev *wdev;
 	struct iwl_gscan_start_cmd scan_params;
 	struct iwl_gscan_bssid_hotlist_cmd hotlist_params;
+	struct iwl_gscan_significant_change_cmd sc_params;
 };
 #endif
 
@@ -1734,6 +1735,8 @@ void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
 int iwl_mvm_vendor_send_reset_hotlist_cmd(struct iwl_mvm *mvm,
 					  struct wireless_dev *wdev);
 
+int iwl_mvm_vendor_send_reset_sig_change_cmd(struct iwl_mvm *mvm,
+					     struct wireless_dev *wdev);
 #endif
 
 #endif /* __IWL_MVM_H__ */

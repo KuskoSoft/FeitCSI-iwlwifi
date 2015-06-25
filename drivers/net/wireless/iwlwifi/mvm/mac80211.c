@@ -1909,6 +1909,7 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 	if (wdev && mvm->gscan.wdev == wdev) {
 		iwl_mvm_vendor_stop_gscan(wdev->wiphy, wdev, NULL, 0);
 		iwl_mvm_vendor_send_reset_hotlist_cmd(mvm, wdev);
+		iwl_mvm_vendor_send_reset_sig_change_cmd(mvm, wdev);
 	}
 #endif
 

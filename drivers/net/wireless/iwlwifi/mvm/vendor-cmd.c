@@ -90,6 +90,8 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_GSCAN_BUCKET_SPECS] = { .type = NLA_NESTED },
 	[IWL_MVM_VENDOR_ATTR_GSCAN_LOST_AP_SAMPLE_SIZE] = { .type = NLA_U8 },
 	[IWL_MVM_VENDOR_ATTR_GSCAN_AP_LIST] = { .type = NLA_NESTED },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_RSSI_SAMPLE_SIZE] = { .type = NLA_U8 },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_MIN_BREACHING] = { .type = NLA_U8 },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -1067,7 +1069,7 @@ int iwl_mvm_vendor_stop_gscan(struct wiphy *wiphy, struct wireless_dev *wdev,
 	}
 
 	memset(&gscan->scan_params, 0, sizeof(struct iwl_gscan_start_cmd));
-	if (!gscan->hotlist_params.num_ap)
+	if (!gscan->hotlist_params.num_ap && !gscan->sc_params.num_ap)
 		gscan->wdev = NULL;
 
 unlock:
@@ -1198,7 +1200,7 @@ int iwl_mvm_vendor_send_reset_hotlist_cmd(struct iwl_mvm *mvm,
 	}
 
 	memset(&gscan->hotlist_params, 0, sizeof(gscan->hotlist_params));
-	if (!gscan->scan_params.bucket_count)
+	if (!gscan->scan_params.bucket_count && !gscan->sc_params.num_ap)
 		gscan->wdev = NULL;
 
 unlock:
@@ -1228,6 +1230,129 @@ static int iwl_vendor_gscan_set_bssid_hotlist(struct wiphy *wiphy,
 		return ret;
 
 	return iwl_mvm_vendor_send_set_hotlist_cmd(mvm, wdev, tb);
+}
+
+static int
+iwl_mvm_vendor_send_set_sig_change_cmd(struct iwl_mvm *mvm,
+				       struct wireless_dev *wdev,
+				       struct nlattr *tb[])
+{
+	const struct iwl_gscan_capabilities *capa = &mvm->fw->gscan_capa;
+	struct gscan_data *gscan = &mvm->gscan;
+	struct iwl_gscan_significant_change_cmd *cmd = &gscan->sc_params;
+	struct iwl_host_cmd hcmd = {
+		.id = iwl_cmd_id(GSCAN_SET_SIGNIFICANT_CHANGE_CMD,
+				 SCAN_GROUP, 0),
+		.len = { sizeof(*cmd), },
+		.data = { cmd, },
+	};
+	int ret;
+	u32 max_aps;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_GSCAN_LOST_AP_SAMPLE_SIZE] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_GSCAN_RSSI_SAMPLE_SIZE] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_GSCAN_MIN_BREACHING] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_GSCAN_AP_LIST])
+		return -EINVAL;
+
+	mutex_lock(&mvm->mutex);
+	if (gscan->wdev && gscan->wdev != wdev) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	cmd->lost_ap_sample_size =
+		nla_get_u8(tb[IWL_MVM_VENDOR_ATTR_GSCAN_LOST_AP_SAMPLE_SIZE]);
+	cmd->rssi_sample_size =
+		nla_get_u8(tb[IWL_MVM_VENDOR_ATTR_GSCAN_RSSI_SAMPLE_SIZE]);
+	if (cmd->rssi_sample_size > capa->max_rssi_sample_size)
+		cmd->rssi_sample_size = capa->max_rssi_sample_size;
+
+	cmd->min_breaching =
+		nla_get_u8(tb[IWL_MVM_VENDOR_ATTR_GSCAN_MIN_BREACHING]);
+
+	max_aps = min(capa->max_significant_change_aps,
+		      ARRAY_SIZE(cmd->ap_list));
+	cmd->num_ap =
+		iwl_vendor_parse_ap_list(tb[IWL_MVM_VENDOR_ATTR_GSCAN_AP_LIST],
+					 max_aps, cmd->ap_list);
+	if (!cmd->num_ap) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	ret = iwl_mvm_send_cmd(mvm, &hcmd);
+
+	if (ret) {
+		IWL_ERR(mvm,
+			"Failed to send gscan set significant change command: %d\n",
+			ret);
+		goto unlock;
+	}
+
+	gscan->wdev = wdev;
+
+unlock:
+	mutex_unlock(&mvm->mutex);
+	return ret;
+}
+
+int iwl_mvm_vendor_send_reset_sig_change_cmd(struct iwl_mvm *mvm,
+					     struct wireless_dev *wdev)
+{
+	struct gscan_data *gscan = &mvm->gscan;
+	struct iwl_host_cmd hcmd = {
+		.id = iwl_cmd_id(GSCAN_RESET_SIGNIFICANT_CHANGE_CMD,
+				 SCAN_GROUP, 0),
+	};
+	int ret;
+
+	mutex_lock(&mvm->mutex);
+	if (gscan->wdev != wdev) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	ret = iwl_mvm_send_cmd(mvm, &hcmd);
+	if (ret) {
+		IWL_ERR(mvm,
+			"Failed to send reset significant change command: %d\n",
+			ret);
+		goto unlock;
+	}
+
+	memset(&gscan->sc_params, 0, sizeof(gscan->sc_params));
+	if (!gscan->scan_params.bucket_count && !gscan->hotlist_params.num_ap)
+		gscan->wdev = NULL;
+
+unlock:
+	mutex_unlock(&mvm->mutex);
+	return ret;
+}
+
+static int
+iwl_vendor_gscan_set_significant_change_list(struct wiphy *wiphy,
+					     struct wireless_dev *wdev,
+					     const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	int ret;
+
+	if (!fw_has_capa(&mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
+		return -EOPNOTSUPP;
+
+	/* If no AP is configured, this is a reset significant change command */
+	if (!data)
+		return iwl_mvm_vendor_send_reset_sig_change_cmd(mvm, wdev);
+
+	ret = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (ret)
+		return ret;
+
+	return iwl_mvm_vendor_send_set_sig_change_cmd(mvm, wdev, tb);
 }
 
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
@@ -1398,6 +1523,16 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_vendor_gscan_set_bssid_hotlist,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd =
+				IWL_MVM_VENDOR_CMD_GSCAN_SET_SIGNIFICANT_CHANGE,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_gscan_set_significant_change_list,
 	},
 };
 
