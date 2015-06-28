@@ -23,19 +23,6 @@ config IWLWIFI_NUM_CHANNELS
 	default 2
 	depends on IWLMVM
 
-config IWLMVM_POWER_SCHEME
-        int "power scheme mode: 1 CAM, 2 BPS, 3 LP"
-        range 1 3
-        default 2
-        depends on IWLMVM
-	---help---
-	  power scheme modes:
-	  1 - Continous Active Mode (CAM):  Power save is disabled.
-	  2 - Balanced Power Save (BPS): the default mode.
-	      for power saving with least influence on performance.
-	  3 - Low Power (LP): Best power saving mode with possible performance degradation.
-	  This value might get overridden by power_scheme module_param if exists.
-
 config IWLWIFI_DEVICE_TESTMODE
 	bool "enable generic netlink testmode support"
 	depends on IWLWIFI
