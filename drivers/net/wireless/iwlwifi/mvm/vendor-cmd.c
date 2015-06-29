@@ -1542,6 +1542,7 @@ enum iwl_mvm_vendor_events_idx {
 #endif
 	IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS,
 	IWL_MVM_VENDOR_EVENT_IDX_HOTLIST_CHANGE,
+	IWL_MVM_VENDOR_EVENT_IDX_SIGNIFICANT_CHANGE,
 	NUM_IWL_MVM_VENDOR_EVENT_IDX
 };
 
@@ -1560,6 +1561,10 @@ iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
 	[IWL_MVM_VENDOR_EVENT_IDX_HOTLIST_CHANGE] = {
 		.vendor_id = INTEL_OUI,
 		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_HOTLIST_CHANGE_EVENT,
+	},
+	[IWL_MVM_VENDOR_EVENT_IDX_SIGNIFICANT_CHANGE] = {
+		.vendor_id = INTEL_OUI,
+		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_SIGNIFICANT_CHANGE_EVENT,
 	},
 };
 
@@ -1739,6 +1744,92 @@ void iwl_mvm_rx_gscan_hotlist_change_event(struct iwl_mvm *mvm,
 	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_GSCAN_HOTLIST_AP_STATUS,
 			ap_status) ||
 	    iwl_vendor_put_hotlist_results(msg, num_res, event->results)) {
+		kfree_skb(msg);
+		return;
+	}
+
+	cfg80211_vendor_event(msg, GFP_KERNEL);
+}
+
+static int iwl_mvm_put_ap(struct sk_buff *msg,
+			  struct iwl_gscan_significant_change_result *res)
+{
+	struct nlattr *rssi;
+	u32 i;
+
+	if (res->num_rssi > MAX_RSSI_SAMPLE_SIZE)
+		return -EINVAL;
+
+	if (nla_put_u8(msg, IWL_MVM_VENDOR_SIGNIFICANT_CHANGE_CHANNEL,
+		       res->channel) ||
+	    nla_put(msg, IWL_MVM_VENDOR_SIGNIFICANT_CHANGE_BSSID, ETH_ALEN,
+		    res->bssid))
+		return -ENOBUFS;
+
+	if (!res->num_rssi)
+		return 0;
+
+	rssi = nla_nest_start(msg,
+			      IWL_MVM_VENDOR_SIGNIFICANT_CHANGE_RSSI_HISTORY);
+	if (!rssi)
+		return -ENOBUFS;
+
+	/* FW uses positive values for RSSI, need to negate it to get real
+	 * values */
+	for (i = 0; i < res->num_rssi; i++) {
+		if (nla_put_s8(msg, i + 1, -res->rssi_history[i]))
+			return -ENOBUFS;
+	}
+
+	nla_nest_end(msg, rssi);
+
+	return 0;
+}
+
+static int iwl_mvm_put_aps(struct sk_buff *msg, u32 num_aps,
+			   struct iwl_gscan_significant_change_result *res)
+{
+	u32 i;
+	struct nlattr *aps;
+
+	aps = nla_nest_start(msg, IWL_MVM_VENDOR_ATTR_GSCAN_SIG_CHANGE_RESULTS);
+	if (!aps)
+		return -ENOBUFS;
+
+	for (i = 0; i < num_aps; i++) {
+		struct nlattr *result = nla_nest_start(msg, i + 1);
+
+		if (!result || iwl_mvm_put_ap(msg, &res[i]))
+			return -ENOBUFS;
+
+		nla_nest_end(msg, result);
+	}
+
+	nla_nest_end(msg, aps);
+	return 0;
+}
+
+void iwl_mvm_rx_gscan_significant_change_event(struct iwl_mvm *mvm,
+					       struct iwl_rx_cmd_buffer *rxb)
+{
+	struct gscan_data *gscan = &mvm->gscan;
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_gscan_significant_change_event *event = (void *)pkt->data;
+	struct sk_buff *msg;
+	u32 num_aps = le32_to_cpu(event->num_aps);
+
+	lockdep_assert_held(&mvm->mutex);
+
+	if (WARN_ON(!gscan->wdev))
+		return;
+
+	msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, gscan->wdev, 200,
+					  IWL_MVM_VENDOR_EVENT_IDX_SIGNIFICANT_CHANGE,
+					  GFP_KERNEL);
+	if (!msg)
+		return;
+
+	if (iwl_mvm_put_aps(msg, num_aps, event->results)) {
 		kfree_skb(msg);
 		return;
 	}

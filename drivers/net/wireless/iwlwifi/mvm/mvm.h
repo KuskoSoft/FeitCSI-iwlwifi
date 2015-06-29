@@ -1740,6 +1740,9 @@ int iwl_mvm_vendor_send_reset_sig_change_cmd(struct iwl_mvm *mvm,
 
 void iwl_mvm_rx_gscan_hotlist_change_event(struct iwl_mvm *mvm,
 					   struct iwl_rx_cmd_buffer *rxb);
+
+void iwl_mvm_rx_gscan_significant_change_event(struct iwl_mvm *mvm,
+					       struct iwl_rx_cmd_buffer *rxb);
 #endif
 
 #endif /* __IWL_MVM_H__ */
