@@ -1355,6 +1355,55 @@ iwl_vendor_gscan_set_significant_change_list(struct wiphy *wiphy,
 	return iwl_mvm_vendor_send_set_sig_change_cmd(mvm, wdev, tb);
 }
 
+void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm)
+{
+	struct gscan_data *gscan = &mvm->gscan;
+	int err;
+	struct iwl_host_cmd hcmd = {
+		.dataflags = { IWL_HCMD_DFL_NOCOPY, },
+	};
+
+	lockdep_assert_held(&mvm->mutex);
+
+	if (!fw_has_capa(&mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
+		return;
+
+	if (gscan->scan_params.bucket_count) {
+		hcmd.id = iwl_cmd_id(GSCAN_START_CMD, SCAN_GROUP, 0);
+		hcmd.len[0] = sizeof(gscan->scan_params);
+		hcmd.data[0] = &gscan->scan_params;
+		err = iwl_mvm_send_cmd(mvm, &hcmd);
+		if (err)
+			IWL_ERR(mvm,
+				"Failed to send gscan start command: %d\n",
+				err);
+	}
+
+	if (gscan->hotlist_params.num_ap) {
+		hcmd.id = iwl_cmd_id(GSCAN_SET_HOTLIST_CMD, SCAN_GROUP, 0);
+		hcmd.len[0] = sizeof(gscan->hotlist_params);
+		hcmd.data[0] = &gscan->hotlist_params;
+		err = iwl_mvm_send_cmd(mvm, &hcmd);
+		if (err)
+			IWL_ERR(mvm,
+				"Failed to send bssid hotlist set command: %d\n",
+				err);
+	}
+
+	if (gscan->sc_params.num_ap) {
+		err = iwl_mvm_send_cmd_pdu(mvm,
+					   iwl_cmd_id(GSCAN_SET_SIGNIFICANT_CHANGE_CMD,
+						      SCAN_GROUP, 0), 0,
+					   sizeof(gscan->sc_params),
+					   &gscan->sc_params);
+		if (err)
+			IWL_ERR(mvm,
+				"Failed to send bssid hotlist set command: %d\n",
+				err);
+	}
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {

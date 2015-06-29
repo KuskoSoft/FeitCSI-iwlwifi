@@ -1478,6 +1478,10 @@ static void iwl_mvm_restart_complete(struct iwl_mvm *mvm)
 	 */
 	iwl_mvm_teardown_tdls_peers(mvm);
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	iwl_mvm_gscan_reconfig(mvm);
+#endif
+
 	mutex_unlock(&mvm->mutex);
 }
 
