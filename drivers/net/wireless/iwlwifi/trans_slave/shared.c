@@ -1379,7 +1379,7 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 	dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv, cmd_entry);
 	iwl_slv_tx_copy_hcmd(dev_cmd, cmd);
 	dev_cmd->hdr.cmd = cmd->id;
-	dev_cmd->hdr.flags = 0;
+	dev_cmd->hdr.reserved = 0;
 
 	spin_lock_bh(&trans_slv->txq_lock);
 
