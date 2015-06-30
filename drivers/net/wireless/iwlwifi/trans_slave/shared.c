@@ -1376,7 +1376,8 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 	BUG_ON(!trans_slv->txqs);
 	BUG_ON(!cmd);
 
-	if (WARN(!trans_slv->wide_cmd_header && group_id != 0,
+	if (WARN(!trans_slv->wide_cmd_header &&
+		 group_id > IWL_ALWAYS_LONG_GROUP,
 		 "unsupported wide command %#x\n", cmd->id))
 		return -EINVAL;
 
