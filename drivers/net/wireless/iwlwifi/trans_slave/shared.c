@@ -748,19 +748,21 @@ static struct class iwl_slv_rpm_class = {
 static struct device *iwl_slv_rpm_add_device(struct iwl_trans *trans)
 {
 	struct iwl_slv_rpm_device *rpm_dev;
+	int ret;
 
 	rpm_dev = kzalloc(sizeof(*rpm_dev), GFP_KERNEL);
 	if (!rpm_dev)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	rpm_dev->trans = trans;
 	rpm_dev->dev.class = &iwl_slv_rpm_class;
 	rpm_dev->dev.parent = trans->dev;
 	dev_set_name(&rpm_dev->dev, "iwl_slv_rpm-%s", dev_name(trans->dev));
 
-	if (device_register(&rpm_dev->dev)) {
+	ret = device_register(&rpm_dev->dev);
+	if (ret) {
 		kfree(rpm_dev);
-		return NULL;
+		return ERR_PTR(ret);
 	}
 
 	pm_runtime_set_active(&rpm_dev->dev);
@@ -966,8 +968,11 @@ int iwl_slv_init(struct iwl_trans *trans)
 		goto error;
 #else
 	trans_slv->d0i3_dev = iwl_slv_rpm_add_device(trans);
-	if (!trans_slv->d0i3_dev)
+	if (IS_ERR(trans_slv->d0i3_dev)) {
+		ret = PTR_ERR(trans_slv->d0i3_dev);
+		trans_slv->d0i3_dev = NULL;
 		goto error;
+	}
 #endif
 
 #ifdef CONFIG_HAS_WAKELOCK
