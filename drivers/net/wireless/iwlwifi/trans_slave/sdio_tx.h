@@ -80,6 +80,7 @@
 #define IWL_SDIO_PTFDS_ROW_SIZE 4
 #define IWL_SDIO_BC_ROW_SIZE 2
 #define IWL_SDIO_SEND_BUF_LEN (32 * 1024)
+#define IWL_SDIO_DTU_WRPTR_ADVANCEMENT 25
 
 #define FDL_DMA_DESC_ADDRESS	0x406000
 #define FDL_DATA_ADDRESS	0x406050
@@ -224,7 +225,8 @@ struct iwl_sdio_dtu_info {
 void iwl_sdio_tx_stop(struct iwl_trans *trans);
 void iwl_sdio_tx_free(struct iwl_trans *trans);
 void iwl_sdio_tx_start(struct iwl_trans *trans, u32 scd_base_addr);
-int iwl_sdio_process_dtu(struct iwl_trans_slv *trans_slv, u8 txq_id);
+int iwl_sdio_process_dtu(struct iwl_trans_slv *trans_slv, u8 txq_id,
+			 bool advance_wrptr);
 void iwl_sdio_tx_calc_desc_num(struct iwl_trans *trans,
 			       struct iwl_slv_tx_chunk_info *chunk_info);
 int iwl_sdio_flush_dtus(struct iwl_trans *trans);

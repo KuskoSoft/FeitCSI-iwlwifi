@@ -616,7 +616,8 @@ static int iwl_sdio_alloc_dtu_mem(struct iwl_trans *trans,
 
 /* set ADMA descriptors defining the destination of the data stream */
 static void iwl_sdio_config_adma(struct iwl_trans *trans,
-				 struct iwl_slv_txq_entry *txq_entry, u8 txq_id)
+				 struct iwl_slv_txq_entry *txq_entry, u8 txq_id,
+				 bool advance_wrptr)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct iwl_sdio_dtu_info *dtu_info = txq_entry->reclaim_info;
@@ -710,19 +711,24 @@ static void iwl_sdio_config_adma(struct iwl_trans *trans,
 
 	adma_list[desc_idx].attr =
 		IWL_SDIO_ADMA_ATTR_VALID | IWL_SDIO_ADMA_ATTR_ACT2;
+	if (!advance_wrptr)
+		adma_list[desc_idx].attr |= IWL_SDIO_ADMA_ATTR_END;
 	adma_list[desc_idx].reserved = 0;
 	adma_list[desc_idx].length = cpu_to_le16(4);
 	adma_list[desc_idx].addr = cpu_to_le32(bc_addr);
 	desc_idx++;
 
-	/* SCD WR PTR descriptor */
-	adma_list[desc_idx].attr =
-		IWL_SDIO_ADMA_ATTR_END | IWL_SDIO_ADMA_ATTR_VALID |
-		IWL_SDIO_ADMA_ATTR_ACT2;
-	adma_list[desc_idx].reserved = 0;
-	adma_list[desc_idx].length = cpu_to_le16(4);
-	adma_list[desc_idx].addr = cpu_to_le32(IWL_SDIO_SCD_WR_PTR_ADDR);
-	desc_idx++;
+	/* SCD WR PTR descriptor (only if advancing DTU wrptr) */
+	if (advance_wrptr) {
+		adma_list[desc_idx].attr =
+			IWL_SDIO_ADMA_ATTR_END | IWL_SDIO_ADMA_ATTR_VALID |
+			IWL_SDIO_ADMA_ATTR_ACT2;
+		adma_list[desc_idx].reserved = 0;
+		adma_list[desc_idx].length = cpu_to_le16(4);
+		adma_list[desc_idx].addr =
+			cpu_to_le32(IWL_SDIO_SCD_WR_PTR_ADDR);
+		desc_idx++;
+	}
 }
 
 /**
@@ -820,7 +826,7 @@ static inline void iwl_sdio_inc_scd_wr_ptr(struct iwl_trans *trans,
 
 static void iwl_sdio_config_dtu_trailer(struct iwl_trans *trans,
 					struct iwl_slv_txq_entry *txq_entry,
-					u8 txq_id)
+					u8 txq_id, bool advance_wrptr)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct iwl_sdio_dtu_info *dtu_info = txq_entry->reclaim_info;
@@ -846,9 +852,10 @@ static void iwl_sdio_config_dtu_trailer(struct iwl_trans *trans,
 
 	iwl_sdio_inc_scd_wr_ptr(trans, txq_id);
 
-	dtu_trailer->scd_wr_ptr =
-		cpu_to_le32(trans_sdio->txq[txq_id].scd_write_ptr |
-			    (txq_id << 8));
+	if (advance_wrptr)
+		dtu_trailer->scd_wr_ptr =
+			cpu_to_le32(trans_sdio->txq[txq_id].scd_write_ptr |
+				    (txq_id << 8));
 }
 
 static void iwl_sdio_config_tfd(struct iwl_trans *trans,
@@ -894,7 +901,7 @@ static void iwl_sdio_config_tfd(struct iwl_trans *trans,
 
 static void iwl_sdio_build_dtu(struct iwl_trans *trans,
 			       struct iwl_slv_txq_entry *txq_entry,
-			       u8 txq_id)
+			       u8 txq_id, bool advance_wrptr)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
@@ -905,12 +912,16 @@ static void iwl_sdio_build_dtu(struct iwl_trans *trans,
 	dtu_hdr->hdr.seq_number = iwl_sdio_get_cmd_seq(trans_sdio, true);
 	dtu_hdr->hdr.signature = cpu_to_le16(IWL_SDIO_CMD_HEADER_SIGNATURE);
 
-	/* the number of system (not data) fields in DTU is 5 */
-	dtu_info->adma_desc_num = dtu_info->sram_alloc.num_fragments + 5;
+	/*
+	 * the number of system (not data) fields in DTU is 5, unless no DTU
+	 * wrptr is written (and then it has 4 fields)
+	 */
+	dtu_info->adma_desc_num = dtu_info->sram_alloc.num_fragments + 4 +
+				  advance_wrptr;
 
 	iwl_sdio_config_tfd(trans, txq_entry);
-	iwl_sdio_config_adma(trans, txq_entry, txq_id);
-	iwl_sdio_config_dtu_trailer(trans, txq_entry, txq_id);
+	iwl_sdio_config_adma(trans, txq_entry, txq_id, advance_wrptr);
+	iwl_sdio_config_dtu_trailer(trans, txq_entry, txq_id, advance_wrptr);
 }
 
 int iwl_sdio_flush_dtus(struct iwl_trans *trans)
@@ -986,7 +997,7 @@ out:
 
 static int iwl_sdio_send_dtu(struct iwl_trans *trans,
 			     struct iwl_slv_txq_entry *txq_entry,
-			     u8 txq_id)
+			     u8 txq_id, bool advance_wrptr)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct iwl_sdio_dtu_info *dtu_info = txq_entry->reclaim_info;
@@ -1003,8 +1014,11 @@ static int iwl_sdio_send_dtu(struct iwl_trans *trans,
 		sizeof(struct iwl_sdio_tfd) +
 		sizeof(struct iwl_sdio_tx_dtu_trailer);
 
-	if (trans_sdio->send_buf_idx + send_len + PAD_DTU_LEN >
-	    IWL_SDIO_SEND_BUF_LEN) {
+	if (!advance_wrptr)
+		send_len -= 4;
+
+	if (unlikely(trans_sdio->send_buf_idx + send_len + PAD_DTU_LEN >
+		     IWL_SDIO_SEND_BUF_LEN)) {
 		IWL_DEBUG_TX(trans, "send buf too big. flushing\n");
 		ret = iwl_sdio_flush_dtus(trans);
 		if (ret)
@@ -1037,7 +1051,10 @@ static int iwl_sdio_send_dtu(struct iwl_trans *trans,
 	memset(cur, 0xac, dtu_info->data_pad_len);
 	cur += dtu_info->data_pad_len;
 
-	memcpy(cur, dtu, sizeof(struct iwl_sdio_tx_dtu_trailer));
+	if (advance_wrptr)
+		memcpy(cur, dtu, sizeof(struct iwl_sdio_tx_dtu_trailer));
+	else
+		memcpy(cur, dtu, sizeof(struct iwl_sdio_tx_dtu_trailer) - 4);
 
 	return 0;
 }
@@ -1046,7 +1063,8 @@ static int iwl_sdio_send_dtu(struct iwl_trans *trans,
  * send a single skb at a time.
  * This is done in coherence with the QoS enablement logic.
  */
-int iwl_sdio_process_dtu(struct iwl_trans_slv *trans_slv, u8 txq_id)
+int iwl_sdio_process_dtu(struct iwl_trans_slv *trans_slv, u8 txq_id,
+			 bool advance_wrptr)
 {
 	struct iwl_trans_sdio *trans_sdio =
 		IWL_TRANS_SLV_GET_SDIO_TRANS(trans_slv);
@@ -1064,9 +1082,10 @@ int iwl_sdio_process_dtu(struct iwl_trans_slv *trans_slv, u8 txq_id)
 		return ret;
 	}
 
-	iwl_sdio_build_dtu(trans_sdio->trans, txq_entry, txq_id);
+	iwl_sdio_build_dtu(trans_sdio->trans, txq_entry, txq_id, advance_wrptr);
 
-	ret = iwl_sdio_send_dtu(trans_sdio->trans, txq_entry, txq_id);
+	ret = iwl_sdio_send_dtu(trans_sdio->trans, txq_entry, txq_id,
+				advance_wrptr);
 	/* FIXME: what if there is a failure here ? */
 
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS

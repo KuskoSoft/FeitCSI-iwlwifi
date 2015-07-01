@@ -445,6 +445,7 @@ static inline int iwl_slv_tx_alloc_queues(struct iwl_trans_slv *trans_slv)
 		INIT_LIST_HEAD(&trans_slv->txqs[i].sent);
 		atomic_set(&trans_slv->txqs[i].waiting_count, 0);
 		atomic_set(&trans_slv->txqs[i].sent_count, 0);
+		trans_slv->txqs[i].last_dtu_wrptr_inc = 0;
 	}
 
 	return 0;

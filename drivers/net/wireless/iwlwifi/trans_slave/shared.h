@@ -329,6 +329,7 @@ struct iwl_slv_tx_data_entry {
  * @waiting_count: number of entries in the waiting list
  * @waiting_last_idx: the index of the last entry in waiting queue
  * @sent_count: number of entries in the sent list
+ * @last_dtu_wrptr_inc: num of frames in this Q since DTU wrptr last increment
  */
 struct iwl_slv_tx_queue {
 	struct list_head waiting;
@@ -336,6 +337,7 @@ struct iwl_slv_tx_queue {
 	atomic_t waiting_count;
 	u32 waiting_last_idx;
 	atomic_t sent_count;
+	u8 last_dtu_wrptr_inc;
 };
 
 int iwl_slv_al_mem_pool_init(struct iwl_slv_al_mem_pool *pm, u16 num_elems);
