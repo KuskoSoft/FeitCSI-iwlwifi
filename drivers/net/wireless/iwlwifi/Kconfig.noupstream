@@ -141,6 +141,7 @@ config IWLMVM_TDLS_PEER_CACHE
 
 config IWLWIFI_PLATFORM_DATA
 	bool "iwlwifi platform data support"
+	depends on IWLWIFI_PCIE
 	---help---
 	  This option enables support for platform data hooks
 
