@@ -2335,7 +2335,7 @@ void _iwl_sdio_resume(struct iwl_trans *trans)
 }
 #endif /* CONFIG_PM_SLEEP */
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+#if IS_ENABLED(CPTCFG_IWLXVT)
 static int iwl_trans_sdio_test_mode_cmd(struct iwl_trans *trans, bool enable)
 {
 	struct sdio_func *sdio_func = IWL_TRANS_SDIO_GET_FUNC(trans);
@@ -2627,7 +2627,7 @@ static const struct iwl_trans_ops trans_ops_sdio = {
 	.unref = iwl_trans_slv_unref,
 	.suspend = iwl_trans_slv_suspend,
 	.resume = iwl_trans_slv_resume,
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+#if IS_ENABLED(CPTCFG_IWLXVT)
 	.test_mode_cmd = iwl_trans_sdio_test_mode_cmd,
 #endif
 	.dump_data = iwl_trans_sdio_dump_data,
