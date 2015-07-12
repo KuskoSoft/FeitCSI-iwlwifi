@@ -99,6 +99,8 @@
 #define HOST_COMPLETE_TIMEOUT			(2 * HZ)
 #define IWL_SDIO_POLL_INTERVAL			1000 /* usec */
 #define IWL_SDIO_ENABLE_TIMEOUT		100 /* msec */
+#define IWL_SDIO_ADDR_MASK 0x3FFFFFFF
+
 
 static const struct iwl_sdio_sf_mem_addresses iwl_sf_addresses = {
 	.tfd_base_addr = IWL_SDIO_SF_MEM_BASE_ADDR +
@@ -341,6 +343,15 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	u8 seq_number;
 	u32 access_control;
 	int ret;
+
+	/*
+	 * Remove 2 upper address bits. The bits are used for:
+	 * 1. telling the ARC MMU not to do address translation
+	 * 2. not to do cache access
+	 * when the driver trys to read using these bits it can lead to
+	 * corrupt access.
+	 */
+	target_addr &= IWL_SDIO_ADDR_MASK;
 
 	/* Test that input is valid */
 	if ((length > IWL_SDIO_TA_MAX_LENGTH) ||
