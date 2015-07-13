@@ -1250,11 +1250,10 @@ iwl_slv_tx_set_meta_for_hcmd(struct iwl_trans *trans,
 	int group_id = iwl_cmd_groupid(cmd->id);
 	bool had_nocopy = false;
 	bool had_dup = false;
-	bool wide_cmd = trans_slv->wide_cmd_header && group_id != 0;
 
 	hcmd_meta = &cmd_entry->hcmd_meta;
 	hcmd_meta->dup_buf = NULL;
-	if (wide_cmd) {
+	if (group_id != 0) {
 		hcmd_meta->copy_size = sizeof(struct iwl_cmd_header_wide);
 		hcmd_meta->hcmd_size = sizeof(struct iwl_cmd_header_wide);
 	} else {
