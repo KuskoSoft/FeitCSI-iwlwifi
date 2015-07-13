@@ -1707,7 +1707,9 @@ static int iwl_sdio_override_secure_boot_cfg(struct iwl_trans *trans)
 	/* Verify AUX address space is not locked */
 	val = iwl_sdio_read_prph_no_claim(trans, PREG_AUX_BUS_WPROT_0);
 	if (val & BIT((SB_CFG_OVERRIDE_ADDR - SB_CFG_BASE_OVERRIDE) >> 10)) {
-		IWL_ERR(trans, "AUX address space is locked for override\n");
+		IWL_ERR(trans,
+			"AUX address space is locked for override, (AUX val=0x%u)\n",
+			val);
 		return -EIO;
 	}
 
