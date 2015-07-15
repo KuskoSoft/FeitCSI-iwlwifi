@@ -2541,30 +2541,52 @@ static u32 iwl_trans_sdio_dump_txq(struct iwl_trans *trans, u32 max_len,
 	return txq_data_len;
 }
 
-static
-struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
+static u32 iwl_trans_sdio_dump_monitor(struct iwl_trans *trans,
+				       struct iwl_fw_error_dump_data **data,
+				       u32 monitor_len, u32 base_addr,
+				       u32 base_shift)
+{
+	u32 len = 0;
+
+	if (trans->dbg_dest_tlv && monitor_len) {
+		struct iwl_fw_error_dump_fw_mon *fw_mon_data;
+		u32 write_ptr = le32_to_cpu(trans->dbg_dest_tlv->write_ptr_reg);
+		u32 wrap_cnt = le32_to_cpu(trans->dbg_dest_tlv->wrap_count);
+
+		(*data)->type = cpu_to_le32(IWL_FW_ERROR_DUMP_FW_MONITOR);
+		(*data)->len = cpu_to_le32(monitor_len + sizeof(*fw_mon_data));
+		fw_mon_data = (void *)(*data)->data;
+		fw_mon_data->fw_mon_wr_ptr =
+			cpu_to_le32(iwl_read_prph(trans, write_ptr));
+		fw_mon_data->fw_mon_cycle_cnt =
+			cpu_to_le32(iwl_read_prph(trans, wrap_cnt));
+		fw_mon_data->fw_mon_base_ptr =
+			cpu_to_le32(base_addr >> base_shift);
+
+		iwl_trans_read_mem_bytes(trans, base_addr, fw_mon_data->data,
+					 monitor_len);
+
+		len = sizeof(**data) + sizeof(*fw_mon_data) + monitor_len;
+	}
+
+	return len;
+}
+
+static struct iwl_trans_dump_data
+*iwl_trans_sdio_dump_data(struct iwl_trans *trans,
+			  struct iwl_fw_dbg_trigger_tlv *trigger)
 {
 	struct iwl_fw_error_dump_data *data;
 	struct iwl_trans_dump_data *dump_data;
 	u32 base = 0;
 	u32 base_shift = 0;
 	u32 base_addr = 0;
-	int monitor_len = 0;
+	u32 monitor_len = 0;
 	u32 len;
 	u32 txq_len;
 
 	/* transport dump header */
 	len = sizeof(*dump_data);
-
-	/* CSR registers */
-	len += sizeof(*data) + IWL_CSR_TO_DUMP;
-
-	/* FH registers */
-	len += sizeof(*data) + (FH_MEM_UPPER_BOUND - FH_MEM_LOWER_BOUND);
-
-	/* TXQ data */
-	txq_len = iwl_trans_sdio_dump_txq(trans, 0, NULL);
-	len += txq_len; /* txq_len already includes the sizeof(*data) */
 
 	/* FW monitor, assuming the registers can be accessed */
 	if (trans->dbg_dest_tlv) {
@@ -2589,6 +2611,29 @@ struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
 			monitor_len = 0;
 	}
 
+	if (trigger && (trigger->mode & IWL_FW_DBG_TRIGGER_MONITOR_ONLY)) {
+		dump_data = vzalloc(len);
+		if (!dump_data)
+			return NULL;
+
+		data = (void *)dump_data->data;
+		len = iwl_trans_sdio_dump_monitor(trans, &data, monitor_len,
+						  base_addr, base_shift);
+		dump_data->len = len;
+
+		return dump_data;
+	}
+
+	/* CSR registers */
+	len += sizeof(*data) + IWL_CSR_TO_DUMP;
+
+	/* FH registers */
+	len += sizeof(*data) + (FH_MEM_UPPER_BOUND - FH_MEM_LOWER_BOUND);
+
+	/* TXQ data */
+	txq_len = iwl_trans_sdio_dump_txq(trans, 0, NULL);
+	len += txq_len;/* txq_len already includes the sizeof(*data) */
+
 	dump_data = vzalloc(len);
 	if (!dump_data)
 		return NULL;
@@ -2597,32 +2642,14 @@ struct iwl_trans_dump_data *iwl_trans_sdio_dump_data(struct iwl_trans *trans)
 	data = (void *)dump_data->data;
 
 	/* Copy all waiting TX commands in the queue */
-	len = iwl_trans_sdio_dump_txq(trans, txq_len, &data);
+	len += iwl_trans_sdio_dump_txq(trans, txq_len, &data);
 
 	len += iwl_trans_sdio_dump_csr(trans, &data);
 	len += iwl_trans_sdio_fh_regs_dump(trans, &data);
 	/* data is already pointing to the next section */
 
-	if (trans->dbg_dest_tlv && monitor_len) {
-		struct iwl_fw_error_dump_fw_mon *fw_mon_data;
-		u32 write_ptr = le32_to_cpu(trans->dbg_dest_tlv->write_ptr_reg);
-		u32 wrap_cnt = le32_to_cpu(trans->dbg_dest_tlv->wrap_count);
-
-		data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_FW_MONITOR);
-		data->len = cpu_to_le32(monitor_len + sizeof(*fw_mon_data));
-		fw_mon_data = (void *)data->data;
-		fw_mon_data->fw_mon_wr_ptr =
-			cpu_to_le32(iwl_read_prph(trans, write_ptr));
-		fw_mon_data->fw_mon_cycle_cnt =
-			cpu_to_le32(iwl_read_prph(trans, wrap_cnt));
-		fw_mon_data->fw_mon_base_ptr =
-			cpu_to_le32(base_addr >> base_shift);
-
-		iwl_trans_read_mem_bytes(trans, base_addr, fw_mon_data->data,
-					 monitor_len);
-
-		len += sizeof(*data) + sizeof(*fw_mon_data) + monitor_len;
-	}
+	len += iwl_trans_sdio_dump_monitor(trans, &data, monitor_len,
+					   base_addr, base_shift);
 
 	dump_data->len = len;
 
