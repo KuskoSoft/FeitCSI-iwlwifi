@@ -6,6 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
+ * Copyright (C) 2015 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -141,6 +142,29 @@ struct iwl_sdio_plat_data {
 	int gpio;
 	int irq;
 };
+
+/*
+ * struct iwl_sdio_page_req - paging request from the FW
+ * @token: request number, used for debug
+ * @flag: bit 0 - download, bit 1 - upload
+ * @byte_cnt: byte count of data to be transferred for up/down
+ * @up_src_sram_addr: source SRAM address
+ * @up_dst_dram_addr: destination DRAM address
+ * @down_src_dram_addr: source DRAM address
+ * @down_dst_sram_addr:destination SRAM address
+ */
+struct iwl_sdio_page_req {
+	__le32 token;
+	__le32 flag;
+	__le32 byte_cnt;
+	__le32 up_src_sram_addr;
+	__le32 up_dst_dram_addr;
+	__le32 down_src_dram_addr;
+	__le32 down_dst_sram_addr;
+} __packed;
+
+#define UMAC_SDIO_PAGE_FLAG_DOWNLOAD_MSK	0x1
+#define UMAC_SDIO_PAGE_FLAG_UPLOAD_MSK		0x2
 
 /*
  * SDIO specific transport structure.
@@ -287,4 +311,7 @@ u8 iwl_sdio_read8(struct iwl_trans *trans, u32 ofs, int *ret);
 u8 iwl_sdio_f0_read8(struct iwl_trans *trans, u32 ofs, int *ret);
 u32 iwl_sdio_read32(struct iwl_trans *trans, u32 ofs, int *ret);
 u8 iwl_sdio_get_cmd_seq(struct iwl_trans_sdio *trans_sdio, bool write);
+int iwl_sdio_download_fw_page(struct iwl_trans *trans, u32 page_sram_addr,
+			      void *page_dram_addr);
+
 #endif /* __iwl_trans_int_sdio_h__ */

@@ -6,6 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
+ * Copyright (C) 2015 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -71,6 +72,7 @@
 #include "iwl-fh.h"
 #include "iwl-io.h"
 #include "shared.h"
+#include "iwl-prph.h"
 
 #define ISR_MAX_LOOPS 64
 
@@ -357,7 +359,7 @@ static const char *get_msg_string(int cmd)
 	IWL_CASE(IWL_SDIO_MSG_TARG_IN_PROGRESS);
 	IWL_CASE(IWL_SDIO_MSG_BAD_OP_CODE);
 	IWL_CASE(IWL_SDIO_MSG_BAD_SIG);
-	IWL_CASE(IWL_SDIO_MSG_GP_INT);
+	IWL_CASE(IWL_SDIO_MSG_PAGING);
 	IWL_CASE(IWL_SDIO_MSG_LMAC_SW_ERROR);
 	IWL_CASE(IWL_SDIO_MSG_SCD_ERROR);
 	IWL_CASE(IWL_SDIO_MSG_FH_TX_INT);
@@ -379,6 +381,82 @@ static void iwl_sdio_handle_error(struct iwl_trans *trans)
 
 	clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
 	wake_up(&trans_slv->wait_command_queue);
+}
+
+static u8 *iwl_sdio_paging_get_dram_address(struct iwl_trans *trans,
+					    u32 req_dram_addr)
+{
+	int block_id;
+	int page_id;
+	void *block_addr;
+	u8 *page_addr;
+
+	/* Calculate the block id and page id */
+	block_id = (req_dram_addr >> PAGE_PER_GROUP_2_EXP_SIZE) &
+		(BIT(BLOCK_PER_IMAGE_2_EXP_SIZE) - 1);
+	page_id = req_dram_addr & (BIT(PAGE_PER_GROUP_2_EXP_SIZE) - 1);
+	block_addr =
+		page_address(trans->paging_db[block_id].fw_paging_block);
+	page_addr = (u8 *)(block_addr) + (page_id << PAGE_2_EXP_SIZE);
+
+	return page_addr;
+}
+
+static void iwl_sdio_paging_handler(struct iwl_trans *trans)
+{
+	struct iwl_sdio_page_req page_req;
+	int ret = 0;
+	u8 *page_addr;
+	u32 sram_addr;
+	void *buf = trans->paging_download_buf;
+
+	if (!trans->paging_req_addr || !trans->paging_db || !buf) {
+		IWL_ERR(trans,
+			"Paging: missing opmode paging configuration\n");
+		return;
+	}
+
+	/* Get FW's page request */
+	iwl_trans_read_mem_bytes(trans, trans->paging_req_addr, &page_req,
+				 sizeof(struct iwl_sdio_page_req));
+
+	/* Upload page from FW */
+	if (le32_to_cpu(page_req.flag) & UMAC_SDIO_PAGE_FLAG_UPLOAD_MSK) {
+		u32 addr = le32_to_cpu(page_req.up_dst_dram_addr);
+		/* get DRAM virtual address */
+		page_addr = iwl_sdio_paging_get_dram_address(trans, addr);
+		/* get SRAM address */
+		sram_addr = le32_to_cpu(page_req.up_src_sram_addr) <<
+			PAGE_2_EXP_SIZE;
+
+		IWL_DEBUG_FW(trans,
+			     "Paging: upload dram address is 0x%p sram address is 0x%08x\n",
+			     page_addr, sram_addr);
+
+		iwl_trans_read_mem_bytes(trans, sram_addr, page_addr,
+					 FW_PAGING_SIZE);
+	}
+
+	/* Download page to FW */
+	if (le32_to_cpu(page_req.flag) & UMAC_SDIO_PAGE_FLAG_DOWNLOAD_MSK) {
+		u32 addr = le32_to_cpu(page_req.down_src_dram_addr);
+		/* get DRAM virtual address */
+		page_addr = iwl_sdio_paging_get_dram_address(trans, addr);
+		/* get SRAM address */
+		sram_addr = le32_to_cpu(page_req.down_dst_sram_addr) <<
+			PAGE_2_EXP_SIZE;
+
+		IWL_DEBUG_FW(trans,
+			     "Paging: download dram address is 0x%p sram address is 0x%08x\n",
+			     page_addr, sram_addr);
+
+		ret = iwl_sdio_download_fw_page(trans, sram_addr, page_addr);
+		if (ret)
+			IWL_ERR(trans, "Paging: failed to download FW page\n");
+	}
+
+	/* Indicate to the FW that the page handling is done */
+	iwl_write_prph(trans, LMPM_PAGE_PASS_NOTIF, LMPM_PAGE_PASS_NOTIF_POS);
 }
 
 void iwl_sdio_d2h_work(struct work_struct *work)
@@ -425,6 +503,11 @@ void iwl_sdio_d2h_work(struct work_struct *work)
 			continue;
 		IWL_DEBUG_ISR(trans, "%s\n",
 			      get_msg_string(err_val & BIT(i)));
+	}
+
+	if (err_val & IWL_SDIO_MSG_PAGING) {
+		iwl_write32(trans, CSR_FH_INT_STATUS, CSR_FH_INT_BIT_RX_CHNL1);
+		iwl_sdio_paging_handler(trans);
 	}
 
 	if (err_val & IWL_SDIO_MSG_LMAC_SW_ERROR) {

@@ -84,6 +84,7 @@
 #include "iwl-fw-error-dump.h"
 #include "iwl-prph.h"
 #include "iwl-constants.h"
+#include "iwl-fw.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "iwl-dnt-cfg.h"
 #endif
@@ -1647,6 +1648,26 @@ static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
 	return ret;
 }
 
+int iwl_sdio_download_fw_page(struct iwl_trans *trans, u32 page_sram_addr,
+			      void *page_dram_addr)
+{
+	int ret = 0;
+	void *buf = trans->paging_download_buf;
+	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
+
+	sdio_claim_host(func);
+
+	ret = iwl_sdio_load_fw_chunk(trans, buf, 0, NULL, page_sram_addr,
+				     FW_PAGING_SIZE, page_dram_addr);
+
+	if (ret)
+		IWL_ERR(trans, "Paging: failed to download fw page\n");
+
+	sdio_release_host(func);
+
+	return ret;
+}
+
 /*
  * Driver Takes the ownership on secure machine before FW load
  * and prevent race with the BT load.
@@ -1752,8 +1773,15 @@ static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 	for (i = *first_ucode_section; i < IWL_UCODE_SECTION_MAX; i++) {
 		last_read_idx = i;
 
+		/*
+		 * CPU1_CPU2_SEPARATOR_SECTION delimiter - separate between
+		 * CPU1 to CPU2.
+		 * PAGING_SEPARATOR_SECTION delimiter - separate between
+		 * CPU2 non paged to CPU2 paging sec
+		 */
 		if (!image->sec[i].data ||
-		    image->sec[i].offset == CPU1_CPU2_SEPARATOR_SECTION) {
+		    image->sec[i].offset == CPU1_CPU2_SEPARATOR_SECTION ||
+		    image->sec[i].offset == PAGING_SEPARATOR_SECTION) {
 			IWL_DEBUG_FW(trans,
 				     "Break since Data not valid or Empty section, sec = %d\n",
 				     i);
