@@ -25,11 +25,13 @@ compat-$(CPTCFG_KERNEL_3_15) += backport-3.15.o
 compat-$(CPTCFG_KERNEL_3_17) += backport-3.17.o
 compat-$(CPTCFG_KERNEL_3_18) += backport-3.18.o
 compat-$(CPTCFG_KERNEL_3_19) += backport-3.19.o
+compat-$(CPTCFG_KERNEL_4_0) += backport-4.0.o
 compat-$(CPTCFG_KERNEL_4_1) += backport-4.1.o
+compat-$(CPTCFG_KERNEL_4_2) += backport-4.2.o
 
 compat-$(CPTCFG_BPAUTO_BUILD_CRYPTO_CCM) += crypto-ccm.o
 compat-$(CPTCFG_BPAUTO_BUILD_DMA_SHARED_HELPERS) += dma-shared-helpers.o
-compat-$(CPTCFG_BPAUTO_RHASHTABLE) += lib-rhashtable.o
-compat-$(CPTCFG_BPAUTO_BUILD_WANT_DEV_COREDUMP) += drivers-base-devcoredump.o
 compat-$(CPTCFG_BPAUTO_BUILD_AVERAGE) += lib-average.o
+compat-$(CPTCFG_BPAUTO_BUILD_WANT_DEV_COREDUMP) += drivers-base-devcoredump.o
+compat-$(CPTCFG_BPAUTO_RHASHTABLE) += lib-rhashtable.o
 compat-$(CPTCFG_BPAUTO_BUILD_CRYPTO_CCM) += crypto-ccm.o
