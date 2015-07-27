@@ -1153,7 +1153,7 @@ static int iwl_mvm_vendor_send_set_hotlist_cmd(struct iwl_mvm *mvm,
 	cmd->lost_ap_sample_size =
 		nla_get_u8(tb[IWL_MVM_VENDOR_ATTR_GSCAN_LOST_AP_SAMPLE_SIZE]);
 
-	max_aps = min(capa->max_hotlist_aps, ARRAY_SIZE(cmd->ap_list));
+	max_aps = min_t(u32, capa->max_hotlist_aps, ARRAY_SIZE(cmd->ap_list));
 	cmd->num_ap =
 		iwl_vendor_parse_ap_list(tb[IWL_MVM_VENDOR_ATTR_GSCAN_AP_LIST],
 					 max_aps, cmd->ap_list);
@@ -1271,8 +1271,8 @@ iwl_mvm_vendor_send_set_sig_change_cmd(struct iwl_mvm *mvm,
 	cmd->min_breaching =
 		nla_get_u8(tb[IWL_MVM_VENDOR_ATTR_GSCAN_MIN_BREACHING]);
 
-	max_aps = min(capa->max_significant_change_aps,
-		      ARRAY_SIZE(cmd->ap_list));
+	max_aps = min_t(u32, capa->max_significant_change_aps,
+		        ARRAY_SIZE(cmd->ap_list));
 	cmd->num_ap =
 		iwl_vendor_parse_ap_list(tb[IWL_MVM_VENDOR_ATTR_GSCAN_AP_LIST],
 					 max_aps, cmd->ap_list);
