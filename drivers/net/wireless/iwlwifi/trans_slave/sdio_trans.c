@@ -1908,6 +1908,15 @@ static void iwl_sdio_apply_destination(struct iwl_trans *trans)
 			iwl_sdio_write_prph_no_claim(trans, addr,
 						     (val2 & ~val));
 			break;
+		case PRPH_BLOCKBIT:
+			if (iwl_sdio_read_prph_no_claim(trans, addr) &
+			    BIT(val)) {
+				IWL_ERR(trans,
+					"BIT(%u) in address 0x%x is 1, stopping FW configuration\n",
+					val, addr);
+				return;
+			}
+			break;
 		default:
 			IWL_ERR(trans, "FW debug - unknown OP %d\n",
 				dest->reg_ops[i].op);
