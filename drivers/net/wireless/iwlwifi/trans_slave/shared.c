@@ -1140,17 +1140,17 @@ static void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
 	}
 
 	if (cmd_entry->hcmd_meta.flags & CMD_MAKE_TRANS_IDLE) {
-		IWL_DEBUG_RPM(trans, "complete %s - mark trans as idle\n",
-			      trans_slv_get_cmd_string(trans_slv,
-			      dev_cmd->hdr.cmd));
+		IWL_DEBUG_INFO(trans, "complete %s - mark trans as idle\n",
+			       trans_slv_get_cmd_string(trans_slv,
+			       dev_cmd->hdr.cmd));
 		set_bit(STATUS_TRANS_IDLE, &trans->status);
 		wake_up(&trans_slv->d0i3_waitq);
 	}
 
 	if (cmd_entry->hcmd_meta.flags & CMD_WAKE_UP_TRANS) {
-		IWL_DEBUG_RPM(trans, "complete %s - clear trans idle flag\n",
-			      trans_slv_get_cmd_string(trans_slv,
-			      dev_cmd->hdr.cmd));
+		IWL_DEBUG_INFO(trans, "complete %s - clear trans idle flag\n",
+			       trans_slv_get_cmd_string(trans_slv,
+			       dev_cmd->hdr.cmd));
 		clear_bit(STATUS_TRANS_IDLE, &trans->status);
 		wake_up(&trans_slv->d0i3_waitq);
 	}
