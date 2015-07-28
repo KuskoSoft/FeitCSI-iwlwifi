@@ -124,6 +124,14 @@ config IWLWIFI_LTE_COEX
 	help
 	  This option enables LTE-Coexistence (vendor) commands
 
+config IWLMVM_DISABLE_P2P_MIMO
+       bool "disable MIMO Tx on P2P interfaces"
+       depends on IWLMVM
+       help
+	  Disable MIMO Tx on P2P interfaces. This is useful when
+	  working vs. Miracast dongles which have reception problems
+	  of MIMO.
+
 config IWLMVM_TDLS_PEER_CACHE
 	bool "enable TDLS peer caching and traffic monitoring"
 	depends on IWLMVM_VENDOR_CMDS
