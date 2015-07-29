@@ -408,6 +408,13 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_NETNS_FD] = { .type = NLA_U32 },
 	[NL80211_ATTR_SCHED_SCAN_DELAY] = { .type = NLA_U32 },
 	[NL80211_ATTR_REG_INDOOR] = { .type = NLA_FLAG },
+	[NL80211_ATTR_MSRMENT_TYPE] = { .type = NLA_U32 },
+	[NL80211_ATTR_MSRMENT_STATUS] = { .type = NLA_U8 },
+	[NL80211_ATTR_MSRMENT_FTM_REQUEST] = { .type = NLA_NESTED },
+	[NL80211_ATTR_MSRMENT_FTM_RESPONSE] = { .type = NLA_NESTED },
+	[NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS] = { .type = NLA_U8 },
+	[NL80211_ATTR_MAX_TOTAL_FTM_TARGETS] = { .type = NLA_U8 },
+	[NL80211_ATTR_LAST_MSG] = { .type = NLA_FLAG },
 };
 
 /* policy for the key attributes */
@@ -1396,6 +1403,14 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 		if (nl80211_put_iftypes(msg, NL80211_ATTR_SUPPORTED_IFTYPES,
 					rdev->wiphy.interface_modes))
 				goto nla_put_failure;
+
+		if ((rdev->wiphy.flags & WIPHY_FLAG_SUPPORTS_FTM_INITIATOR) &&
+		    (nla_put_u32(msg, NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS,
+				 rdev->wiphy.max_two_sided_ftm_targets) ||
+		     nla_put_u32(msg, NL80211_ATTR_MAX_TOTAL_FTM_TARGETS,
+				 rdev->wiphy.max_total_ftm_targets)))
+			goto nla_put_failure;
+
 		state->split_start++;
 		if (state->split)
 			break;
@@ -10658,6 +10673,235 @@ static int nl80211_tdls_cancel_channel_switch(struct sk_buff *skb,
 	return 0;
 }
 
+/* policy for the attributes of a single ftm target */
+static const struct nla_policy
+nl80211_ftm_target_policy[NL80211_FTM_TARGET_ATTR_MAX + 1] = {
+	[NL80211_FTM_TARGET_ATTR_FREQ] = { .type = NLA_U32 },
+	[NL80211_FTM_TARGET_ATTR_BW] = { .type = NLA_U8 },
+	[NL80211_FTM_TARGET_ATTR_CNTR_FREQ_1] = { .type = NLA_U32 },
+	[NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2] = { .type = NLA_U32 },
+	[NL80211_FTM_TARGET_ATTR_BSSID] = { .len = ETH_ALEN },
+	[NL80211_FTM_TARGET_ATTR_ONE_SIDED] = { .type = NLA_FLAG },
+	[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS] = { .type = NLA_U16 },
+	[NL80211_FTM_TARGET_ATTR_BURST_PERIOD] = { .type = NLA_U16 },
+	[NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST] = { .type = NLA_U8 },
+	[NL80211_FTM_TARGET_ATTR_RETRIES] = { .type = NLA_U8 },
+	[NL80211_FTM_TARGET_ATTR_ASAP] = { .type = NLA_FLAG },
+	[NL80211_FTM_TARGET_ATTR_QUERY_LCI] = { .type = NLA_FLAG },
+	[NL80211_FTM_TARGET_ATTR_QUERY_CIVIC] = { .type = NLA_FLAG },
+	[NL80211_FTM_TARGET_ATTR_COOKIE] = { .type = NLA_U64 },
+};
+
+static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
+				    struct nlattr *ftm_target_attr,
+				    struct cfg80211_ftm_target *target)
+{
+	struct nlattr *tb[NL80211_FTM_TARGET_ATTR_MAX + 1];
+	int err;
+
+	err = nla_parse_nested(tb, NL80211_FTM_TARGET_ATTR_MAX, ftm_target_attr,
+			       nl80211_ftm_target_policy);
+	if (err)
+		return err;
+
+	if (!tb[NL80211_FTM_TARGET_ATTR_BSSID] ||
+	    !tb[NL80211_FTM_TARGET_ATTR_FREQ] ||
+	    !tb[NL80211_FTM_TARGET_ATTR_BW])
+		return -EINVAL;
+
+	nla_memcpy(target->bssid, tb[NL80211_FTM_TARGET_ATTR_BSSID], ETH_ALEN);
+
+	target->chan_def.chan = ieee80211_get_channel(&rdev->wiphy,
+		nla_get_u32(tb[NL80211_FTM_TARGET_ATTR_FREQ]));
+
+	target->chan_def.width = nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_BW]);
+
+	if (tb[NL80211_FTM_TARGET_ATTR_CNTR_FREQ_1])
+		target->chan_def.center_freq1 =
+			nla_get_u32(tb[NL80211_FTM_TARGET_ATTR_CNTR_FREQ_1]);
+	else
+		target->chan_def.center_freq1 =
+			target->chan_def.chan->center_freq;
+
+	if (tb[NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2])
+		target->chan_def.center_freq2 =
+			nla_get_u32(tb[NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2]);
+
+	if (!cfg80211_chandef_valid(&target->chan_def))
+		return -EINVAL;
+
+	if (!tb[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS])
+		target->num_of_bursts = 1;
+	else
+		target->num_of_bursts =
+			nla_get_u16(tb[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS]);
+
+	if (target->num_of_bursts == 1) {
+		if (!tb[NL80211_FTM_TARGET_ATTR_BURST_PERIOD])
+			return -EINVAL;
+		target->burst_period =
+			nla_get_u16(tb[NL80211_FTM_TARGET_ATTR_BURST_PERIOD]);
+	}
+
+	target->samples_per_burst =
+		tb[NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST] ?
+		nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST]) : 2;
+
+	if (!tb[NL80211_FTM_TARGET_ATTR_RETRIES])
+		target->retries = 3;
+	else
+		target->retries =
+			nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_RETRIES]);
+
+	target->one_sided = nla_get_flag(tb[NL80211_FTM_TARGET_ATTR_ONE_SIDED]);
+	target->asap = nla_get_flag(tb[NL80211_FTM_TARGET_ATTR_ASAP]);
+	target->lci = nla_get_flag(tb[NL80211_FTM_TARGET_ATTR_QUERY_LCI]);
+	target->civic = nla_get_flag(tb[NL80211_FTM_TARGET_ATTR_QUERY_CIVIC]);
+
+	if (tb[NL80211_FTM_TARGET_ATTR_COOKIE])
+		target->cookie =
+			nla_get_u64(tb[NL80211_FTM_TARGET_ATTR_COOKIE]);
+
+	return 0;
+}
+
+/* policy for the ftm request attributes */
+static const struct nla_policy
+nl80211_ftm_request_policy[NL80211_FTM_REQ_ATTR_MAX + 1] = {
+	[NL80211_FTM_REQ_ATTR_TIMEOUT] = { .type = NLA_U8 },
+	[NL80211_FTM_REQ_ATTR_MACADDR_TEMPLATE] = { .len = ETH_ALEN  },
+	[NL80211_FTM_REQ_ATTR_MACADDR_MASK] = { .len = ETH_ALEN  },
+	[NL80211_FTM_REQ_ATTR_REPORT_TSF] = { .type = NLA_FLAG },
+	[NL80211_FTM_REQ_ATTR_TARGETS] = { .type = NLA_NESTED },
+};
+
+static int nl80211_parse_ftm_request(struct cfg80211_registered_device *rdev,
+				     struct nlattr *ftm_attr,
+				     struct cfg80211_ftm_request *ftm)
+{
+	struct nlattr *tb[NL80211_FTM_REQ_ATTR_MAX + 1];
+	struct nlattr *ap_attr;
+	int tmp, i, two_sided_counter;
+	int err;
+
+	err = nla_parse_nested(tb, NL80211_FTM_REQ_ATTR_MAX, ftm_attr,
+			       nl80211_ftm_request_policy);
+	if (err)
+		return err;
+
+	if (!tb[NL80211_FTM_REQ_ATTR_MACADDR_TEMPLATE] ||
+	    !tb[NL80211_FTM_REQ_ATTR_MACADDR_MASK] ||
+	    !tb[NL80211_FTM_REQ_ATTR_TARGETS])
+		return -EINVAL;
+
+	if (nl80211_parse_random_mac(tb[NL80211_FTM_REQ_ATTR_MACADDR_TEMPLATE],
+				     tb[NL80211_FTM_REQ_ATTR_MACADDR_MASK],
+				     ftm->macaddr_template, ftm->macaddr_mask))
+		return -EINVAL;
+
+	if (!tb[NL80211_FTM_REQ_ATTR_TIMEOUT])
+		ftm->timeout = 50;
+	else
+		ftm->timeout = nla_get_u8(tb[NL80211_FTM_REQ_ATTR_TIMEOUT]);
+
+	if (tb[NL80211_FTM_REQ_ATTR_REPORT_TSF])
+		ftm->report_tsf = true;
+
+	nla_for_each_nested(ap_attr, tb[NL80211_FTM_REQ_ATTR_TARGETS], tmp)
+		ftm->num_of_targets++;
+	ftm->targets = kcalloc(ftm->num_of_targets,
+			       sizeof(struct cfg80211_ftm_target), GFP_KERNEL);
+	if (!ftm->targets)
+		return -ENOMEM;
+
+	i = 0;
+	two_sided_counter = 0;
+	nla_for_each_nested(ap_attr, tb[NL80211_FTM_REQ_ATTR_TARGETS], tmp) {
+		err = nl80211_parse_ftm_target(rdev, ap_attr, &ftm->targets[i]);
+		if (err)
+			goto free_targets;
+		if (!ftm->targets[i].one_sided)
+			two_sided_counter++;
+		i++;
+	}
+	if (ftm->num_of_targets > rdev->wiphy.max_total_ftm_targets ||
+	    two_sided_counter > rdev->wiphy.max_two_sided_ftm_targets)
+		goto free_targets;
+
+	return 0;
+
+free_targets:
+	kfree(ftm->targets);
+	return -EINVAL;
+}
+
+static void nl80211_msrment_request_free(struct cfg80211_msrment_request *req)
+{
+	switch (req->type) {
+	case NL80211_MSRMENT_TYPE_FTM:
+		kfree(req->u.ftm.targets);
+		req->u.ftm.targets = NULL;
+		break;
+	default:
+		break;
+	}
+}
+
+static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
+{
+	struct cfg80211_registered_device *rdev = info->user_ptr[0];
+	struct net_device *dev = info->user_ptr[1];
+	struct wireless_dev *wdev = dev->ieee80211_ptr;
+	struct cfg80211_msrment_request request = {0};
+	struct cfg80211_active_msrment *msrment;
+	u64 cookie = 0;
+	int err;
+
+	if (!info->attrs[NL80211_ATTR_MSRMENT_TYPE])
+		return -EINVAL;
+	request.type = nla_get_u32(info->attrs[NL80211_ATTR_MSRMENT_TYPE]);
+	request.nl_portid = genl_info_snd_portid(info);
+
+	switch (request.type) {
+	case NL80211_MSRMENT_TYPE_FTM:
+		if (!info->attrs[NL80211_ATTR_MSRMENT_FTM_REQUEST])
+			return -EINVAL;
+		err = nl80211_parse_ftm_request(rdev,
+			info->attrs[NL80211_ATTR_MSRMENT_FTM_REQUEST],
+			&request.u.ftm);
+		if (err)
+			return err;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	msrment = kzalloc(sizeof(*msrment), GFP_KERNEL);
+	if (!msrment) {
+		err = -ENOMEM;
+		goto free_request;
+	}
+
+	err = rdev_perform_msrment(rdev, wdev, &request, &cookie);
+	if (err)
+		goto free_request;
+
+	WARN_ON(!cookie);
+
+	msrment->wdev = wdev;
+	msrment->cookie = cookie;
+	msrment->nl_portid = genl_info_snd_portid(info);
+	spin_lock_bh(&rdev->msrments_lock);
+	list_add_tail(&msrment->list, &rdev->msrments_list);
+	spin_unlock_bh(&rdev->msrments_lock);
+
+	return 0;
+
+free_request:
+	nl80211_msrment_request_free(&request);
+	return err;
+}
+
 #define NL80211_FLAG_NEED_WIPHY		0x01
 #define NL80211_FLAG_NEED_NETDEV	0x02
 #define NL80211_FLAG_NEED_RTNL		0x04
@@ -11477,6 +11721,14 @@ static __genl_const struct genl_ops nl80211_ops[] = {
 	{
 		.cmd = NL80211_CMD_TDLS_CANCEL_CHANNEL_SWITCH,
 		.doit = nl80211_tdls_cancel_channel_switch,
+		.policy = nl80211_policy,
+		.flags = GENL_ADMIN_PERM,
+		.internal_flags = NL80211_FLAG_NEED_NETDEV_UP |
+				  NL80211_FLAG_NEED_RTNL,
+	},
+	{
+		.cmd = NL80211_CMD_MSRMENT_REQUEST,
+		.doit = nl80211_msrment_request,
 		.policy = nl80211_policy,
 		.flags = GENL_ADMIN_PERM,
 		.internal_flags = NL80211_FLAG_NEED_NETDEV_UP |
@@ -13259,6 +13511,7 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 		bool schedule_scan_stop = false;
 		struct cfg80211_sched_scan_request *sched_scan_req =
 			rcu_dereference(rdev->sched_scan_req);
+		struct cfg80211_active_msrment *msrment;
 
 		if (sched_scan_req && netlink_notify_portid(notify) &&
 		    sched_scan_req->owner_nlportid == netlink_notify_portid(notify))
@@ -13282,6 +13535,16 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 			}
 		}
 		spin_unlock_bh(&rdev->beacon_registrations_lock);
+
+		spin_lock_bh(&rdev->msrments_lock);
+		list_for_each_entry(msrment, &rdev->msrments_list, list) {
+			if (msrment->nl_portid ==
+			    netlink_notify_portid(notify)) {
+				msrment->nl_portid = 0;
+				schedule_work(&rdev->msrment_abort_wk);
+			}
+		}
+		spin_unlock_bh(&rdev->msrments_lock);
 
 		if (schedule_destroy_work) {
 			struct cfg80211_iface_destroy *destroy;
@@ -13399,6 +13662,195 @@ void cfg80211_crit_proto_stopped(struct wireless_dev *wdev, gfp_t gfp)
 
 }
 EXPORT_SYMBOL(cfg80211_crit_proto_stopped);
+
+static int nl80211_put_ftm_resp_target(struct sk_buff *msg,
+				       struct cfg80211_ftm_target *target)
+{
+	struct nlattr *attr =
+		nla_nest_start(msg, NL80211_FTM_RESP_ENTRY_ATTR_TARGET);
+
+	if (!attr)
+		return -ENOBUFS;
+
+	if (nla_put_u32(msg, NL80211_FTM_TARGET_ATTR_FREQ,
+			target->chan_def.chan->center_freq) ||
+	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_BW,
+		       target->chan_def.width) ||
+	    nla_put_u32(msg, NL80211_FTM_TARGET_ATTR_CNTR_FREQ_1,
+			target->chan_def.center_freq1) ||
+	    nla_put_u32(msg, NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2,
+			target->chan_def.center_freq2) ||
+	    nla_put(msg, NL80211_FTM_TARGET_ATTR_BSSID, ETH_ALEN,
+		    target->bssid) ||
+	    nla_put_u16(msg, NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS,
+		       target->num_of_bursts) ||
+	    nla_put_u16(msg, NL80211_FTM_TARGET_ATTR_BURST_PERIOD,
+			target->burst_period) ||
+	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST,
+		       target->samples_per_burst) ||
+	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_RETRIES, target->retries) ||
+	    nla_put_u64(msg, NL80211_FTM_TARGET_ATTR_COOKIE, target->cookie))
+		return -ENOBUFS;
+
+	if (target->one_sided &&
+	    nla_put_flag(msg, NL80211_FTM_TARGET_ATTR_ONE_SIDED))
+		return -ENOBUFS;
+
+	if (target->asap && nla_put_flag(msg, NL80211_FTM_TARGET_ATTR_ASAP))
+		return -ENOBUFS;
+
+	if (target->lci && nla_put_flag(msg, NL80211_FTM_TARGET_ATTR_QUERY_LCI))
+		return -ENOBUFS;
+
+	if (target->civic &&
+	    nla_put_flag(msg, NL80211_FTM_TARGET_ATTR_QUERY_CIVIC))
+		return -ENOBUFS;
+
+	nla_nest_end(msg, attr);
+	return 0;
+}
+
+static int nl80211_put_ftm_result(struct sk_buff *msg,
+				  struct cfg80211_ftm_result *ftm)
+{
+	struct nlattr *resp = nla_nest_start(msg,
+					     NL80211_ATTR_MSRMENT_FTM_RESPONSE);
+
+	if (!resp)
+		return -ENOBUFS;
+
+	if (nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_STATUS, ftm->status) ||
+	    (ftm->complete &&
+	     nla_put_flag(msg, NL80211_FTM_RESP_ENTRY_ATTR_COMPLETE)) ||
+	    nl80211_put_ftm_resp_target(msg, ftm->target) ||
+	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_HOST_TIME,
+			ftm->host_time) ||
+	    (ftm->tsf && nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_TSF,
+				     ftm->tsf)) ||
+	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX,
+		       ftm->burst_index) ||
+	    nla_put_s8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI, ftm->rssi) ||
+	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
+		       ftm->rssi_spread) ||
+	    nl80211_put_sta_rate(msg, &ftm->rate_info,
+				 NL80211_FTM_RESP_ENTRY_ATTR_RATE_INFO) ||
+	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
+	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
+			ftm->rtt_variance) ||
+	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,
+			ftm->rtt_spread))
+		return -ENOBUFS;
+
+	nla_nest_end(msg, resp);
+
+	return 0;
+}
+
+static struct sk_buff *
+nl80211_alloc_measurement_response(struct wiphy *wiphy,
+				   struct cfg80211_msrment_response *response,
+				   void **hdr, gfp_t gfp)
+{
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
+	struct sk_buff *msg = nlmsg_new(NLMSG_DEFAULT_SIZE, gfp);
+
+	if (!msg)
+		return NULL;
+
+	*hdr = nl80211hdr_put(msg, 0, 0, 0, NL80211_CMD_MSRMENT_RESPONSE);
+	if (!*hdr)
+		goto nla_put_failure;
+
+	if (nla_put_u32(msg, NL80211_ATTR_WIPHY, rdev->wiphy_idx) ||
+	    nla_put_u64(msg, NL80211_ATTR_COOKIE, response->cookie) ||
+	    nla_put_u32(msg, NL80211_ATTR_MSRMENT_TYPE, response->type) ||
+	    nla_put_u8(msg, NL80211_ATTR_MSRMENT_STATUS, response->status))
+		goto nla_put_failure;
+
+	return msg;
+
+nla_put_failure:
+	WARN_ON(1);
+	nlmsg_free(msg);
+	return NULL;
+}
+
+static void
+nl80211_send_measurement_response(struct wiphy *wiphy,
+				  struct cfg80211_msrment_response *response,
+				  struct sk_buff *msg, void *hdr)
+{
+	genlmsg_end(msg, hdr);
+	genlmsg_unicast(wiphy_net(wiphy), msg, response->nl_portid);
+}
+
+static void nl80211_ftm_response(struct wiphy *wiphy,
+				 struct cfg80211_msrment_response *response,
+				 gfp_t gfp)
+{
+	void *hdr;
+	struct cfg80211_ftm_results ftm = response->u.ftm;
+	struct sk_buff *msg;
+	int i;
+
+	for (i = 0; i < ftm.num_of_entries; i++) {
+		msg = nl80211_alloc_measurement_response(wiphy, response,
+							 &hdr, gfp);
+		if (!msg)
+			return;
+
+		if (nl80211_put_ftm_result(msg, &ftm.entries[i]))
+			goto nla_put_failure;
+
+		if (i == ftm.num_of_entries - 1 &&
+		    nla_put_flag(msg, NL80211_ATTR_LAST_MSG))
+			goto nla_put_failure;
+
+		nl80211_send_measurement_response(wiphy, response, msg, hdr);
+	}
+
+	return;
+
+nla_put_failure:
+	WARN_ON(1);
+	nlmsg_free(msg);
+}
+
+void cfg80211_measurement_response(struct wiphy *wiphy,
+				   struct cfg80211_msrment_response *response,
+				   gfp_t gfp)
+{
+	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
+	struct cfg80211_active_msrment *tmp, *msrment = NULL;
+
+	trace_cfg80211_measurement_response(wiphy, response);
+
+	spin_lock_bh(&rdev->msrments_lock);
+	list_for_each_entry(tmp, &rdev->msrments_list, list) {
+		if (tmp->cookie == tmp->cookie) {
+			msrment = tmp;
+			list_del(&tmp->list);
+			break;
+		}
+	}
+	spin_unlock_bh(&rdev->msrments_lock);
+
+	/* if not found or no portid it was canceled already */
+	if (!msrment || !msrment->nl_portid)
+		goto free;
+
+	switch (response->type) {
+	case NL80211_MSRMENT_TYPE_FTM:
+		nl80211_ftm_response(wiphy, response, gfp);
+		break;
+	default:
+		WARN(1, "invalid measurement type %d\n", response->type);
+		break;
+	};
+ free:
+	kfree(msrment);
+}
+EXPORT_SYMBOL(cfg80211_measurement_response);
 
 void nl80211_send_ap_stopped(struct wireless_dev *wdev)
 {

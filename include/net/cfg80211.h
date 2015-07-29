@@ -2222,6 +2222,161 @@ struct cfg80211_qos_map {
 };
 
 /**
+ * struct cfg80211_ftm_target - data for an FTM target (FTM responder)
+ *
+ * @cookie: Extra data for the use of the invoking component. This will be
+ *	passed back to the caller in the response, along with the rest of the
+ *	request.
+ * @chan_def: target's channel info
+ * @bssid: target's BSSID.
+ * @one_sided: whether to perform a one-sided (flag set) or two-sided (flag
+ *	clear) measurement.
+ * @asap: Whether to perform the measurement in ASAP mode. Ignored if one-sided.
+ * @lci: Whether to query for LCI in the request. Ignored if one-sided.
+ * @civic: Whether to query for CIVIC in the request. Ignored if one-sided.
+ * @num_of_bursts: number of measurement iterations.
+ * @burst_period: Measurement periodicity in units of 100ms. Ignored if num of
+ *	bursts is 1.
+ * @samples_per_burst: Number of measurement frames requested per burst.
+ * @retries: Number of retries per sample.
+ */
+struct cfg80211_ftm_target {
+	u64 cookie;
+	struct cfg80211_chan_def chan_def;
+	u8 bssid[ETH_ALEN];
+	bool one_sided;
+	bool asap;
+	bool lci;
+	bool civic;
+	u16 num_of_bursts;
+	u16 burst_period;
+	u8 samples_per_burst;
+	u8 retries;
+};
+
+/**
+ * struct cfg80211_ftm_request - data for FTM requests
+ *
+ * @report_tsf: if true, report the TSF of the AP to which the vif is
+ *	associated. Not relevant if the vif is not associated.
+ * @timeout: Timespan within which measurement should complete. Given in units
+ *	of 100ms.
+ * @macaddr_template: Sets the fixed part of a randomized mac address.
+ * @macaddr_mask: Bits set to 1 shall be copied from @macaddr_template. Bits set
+ *	to 0 shall be randomized by the device.
+ * @num_of_targets: Number of targets (with which to perform a measurement)
+ *	contained in this request (see @targets). &num_of_target will not
+ *	exceed the value reported for the device in
+ *	%NL80211_ATTR_MAX_TOTAL_FTM_TARGETS.
+ * @targets: List of targets with which to perform the measurement. This list is
+ *	dynamically allocated when the request arrives, and should be released
+ *	using kfree by the underlying driver when it is no longer required.
+ *	Amongst these targets, the number of 2-sided requests will not exceed
+ *	the value reported for the device in
+ *	%NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS.
+ */
+struct cfg80211_ftm_request {
+	bool report_tsf;
+	u8 timeout;
+	u8 macaddr_template[ETH_ALEN];
+	u8 macaddr_mask[ETH_ALEN];
+	u8 num_of_targets;
+	struct cfg80211_ftm_target *targets;
+};
+
+/**
+ * struct cfg80211_msrment_request - measurement request data
+ *
+ * @type: Type of measurement. Determines the actual type of the union field
+ *	below.
+ * @nl_portid: the netlink port used for this request
+ * @u: Data for the specific required measurement type.
+ */
+struct cfg80211_msrment_request {
+	enum nl80211_msrment_type type;
+	u32 nl_portid;
+	union {
+		struct cfg80211_ftm_request ftm;
+	} u;
+};
+
+/**
+ * struct cfg80211_ftm_result - data for an FTM result of a single target
+ *
+ * @status: Status of measurement
+ * @complete: Whether this measurement is the last one expected for this target.
+ *	This implies that resources associated with this target may be released.
+ * @target: Pointer to the corresponding FTM target given in the request.
+ * @host_time: Time in which:
+ *	- in case of error - error was detected
+ *	- in case of success - successful measurement started
+ *	Given value is in nanoseconds elapsed since host boot time
+ *	(referring to CLOCK_BOOTTIME).
+ *	Note that this reported value is an estimation of the actual event time,
+ *	with expected error of up to 20ms off the actual mark. Underlying
+ *	devices must make sure they comply with this limited tolerance.
+ * @tsf: Same as %host_time, but in the expressed as the TSF of the AP the vif
+ *	is associated to. This value is not an estimation. If field
+ *	&report_tsf in the request is not set, this field is ignored.
+ * @burst_index: Ordinal number of currently reported measurement iteration.
+ * @rssi: Measured RSSI, given in dBm. Valid values range: -128-0.
+ * @rssi_spread: The difference between max and min measured RSSI values
+ * @rate_info: Used rate-related data.
+ * @rtt: The Round Trip Time that took for the last measurement for current
+ *	target, in nsec.
+ * @rtt_variance: The variance of the RTT values measured for current target, in
+ *	nsec^2.
+ * @rtt_spread: The difference between max and min RTT values measured for
+ *	the current target in the current session, in nsec.
+ */
+struct cfg80211_ftm_result {
+	enum nl80211_ftm_response_status status;
+	bool complete;
+	struct cfg80211_ftm_target *target;
+	u64 host_time;
+	u64 tsf;
+	u8 burst_index;
+	s8 rssi;
+	u8 rssi_spread;
+	struct rate_info rate_info;
+	u32 rtt;
+	u32 rtt_variance;
+	u32 rtt_spread;
+};
+
+/**
+ * struct cfg80211_ftm_results - data for FTM results of all targets
+ *
+ * @num_of_entries: num of entries in the results array
+ * @entries: an array of FTM results. this array is both allocated and
+ *	released in the driver.
+ */
+struct cfg80211_ftm_results {
+	u8 num_of_entries;
+	struct cfg80211_ftm_result *entries;
+};
+
+/**
+ * struct cfg80211_msrment_response - measurement response data
+ * @cookie: Identifier of current measurement response, matching the one given
+ *	in the request.
+ * @type: Type of measurement. Determines the actual type of the union field
+ *	below.
+ * @status: Status of current measurement response.
+ * @nl_portid: netlink port this response should be sent to
+ * @u: Data for the specific reported measurement type.
+ */
+struct cfg80211_msrment_response {
+	u64 cookie;
+	enum nl80211_msrment_type type;
+	enum nl80211_msrment_status status;
+	u32 nl_portid;
+	union {
+		struct cfg80211_ftm_results ftm;
+	} u;
+};
+
+/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -2492,6 +2647,12 @@ struct cfg80211_qos_map {
  *	and returning to the base channel for communication with the AP.
  * @tdls_cancel_channel_switch: Stop channel-switching with a TDLS peer. Both
  *	peers must be on the base channel when the call completes.
+ *
+ * @perform_msrment: Perform a measurement according to the given request. Once
+ *	this function returns, the given request pointer in no longer valid.
+ *	The cookie must be filled to a unique value for this request, for later
+ *	possible aborting.
+ * @abort_msrment: Abort a previously requested measurement.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -2756,6 +2917,12 @@ struct cfg80211_ops {
 	void	(*tdls_cancel_channel_switch)(struct wiphy *wiphy,
 					      struct net_device *dev,
 					      const u8 *addr);
+	int	(*perform_msrment)(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   struct cfg80211_msrment_request *request,
+				   u64 *cookie);
+	int	(*abort_msrment)(struct wiphy *wiphy, struct wireless_dev *wdev,
+				 u64 cookie);
 };
 
 /*
@@ -2802,6 +2969,8 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_SUPPORTS_5_10_MHZ: Device supports 5 MHz and 10 MHz channels.
  * @WIPHY_FLAG_HAS_CHANNEL_SWITCH: Device supports channel switch in
  *	beaconing mode (AP, IBSS, Mesh, ...).
+ * @WIPHY_FLAG_SUPPORTS_FTM_INITIATOR: Device supports 802.11 Fine Timing
+ *	Measurement Initiator.
  */
 enum wiphy_flags {
 	/* use hole at 0 */
@@ -2827,6 +2996,7 @@ enum wiphy_flags {
 	WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL	= BIT(21),
 	WIPHY_FLAG_SUPPORTS_5_10_MHZ		= BIT(22),
 	WIPHY_FLAG_HAS_CHANNEL_SWITCH		= BIT(23),
+	WIPHY_FLAG_SUPPORTS_FTM_INITIATOR	= BIT(24),
 };
 
 /**
@@ -3175,6 +3345,11 @@ struct wiphy_vendor_command {
  *	low rssi when a frame is heard on different channel, then it should set
  *	this variable to the maximal offset for which it can compensate.
  *	This value should be set in MHz.
+ *
+ * @max_two_sided_ftm_targets: max number of 2-sided targets allowed in an FTM
+ *	request.
+ * @max_total_ftm_targets: max number of targets (both 1-sided and 2-sided) in
+ *	an FTM request. A value of 0 implies no FTM support.
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -3299,6 +3474,9 @@ struct wiphy {
 
 	u8 max_num_csa_counters;
 	u8 max_adj_channel_rssi_comp;
+
+	u8 max_two_sided_ftm_targets;
+	u8 max_total_ftm_targets;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };
@@ -5217,6 +5395,17 @@ void cfg80211_crit_proto_stopped(struct wireless_dev *wdev, gfp_t gfp);
  * Return: the number of channels supported by the device.
  */
 unsigned int ieee80211_get_num_supported_channels(struct wiphy *wiphy);
+
+/**
+ * cfg80211_measurement_response - notify regarding a measurement response
+ *
+ * @wiphy: the wiphy
+ * @response: a response for which to notify
+ * @gfp: allocation flags
+ */
+void cfg80211_measurement_response(struct wiphy *wiphy,
+				   struct cfg80211_msrment_response *response,
+				   gfp_t gfp);
 
 /**
  * cfg80211_check_combinations - check interface combinations

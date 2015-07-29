@@ -2130,6 +2130,41 @@ TRACE_EVENT(rdev_tdls_cancel_channel_switch,
 		  WIPHY_PR_ARG, NETDEV_PR_ARG, MAC_PR_ARG(addr))
 );
 
+TRACE_EVENT(rdev_perform_msrment,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev,
+		 struct cfg80211_msrment_request *request),
+	TP_ARGS(wiphy, wdev, request),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		WDEV_ENTRY
+		__field(enum nl80211_msrment_type, type)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		WDEV_ASSIGN;
+		__entry->type = request->type;
+	),
+	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", type %d",
+		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->type)
+);
+
+TRACE_EVENT(rdev_abort_msrment,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev, u64 cookie),
+	TP_ARGS(wiphy, wdev, cookie),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		WDEV_ENTRY
+		__field(u64, cookie)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		WDEV_ASSIGN;
+		__entry->cookie = cookie;
+	),
+	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", cookie %llu",
+		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->cookie)
+);
+
 /*************************************************************
  *	     cfg80211 exported functions traces		     *
  *************************************************************/
@@ -2925,6 +2960,26 @@ TRACE_EVENT(rdev_set_coalesce,
 	),
 	TP_printk(WIPHY_PR_FMT ", n_rules=%d",
 		  WIPHY_PR_ARG, __entry->n_rules)
+);
+
+TRACE_EVENT(cfg80211_measurement_response,
+	TP_PROTO(struct wiphy *wiphy,
+		 struct cfg80211_msrment_response *response),
+	TP_ARGS(wiphy, response),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		__field(u64, cookie)
+		__field(enum nl80211_msrment_type, type)
+		__field(enum nl80211_msrment_status, status)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		__entry->cookie = response->cookie;
+		__entry->type = response->type;
+		__entry->status = response->status;
+	),
+	TP_printk(WIPHY_PR_FMT ", cookie %llu, type %d, status %d",
+		  WIPHY_PR_ARG, __entry->cookie, __entry->type, __entry->status)
 );
 
 #endif /* !__RDEV_OPS_TRACE || TRACE_HEADER_MULTI_READ */

@@ -3,6 +3,7 @@
  *
  * Copyright 2006-2010		Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
+ * Copyright 2015	Intel Deutschland GmbH
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -340,6 +341,33 @@ static void cfg80211_sched_scan_stop_wk(struct work_struct *work)
 	rtnl_unlock();
 }
 
+static void cfg80211_abort_msrment_wk(struct work_struct *work)
+{
+	struct cfg80211_registered_device *rdev;
+	struct cfg80211_active_msrment *msrment, *tmp;
+	LIST_HEAD(msrments_list);
+
+	rdev = container_of(work, struct cfg80211_registered_device,
+			    msrment_abort_wk);
+
+	spin_lock_bh(&rdev->msrments_lock);
+	list_for_each_entry_safe(msrment, tmp, &rdev->msrments_list, list) {
+		if (msrment->nl_portid != 0)
+			continue;
+		list_del(&msrment->list);
+		list_add(&msrment->list, &msrments_list);
+	}
+	spin_unlock_bh(&rdev->msrments_lock);
+
+	rtnl_lock();
+	list_for_each_entry_safe(msrment, tmp, &msrments_list, list) {
+		rdev_abort_msrment(rdev, msrment->wdev, msrment->cookie);
+		list_del(&msrment->list);
+		kfree(msrment);
+	}
+	rtnl_unlock();
+}
+
 /* exported functions */
 
 struct wiphy *wiphy_new_nm(const struct cfg80211_ops *ops, int sizeof_priv,
@@ -422,6 +450,9 @@ use_default_name:
 	spin_lock_init(&rdev->beacon_registrations_lock);
 	spin_lock_init(&rdev->bss_lock);
 	INIT_LIST_HEAD(&rdev->bss_list);
+	spin_lock_init(&rdev->msrments_lock);
+	INIT_LIST_HEAD(&rdev->msrments_list);
+	INIT_WORK(&rdev->msrment_abort_wk, cfg80211_abort_msrment_wk);
 	INIT_WORK(&rdev->scan_done_wk, __cfg80211_scan_done);
 	INIT_WORK(&rdev->sched_scan_results_wk, __cfg80211_sched_scan_results);
 	INIT_LIST_HEAD(&rdev->mlme_unreg);
@@ -629,6 +660,10 @@ int wiphy_register(struct wiphy *wiphy)
 		     !rdev->ops->set_mac_acl)))
 		return -EINVAL;
 
+	if (WARN_ON((wiphy->flags & WIPHY_FLAG_SUPPORTS_FTM_INITIATOR) &&
+		    (!rdev->ops->perform_msrment || !rdev->ops->abort_msrment)))
+		return -EINVAL;
+
 	if (wiphy->addresses)
 		memcpy(wiphy->perm_addr, wiphy->addresses[0].addr, ETH_ALEN);
 
@@ -792,9 +827,11 @@ void wiphy_unregister(struct wiphy *wiphy)
 		rfkill_unregister(rdev->rfkill);
 
 	rtnl_lock();
+	/* since we no longer have any wdevs, the list should be empty */
+	WARN_ON(!list_empty(&rdev->msrments_list));
+
 	nl80211_notify_wiphy(rdev, NL80211_CMD_DEL_WIPHY);
 	rdev->wiphy.registered = false;
-
 	WARN_ON(!list_empty(&rdev->wdev_list));
 
 	/*
@@ -823,6 +860,7 @@ void wiphy_unregister(struct wiphy *wiphy)
 	flush_work(&rdev->destroy_work);
 	flush_work(&rdev->sched_scan_stop_wk);
 	flush_work(&rdev->mlme_unreg_wk);
+	flush_work(&rdev->msrment_abort_wk);
 
 #ifdef CONFIG_PM
 	if (rdev->wiphy.wowlan_config && rdev->ops->set_wakeup)
@@ -865,8 +903,25 @@ EXPORT_SYMBOL(wiphy_rfkill_set_hw_state);
 void cfg80211_unregister_wdev(struct wireless_dev *wdev)
 {
 	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wdev->wiphy);
+	struct cfg80211_active_msrment *msrment, *tmp;
+	LIST_HEAD(msrments_list);
 
 	ASSERT_RTNL();
+
+	spin_lock_bh(&rdev->msrments_lock);
+	list_for_each_entry_safe(msrment, tmp, &rdev->msrments_list, list) {
+		if (msrment->wdev != wdev)
+			continue;
+		list_del(&msrment->list);
+		list_add(&msrment->list, &msrments_list);
+	}
+	spin_unlock_bh(&rdev->msrments_lock);
+
+	list_for_each_entry_safe(msrment, tmp, &msrments_list, list) {
+		rdev_abort_msrment(rdev, wdev, msrment->cookie);
+		list_del(&msrment->list);
+		kfree(msrment);
+	}
 
 	if (WARN_ON(wdev->netdev))
 		return;

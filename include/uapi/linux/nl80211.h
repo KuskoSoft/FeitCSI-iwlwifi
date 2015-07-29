@@ -820,6 +820,23 @@
  *	as an event to indicate changes for devices with wiphy-specific regdom
  *	management.
  *
+ * @NL80211_CMD_MSRMENT_REQUEST: Request to perform some type of measurement.
+ *	Request type is given by %NL80211_ATTR_MSRMENT_TYPE. Additional data is
+ *	given according to the request type.
+ *	When called, this operation returns a cookie (%NL80211_ATTR_COOKIE)
+ *	that will be included with any events pertaining to this request.
+ *	In order to abort the request, the socket which sent the request needs
+ *	to be closed. It is strongly recommended that each request will have a
+ *	separate socket.
+ * @NL80211_CMD_MSRMENT_RESPONSE: Reports measurement results in response to a
+ *	previous measurement request. A cookie matching the previous request is
+ *	given by %NL80211_ATTR_COOKIE. Response type is given by
+ *	%NL80211_ATTR_MSRMENT_TYPE. Response status is given by
+ *	%NL80211_ATTR_MSRMENT_STATUS. Additional data is given according to the
+ *	request type.
+ *	This message might be sent multiple times for one response, splitting
+ *	the response into several segments. The @NL80211_ATTR_LAST_MSG flag
+ *	should be set in the last message of the response.
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
  */
@@ -1005,6 +1022,9 @@ enum nl80211_commands {
 	NL80211_CMD_TDLS_CANCEL_CHANNEL_SWITCH,
 
 	NL80211_CMD_WIPHY_REG_CHANGE,
+
+	NL80211_CMD_MSRMENT_REQUEST,
+	NL80211_CMD_MSRMENT_RESPONSE,
 
 	/* add new commands above here */
 
@@ -1783,6 +1803,25 @@ enum nl80211_commands {
  *	between scans. The scan plans are executed sequentially.
  *	Each scan plan is a nested attribute of &enum nl80211_sched_scan_plan.
  *
+ * @NL80211_ATTR_MSRMENT_TYPE: Type of current measurement request/response.
+ *	(values defined in &enum nl80211_msrment_type).
+ * @NL80211_ATTR_MSRMENT_STATUS: Status of current measurement response.
+ *	(values defined in &enum nl80211_msrment_status)
+ * @NL80211_ATTR_MSRMENT_FTM_REQUEST: Container for data of an FTM measurement
+ *	request (nested. see &enum nl80211_ftm_request)
+ * @NL80211_ATTR_MSRMENT_FTM_RESPONSE: An AP with which a measurement was
+ *	attempted (nested. see &enum nl80211_ftm_response_entry)
+ *	An FTM response consists of series of such messages, where the last
+ *	message is marked with the @NL80211_ATTR_LAST_MSG flag.
+ * @NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS: Max number of 2-sided targets
+ *	allowed by the device in an FTM request. Not in use in case FTM is not
+ *	supported. (u32)
+ * @NL80211_ATTR_MAX_TOTAL_FTM_TARGETS: Max number of targets (both 1-sided and
+ *	2-sided) allowed by the device in an FTM request. Not in use in case FTM
+ *	is not supported. (u32)
+ * @NL80211_ATTR_LAST_MSG: Indicates that this message is the last one in the
+ *	series of messages. (flag)
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2156,6 +2195,16 @@ enum nl80211_attrs {
 	NL80211_ATTR_MAX_SCAN_PLAN_INTERVAL,
 	NL80211_ATTR_MAX_SCAN_PLAN_ITERATIONS,
 	NL80211_ATTR_SCHED_SCAN_PLANS,
+
+	NL80211_ATTR_MSRMENT_TYPE,
+	NL80211_ATTR_MSRMENT_STATUS,
+
+	NL80211_ATTR_MSRMENT_FTM_REQUEST,
+	NL80211_ATTR_MSRMENT_FTM_RESPONSE,
+	NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS,
+	NL80211_ATTR_MAX_TOTAL_FTM_TARGETS,
+
+	NL80211_ATTR_LAST_MSG,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -4642,6 +4691,228 @@ enum nl80211_sched_scan_plan {
 	__NL80211_SCHED_SCAN_PLAN_AFTER_LAST,
 	NL80211_SCHED_SCAN_PLAN_MAX =
 		__NL80211_SCHED_SCAN_PLAN_AFTER_LAST - 1
+};
+
+/**
+ * enum nl80211_msrment_type - measurement types
+ *
+ * Used to indicate the requested/reported measurement type in
+ * %NL80211_CMD_MSRMENT_REQUEST or %NL80211_CMD_MSRMENT_RESPONSE.
+ *
+ * @NL80211_MSRMENT_TYPE_FTM: Fine Timing Measurement.
+ *	An FTM request should be constructed according to &enum
+ *	nl80211_ftm_request.
+ *	An FTM response is a serie of messages, each meassage including a
+ *	single FTM target, described in &enum nl80211_ftm_target. The last
+ *	message in the serie is marked with the @NL80211_ATTR_LAST_MSG flag.
+ *	Status @NL80211_MSRMENT_STATUS_REFUSED is used if the device is not
+ *	available for FTM operations. Status @NL80211_MSRMENT_STATUS_FAIL is
+ *	used if the device attempted to perform the measurements, but all failed
+ *	for local reasons. In these both cases, no response is included in the
+ *	message. In other cases @NL80211_MSRMENT_STATUS_SUCCESS is used.
+ *	In the latter case, internal status of each target is used to
+ *	indicate the measurement status of each particular target.
+ */
+enum nl80211_msrment_type {
+	NL80211_MSRMENT_TYPE_FTM,
+};
+
+/**
+ * enum nl80211_msrment_status - measurement response status values
+ *
+ * @NL80211_MSRMENT_STATUS_SUCCESS: Measurement performed. This does not mean
+ *	every sub-measurement was successful, but only that as a whole, the
+ *	operation succeeded. More detailed status should reside in the internal
+ *	parts of the response, and according to the measurement type.
+ * @NL80211_MSRMENT_STATUS_REFUSED: Device is refusing to perform the required
+ *	measurement. Note that not every measurement can be performed at every
+ *	given moment in time. See specific measurement details for execution
+ *	conditions.
+ * @NL80211_MSRMENT_STATUS_FAIL: Measurement failed.
+ */
+enum nl80211_msrment_status {
+	NL80211_MSRMENT_STATUS_SUCCESS,
+	NL80211_MSRMENT_STATUS_REFUSED,
+	NL80211_MSRMENT_STATUS_FAIL,
+};
+
+/**
+ * enum nl80211_ftm_target - attributes for an FTM target
+ *
+ * An FTM target is a station with which to perform measurements.
+ *
+ * @__NL80211_FTM_TARGET_ATTR_INVALID: invalid
+ * @NL80211_FTM_TARGET_ATTR_FREQ: Target's frequency (u32)
+ * @NL80211_FTM_TARGET_ATTR_BW: Target's channel bandwidth. Only BWs supported
+ *	by the device are allowed. (u8, one of &enum nl80211_chan_width)
+ * @NL80211_FTM_TARGET_ATTR_CNTR_FREQ_1: Center freq., 1st segment, if relevant
+ *	(u32)
+ * @NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2: Center freq., 2nd segment, if relevant
+ *	(u32)
+ * @NL80211_FTM_TARGET_ATTR_BSSID: Target's BSSID (6 octets)
+ * @NL80211_FTM_TARGET_ATTR_ONE_SIDED: whether to perform a one-sided (flag set)
+ *	or two-sided (flag clear) measurement. (flag)
+ * @NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS: number of measurement iterations.
+ *	Optional (default: 1). (u16)
+ * @NL80211_FTM_TARGET_ATTR_BURST_PERIOD: Measurement periodicity in units of
+ *	100ms. Ignored if num of bursts is 1. (u16)
+ * @NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST: Number of measurement frames
+ *	requested per burst. Optional (default: 2) (u8)
+ * @NL80211_FTM_TARGET_ATTR_RETRIES: Number of retries per sample.
+ *	Optional (default: 3). (u8)
+ * @NL80211_FTM_TARGET_ATTR_ASAP: Whether to perform the measurement in ASAP
+ *	mode. Ignored if one-sided. (flag)
+ * @NL80211_FTM_TARGET_QUERY_LCI: Whether to include an LCI query in the
+ *	request. (flag)
+ * @NL80211_FTM_TARGET_QUERY_CIVIC: Whether to include a CIVIC query in the
+ *	request. (flag)
+ * @NL80211_FTM_TARGET_ATTR_COOKIE: Extra data for the use of the invoking
+ *	component. This will be passed back to the caller in the response, along
+ *	with the rest of the request. Optional. (u64)
+ * @__NL80211_FTM_TARGET_ATTR_AFTER_LAST: internal
+ * @NL80211_FTM_TARGET_ATTR_MAX: highest FTM target attribute
+ */
+enum nl80211_ftm_target {
+	__NL80211_FTM_TARGET_ATTR_INVALID,
+	NL80211_FTM_TARGET_ATTR_FREQ,
+	NL80211_FTM_TARGET_ATTR_BW,
+	NL80211_FTM_TARGET_ATTR_CNTR_FREQ_1,
+	NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2,
+	NL80211_FTM_TARGET_ATTR_BSSID,
+	NL80211_FTM_TARGET_ATTR_ONE_SIDED,
+	NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS,
+	NL80211_FTM_TARGET_ATTR_BURST_PERIOD,
+	NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST,
+	NL80211_FTM_TARGET_ATTR_RETRIES,
+	NL80211_FTM_TARGET_ATTR_ASAP,
+	NL80211_FTM_TARGET_ATTR_QUERY_LCI,
+	NL80211_FTM_TARGET_ATTR_QUERY_CIVIC,
+	NL80211_FTM_TARGET_ATTR_COOKIE,
+
+	/* keep last */
+	__NL80211_FTM_TARGET_ATTR_AFTER_LAST,
+	NL80211_FTM_TARGET_ATTR_MAX = __NL80211_FTM_TARGET_ATTR_AFTER_LAST - 1
+};
+
+/**
+ * enum nl80211_ftm_request - attributes for an FTM request
+ *
+ * Note: Only a single FTM request can be handled at a time.
+ *
+ * @__NL80211_FTM_REQ_ATTR_INVALID: invalid
+ * @NL80211_FTM_REQ_ATTR_TIMEOUT: Timespan within which measurement should
+ *	complete. Given in tenths of a second. Optional (default: 50). (u8)
+ * @NL80211_FTM_REQ_ATTR_MACADDR_TEMPLATE: Device will use the given template
+ *	(and mask, see ahead) to generate a mac address for identification. This
+ *	attribute sets the fixed part of a randomized mac address. (6 octets)
+ *	The MC bit must be set to 0.
+ * @NL80211_FTM_REQ_ATTR_MACADDR_MASK: Mask for mac address randomization. Bits
+ *	set to 1 shall be copied from %NL80211_FTM_REQ_ATTR_MACADDR_TEMPLATE.
+ *	Bits set to 0 shall be randomized by the device.
+ *	MC bit should not be randomized(set to 1). (6 octets)
+ * @NL80211_FTM_REQ_ATTR_REPORT_TSF: Flag that indicates to use the associated
+ *	AP's TSF in the %NL80211_FTM_RESP_ENTRY_ATTR_TSF field in the response.
+ *	Useful for RRM requests, where an associated AP requires to perform FTM,
+ *	and expects a timestamp in its own TSF. If not set, no tsf value is
+ *	reported in the response. Ignored if no AP is associated. (flag)
+ * @NL80211_FTM_REQ_ATTR_TARGETS: List of targets with which to perform
+ *	measurements. Length shall not exceed the value reported for the device
+ *	in %NL80211_ATTR_MAX_TOTAL_FTM_TARGETS. Among these targets, the number
+ *	of 2-sided requests shall not exceed the value reported for the device
+ *	in %NL80211_ATTR_MAX_2_SIDED_FTM_TARGETS.
+ *	(nested. see &enum nl80211_ftm_target)
+ *
+ * @__NL80211_FTM_REQ_ATTR_AFTER_LAST: internal
+ * @NL80211_FTM_REQ_ATTR_MAX: highest FTM request attribute
+ */
+enum nl80211_ftm_request {
+	__NL80211_FTM_REQ_ATTR_INVALID,
+	NL80211_FTM_REQ_ATTR_TIMEOUT,
+	NL80211_FTM_REQ_ATTR_MACADDR_TEMPLATE,
+	NL80211_FTM_REQ_ATTR_MACADDR_MASK,
+	NL80211_FTM_REQ_ATTR_REPORT_TSF,
+	NL80211_FTM_REQ_ATTR_TARGETS,
+
+	/* keep last */
+	__NL80211_FTM_REQ_ATTR_AFTER_LAST,
+	NL80211_FTM_REQ_ATTR_MAX = __NL80211_FTM_REQ_ATTR_AFTER_LAST - 1
+};
+
+/**
+ * enum nl80211_ftm_response_status - status of an FTM measurement attempt
+ *
+ * @NL80211_FTM_RESP_SUCCESS: Successful measurement, given results are valid.
+ * @NL80211_FTM_RESP_TARGET_INCAPAB: Target reported incapable
+ * @NL80211_FTM_RESP_TARGET_BUSY: Target reported busy
+ * @NL80211_FTM_RESP_FAIL: Failed for some other reason.
+ */
+enum nl80211_ftm_response_status {
+	NL80211_FTM_RESP_SUCCESS,
+	NL80211_FTM_RESP_TARGET_INCAPAB,
+	NL80211_FTM_RESP_TARGET_BUSY,
+	NL80211_FTM_RESP_FAIL,
+};
+
+/**
+ * enum nl80211_ftm_response_entry - attributes for an FTM response entry
+ *
+ * An FTM response entry represents a single target with which an FTM
+ *	measurement was attempted.
+ *
+ * @__NL80211_FTM_RESP_ENTRY_ATTR_INVALID: invalid
+ * @NL80211_FTM_RESP_ENTRY_ATTR_STATUS: Status of measurement. (u8, one of
+ *	&enum nl80211_ftm_response_status)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_COMPLETE: Whether this measurement is the last
+ *	one expected for this target. This implies that resources associated
+ *	with this target may be released. (flag)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_TARGET: The corresponding FTM target entry in
+ *	the measurement request. (nested. see &enum nl80211_ftm_target)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_HOST_TIME: Time, given in nanoseconds since
+ *	host boot time(referring to CLOCK_BOOTTIME), in which:
+ *	- in case of error - error was detected
+ *	- in case of success - successful measurement started
+ *	Note that this reported value is an estimation of the actual event time,
+ *	with expected error of up to 20ms off the actual mark. Underlying
+ *	devices must make sure they comply with this limited tolerance. (u64)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_TSF: Same as %NL80211_FTM_RESP_ATTR_HOST_TIME,
+ *	but the value is TSF of the associated AP. Optional - present only if
+ *	%NL80211_FTM_REQ_ATTR_AP_REPORT_TSF was set in the request, and an
+ *	associated AP exists. Also, this value is not an estimation. (u64)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX: Ordinal number of currently
+ *	reported measurement iteration. (u8)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RSSI: Measured RSSI, given in dBm. Valid values
+ *	range: -128-0. (s8)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD: The difference between max and min
+ *	measured RSSI values. (u8)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RATE_INFO: Rate-related data. (nested. see enum
+ *	nl80211_rate_info)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RTT: The Round Trip Time that took for the last
+ *	measurement for current target, in nsec. (u32)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR: The variance of the RTT values measured
+ *	for current target, in nsec^2. (u32)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD: The difference between max and min
+ *	RTT values measured for the current target in the current session, given
+ *	in nsec (u32)
+ */
+enum nl80211_ftm_response_entry {
+	__NL80211_FTM_RESP_ENTRY_ATTR_INVALID,
+	NL80211_FTM_RESP_ENTRY_ATTR_STATUS,
+	NL80211_FTM_RESP_ENTRY_ATTR_COMPLETE,
+	NL80211_FTM_RESP_ENTRY_ATTR_TARGET,
+	NL80211_FTM_RESP_ENTRY_ATTR_HOST_TIME,
+	NL80211_FTM_RESP_ENTRY_ATTR_TSF,
+	NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX,
+	NL80211_FTM_RESP_ENTRY_ATTR_RSSI,
+	NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
+	NL80211_FTM_RESP_ENTRY_ATTR_RATE_INFO,
+	NL80211_FTM_RESP_ENTRY_ATTR_RTT,
+	NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
+	NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,
+
+	/* keep last */
+	__NL80211_FTM_RESP_ENTRY_ATTR_AFTER_LAST,
+	NL80211_FTM_RESP_ENTRY_ATTR_MAX =
+	__NL80211_FTM_RESP_ENTRY_ATTR_AFTER_LAST - 1,
 };
 
 #endif /* __LINUX_NL80211_H */

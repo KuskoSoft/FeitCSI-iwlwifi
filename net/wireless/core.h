@@ -2,6 +2,7 @@
  * Wireless configuration interface internals.
  *
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
+ * Copyright 2015	Intel Deutschland GmbH
  */
 #ifndef __NET_WIRELESS_CORE_H
 #define __NET_WIRELESS_CORE_H
@@ -62,6 +63,10 @@ struct cfg80211_registered_device {
 	struct list_head mlme_unreg;
 	spinlock_t mlme_unreg_lock;
 	struct work_struct mlme_unreg_wk;
+
+	spinlock_t msrments_lock;
+	struct list_head msrments_list;
+	struct work_struct msrment_abort_wk;
 
 	/* protected by RTNL only */
 	int num_running_ifaces;
@@ -256,6 +261,13 @@ struct cfg80211_beacon_registration {
 struct cfg80211_iface_destroy {
 	struct list_head list;
 	u32 nlportid;
+};
+
+struct cfg80211_active_msrment {
+	struct wireless_dev *wdev;
+	struct list_head list;
+	u64 cookie;
+	u32 nl_portid;
 };
 
 void cfg80211_destroy_ifaces(struct cfg80211_registered_device *rdev);

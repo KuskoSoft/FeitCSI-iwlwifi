@@ -1063,4 +1063,31 @@ rdev_set_coalesce(struct cfg80211_registered_device *rdev,
 	trace_rdev_return_int(&rdev->wiphy, ret);
 	return ret;
 }
+
+static inline int rdev_perform_msrment(struct cfg80211_registered_device *rdev,
+				       struct wireless_dev *wdev,
+				       struct cfg80211_msrment_request *request,
+				       u64 *cookie)
+{
+	int ret = -ENOTSUPP;
+
+	trace_rdev_perform_msrment(&rdev->wiphy, wdev, request);
+	if (rdev->ops->perform_msrment)
+		ret = rdev->ops->perform_msrment(&rdev->wiphy, wdev,
+						 request, cookie);
+	trace_rdev_return_int_cookie(&rdev->wiphy, ret, *cookie);
+	return ret;
+}
+
+static inline int rdev_abort_msrment(struct cfg80211_registered_device *rdev,
+				     struct wireless_dev *wdev, u64 cookie)
+{
+	int ret = -ENOTSUPP;
+
+	trace_rdev_abort_msrment(&rdev->wiphy, wdev, cookie);
+	if (rdev->ops->abort_msrment)
+		ret = rdev->ops->abort_msrment(&rdev->wiphy, wdev, cookie);
+	trace_rdev_return_int(&rdev->wiphy, ret);
+	return ret;
+}
 #endif /* __CFG80211_RDEV_OPS */
