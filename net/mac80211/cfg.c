@@ -3345,6 +3345,60 @@ static int ieee80211_del_tx_ts(struct wiphy *wiphy, struct net_device *dev,
 	return -ENOENT;
 }
 
+static u64 ieee80211_msrment_cookie(struct ieee80211_local *local,
+				    enum nl80211_msrment_type type)
+{
+	ASSERT_RTNL();
+
+	local->msrment_cookie_counter++;
+	if (local->msrment_cookie_counter == (1ULL << 48))
+		local->msrment_cookie_counter = 1;
+
+	return ((u64)type << 48) | local->msrment_cookie_counter;
+}
+
+static int ieee80211_perform_msrment(struct wiphy *wiphy,
+				     struct wireless_dev *wdev,
+				     struct cfg80211_msrment_request *request,
+				     u64 *cookie)
+{
+	struct ieee80211_local *local = wiphy_priv(wiphy);
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+
+	*cookie = ieee80211_msrment_cookie(local, request->type);
+
+	switch (request->type) {
+	case NL80211_MSRMENT_TYPE_FTM:
+		if (!local->ops->perform_ftm)
+			return -EOPNOTSUPP;
+		return local->ops->perform_ftm(&local->hw, *cookie, vif,
+					       &request->u.ftm);
+	default:
+		break;
+	}
+
+	return -EOPNOTSUPP;
+}
+
+static int ieee80211_abort_msrment(struct wiphy *wiphy,
+				   struct wireless_dev *wdev, u64 cookie)
+{
+	struct ieee80211_local *local = wiphy_priv(wiphy);
+
+	enum nl80211_msrment_type type = cookie >> 48;
+
+	switch (type) {
+	case NL80211_MSRMENT_TYPE_FTM:
+		if (!local->ops->abort_ftm)
+			return -EOPNOTSUPP;
+		return local->ops->abort_ftm(&local->hw, cookie);
+	default:
+		break;
+	}
+
+	return -EOPNOTSUPP;
+}
+
 const struct cfg80211_ops mac80211_config_ops = {
 	.add_virtual_intf = ieee80211_add_iface,
 	.del_virtual_intf = ieee80211_del_iface,
@@ -3365,6 +3419,8 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.get_station = ieee80211_get_station,
 	.dump_station = ieee80211_dump_station,
 	.dump_survey = ieee80211_dump_survey,
+	.perform_msrment = ieee80211_perform_msrment,
+	.abort_msrment = ieee80211_abort_msrment,
 #ifdef CPTCFG_MAC80211_MESH
 	.add_mpath = ieee80211_add_mpath,
 	.del_mpath = ieee80211_del_mpath,

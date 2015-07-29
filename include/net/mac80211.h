@@ -1990,10 +1990,6 @@ struct ieee80211_txq {
  *
  * @IEEE80211_HW_BEACON_TX_STATUS: The device/driver provides TX status
  *	for sent beacons.
- * @IEEE80211_HW_SUPPORTS_FTM_INITIATOR:
- *	Hardware supports 802.11 Fine Timing Measurement Initiator.
- *	This flag should be set only if the support can be provided without
- *	involvement of the stack; otherwise leave it to stack to decide.
  *
  * @IEEE80211_HW_NEEDS_UNIQUE_STA_ADDR: Hardware (or driver) requires that each
  *	station has a unique address, i.e. each station entry can be identified
@@ -2035,7 +2031,6 @@ enum ieee80211_hw_flags {
 	IEEE80211_HW_TDLS_WIDER_BW,
 	IEEE80211_HW_SUPPORTS_AMSDU_IN_AMPDU,
 	IEEE80211_HW_BEACON_TX_STATUS,
-	IEEE80211_HW_SUPPORTS_FTM_INITIATOR,
 	IEEE80211_HW_NEEDS_UNIQUE_STA_ADDR,
 
 	/* keep last, obviously */
@@ -3387,6 +3382,11 @@ enum ieee80211_reconfig_type {
  *	the function call.
  *
  * @wake_tx_queue: Called when new packets have been added to the queue.
+ *
+ * @perform_ftm: Perform a Fine Timing Measurement with the given request
+ *	parameters. The given request can only be used within the function call.
+ * @abort_ftm: Abort a Fine Timing Measurement request. The given cookie must
+ *	match that of the active FTM request.
  */
 struct ieee80211_ops {
 	void (*tx)(struct ieee80211_hw *hw,
@@ -3630,6 +3630,11 @@ struct ieee80211_ops {
 
 	void (*wake_tx_queue)(struct ieee80211_hw *hw,
 			      struct ieee80211_txq *txq);
+
+	int (*perform_ftm)(struct ieee80211_hw *hw, u64 cookie,
+			   struct ieee80211_vif *vif,
+			   struct cfg80211_ftm_request *ftm_req);
+	int (*abort_ftm)(struct ieee80211_hw *hw, u64 cookie);
 };
 
 /**
