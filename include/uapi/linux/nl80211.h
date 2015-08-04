@@ -869,6 +869,10 @@
  *	which just terminated.
  * @NL80211_CMD_RM_NAN_FUNCTION: remove a NAN function based on its instance
  *	id and cookie.
+ * @NL80211_CMD_CHANGE_NAN_CONFIG: Changes current NAN configuration. NAN
+ *	must be opeartional (%NL80211_CMD_START_NAN was executed).
+ *	It must contain at least one of the following attributes:
+ *	%NL80211_ATTR_NAN_MASTER_PREF, %NL80211_ATTR_NAN_DUAL.
  *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
@@ -1067,6 +1071,7 @@ enum nl80211_commands {
 	NL80211_CMD_STOP_NAN,
 	NL80211_CMD_ADD_NAN_FUNCTION,
 	NL80211_CMD_RM_NAN_FUNCTION,
+	NL80211_CMD_CHANGE_NAN_CONFIG,
 
 	/* add new commands above here */
 
@@ -1871,10 +1876,13 @@ enum nl80211_commands {
  *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
  *
  * @NL80211_ATTR_NAN_MASTER_PREF: the master preference to be used by
- *	&NL80211_CMD_START_NAN. Its type is u8 and it can't be 0, 1 or 255.
+ *	&NL80211_CMD_START_NAN and optionally with
+ *	&NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0, 1 or
+ *	255.
  * @NL80211_ATTR_NAN_DUAL: NaN dual band operation config (see
  *	&enum nl80211_nan_dual_band_conf). This attribute is used with
- *	&NL80211_CMD_START_NAN.
+ *	&NL80211_CMD_START_NAN and optionally with
+ *	&NL80211_CMD_CHANGE_NAN_CONFIG.
  * @NL80211_ATTR_NAN_FUNC: a function that can be added to NAN. See
  *	&enum nl80211_nan_func_attributes for description of this nested
  *	attribute.

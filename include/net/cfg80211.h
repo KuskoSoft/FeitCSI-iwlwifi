@@ -2497,6 +2497,17 @@ struct cfg80211_nan_func {
 };
 
 /**
+ * enum cfg80211_nan_conf_changes - indicates changed fields in nan configuration
+ *
+ * @CFG80211_NAN_CONF_CHANGED_PREF: master preference
+ * @CFG80211_NAN_CONF_CHANGED_DUAL: dual band operation
+ */
+enum cfg80211_nan_conf_changes {
+	CFG80211_NAN_CONF_CHANGED_PREF = BIT(0),
+	CFG80211_NAN_CONF_CHANGED_DUAL = BIT(1),
+};
+
+/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -2784,6 +2795,8 @@ struct cfg80211_nan_func {
  *	scope of this call. The function assigns a unique instance_id in the
  *	provided @nan_func.
  * @rm_nan_func: Remove a nan function.
+ * @nan_change_conf: changes NAN configuration. The changed parameters must
+ *	be specified in @changes. All other parameters must be ignored.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -3065,6 +3078,10 @@ struct cfg80211_ops {
 				struct cfg80211_nan_func *nan_func);
 	void	(*rm_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
 			       u8 instance_id, u64 cookie);
+	int	(*nan_change_conf)(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   struct cfg80211_nan_conf *conf,
+				   u32 changes);
 };
 
 /*
