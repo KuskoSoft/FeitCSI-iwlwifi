@@ -854,6 +854,21 @@
  *	After this command NAN functions can be added.
  * @NL80211_CMD_STOP_NAN: Stop the NAN operation, identified by
  *	its %NL80211_ATTR_WDEV interface.
+ * @NL80211_CMD_ADD_NAN_FUNCTION: add a NAN function. The function is defined
+ *	with %NL80211_ATTR_NAN_FUNC nested attribute. When called, this
+ *	operation returns the strictly positive and unique instance id
+ *	(%NL80211_ATTR_NAN_FUNC_INST_ID) of the function upon success.
+ *	In addition, a user defined cookie must be provided with
+ *	%NL80211_ATTR_COOKIE. The cookie is provided by the userspace and has
+ *	to be unique (or at least fairly random). The kernel will ignore it
+ *	but it will be passed to the user space for any match or termination
+ *	event. Since instance ID's can be re-used, this cookie is the right
+ *	way to identify the function. This will avoid races when a termination
+ *	event may be handled by the user space after it has already added a
+ *	new function that got the same instace id from the kernel as the one
+ *	which just terminated.
+ * @NL80211_CMD_RM_NAN_FUNCTION: remove a NAN function based on its instance
+ *	id and cookie.
  *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
@@ -1050,6 +1065,8 @@ enum nl80211_commands {
 
 	NL80211_CMD_START_NAN,
 	NL80211_CMD_STOP_NAN,
+	NL80211_CMD_ADD_NAN_FUNCTION,
+	NL80211_CMD_RM_NAN_FUNCTION,
 
 	/* add new commands above here */
 
@@ -1858,6 +1875,11 @@ enum nl80211_commands {
  * @NL80211_ATTR_NAN_DUAL: NaN dual band operation config (see
  *	&enum nl80211_nan_dual_band_conf). This attribute is used with
  *	&NL80211_CMD_START_NAN.
+ * @NL80211_ATTR_NAN_FUNC: a function that can be added to NAN. See
+ *	&enum nl80211_nan_func_attributes for description of this nested
+ *	attribute.
+ * @NL80211_ATTR_NAN_FUNC_INST_ID: the instance id of a %NL80211_ATTR_NAN_FUNC.
+ *	Its type is u8 and it cannot be 0.
  *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
@@ -2248,6 +2270,8 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_NAN_MASTER_PREF,
 	NL80211_ATTR_NAN_DUAL,
+	NL80211_ATTR_NAN_FUNC,
+	NL80211_ATTR_NAN_FUNC_INST_ID,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -5042,6 +5066,131 @@ enum nl80211_nan_dual_band_conf {
 	__NL80211_NAN_BAND_AFTER_LAST,
 	NL80211_NAN_BAND_MAX =
 	__NL80211_NAN_BAND_AFTER_LAST - 1,
+};
+
+/**
+ * enum nl80211_nan_function_type - NAN function type
+ *
+ * Defines the function type of a NAN function
+ *
+ * @NL80211_NAN_FUNC_PUBLISH: function is publish
+ * @NL80211_NAN_FUNC_SUBSCRIBE: function is subscribe
+ * @NL80211_NAN_FUNC_FOLLOW_UP: function is follow-up
+ */
+enum nl80211_nan_function_type {
+	NL80211_NAN_FUNC_PUBLISH,
+	NL80211_NAN_FUNC_SUBSCRIBE,
+	NL80211_NAN_FUNC_FOLLOW_UP,
+
+	/* keep last */
+	__NL80211_NAN_FUNC_TYPE_AFTER_LAST,
+	NL80211_NAN_FUNC_MAX_TYPE = __NL80211_NAN_FUNC_TYPE_AFTER_LAST - 1,
+};
+
+/**
+ * enum nl80211_nan_publish_type - NAN publish tx type
+ *
+ * Defines how to send publish Service Discovery Frames
+ *
+ * @NL80211_NAN_SOLICITED_PUBLISH: publish function is solicited
+ * @NL80211_NAN_UNSOLICITED_PUBLISH: publish function is unsolicited
+ */
+enum nl80211_nan_publish_type {
+	NL80211_NAN_SOLICITED_PUBLISH = 1 << 0,
+	NL80211_NAN_UNSOLICITED_PUBLISH = 1 << 1,
+};
+
+#define NL80211_NAN_FUNC_SERVICE_ID_LEN 6
+#define NL80211_NAN_FUNC_SERVICE_SPEC_INFO_MAX_LEN 0xff
+#define NL80211_NAN_FUNC_SRF_MAX_LEN 0xff
+
+/**
+ * enum nl80211_nan_func_attributes - NAN function attributes
+ * @__NL80211_NAN_FUNC_INVALID: invalid
+ * @NL80211_NAN_FUNC_TYPE: &enum nl80211_nan_function_type (u8).
+ * @NL80211_NAN_FUNC_SERVICE_ID: 6 bytes of the service ID hash as
+ *	specified in NAN spec. This is a binary attribute.
+ * @NL80211_NAN_FUNC_PUBLISH_TYPE: relevant if the function's type is
+ *	publish. Defines the transmission type for the publish Service Discovery
+ *	Frame, see &enum nl80211_nan_publish_type. Its type is u8.
+ * @NL80211_NAN_FUNC_PUBLISH_BCAST: relevant if the function is a solicited
+ *	publish. Should the solicited publish Service Discovery Frame be sent to
+ *	the NAN Broadcast address. This is a flag.
+ * @NL80211_NAN_FUNC_SUBSCRIBE_ACTIVE: relevant if the function's type is
+ *	subscribe. Is the subscribe active. This is a flag.
+ * @NL80211_NAN_FUNC_FOLLOW_UP_ID: relevant if the function's type is follow up.
+ *	The instance ID for the follow up Service Discovery Frame. This is u8.
+ * @NL80211_NAN_FUNC_FOLLOW_UP_REQ_ID: relevant if the function's type
+ *	is follow up. This is a u8.
+ *	The requestor instance ID for the follow up Service Discovery Frame.
+ * @NL80211_NAN_FUNC_FOLLOW_UP_DEST: the MAC address of the recipient of the
+ *	follow up Service Discovery Frame. This is a binary attribute.
+ * @NL80211_NAN_FUNC_CLOSE_RANGE: is this function limited for devices in a
+ *	close range. The range itself (RSSI) is defined by the device.
+ *	This is a flag.
+ * @NL80211_NAN_FUNC_TTL: number of DWs this function should stay active. 0 is
+ *	equivalent to no TTL at all. This is a u32.
+ * @NL80211_NAN_FUNC_SERVICE_INFO: array of bytes describing the service
+ *	specific info. This is a binary attribute.
+ * @NL80211_NAN_FUNC_SRF: Service Receive Filter. This is a nested attribute.
+ *	See &enum nl80211_nan_srf_attributes.
+ * @NL80211_NAN_FUNC_RX_MATCH_FILTER: Receive Matching filter. This is a nested
+ *	attribute. It is a list of binary values.
+ * @NL80211_NAN_FUNC_TX_MATCH_FILTER: Transmit Matching filter. This is a
+ *	nested attribute. It is a list of binary values.
+ * @NUM_NL80211_NAN_FUNC_ATTR: internal
+ * @NL80211_NAN_FUNC_ATTR_MAX: highest NAN function attribute
+ */
+enum nl80211_nan_func_attributes {
+	__NL80211_NAN_FUNC_INVALID,
+	NL80211_NAN_FUNC_TYPE,
+	NL80211_NAN_FUNC_SERVICE_ID,
+	NL80211_NAN_FUNC_PUBLISH_TYPE,
+	NL80211_NAN_FUNC_PUBLISH_BCAST,
+	NL80211_NAN_FUNC_SUBSCRIBE_ACTIVE,
+	NL80211_NAN_FUNC_FOLLOW_UP_ID,
+	NL80211_NAN_FUNC_FOLLOW_UP_REQ_ID,
+	NL80211_NAN_FUNC_FOLLOW_UP_DEST,
+	NL80211_NAN_FUNC_CLOSE_RANGE,
+	NL80211_NAN_FUNC_TTL,
+	NL80211_NAN_FUNC_SERVICE_INFO,
+	NL80211_NAN_FUNC_SRF,
+	NL80211_NAN_FUNC_RX_MATCH_FILTER,
+	NL80211_NAN_FUNC_TX_MATCH_FILTER,
+
+	/* keep last */
+	NUM_NL80211_NAN_FUNC_ATTR,
+	NL80211_NAN_FUNC_ATTR_MAX = NUM_NL80211_NAN_FUNC_ATTR - 1
+};
+
+/**
+ * enum nl80211_nan_srf_attributes - NAN Service Response filter attributes
+ * @__NL80211_NAN_SRF_INVALID: invalid
+ * @NL80211_NAN_SRF_INCLUDE: true if the include bit of the SRF set.
+ *	This is a flag.
+ * @NL80211_NAN_SRF_TYPE_BF: true if the SRF is a Bloom Filter SRF. If false
+ *	the SRF will be &NL80211_ATTR_MAC_ADDRS. This is a flag.
+ * @NL80211_NAN_SRF_BF: Bloom Filter. Relevant and mandatory if
+ *	&NL80211_NAN_SRF_TYPE_BF is true. This attribute is binary.
+ * @NL80211_NAN_SRF_BF_IDX: index of the Bloom Filter. Relevant and
+ *	mandatory if &NL80211_NAN_SRF_TYPE_BF is true. This is a u8.
+ * @NL80211_NAN_SRF_MAC_ADDRS: list of MAC addresses for the SRF. Relevant and
+ *	mandatory if &NL80211_NAN_SRF_TYPE_BF is false. This is a nested
+ *	attribute. Each nested attribute is a MAC address.
+ * @NUM_NL80211_NAN_SRF_ATTR: internal
+ * @NL80211_NAN_SRF_ATTR_MAX: highest NAN SRF attribute
+ */
+enum nl80211_nan_srf_attributes {
+	__NL80211_NAN_SRF_INVALID,
+	NL80211_NAN_SRF_INCLUDE,
+	NL80211_NAN_SRF_TYPE_BF,
+	NL80211_NAN_SRF_BF,
+	NL80211_NAN_SRF_BF_IDX,
+	NL80211_NAN_SRF_MAC_ADDRS,
+
+	/* keep last */
+	NUM_NL80211_NAN_SRF_ATTR,
+	NL80211_NAN_SRF_ATTR_MAX = NUM_NL80211_NAN_SRF_ATTR - 1,
 };
 
 #endif /* __LINUX_NL80211_H */

@@ -907,6 +907,28 @@ static inline void rdev_stop_nan(struct cfg80211_registered_device *rdev,
 	trace_rdev_return_void(&rdev->wiphy);
 }
 
+static inline int
+rdev_add_nan_func(struct cfg80211_registered_device *rdev,
+		  struct wireless_dev *wdev,
+		  struct cfg80211_nan_func *nan_func)
+{
+	int ret;
+
+	trace_rdev_add_nan_func(&rdev->wiphy, wdev, nan_func);
+	ret = rdev->ops->add_nan_func(&rdev->wiphy, wdev, nan_func);
+	trace_rdev_return_int(&rdev->wiphy, ret);
+	return ret;
+}
+
+static inline void rdev_rm_nan_func(struct cfg80211_registered_device *rdev,
+				    struct wireless_dev *wdev,
+				    u8 instance_id, u64 cookie)
+{
+	trace_rdev_rm_nan_func(&rdev->wiphy, wdev, instance_id, cookie);
+	rdev->ops->rm_nan_func(&rdev->wiphy, wdev, instance_id, cookie);
+	trace_rdev_return_void(&rdev->wiphy);
+}
+
 static inline int rdev_set_mac_acl(struct cfg80211_registered_device *rdev,
 				   struct net_device *dev,
 				   struct cfg80211_acl_data *params)

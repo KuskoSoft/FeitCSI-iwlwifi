@@ -2430,6 +2430,73 @@ struct cfg80211_nan_conf {
 };
 
 /**
+ * struct cfg80211_nan_func_filter - a NAN function Rx / Tx filter
+ *
+ * @filter: the content of the filter
+ * @len: the length of the filter
+ */
+struct cfg80211_nan_func_filter {
+	const u8 *filter;
+	u8 len;
+};
+
+/**
+ * struct cfg80211_nan_func - a NAN function
+ *
+ * @type: &enum nl80211_nan_function_type
+ * @service_id: the service ID of the function
+ * @publish_type: &nl80211_nan_publish_type
+ * @close_range: if true, the range should be limited. Threshold is
+ *	implementation specific.
+ * @publish_bcast: if true, the solicited publish should be broadcasted
+ * @subscribe_active: if true, the subscribe is active
+ * @followup_id: the instance ID for follow up
+ * @followup_reqid: the requestor instance ID for follow up
+ * @followup_dest: MAC address of the recipient of the follow up
+ * @ttl: time to live counter in DW.
+ * @serv_spec_info: Service Specific Info
+ * @serv_spec_info_len: Service Specific Info length
+ * @srf_include: if true, SRF is inclusive
+ * @srf_bf: Bloom Filter
+ * @srf_bf_len: Bloom Filter length
+ * @srf_bf_idx: Bloom Filter index
+ * @srf_macs: SRF MAC addresses
+ * @srf_num_macs: number of MAC addresses in SRF
+ * @rx_filters: rx filters that are matched with corresponding peer's tx_filter
+ * @tx_filters: filters that should be transmitted in the SDF.
+ * @num_rx_filters: length of &rx_filters.
+ * @num_tx_filters: length of &tx_filters.
+ * @instance_id: driver allocated id of the function.
+ * @cookie: user defined cookie (will be returned with notifications)
+ */
+struct cfg80211_nan_func {
+	enum nl80211_nan_function_type type;
+	u8 service_id[NL80211_NAN_FUNC_SERVICE_ID_LEN];
+	u8 publish_type;
+	bool close_range;
+	bool publish_bcast;
+	bool subscribe_active;
+	u8 followup_id;
+	u8 followup_reqid;
+	struct mac_address followup_dest;
+	u32 ttl;
+	const u8 *serv_spec_info;
+	u8 serv_spec_info_len;
+	bool srf_include;
+	const u8 *srf_bf;
+	u8 srf_bf_len;
+	u8 srf_bf_idx;
+	struct mac_address *srf_macs;
+	int srf_num_macs;
+	struct cfg80211_nan_func_filter *rx_filters;
+	struct cfg80211_nan_func_filter *tx_filters;
+	u8 num_tx_filters;
+	u8 num_rx_filters;
+	u8 instance_id;
+	u64 cookie;
+};
+
+/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -2712,6 +2779,11 @@ struct cfg80211_nan_conf {
  * @start_ftm_responder: Start and configure FTM responder.
  * @start_nan: Start the NAN interface.
  * @stop_nan: Stop the NAN interface.
+ * @add_nan_func: Add a nan function. Returns negative value on failure.
+ *	The data in cfg80211_nan_func must not be referenced outside the
+ *	scope of this call. The function assigns a unique instance_id in the
+ *	provided @nan_func.
+ * @rm_nan_func: Remove a nan function.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -2989,6 +3061,10 @@ struct cfg80211_ops {
 	int	(*start_nan)(struct wiphy *wiphy, struct wireless_dev *wdev,
 			     struct cfg80211_nan_conf *conf);
 	void	(*stop_nan)(struct wiphy *wiphy, struct wireless_dev *wdev);
+	int	(*add_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
+				struct cfg80211_nan_func *nan_func);
+	void	(*rm_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
+			       u8 instance_id, u64 cookie);
 };
 
 /*
