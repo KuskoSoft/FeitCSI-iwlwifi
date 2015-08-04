@@ -5683,6 +5683,43 @@ wiphy_ext_feature_isset(struct wiphy *wiphy,
 	return (ft_byte & BIT(ftidx % 8)) != 0;
 }
 
+/**
+ * struct cfg80211_nan_match_params - NAN match parameters
+ * @type: the type of the function that triggered a match. If it is
+ *	 %NL80211_NAN_FUNC_SUBSCRIBE it means that we replied to a subscriber.
+ *	 If it is %NL80211_NAN_FUNC_PUBLISH, it means that we got a discovery
+ *	 result.
+ *	 If it is %NL80211_NAN_FUNC_FOLLOW_UP, we received a follow up.
+ * @inst_id: the local instance id
+ * @peer_inst_id: the instance id of the peer's function
+ * @addr: the MAC address of the peer
+ * @info_len: the length of the &info
+ * @info: the Service Specific Info from the peer (if any)
+ * @cookie: user defined cookie of the corresponding function
+ */
+struct cfg80211_nan_match_params {
+	enum nl80211_nan_function_type type;
+	u8 inst_id;
+	u8 peer_inst_id;
+	const u8 *addr;
+	u8 info_len;
+	const u8 *info;
+	u64 cookie;
+};
+
+/**
+ * cfg80211_nan_match - report a match for a NAN function.
+ * @wdev: the wireless device reporting the match
+ * @match: match notification parameters
+ * @gfp: allocation flags
+ *
+ * This function reports that the a NAN function had a match. This
+ * can be a subscribe that had a match or a solicited publish that
+ * was sent. It can also be a follow up that was received.
+ */
+void cfg80211_nan_match(struct wireless_dev *wdev,
+			struct cfg80211_nan_match_params *match, gfp_t gfp);
+
 /* ethtool helper */
 void cfg80211_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info);
 
