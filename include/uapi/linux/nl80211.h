@@ -845,6 +845,16 @@
  *	This is supported only on AP interface. FTM responder cannot be stopped
  *	without removing the interface.
  *
+ * @NL80211_CMD_START_NAN: Start NAN operation, identified by its
+ *	%NL80211_ATTR_WDEV interface. This interface must have been previously
+ *	created with %NL80211_CMD_NEW_INTERFACE. After it has been started, the
+ *	NAN interface will create or join a cluster. This command must have a
+ *	valid %NL80211_ATTR_NAN_MASTER_PREF attribute and optional
+ *	%NL80211_ATTR_NAN_DUAL attributes.
+ *	After this command NAN functions can be added.
+ * @NL80211_CMD_STOP_NAN: Stop the NAN operation, identified by
+ *	its %NL80211_ATTR_WDEV interface.
+ *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
  */
@@ -1037,6 +1047,9 @@ enum nl80211_commands {
 	NL80211_CMD_MSRMENT_RESPONSE,
 
 	NL80211_CMD_START_FTM_RESPONDER,
+
+	NL80211_CMD_START_NAN,
+	NL80211_CMD_STOP_NAN,
 
 	/* add new commands above here */
 
@@ -1840,6 +1853,12 @@ enum nl80211_commands {
  * @NL80211_ATTR_CIVIC: The content of measurement Report IE (Section 8.4.2.21
  *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
  *
+ * @NL80211_ATTR_NAN_MASTER_PREF: the master preference to be used by
+ *	&NL80211_CMD_START_NAN. Its type is u8 and it can't be 0, 1 or 255.
+ * @NL80211_ATTR_NAN_DUAL: NaN dual band operation config (see
+ *	&enum nl80211_nan_dual_band_conf). This attribute is used with
+ *	&NL80211_CMD_START_NAN.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2227,6 +2246,9 @@ enum nl80211_attrs {
 	NL80211_ATTR_LCI,
 	NL80211_ATTR_CIVIC,
 
+	NL80211_ATTR_NAN_MASTER_PREF,
+	NL80211_ATTR_NAN_DUAL,
+
 	/* add attributes here, update the policy in nl80211.c */
 
 	__NL80211_ATTR_AFTER_LAST,
@@ -2305,6 +2327,7 @@ enum nl80211_attrs {
  *	commands to create and destroy one
  * @NL80211_IF_TYPE_OCB: Outside Context of a BSS
  *	This mode corresponds to the MIB variable dot11OCBActivated=true
+ * @NL80211_IFTYPE_NAN: NAN device interface type (not a netdev)
  * @NL80211_IFTYPE_MAX: highest interface type number currently defined
  * @NUM_NL80211_IFTYPES: number of defined interface types
  *
@@ -2325,6 +2348,7 @@ enum nl80211_iftype {
 	NL80211_IFTYPE_P2P_GO,
 	NL80211_IFTYPE_P2P_DEVICE,
 	NL80211_IFTYPE_OCB,
+	NL80211_IFTYPE_NAN,
 
 	/* keep last */
 	NUM_NL80211_IFTYPES,
@@ -4998,6 +5022,26 @@ enum nl80211_ftm_response_entry {
 	__NL80211_FTM_RESP_ENTRY_ATTR_AFTER_LAST,
 	NL80211_FTM_RESP_ENTRY_ATTR_MAX =
 	__NL80211_FTM_RESP_ENTRY_ATTR_AFTER_LAST - 1,
+};
+
+/**
+ * enum nl80211_nan_dual_band_conf - NAN dual band configuration
+ *
+ * Defines the NAN dual band mode of operation
+ *
+ * @NL80211_NAN_BAND_DEFAULT: device default mode
+ * @NL80211_NAN_BAND_SINGLE: 2.4Ghz only mode
+ * @NL80211_NAN_BAND_DUAL: 2.4Ghz and 5.2Ghz mode
+  */
+enum nl80211_nan_dual_band_conf {
+	NL80211_NAN_BAND_DEFAULT,
+	NL80211_NAN_BAND_SINGLE,
+	NL80211_NAN_BAND_DUAL,
+
+	/* keep last */
+	__NL80211_NAN_BAND_AFTER_LAST,
+	NL80211_NAN_BAND_MAX =
+	__NL80211_NAN_BAND_AFTER_LAST - 1,
 };
 
 #endif /* __LINUX_NL80211_H */

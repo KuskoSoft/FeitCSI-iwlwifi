@@ -2417,6 +2417,19 @@ struct cfg80211_ftm_responder_params {
 };
 
 /**
+ * struct cfg80211_nan_conf - nan configuration
+ *
+ * This struct defines nan configuration parameters
+ *
+ * @master_pref: master preference (2 -254)
+ * @dual: dual band operation mode
+ */
+struct cfg80211_nan_conf {
+	u8 master_pref;
+	enum nl80211_nan_dual_band_conf dual;
+};
+
+/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -2697,6 +2710,8 @@ struct cfg80211_ftm_responder_params {
  * @abort_msrment: Abort a previously requested measurement.
  *
  * @start_ftm_responder: Start and configure FTM responder.
+ * @start_nan: Start the NAN interface.
+ * @stop_nan: Stop the NAN interface.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -2971,6 +2986,9 @@ struct cfg80211_ops {
 	int	(*start_ftm_responder)(struct wiphy *wiphy,
 				       struct net_device *dev,
 				struct cfg80211_ftm_responder_params *params);
+	int	(*start_nan)(struct wiphy *wiphy, struct wireless_dev *wdev,
+			     struct cfg80211_nan_conf *conf);
+	void	(*stop_nan)(struct wiphy *wiphy, struct wireless_dev *wdev);
 };
 
 /*
@@ -3708,6 +3726,7 @@ struct cfg80211_cached_keys;
  *	beacons, 0 when not valid
  * @address: The address for this device, valid only if @netdev is %NULL
  * @p2p_started: true if this is a P2P Device that has been started
+ * @nan_started: true if this is a NAN interface that has been started
  * @cac_started: true if DFS channel availability check has been started
  * @cac_start_time: timestamp (jiffies) when the dfs state was entered.
  * @cac_time_ms: CAC time in ms
@@ -3738,7 +3757,7 @@ struct wireless_dev {
 
 	struct mutex mtx;
 
-	bool use_4addr, p2p_started;
+	bool use_4addr, p2p_started, nan_started;
 
 	u8 address[ETH_ALEN] __aligned(sizeof(u16));
 
