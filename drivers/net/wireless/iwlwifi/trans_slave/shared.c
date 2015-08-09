@@ -572,7 +572,7 @@ static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 			return ret;
 	}
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
 		wake_unlock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
 #endif
@@ -595,7 +595,7 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 			return ret;
 	}
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
 	    !trans_slv->suspending)
 		wake_lock(&trans_slv->slv_wake_lock);
@@ -898,7 +898,7 @@ void iwl_slv_free(struct iwl_trans *trans)
 	if (WARN_ON_ONCE(!trans_slv))
 		return;
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 	wake_lock_destroy(&trans_slv->slv_wake_lock);
 	wake_lock_destroy(&trans_slv->data_wake_lock);
 #endif
@@ -975,7 +975,7 @@ int iwl_slv_init(struct iwl_trans *trans)
 	}
 #endif
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 	/* The transport wakelock is locked on init. We only
 	 * allow unlock when in d0i3 */
 	wake_lock_init(&trans_slv->slv_wake_lock, WAKE_LOCK_SUSPEND,
@@ -1641,7 +1641,7 @@ int iwl_trans_slv_tx_data_send(struct iwl_trans *trans, struct sk_buff *skb,
 	spin_unlock_bh(&trans_slv->txq_lock);
 
 	/* allow a burst of Tx to go through */
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
 		wake_lock_timeout(&trans_slv->data_wake_lock,
 				msecs_to_jiffies(TRANS_DATA_WAKE_TIMEOUT_MS));
@@ -1899,7 +1899,7 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 		if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_IGNORE_RX)
 			take_ref = false;
 
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 		/* let the packet propagate up the stack before suspend */
 		if (take_ref &&
 		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)

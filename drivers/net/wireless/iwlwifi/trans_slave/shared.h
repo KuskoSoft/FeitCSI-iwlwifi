@@ -70,7 +70,7 @@
 #include <linux/skbuff.h>
 
 #include "iwl-trans.h"
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 #include <linux/wakelock.h>
 #endif
 
@@ -216,7 +216,7 @@ struct iwl_trans_slv {
 	struct slv_mini_rpm_config rpm_config;
 #endif
 	unsigned long rpm_flags;
-#ifdef CONFIG_HAS_WAKELOCK
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 	struct wake_lock slv_wake_lock;
 	struct wake_lock data_wake_lock;
 #endif
