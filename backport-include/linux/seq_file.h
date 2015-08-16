@@ -23,4 +23,29 @@ static inline struct user_namespace *seq_user_ns(struct seq_file *seq)
 #endif /* CONFIG_USER_NS */
 #endif /* < 3.7 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#define seq_has_overflowed LINUX_BACKPORT(seq_has_overflowed)
+/**
+ * seq_has_overflowed - check if the buffer has overflowed
+ * @m: the seq_file handle
+ *
+ * seq_files have a buffer which may overflow. When this happens a larger
+ * buffer is reallocated and all the data will be printed again.
+ * The overflow state is true when m->count == m->size.
+ *
+ * Returns true if the buffer received more than it can hold.
+ */
+static inline bool seq_has_overflowed(struct seq_file *m)
+{
+	return m->count == m->size;
+}
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+#define seq_hex_dump LINUX_BACKPORT(seq_hex_dump)
+void seq_hex_dump(struct seq_file *m, const char *prefix_str, int prefix_type,
+		  int rowsize, int groupsize, const void *buf, size_t len,
+		  bool ascii);
+#endif
+
 #endif /* __BACKPORT_SEQ_FILE_H */
