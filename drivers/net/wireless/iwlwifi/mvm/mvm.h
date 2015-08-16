@@ -660,6 +660,15 @@ struct gscan_data {
 	u32 gp2;
 	u64 timestamp;	/* monotonic time, in usecs. */
 };
+
+struct iwl_mvm_gscan_beacon {
+	struct list_head list;
+	u32 gp2_ts;
+	s8 signal;
+	u8 channel;
+	u32 len;
+	struct ieee80211_mgmt mgmt[0];
+};
 #endif
 
 struct iwl_mvm {
@@ -992,6 +1001,11 @@ struct iwl_mvm {
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	struct gscan_data gscan;
+
+	/* protects the gscan beacons list */
+	spinlock_t gscan_beacons_lock;
+	struct list_head gscan_beacons_list;
+	struct work_struct gscan_beacons_work;
 #endif
 };
 
@@ -1768,6 +1782,8 @@ void iwl_mvm_rx_gscan_significant_change_event(struct iwl_mvm *mvm,
 					       struct iwl_rx_cmd_buffer *rxb);
 
 void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm);
+
+void iwl_mvm_gscan_beacons_work(struct work_struct *work);
 #endif
 
 #endif /* __IWL_MVM_H__ */

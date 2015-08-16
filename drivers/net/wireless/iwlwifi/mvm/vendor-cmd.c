@@ -1079,6 +1079,20 @@ unlock:
 	return err;
 }
 
+static void iwl_mvm_gscan_clear(struct iwl_mvm *mvm)
+{
+	struct iwl_mvm_gscan_beacon *beacon, *tmp;
+
+	spin_lock_bh(&mvm->gscan_beacons_lock);
+	list_for_each_entry_safe(beacon, tmp, &mvm->gscan_beacons_list, list) {
+		list_del(&beacon->list);
+		kfree(beacon);
+	}
+	spin_unlock_bh(&mvm->gscan_beacons_lock);
+
+	cancel_work_sync(&mvm->gscan_beacons_work);
+}
+
 int iwl_mvm_vendor_stop_gscan(struct wiphy *wiphy, struct wireless_dev *wdev,
 			      const void *data, int data_len)
 {
@@ -1109,6 +1123,8 @@ int iwl_mvm_vendor_stop_gscan(struct wiphy *wiphy, struct wireless_dev *wdev,
 	memset(&gscan->scan_params, 0, sizeof(struct iwl_gscan_start_cmd));
 	if (!gscan->hotlist_params.num_ap && !gscan->sc_params.num_ap)
 		gscan->wdev = NULL;
+
+	iwl_mvm_gscan_clear(mvm);
 
 unlock:
 	mutex_unlock(&mvm->mutex);
@@ -1412,6 +1428,7 @@ void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm)
 	 * the timestamp for these events is calculated correctly.
 	 */
 	iwl_mvm_wait_for_async_handlers(mvm);
+	flush_work(&mvm->gscan_beacons_work);
 
 	if (gscan->scan_params.bucket_count) {
 		hcmd.id = iwl_cmd_id(GSCAN_START_CMD, SCAN_GROUP, 0);
@@ -1636,6 +1653,7 @@ enum iwl_mvm_vendor_events_idx {
 	IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS,
 	IWL_MVM_VENDOR_EVENT_IDX_HOTLIST_CHANGE,
 	IWL_MVM_VENDOR_EVENT_IDX_SIGNIFICANT_CHANGE,
+	IWL_MVM_VENDOR_EVENT_IDX_GSCAN_BEACON,
 	NUM_IWL_MVM_VENDOR_EVENT_IDX
 };
 
@@ -1658,6 +1676,10 @@ iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
 	[IWL_MVM_VENDOR_EVENT_IDX_SIGNIFICANT_CHANGE] = {
 		.vendor_id = INTEL_OUI,
 		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_SIGNIFICANT_CHANGE_EVENT,
+	},
+	[IWL_MVM_VENDOR_EVENT_IDX_GSCAN_BEACON] = {
+		.vendor_id = INTEL_OUI,
+		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_BEACON_EVENT,
 	},
 };
 
@@ -1941,4 +1963,60 @@ void iwl_mvm_rx_gscan_significant_change_event(struct iwl_mvm *mvm,
 	}
 
 	cfg80211_vendor_event(msg, GFP_KERNEL);
+}
+
+static void iwl_mvm_send_gscan_beacon(struct iwl_mvm *mvm,
+				      struct iwl_mvm_gscan_beacon *beacon)
+{
+	struct ieee80211_mgmt *mgmt = beacon->mgmt;
+	struct gscan_data *gscan = &mvm->gscan;
+	struct sk_buff *msg;
+	struct nlattr *res;
+	u32 diff;
+	u64 timestamp;
+
+	msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, mvm->gscan.wdev,
+					  100 + beacon->len,
+					  IWL_MVM_VENDOR_EVENT_IDX_GSCAN_BEACON,
+					  GFP_KERNEL);
+	if (!msg)
+		return;
+
+	res = nla_nest_start(msg, IWL_MVM_VENDOR_ATTR_GSCAN_RESULTS);
+	if (!res) {
+		kfree_skb(msg);
+		return;
+	}
+
+	diff = beacon->gp2_ts - gscan->gp2;
+	timestamp = gscan->timestamp + diff;
+
+	if (nla_put_u64(msg, IWL_MVM_VENDOR_GSCAN_RESULT_TIMESTAMP,
+			timestamp) ||
+	    nla_put_s8(msg, IWL_MVM_VENDOR_GSCAN_RESULT_RSSI, beacon->signal) ||
+	    nla_put_u8(msg, IWL_MVM_VENDOR_GSCAN_RESULT_CHANNEL,
+		       beacon->channel) ||
+	    nla_put(msg, IWL_MVM_VENDOR_GSCAN_RESULT_FRAME, beacon->len,
+		    mgmt)) {
+		kfree_skb(msg);
+		return;
+	}
+
+	nla_nest_end(msg, res);
+	cfg80211_vendor_event(msg, GFP_KERNEL);
+}
+
+void iwl_mvm_gscan_beacons_work(struct work_struct *work)
+{
+	struct iwl_mvm_gscan_beacon *beacon, *tmp;
+	struct iwl_mvm *mvm = container_of(work, struct iwl_mvm,
+					   gscan_beacons_work);
+
+	spin_lock_bh(&mvm->gscan_beacons_lock);
+	list_for_each_entry_safe(beacon, tmp, &mvm->gscan_beacons_list, list) {
+		iwl_mvm_send_gscan_beacon(mvm, beacon);
+		list_del(&beacon->list);
+		kfree(beacon);
+	}
+	spin_unlock_bh(&mvm->gscan_beacons_lock);
 }
