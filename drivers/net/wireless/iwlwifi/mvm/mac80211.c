@@ -2007,6 +2007,10 @@ static void iwl_mvm_mc_iface_iterator(void *_data, u8 *mac,
 	struct iwl_mcast_filter_cmd *cmd = mvm->mcast_filter_cmd;
 	int ret, len;
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	cmd = mvm->mcast_active_filter_cmd;
+#endif
+
 	/* if we don't have free ports, mcast frames will be dropped */
 	if (WARN_ON_ONCE(data->port_id >= MAX_PORT_ID_NUM))
 		return;
@@ -2024,7 +2028,10 @@ static void iwl_mvm_mc_iface_iterator(void *_data, u8 *mac,
 		IWL_ERR(mvm, "mcast filter cmd error. ret=%d\n", ret);
 }
 
-static void iwl_mvm_recalc_multicast(struct iwl_mvm *mvm)
+#ifndef CPTCFG_IWLMVM_VENDOR_CMDS
+static
+#endif
+void iwl_mvm_recalc_multicast(struct iwl_mvm *mvm)
 {
 	struct iwl_mvm_mc_iter_data iter_data = {
 		.mvm = mvm,
@@ -2094,6 +2101,9 @@ static void iwl_mvm_configure_filter(struct ieee80211_hw *hw,
 	if (!cmd)
 		goto out;
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	iwl_mvm_active_rx_filters(mvm);
+#endif
 	iwl_mvm_recalc_multicast(mvm);
 out:
 	mutex_unlock(&mvm->mutex);

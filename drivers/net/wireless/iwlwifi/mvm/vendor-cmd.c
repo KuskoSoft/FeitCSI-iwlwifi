@@ -95,6 +95,8 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_GSCAN_AP_LIST] = { .type = NLA_NESTED },
 	[IWL_MVM_VENDOR_ATTR_GSCAN_RSSI_SAMPLE_SIZE] = { .type = NLA_U8 },
 	[IWL_MVM_VENDOR_ATTR_GSCAN_MIN_BREACHING] = { .type = NLA_U8 },
+	[IWL_MVM_VENDOR_ATTR_RXFILTER] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_RXFILTER_OP] = { .type = NLA_U32 },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -1473,6 +1475,129 @@ out:
 	mutex_unlock(&mvm->mutex);
 }
 
+void iwl_mvm_active_rx_filters(struct iwl_mvm *mvm)
+{
+	int i, len, total = 0;
+	struct iwl_mcast_filter_cmd *cmd;
+	static const u8 ipv4mc[] = {0x01, 0x00, 0x5e};
+	static const u8 ipv6mc[] = {0x33, 0x33};
+	static const u8 ipv4_mdns[] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0xfb};
+	static const u8 ipv6_mdns[] = {0x33, 0x33, 0x00, 0x00, 0x00, 0xfb};
+
+	lockdep_assert_held(&mvm->mutex);
+
+	for (i = 0; i < mvm->mcast_filter_cmd->count; i++) {
+		if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_MCAST4 &&
+		    memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+			   ipv4mc, sizeof(ipv4mc)) == 0)
+			total++;
+		else if (memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+				ipv4_mdns, sizeof(ipv4_mdns)) == 0)
+			total++;
+		else if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_MCAST6 &&
+			 memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+				ipv6mc, sizeof(ipv6mc)) == 0)
+			total++;
+		else if (memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+				ipv6_mdns, sizeof(ipv6_mdns)) == 0)
+			total++;
+	}
+
+	/* FW expects full words */
+	len = roundup(sizeof(*cmd) + total * ETH_ALEN, 4);
+	cmd = kzalloc(len, GFP_KERNEL);
+	if (!cmd)
+		return;
+
+	memcpy(cmd, mvm->mcast_filter_cmd, sizeof(*cmd));
+	cmd->count = 0;
+
+	for (i = 0; i < mvm->mcast_filter_cmd->count; i++) {
+		bool copy_filter = false;
+
+		if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_MCAST4 &&
+		    memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+			   ipv4mc, sizeof(ipv4mc)) == 0)
+			copy_filter = true;
+		else if (memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+				ipv4_mdns, sizeof(ipv4_mdns)) == 0)
+			copy_filter = true;
+		else if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_MCAST6 &&
+			 memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+				ipv6mc, sizeof(ipv6mc)) == 0)
+			copy_filter = true;
+		else if (memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
+				ipv6_mdns, sizeof(ipv6_mdns)) == 0)
+			copy_filter = true;
+
+		if (!copy_filter)
+			continue;
+
+		ether_addr_copy(&cmd->addr_list[cmd->count * ETH_ALEN],
+				&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN]);
+		cmd->count++;
+	}
+
+	kfree(mvm->mcast_active_filter_cmd);
+	mvm->mcast_active_filter_cmd = cmd;
+}
+
+static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   const void *data, int data_len)
+{
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	enum iwl_mvm_vendor_rxfilter_flags filter, rx_filters;
+	enum iwl_mvm_vendor_rxfilter_op op;
+	int retval;
+
+	retval = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (retval)
+		return retval;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_RXFILTER])
+		return -EINVAL;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_RXFILTER_OP])
+		return -EINVAL;
+
+	filter = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_RXFILTER]);
+	op = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_RXFILTER_OP]);
+
+	if (filter != IWL_MVM_VENDOR_RXFILTER_UNICAST &&
+	    filter != IWL_MVM_VENDOR_RXFILTER_BCAST &&
+	    filter != IWL_MVM_VENDOR_RXFILTER_MCAST4 &&
+	    filter != IWL_MVM_VENDOR_RXFILTER_MCAST6)
+		return -EINVAL;
+
+	rx_filters = mvm->rx_filters;
+	switch (op) {
+	case IWL_MVM_VENDOR_RXFILTER_OP_DROP:
+		rx_filters &= ~filter;
+		break;
+	case IWL_MVM_VENDOR_RXFILTER_OP_PASS:
+		rx_filters |= filter;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (rx_filters == mvm->rx_filters)
+		return 0;
+
+	mutex_lock(&mvm->mutex);
+
+	mvm->rx_filters = rx_filters;
+	iwl_mvm_active_rx_filters(mvm);
+	iwl_mvm_recalc_multicast(mvm);
+
+	mutex_unlock(&mvm->mutex);
+
+	return 0;
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -1651,6 +1776,15 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_vendor_gscan_set_significant_change_list,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_RXFILTER,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mvm_vendor_rxfilter,
 	},
 };
 

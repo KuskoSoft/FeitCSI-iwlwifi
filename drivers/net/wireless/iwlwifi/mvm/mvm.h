@@ -1020,6 +1020,9 @@ struct iwl_mvm {
 	spinlock_t gscan_beacons_lock;
 	struct list_head gscan_beacons_list;
 	struct work_struct gscan_beacons_work;
+
+	struct iwl_mcast_filter_cmd *mcast_active_filter_cmd;
+	u8 rx_filters;
 #endif
 };
 
@@ -1810,6 +1813,11 @@ void iwl_mvm_rx_gscan_significant_change_event(struct iwl_mvm *mvm,
 void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm);
 
 void iwl_mvm_gscan_beacons_work(struct work_struct *work);
+
+void iwl_mvm_recalc_multicast(struct iwl_mvm *mvm);
+
+void iwl_mvm_active_rx_filters(struct iwl_mvm *mvm);
+
 #endif
 
 #endif /* __IWL_MVM_H__ */
