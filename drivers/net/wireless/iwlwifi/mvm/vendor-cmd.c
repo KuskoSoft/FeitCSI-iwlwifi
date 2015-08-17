@@ -72,6 +72,9 @@
 #include "lte-coex.h"
 #endif
 
+#include "iwl-io.h"
+#include "iwl-prph.h"
+
 static const struct nla_policy
 iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_LOW_LATENCY] = { .type = NLA_FLAG },
@@ -966,6 +969,29 @@ static int iwl_vendor_gscan_parse_buckets(struct nlattr *info, u32 max_buckets,
 	return 0;
 }
 
+static void iwl_vendor_get_gp2_monotonic(struct iwl_mvm *mvm, u32 *gp2,
+					 struct timespec *ts)
+{
+	bool ps_disabled;
+
+	lockdep_assert_held(&mvm->mutex);
+
+	/* Disable power save when reading GP2 */
+	ps_disabled = mvm->ps_disabled;
+	if (!ps_disabled) {
+		mvm->ps_disabled = true;
+		iwl_mvm_power_update_device(mvm);
+	}
+
+	*gp2 = iwl_read_prph(mvm->trans, DEVICE_SYSTEM_TIME_REG);
+	ktime_get_ts(ts);
+
+	if (!ps_disabled) {
+		mvm->ps_disabled = ps_disabled;
+		iwl_mvm_power_update_device(mvm);
+	}
+}
+
 static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 				  struct wireless_dev *wdev,
 				  const void *data, int data_len)
@@ -985,6 +1011,7 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
 	int err;
 	u32 tmp;
+	struct timespec ts;
 
 	if (!fw_has_capa(&mvm->fw->ucode_capa,
 			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
@@ -1042,6 +1069,10 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 	}
 
 	gscan->wdev = wdev;
+
+	iwl_vendor_get_gp2_monotonic(mvm, &gscan->gp2, &ts);
+	gscan->timestamp = ts.tv_sec * USEC_PER_SEC +
+		ts.tv_nsec / NSEC_PER_USEC;
 
 unlock:
 	mutex_unlock(&mvm->mutex);
@@ -1376,6 +1407,12 @@ void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm)
 			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
 		return;
 
+	/*
+	 * Wait for pending gscan events before restarting gscan so
+	 * the timestamp for these events is calculated correctly.
+	 */
+	iwl_mvm_wait_for_async_handlers(mvm);
+
 	if (gscan->scan_params.bucket_count) {
 		hcmd.id = iwl_cmd_id(GSCAN_START_CMD, SCAN_GROUP, 0);
 		hcmd.len[0] = sizeof(gscan->scan_params);
@@ -1670,12 +1707,23 @@ void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
 #endif
 
 static int iwl_vendor_put_one_result(struct sk_buff *skb,
+				     struct gscan_data *gscan,
 				     struct iwl_gscan_scan_result *res)
 {
+	u32 gp2_ts, diff;
+	u64 ts;
+
+	/*
+	 * Convert the timestamp of the result to monotonic time,
+	 * which is what gscan expects.
+	 */
+	gp2_ts = le32_to_cpu(res->timestamp);
+	diff = gp2_ts - gscan->gp2;
+	ts = gscan->timestamp + diff;
+
 	/* FW sends RSSI as absolute values, so negate here to get dB values */
 	if (nla_put_s8(skb, IWL_MVM_VENDOR_GSCAN_RESULT_RSSI, -res->rssi) ||
-	    nla_put_u32(skb, IWL_MVM_VENDOR_GSCAN_RESULT_TIMESTAMP,
-			le32_to_cpu(res->timestamp)) ||
+	    nla_put_u64(skb, IWL_MVM_VENDOR_GSCAN_RESULT_TIMESTAMP, ts) ||
 	    nla_put_u8(skb, IWL_MVM_VENDOR_GSCAN_RESULT_CHANNEL,
 		       res->channel) ||
 	    nla_put(skb, IWL_MVM_VENDOR_GSCAN_RESULT_BSSID, ETH_ALEN,
@@ -1734,7 +1782,7 @@ void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
 			if (!result)
 				break;
 
-			if (iwl_vendor_put_one_result(msg,
+			if (iwl_vendor_put_one_result(msg, gscan,
 						      &event->results[i])) {
 				nla_nest_cancel(msg, result);
 				break;
@@ -1750,7 +1798,8 @@ void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
 	}
 }
 
-static int iwl_vendor_put_hotlist_results(struct sk_buff *msg, u32 num_res,
+static int iwl_vendor_put_hotlist_results(struct sk_buff *msg,
+					  struct gscan_data *gscan, u32 num_res,
 					  struct iwl_gscan_scan_result *results)
 {
 	struct nlattr *res;
@@ -1764,7 +1813,7 @@ static int iwl_vendor_put_hotlist_results(struct sk_buff *msg, u32 num_res,
 		struct nlattr *result = nla_nest_start(msg, i + 1);
 
 		if (!result ||
-		    iwl_vendor_put_one_result(msg, &results[i]))
+		    iwl_vendor_put_one_result(msg, gscan, &results[i]))
 			return -ENOBUFS;
 
 		nla_nest_end(msg, result);
@@ -1799,7 +1848,8 @@ void iwl_mvm_rx_gscan_hotlist_change_event(struct iwl_mvm *mvm,
 	if (ap_status >= NUM_IWL_MVM_VENDOR_HOTLIST_AP_STATUS ||
 	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_GSCAN_HOTLIST_AP_STATUS,
 			ap_status) ||
-	    iwl_vendor_put_hotlist_results(msg, num_res, event->results)) {
+	    iwl_vendor_put_hotlist_results(msg, gscan, num_res,
+					   event->results)) {
 		kfree_skb(msg);
 		return;
 	}

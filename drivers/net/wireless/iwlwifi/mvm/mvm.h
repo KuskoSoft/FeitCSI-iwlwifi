@@ -657,6 +657,8 @@ struct gscan_data {
 	struct iwl_gscan_start_cmd scan_params;
 	struct iwl_gscan_bssid_hotlist_cmd hotlist_params;
 	struct iwl_gscan_significant_change_cmd sc_params;
+	u32 gp2;
+	u64 timestamp;	/* monotonic time, in usecs. */
 };
 #endif
 
