@@ -76,9 +76,6 @@
 #define IWL_SLV_TX_Q_HIGH_THLD 320
 #define IWL_SLV_TX_Q_LOW_THLD 256
 
-/* max time to wait for trans to become idle/non-idle on d0i3 enter/exit */
-#define TRANS_IDLE_TIMEOUT_MS 2000
-
 /* max time to keep the system awake after data Rx/Tx, as an optimization for
  * bursty traffic */
 #define TRANS_DATA_WAKE_TIMEOUT_MS 1500
@@ -522,7 +519,7 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 
 	ret = wait_event_timeout(trans_slv->d0i3_waitq,
 				 test_bit(STATUS_TRANS_IDLE, &trans->status),
-				 msecs_to_jiffies(TRANS_IDLE_TIMEOUT_MS));
+				 msecs_to_jiffies(IWL_TRANS_IDLE_TIMEOUT));
 	if (!ret && !test_bit(STATUS_TRANS_IDLE, &trans->status)) {
 		IWL_ERR(trans, "Timeout entering D0i3\n");
 		ret = -ETIMEDOUT;
@@ -574,7 +571,7 @@ static int iwl_slv_fw_exit_d0i3(struct iwl_trans *trans)
 
 	ret = wait_event_timeout(trans_slv->d0i3_waitq,
 				 !test_bit(STATUS_TRANS_IDLE, &trans->status),
-				 msecs_to_jiffies(TRANS_IDLE_TIMEOUT_MS));
+				 msecs_to_jiffies(IWL_TRANS_IDLE_TIMEOUT));
 	if (!ret && test_bit(STATUS_TRANS_IDLE, &trans->status)) {
 		IWL_ERR(trans, "Timeout exiting D0i3\n");
 		ret = -ETIMEDOUT;
