@@ -17,6 +17,17 @@ config IWLXVT
 	  Say Y if you have the user space application and want
 	  to execute debug and testing flows on the HW.
 
+config IWLWIFI_SUPPORT_FPGA_BU
+	bool "enable chip BU without RF"
+	depends on IWLMVM
+	help
+	  This option allows the driver to work without RF.
+	  Enable this options if you work with FPGA or if you
+	  want to work without Phy calibration phase.
+
+	  If unsure say N,
+	  Say Y if you have this code and want jump over the ucode init sequence.
+
 config IWLWIFI_NUM_CHANNELS
 	int "number of supported concurrent channels"
 	range 1 2
@@ -84,6 +95,14 @@ config IWLWIFI_MINI_PM_RUNTIME
 	  Enable use of an internal reference counting framework for the
 	  purpose of getting the FW and bus into a low power state when
 	  the WiFi component is idle.
+
+config IWLWIFI_FORCE_OFDM_RATE
+	bool "force transmit to OFDM low rate"
+	depends on IWLMVM
+	help
+	  This option force the FW to transmit OFDM rate.
+
+	  If unsure say N, Say Y if you have this code and want to transmit OFDM low rate.
 
 config IWLMVM_P2P_OPPPS_TEST_WA
 	bool "Use WA to pass P2P OPPPS certification test"

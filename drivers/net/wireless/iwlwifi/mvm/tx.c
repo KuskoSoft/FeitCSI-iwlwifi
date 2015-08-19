@@ -216,6 +216,7 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm *mvm, struct iwl_tx_cmd *tx_cmd,
 	 * table is controlled by LINK_QUALITY commands
 	 */
 
+#ifndef CPTCFG_IWLWIFI_FORCE_OFDM_RATE
 	if (ieee80211_is_data(fc) && sta) {
 		tx_cmd->initial_rate_index = 0;
 		tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_STA_RATE);
@@ -224,6 +225,11 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm *mvm, struct iwl_tx_cmd *tx_cmd,
 		tx_cmd->tx_flags |=
 			cpu_to_le32(TX_CMD_FLG_ACK | TX_CMD_FLG_BAR);
 	}
+#else
+	if (ieee80211_is_back_req(fc))
+			tx_cmd->tx_flags |=
+				cpu_to_le32(TX_CMD_FLG_ACK | TX_CMD_FLG_BAR);
+#endif
 
 	/* HT rate doesn't make sense for a non data frame */
 	WARN_ONCE(info->control.rates[0].flags & IEEE80211_TX_RC_MCS,
@@ -241,6 +247,10 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm *mvm, struct iwl_tx_cmd *tx_cmd,
 	/* For 5 GHZ band, remap mac80211 rate indices into driver indices */
 	if (info->band == IEEE80211_BAND_5GHZ)
 		rate_idx += IWL_FIRST_OFDM_RATE;
+#ifdef CPTCFG_IWLWIFI_FORCE_OFDM_RATE
+	/* Force OFDM on each TX packet */
+	rate_idx = IWL_FIRST_OFDM_RATE;
+#endif
 
 	/* For 2.4 GHZ band, check that there is no need to remap */
 	BUILD_BUG_ON(IWL_FIRST_CCK_RATE != 0);

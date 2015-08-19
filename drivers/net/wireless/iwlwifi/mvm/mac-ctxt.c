@@ -1013,6 +1013,10 @@ static int iwl_mvm_mac_ctxt_send_beacon(struct iwl_mvm *mvm,
 		rate = IWL_FIRST_CCK_RATE;
 		beacon_cmd.tx.rate_n_flags |= cpu_to_le32(RATE_MCS_CCK_MSK);
 	}
+#ifdef CPTCFG_IWLWIFI_FORCE_OFDM_RATE
+	rate = IWL_FIRST_OFDM_RATE;
+	beacon_cmd.tx.rate_n_flags &= cpu_to_le32(~RATE_MCS_CCK_MSK);
+#endif
 	beacon_cmd.tx.rate_n_flags |=
 		cpu_to_le32(iwl_mvm_mac80211_idx_to_hwrate(rate));
 

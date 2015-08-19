@@ -75,7 +75,11 @@
 #define IWL9000_SMEM_OFFSET		0x400000
 #define IWL9000_SMEM_LEN		0x68000
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+#define IWL9000_FW_PRE "fpga-iwlwifi-Pulsar-"
+#else
 #define  IWL9000_FW_PRE "iwlwifi-9000-"
+#endif
 #define IWL9000_MODULE_FIRMWARE(api) \
 	IWL9000_FW_PRE "-" __stringify(api) ".ucode"
 
@@ -148,6 +152,10 @@ const struct iwl_cfg iwl9000_2ac_cfg = {
 		.ht_params = &iwl9000_ht_params,
 		.nvm_ver = IWL9000_NVM_VERSION,
 		.nvm_calib_ver = IWL9000_TX_POWER_VERSION,
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+		/* No need to load INIT image on FPGA */
+		.no_power_up_nic_in_init = true,
+#endif
 		.max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
 };
 
