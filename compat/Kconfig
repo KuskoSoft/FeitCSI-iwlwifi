@@ -67,6 +67,7 @@ config BPAUTO_CORDIC
 	bool
 
 config BPAUTO_BUILD_AVERAGE
+	depends on n
 	bool
 	depends on !AVERAGE
 	default y if BPAUTO_USERSEL_BUILD_ALL
