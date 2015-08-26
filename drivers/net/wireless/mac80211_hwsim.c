@@ -2677,7 +2677,11 @@ static void hwsim_mon_setup(struct net_device *dev)
 	dev->netdev_ops = &hwsim_netdev_ops;
 	dev->destructor = free_netdev;
 	ether_setup(dev);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,2,0)
+	dev->priv_flags |= IFF_NO_QUEUE;
+#else
 	dev->tx_queue_len = 0;
+#endif
 	dev->type = ARPHRD_IEEE80211_RADIOTAP;
 	eth_zero_addr(dev->dev_addr);
 	dev->dev_addr[0] = 0x12;
