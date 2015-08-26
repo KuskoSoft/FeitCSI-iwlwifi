@@ -722,9 +722,6 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 	int len = sizeof(cmd);
 	int err;
 
-	if (!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_TX_POWER_DEV))
-		return -EOPNOTSUPP;
-
 	err = iwl_mvm_parse_vendor_data(tb, data, data_len);
 	if (err)
 		return err;
