@@ -1718,12 +1718,12 @@ static int iwl_sdio_rsa_race_bug_wa(struct iwl_trans *trans)
 }
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-static int iwl_sdio_override_secure_boot_cfg(struct iwl_trans *trans)
+static void iwl_sdio_override_secure_boot_cfg(struct iwl_trans *trans)
 {
 	u32 val;
 
 	if (!trans->dbg_cfg.secure_boot_cfg)
-		return 0;
+		return;
 
 	/* Verify AUX address space is not locked */
 	val = iwl_sdio_read_prph_no_claim(trans, PREG_AUX_BUS_WPROT_0);
@@ -1731,8 +1731,12 @@ static int iwl_sdio_override_secure_boot_cfg(struct iwl_trans *trans)
 		IWL_ERR(trans,
 			"AUX address space is locked for override, (AUX val=0x%u)\n",
 			val);
-		return -EIO;
+		return;
 	}
+
+	/* Modify secure boot cfg flags */
+	iwl_sdio_write_prph_no_claim(trans, SB_MODIFY_CFG_FLAG,
+				     trans->dbg_cfg.secure_boot_cfg);
 
 	/* take ownership on the AUX IF */
 	val = iwl_sdio_read_prph_no_claim(trans, WFPM_CTRL_REG);
@@ -1744,11 +1748,7 @@ static int iwl_sdio_override_secure_boot_cfg(struct iwl_trans *trans)
 	iwl_sdio_write_prph_no_claim(trans, SB_CFG_OVERRIDE_ADDR,
 				     SB_CFG_OVERRIDE_ENABLE | val);
 
-	/* Modify secure boot cfg flags */
-	iwl_sdio_write_prph_no_claim(trans, SB_MODIFY_CFG_FLAG,
-				     trans->dbg_cfg.secure_boot_cfg);
-
-	return 0;
+	return;
 }
 #endif
 
@@ -1965,9 +1965,7 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 		goto exit_err;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-	ret = iwl_sdio_override_secure_boot_cfg(trans);
-	if (ret)
-		return ret;
+	iwl_sdio_override_secure_boot_cfg(trans);
 #endif
 
 	/* Remove CSR reset to allow NIC to operate */
