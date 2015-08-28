@@ -1705,8 +1705,6 @@ enum nl80211_commands {
  * @NL80211_ATTR_TDLS_INITIATOR: flag attribute indicating the current end is
  *	the TDLS link initiator.
  *
- * @NL80211_ATTR_REG_INDOOR: flag attribute, if set indicates that the device
- *      is operating in an indoor environment.
  * @NL80211_ATTR_USE_RRM: flag for indicating whether the current connection
  *	shall support Radio Resource Measurements (11k). This attribute can be
  *	used with %NL80211_CMD_ASSOCIATE and %NL80211_CMD_CONNECT requests.
@@ -2129,7 +2127,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_NETNS_FD,
 
 	NL80211_ATTR_SCHED_SCAN_DELAY,
-	
+
 	NL80211_ATTR_REG_INDOOR,
 
 	/* add attributes here, update the policy in nl80211.c */
