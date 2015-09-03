@@ -5,6 +5,7 @@
  *
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014 Intel Mobile Communications GmbH
+ * Copyright 2015	Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1498,13 +1499,26 @@ struct cfg80211_match_set {
 };
 
 /**
+ * struct cfg80211_sched_scan_plan - scan plan for scheduled scan
+ *
+ * @interval: interval between scheduled scan iterations. In seconds.
+ * @iterations: number of scan iterations in this scan plan. Zero means
+ *	infinite loop.
+ *	The last scan plan will always have this parameter set to zero,
+ *	all other scan plans will have a finite number of iterations.
+ */
+struct cfg80211_sched_scan_plan {
+	u32 interval;
+	u32 iterations;
+};
+
+/**
  * struct cfg80211_sched_scan_request - scheduled scan request description
  *
  * @ssids: SSIDs to scan for (passed in the probe_reqs in active scans)
  * @n_ssids: number of SSIDs
  * @n_channels: total number of channels to scan
  * @scan_width: channel width for scanning
- * @interval: interval between each scheduled scan cycle
  * @ie: optional information element(s) to add into Probe Request or %NULL
  * @ie_len: length of ie in octets
  * @flags: bit field of flags controlling operation
@@ -1527,6 +1541,9 @@ struct cfg80211_match_set {
  *	cycle.  The driver may ignore this parameter and start
  *	immediately (or at any other time), if this feature is not
  *	supported.
+ * @scan_plans: scan plans to be executed in this scheduled scan. Lowest
+ *	index must be executed first.
+ * @n_scan_plans: number of scan plans, at least 1.
  * @rcu_head: RCU callback used to free the struct
  * @owner_nlportid: netlink portid of owner (if this should is a request
  *	owned by a particular socket)
@@ -1540,7 +1557,6 @@ struct cfg80211_sched_scan_request {
 	int n_ssids;
 	u32 n_channels;
 	enum nl80211_bss_scan_width scan_width;
-	u32 interval;
 	const u8 *ie;
 	size_t ie_len;
 	u32 flags;
@@ -1548,6 +1564,8 @@ struct cfg80211_sched_scan_request {
 	int n_match_sets;
 	s32 min_rssi_thold;
 	u32 delay;
+	struct cfg80211_sched_scan_plan *scan_plans;
+	int n_scan_plans;
 
 	u8 mac_addr[ETH_ALEN] __aligned(2);
 	u8 mac_addr_mask[ETH_ALEN] __aligned(2);
@@ -3061,6 +3079,12 @@ struct wiphy_vendor_command {
  *	include fixed IEs like supported rates
  * @max_sched_scan_ie_len: same as max_scan_ie_len, but for scheduled
  *	scans
+ * @max_sched_scan_plans: maximum number of scan plans (scan interval and number
+ *	of iterations) for scheduled scan supported by the device.
+ * @max_sched_scan_plan_interval: maximum interval (in seconds) for a
+ *	single scan plan supported by the device.
+ * @max_sched_scan_plan_iterations: maximum number of iterations for a single
+ *	scan plan supported by the device.
  * @coverage_class: current coverage class
  * @fw_version: firmware version for ethtool reporting
  * @hw_version: hardware version for ethtool reporting
@@ -3171,6 +3195,9 @@ struct wiphy {
 	u8 max_match_sets;
 	u16 max_scan_ie_len;
 	u16 max_sched_scan_ie_len;
+	u32 max_sched_scan_plans;
+	u32 max_sched_scan_plan_interval;
+	u32 max_sched_scan_plan_iterations;
 
 	int n_cipher_suites;
 	const u32 *cipher_suites;
