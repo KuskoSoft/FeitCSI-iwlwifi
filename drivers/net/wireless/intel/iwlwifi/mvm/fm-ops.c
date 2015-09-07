@@ -102,8 +102,9 @@ static void iwl_mvm_fm_iface_iterator(void *_data, u8 *mac,
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct ieee80211_chanctx_conf *chanctx_conf;
 
-	/* P2P device is never assigned a channel */
-	if (vif->type == NL80211_IFTYPE_P2P_DEVICE)
+	/* P2P device or NAN are never assigned a channel */
+	if ((vif->type == NL80211_IFTYPE_P2P_DEVICE) ||
+	    (vif->type == NL80211_IFTYPE_NAN))
 		return;
 
 	rcu_read_lock();

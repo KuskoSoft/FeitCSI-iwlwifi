@@ -607,6 +607,7 @@ static void iwl_mvm_power_get_vifs_iterator(void *_data, u8 *mac,
 
 	switch (ieee80211_vif_type_p2p(vif)) {
 	case NL80211_IFTYPE_P2P_DEVICE:
+	case NL80211_IFTYPE_NAN:
 		break;
 
 	case NL80211_IFTYPE_P2P_GO:
