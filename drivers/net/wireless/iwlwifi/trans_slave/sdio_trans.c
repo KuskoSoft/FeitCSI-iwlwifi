@@ -809,6 +809,7 @@ static int iwl_sdio_release_hw(struct iwl_trans *trans, bool low_power)
 	/* Cancel any work items initiated by the interrupt handler */
 	cancel_work_sync(&trans_sdio->d2h_work);
 	cancel_work_sync(&trans_sdio->rx_work);
+	flush_workqueue(trans_sdio->rx_wq);
 
 	/* Release Bus function access from the driver */
 	sdio_release_host(func);
@@ -2756,6 +2757,12 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 	INIT_LIST_HEAD(&trans_sdio->rx_mem_buff_list);
 	mutex_init(&trans_sdio->rx_buff_mtx);
 	INIT_WORK(&trans_sdio->d2h_work, iwl_sdio_d2h_work);
+	trans_sdio->rx_wq = alloc_workqueue("sdio_rx_wq",
+					    WQ_HIGHPRI | WQ_UNBOUND, 1);
+	if (!trans_sdio->rx_wq) {
+		ret = -ENOMEM;
+		goto free_trans;
+	}
 	INIT_WORK(&trans_sdio->rx_work, iwl_sdio_rx_work);
 
 	snprintf(trans_sdio->rx_mem_desc_pool_name,
@@ -2800,6 +2807,12 @@ free_trans:
 void iwl_trans_sdio_free(struct iwl_trans *trans)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+
+	/* Destroy the RX workqueue */
+	if (trans_sdio->rx_wq) {
+		destroy_workqueue(trans_sdio->rx_wq);
+		trans_sdio->rx_wq = NULL;
+	}
 
 	/* Free all of the SDIO RX  memory */
 	iwl_sdio_free_rx_mem(trans);

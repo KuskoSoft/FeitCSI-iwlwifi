@@ -328,7 +328,7 @@ static int iwl_sdio_handle_data_ready(struct iwl_trans *trans)
 	list_add_tail(&rx_buff->list, &trans_sdio->rx_mem_buff_list);
 	mutex_unlock(&trans_sdio->rx_buff_mtx);
 
-	schedule_work(&trans_sdio->rx_work);
+	queue_work(trans_sdio->rx_wq, &trans_sdio->rx_work);
 	return 0;
 
 error:

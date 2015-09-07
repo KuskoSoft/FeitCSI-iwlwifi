@@ -214,6 +214,7 @@ struct iwl_trans_sdio {
 	/* Work definitions */
 	struct work_struct d2h_work;
 	struct work_struct rx_work;
+	struct workqueue_struct *rx_wq;
 
 	/* Misc configurations */
 	u32 rx_page_order;
