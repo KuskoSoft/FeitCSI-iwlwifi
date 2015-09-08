@@ -86,6 +86,7 @@
 #include "fw-dbg.h"
 #include "fw-api.h"
 #include "fw-api-scan.h"
+#include "fw-api-nan.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "iwl-dnt-cfg.h"
 #include "iwl-dnt-dispatch.h"
@@ -291,6 +292,10 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 		       iwl_mvm_rx_gscan_hotlist_change_event, true),
 	RX_HANDLER_GRP(SCAN_GROUP, GSCAN_SIGNIFICANT_CHANGE_EVENT,
 		       iwl_mvm_rx_gscan_significant_change_event, true),
+	RX_HANDLER_GRP(NAN_GROUP, NAN_DISCOVERY_TERMINATE_NOTIF,
+		       iwl_mvm_nan_de_term_notif, false),
+	RX_HANDLER_GRP(NAN_GROUP, NAN_DISCOVERY_EVENT_NOTIF,
+		       iwl_mvm_nan_match, false),
 #endif
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
@@ -451,12 +456,24 @@ static const struct iwl_hcmd_names iwl_mvm_scan_names[] = {
 	HCMD_NAME(GSCAN_RESULTS_AVAILABLE_EVENT),
 };
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mvm_nan_names[] = {
+	HCMD_NAME(NAN_CONFIG_CMD),
+	HCMD_NAME(NAN_DISCOVERY_FUNC_CMD),
+	HCMD_NAME(NAN_DISCOVERY_EVENT_NOTIF),
+	HCMD_NAME(NAN_DISCOVERY_TERMINATE_NOTIF),
+	HCMD_NAME(NAN_FAW_START_NOTIF),
+};
+
 static const struct iwl_hcmd_arr iwl_mvm_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mvm_legacy_names),
 	[LONG_GROUP] = HCMD_ARR(iwl_mvm_legacy_names),
 	[PHY_OPS_GROUP] = HCMD_ARR(iwl_mvm_phy_names),
 	[DATA_PATH_GROUP] = HCMD_ARR(iwl_mvm_data_path_names),
 	[SCAN_GROUP] = HCMD_ARR(iwl_mvm_scan_names),
+	[NAN_GROUP] = HCMD_ARR(iwl_mvm_nan_names),
 };
 
 /* this forward declaration can avoid to export the function */

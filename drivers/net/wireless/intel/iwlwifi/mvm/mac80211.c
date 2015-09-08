@@ -92,6 +92,7 @@
 #include "iwl-dnt-dispatch.h"
 #endif
 #include "tof.h"
+#include "fw-api-nan.h"
 
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
 	{
@@ -565,6 +566,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		hw->wiphy->iface_combinations = iwl_mvm_iface_combinations_nan;
 		hw->wiphy->n_iface_combinations =
 			ARRAY_SIZE(iwl_mvm_iface_combinations_nan);
+		hw->max_nan_de_entries = NAN_MAX_SUPPORTED_DE_ENTRIES;
 	} else {
 		hw->wiphy->iface_combinations = iwl_mvm_iface_combinations;
 		hw->wiphy->n_iface_combinations =
@@ -1579,14 +1581,6 @@ static void iwl_mvm_prepare_mac_removal(struct iwl_mvm *mvm,
 		 */
 		flush_work(&mvm->sta_drained_wk);
 	}
-}
-
-static int iwl_mvm_stop_nan(struct ieee80211_hw *hw,
-			    struct ieee80211_vif *vif)
-{
-	IWL_DEBUG_MAC80211(IWL_MAC80211_GET_MVM(hw), "Stop NAN\n");
-
-	return 0;
 }
 
 static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
@@ -4526,15 +4520,6 @@ iwl_mvm_mac_start_ftm_responder(struct ieee80211_hw *hw,
 	return ret;
 }
 
-static int iwl_mvm_start_nan(struct ieee80211_hw *hw,
-			     struct ieee80211_vif *vif,
-			     struct cfg80211_nan_conf *conf)
-{
-	IWL_DEBUG_MAC80211(IWL_MAC80211_GET_MVM(hw), "Start NAN\n");
-
-	return 0;
-}
-
 const struct ieee80211_ops iwl_mvm_hw_ops = {
 	.tx = iwl_mvm_mac_tx,
 	.ampdu_action = iwl_mvm_mac_ampdu_action,
@@ -4612,4 +4597,6 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 
 	.start_nan = iwl_mvm_start_nan,
 	.stop_nan = iwl_mvm_stop_nan,
+	.add_nan_func = iwl_mvm_add_nan_func,
+	.rm_nan_func = iwl_mvm_rm_nan_func,
 };

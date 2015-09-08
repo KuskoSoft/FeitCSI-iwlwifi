@@ -1041,6 +1041,8 @@ struct iwl_mvm {
 	struct iwl_mcast_filter_cmd *mcast_active_filter_cmd;
 	u8 rx_filters;
 #endif
+
+	struct ieee80211_vif *nan_vif;
 };
 
 /* Extract MVM priv from op_mode and _hw */
@@ -1841,5 +1843,22 @@ int iwl_mvm_configure_bcast_filter(struct iwl_mvm *mvm);
 void iwl_mvm_active_rx_filters(struct iwl_mvm *mvm);
 
 #endif
+
+/* NAN */
+void iwl_mvm_nan_match(struct iwl_mvm *mvm,
+		       struct iwl_rx_cmd_buffer *rxb);
+void iwl_mvm_nan_de_term_notif(struct iwl_mvm *mvm,
+			       struct iwl_rx_cmd_buffer *rxb);
+int iwl_mvm_start_nan(struct ieee80211_hw *hw,
+		      struct ieee80211_vif *vif,
+		      struct cfg80211_nan_conf *conf);
+int iwl_mvm_stop_nan(struct ieee80211_hw *hw,
+		     struct ieee80211_vif *vif);
+int iwl_mvm_add_nan_func(struct ieee80211_hw *hw,
+			 struct ieee80211_vif *vif,
+			 const struct cfg80211_nan_func *nan_func);
+void iwl_mvm_rm_nan_func(struct ieee80211_hw *hw,
+			 struct ieee80211_vif *vif,
+			 u8 instance_id);
 
 #endif /* __IWL_MVM_H__ */
