@@ -584,16 +584,13 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 {
 	struct iwl_trans_slv *trans_slv __maybe_unused =
 				IWL_TRANS_GET_SLV_TRANS(trans);
-	int ret;
+	int ret = 0;
 
 	if (iwlwifi_mod_params.d0i3_disable)
 		return 0;
 
-	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE) {
+	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE)
 		ret = iwl_slv_fw_exit_d0i3(trans);
-		if (ret)
-			return ret;
-	}
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
@@ -601,7 +598,7 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 		wake_lock(&trans_slv->slv_wake_lock);
 #endif
 
-	return 0;
+	return ret;
 }
 
 struct iwl_slv_rpm_device {
