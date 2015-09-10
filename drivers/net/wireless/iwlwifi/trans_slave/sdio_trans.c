@@ -231,6 +231,11 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 		return -EINVAL;
 	}
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort TA write\n");
+		return -EINVAL;
+	}
+
 	/* Fill the access command */
 	access_control = iwl_sdio_set_cmd_access_control(ac_mode,
 							 target_addr, true);
@@ -267,8 +272,10 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 	ret = sdio_writesb(func, IWL_SDIO_DATA_ADDR,
 			   &trans_sdio->ta_buff,
 			   sizeof(struct iwl_sdio_cmd_buffer));
-	if (ret)
+	if (ret) {
 		IWL_ERR(trans, "Cannot send buffer for TA command %d\n", ret);
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
+	}
 
 	return ret;
 }
@@ -366,6 +373,11 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	if (WARN_ON(!target_buff))
 		return -ENOMEM;
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort TA read\n");
+		return -EINVAL;
+	}
+
 	/* Fill the access command */
 	access_control = iwl_sdio_set_cmd_access_control(ac_mode,
 							 target_addr, false);
@@ -418,6 +430,7 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 				jiffies_to_msecs(HOST_COMPLETE_TIMEOUT));
 
 			clear_bit(STATUS_TA_ACTIVE, &trans->status);
+			set_bit(STATUS_TRANS_DEAD, &trans->status);
 			trans_sdio->ta_read_buff = NULL;
 			return -ETIMEDOUT;
 		}
@@ -451,15 +464,23 @@ static void iwl_trans_sdio_write8(struct iwl_trans *trans, u32 ofs, u8 val)
 	int ret;
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort SDIO write\n");
+		return;
+	}
+
 	sdio_claim_host(func);
 
 	/* Use target access through the SDTM for indirect write */
 	ret = iwl_sdio_ta_write(trans, ofs, sizeof(u8), &val,
 				IWL_SDIO_TA_AC_INDIRECT);
-	if (ret)
+	if (ret) {
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
+
 		/* TODO: Call op_mode nic_error if the operation failed
 		 * and retry the operation. */
 		IWL_ERR(trans, "Failed to write byte to SDIO bus\n");
+	}
 
 	sdio_release_host(func);
 }
@@ -475,15 +496,22 @@ static void iwl_trans_sdio_write32(struct iwl_trans *trans, u32 ofs, u32 val)
 	int ret;
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort SDIO read\n");
+		return;
+	}
+
 	sdio_claim_host(func);
 
 	/* Use target access through the SDTM for direct write */
 	ret = iwl_sdio_ta_write(trans, ofs, sizeof(u32), &val,
 				IWL_SDIO_TA_AC_DIRECT);
-	if (ret)
+	if (ret) {
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
 		/* TODO: Call op_mode nic_error if the operation failed
 		 * and retry the operation. */
 		IWL_ERR(trans, "Failed to write dword to SDIO bus\n");
+	}
 
 	sdio_release_host(func);
 }
@@ -500,12 +528,18 @@ static u32 iwl_trans_sdio_read32(struct iwl_trans *trans, u32 ofs)
 	u32 ret_val;
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort SDIO read\n");
+		return IWL_SDIO_READ_VAL_ERR;
+	}
+
 	sdio_claim_host(func);
 
 	/* Use target acces through the SDTM for indirect read */
 	ret = iwl_sdio_ta_read(trans, ofs, sizeof(u32), &ret_val,
 			       IWL_SDIO_TA_AC_DIRECT);
 	if (ret) {
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
 		IWL_ERR(trans, "Failed to read word from SDIO bus\n");
 		ret_val = IWL_SDIO_READ_VAL_ERR;
 	}
@@ -527,12 +561,18 @@ static void iwl_trans_sdio_write_prph(struct iwl_trans *trans, u32 addr,
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 	int ret;
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph write\n");
+		return;
+	}
+
 	sdio_claim_host(func);
 
 	/* Use standard target access - The SDTM will perform the prph flow */
 	ret = iwl_sdio_ta_write(trans, addr, sizeof(u32), &val,
 				IWL_SDIO_TA_AC_PRPH);
-	if (ret)
+	if (ret) {
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
 		/*
 		 * TODO: Call op_mode nic_error if the operation failed
 		 * and retry the operation.
@@ -540,6 +580,7 @@ static void iwl_trans_sdio_write_prph(struct iwl_trans *trans, u32 addr,
 		IWL_ERR(trans,
 			"Failed to write to prph. address 0x%x, ret %d\n",
 			addr , ret);
+	}
 
 	sdio_release_host(func);
 }
@@ -552,14 +593,22 @@ static void iwl_trans_sdio_write_prph(struct iwl_trans *trans, u32 addr,
 static void iwl_sdio_write_prph_no_claim(struct iwl_trans *trans, u32 addr,
 					 u32 val)
 {
+	int ret;
+
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph write\n");
+		return;
+	}
+
 	/* Use standard target access - The SDTM will perform the prph flow */
-	int ret = iwl_sdio_ta_write(trans, addr, sizeof(u32), &val,
+	ret = iwl_sdio_ta_write(trans, addr, sizeof(u32), &val,
 				IWL_SDIO_TA_AC_PRPH);
 	if (ret) {
 		/*
 		 * TODO: Call op_mode nic_error if the operation failed
 		 * and retry the operation.
 		 */
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
 		IWL_ERR(trans,
 			"Failed to write to prph. address 0x%x, ret %d\n",
 			addr , ret);
@@ -579,6 +628,11 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 	u32 ret_val;
 	int ret;
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph read\n");
+		return IWL_SDIO_READ_VAL_ERR;
+	}
+
 	sdio_claim_host(func);
 
 	/* Use standard target access - The SDTM will perfrom the prph flow */
@@ -590,6 +644,7 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 		 * TODO: Call op_mode nic_error if the operation failed
 		 * and retry the operation.
 		 */
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
 		IWL_ERR(trans,
 			"Failed to read from prph. address 0x%x, ret %d\n",
 			addr , ret);
@@ -609,6 +664,11 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 {
 	u32 ret_val;
 	int ret;
+
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
+		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph read\n");
+		return IWL_SDIO_READ_VAL_ERR;
+	}
 
 	/* Use standard target access - The SDTM will perform the prph flow */
 	ret = iwl_sdio_ta_read(trans, addr, sizeof(u32), &ret_val,
@@ -1385,6 +1445,7 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 
 release_hw:
 	iwl_sdio_release_hw(trans, true);
+	clear_bit(STATUS_TRANS_DEAD, &trans->status);
 	mutex_unlock(&trans_sdio->target_access_mtx);
 	pm_runtime_put(trans->dev);
 	return ret;
@@ -2342,6 +2403,8 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans, bool low_power)
 	/* Stop HW and power down */
 	sdio_claim_host(func);
 	iwl_sdio_release_hw(trans, low_power);
+
+	clear_bit(STATUS_TRANS_DEAD, &trans->status);
 
 	/* we no longer need the sdio card active - release it */
 	pm_runtime_put(trans->dev);

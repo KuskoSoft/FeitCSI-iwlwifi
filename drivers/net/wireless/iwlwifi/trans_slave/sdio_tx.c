@@ -917,6 +917,9 @@ int iwl_sdio_flush_dtus(struct iwl_trans *trans)
 	if (!trans_sdio->send_buf_idx)
 		goto out;
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status))
+		return -EINVAL;
+
 	/* Only block size transfers are supported. In order to pad the whole
 	 * transfer, add a trailing command for writing padding bytes to the
 	 * trash buffer register
@@ -963,10 +966,12 @@ int iwl_sdio_flush_dtus(struct iwl_trans *trans)
 
 	ret = sdio_writesb(func, IWL_SDIO_DATA_ADDR, trans_sdio->send_buf,
 			   trans_sdio->send_buf_idx);
-	if (ret)
+	if (ret) {
 		IWL_ERR(trans, "Cannot send buffer %d\n", ret);
-	else
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
+	} else {
 		trans_sdio->send_buf_idx = 0;
+	}
 
 	sdio_release_host(func);
 
