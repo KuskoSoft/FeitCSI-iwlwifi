@@ -82,7 +82,7 @@ module_param_named(d0i3_timeout, d0i3_entry_timeout_ms, uint, S_IRUGO);
 MODULE_PARM_DESC(d0i3_timeout, "Timeout to D0i3 entry when idle (ms)");
 
 /* max time to wait for trans to become idle/non-idle on d0i3 enter/exit */
-#define TRANS_IDLE_TIMEOUT_MS 10000
+#define TRANS_IDLE_TIMEOUT_MS 2000
 
 /* max time to keep the system awake after data Rx/Tx, as an optimization for
  * bursty traffic */
