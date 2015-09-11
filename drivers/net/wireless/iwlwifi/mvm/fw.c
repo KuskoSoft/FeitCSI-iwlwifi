@@ -783,11 +783,12 @@ int iwl_run_init_mvm_ucode(struct iwl_mvm *mvm, bool read_nvm)
 		}
 	}
 
-#ifndef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	if (!mvm->trans->dbg_cfg.fpga_bu_mode)
+#endif
 	/* In case we read the NVM from external file, load it to the NIC */
 	if (mvm->nvm_file_name)
 		iwl_mvm_load_nvm_to_nic(mvm);
-#endif
 
 	ret = iwl_nvm_check_version(mvm->nvm_data, mvm->trans);
 	WARN_ON(ret);
@@ -807,7 +808,8 @@ int iwl_run_init_mvm_ucode(struct iwl_mvm *mvm, bool read_nvm)
 	mvm->calibrating = true;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	goto error;
+	if (mvm->trans->dbg_cfg.fpga_bu_mode)
+		goto error;
 #endif
 
 	/* Send TX valid antennas before triggering calibrations */
@@ -1067,7 +1069,9 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	 * module loading, load init ucode now
 	 * (for example, if we were in RFKILL)
 	 */
-#ifndef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	if (!mvm->trans->dbg_cfg.fpga_bu_mode) {
+#endif
 	ret = iwl_run_init_mvm_ucode(mvm, false);
 	if (ret && !iwlmvm_mod_params.init_dbg) {
 		IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", ret);
@@ -1086,6 +1090,8 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 		ret = _iwl_trans_start_hw(mvm->trans, false);
 		if (ret)
 			goto error;
+	}
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
 	}
 #endif
 
@@ -1158,7 +1164,9 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 		goto error;
 
 	/* Send phy db control command and then phy db calibration*/
-#ifndef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	if (!mvm->trans->dbg_cfg.fpga_bu_mode) {
+#endif
 	ret = iwl_send_phy_db_data(mvm->phy_db);
 	if (ret)
 		goto error;
@@ -1166,6 +1174,8 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	ret = iwl_send_phy_cfg_cmd(mvm);
 	if (ret)
 		goto error;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	}
 #endif
 
 	/* init the fw <-> mac80211 STA mapping */

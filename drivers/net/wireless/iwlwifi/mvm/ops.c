@@ -584,6 +584,9 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		IWL_DEBUG_EEPROM(mvm->trans->dev,
 				 "working without external nvm file\n");
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	if (mvm->trans->dbg_cfg.fpga_bu_mode)
+#endif
 	if (WARN(cfg->no_power_up_nic_in_init && !mvm->nvm_file_name,
 		 "not allowing power-up and not having nvm_file\n"))
 		goto out_free;
@@ -594,10 +597,19 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	 * and not in the file.
 	 * for nics with no_power_up_nic_in_init: rely completley on nvm_file
 	 */
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	if (mvm->trans->dbg_cfg.fpga_bu_mode) {
+#endif
 	if (cfg->no_power_up_nic_in_init && mvm->nvm_file_name) {
 		err = iwl_nvm_init(mvm, false);
 		if (err)
 			goto out_free;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	/* this is really the wrong brace to ifdef, but with two of them
+	 * right after another it doesn't actually matter.
+	 */
+	}
+#endif
 	} else {
 		err = iwl_trans_start_hw(mvm->trans);
 		if (err)
@@ -656,8 +668,14 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 #endif
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	if (!(mvm-trans->dbg_cfg.fpga_bu_mode &&
+	      cfg->no_power_up_nic_in_init) || !mvm->nvm_file_name)
+		iwl_trans_op_mode_leave(trans);
+#else
 	if (!cfg->no_power_up_nic_in_init || !mvm->nvm_file_name)
 		iwl_trans_op_mode_leave(trans);
+#endif
 	ieee80211_free_hw(mvm->hw);
 	return NULL;
 }

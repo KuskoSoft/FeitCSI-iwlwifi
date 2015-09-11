@@ -20,6 +20,7 @@ config IWLXVT
 config IWLWIFI_SUPPORT_FPGA_BU
 	bool "enable chip BU without RF"
 	depends on IWLMVM
+	select IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	help
 	  This option allows the driver to work without RF.
 	  Enable this options if you work with FPGA or if you

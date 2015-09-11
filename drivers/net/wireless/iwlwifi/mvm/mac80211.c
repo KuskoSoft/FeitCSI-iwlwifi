@@ -2407,9 +2407,10 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 	if (changes & BSS_CHANGED_TXPOWER) {
 		IWL_DEBUG_CALIB(mvm, "Changing TX Power to %d\n",
 				bss_conf->txpower);
-#ifndef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-		iwl_mvm_set_tx_power(mvm, vif, bss_conf->txpower);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+		if (!mvm->trans->dbg_cfg.fpga_bu_mode)
 #endif
+		iwl_mvm_set_tx_power(mvm, vif, bss_conf->txpower);
 	}
 
 	if (changes & BSS_CHANGED_CQM) {
@@ -2588,9 +2589,10 @@ iwl_mvm_bss_info_changed_ap_ibss(struct iwl_mvm *mvm,
 	if (changes & BSS_CHANGED_TXPOWER) {
 		IWL_DEBUG_CALIB(mvm, "Changing TX Power to %d\n",
 				bss_conf->txpower);
-#ifndef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-		iwl_mvm_set_tx_power(mvm, vif, bss_conf->txpower);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+		if (!mvm->trans->dbg_cfg.fpga_bu_mode)
 #endif
+		iwl_mvm_set_tx_power(mvm, vif, bss_conf->txpower);
 	}
 }
 
