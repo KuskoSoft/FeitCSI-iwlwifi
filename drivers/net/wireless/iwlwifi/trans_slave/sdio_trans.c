@@ -2038,7 +2038,7 @@ static int iwl_setup_oob_irq(struct iwl_trans *trans, int irq)
 
 	IWL_DEBUG_INFO(trans, "request irq %d\n", irq);
 	ret = request_threaded_irq(irq, sdio_irq_handler,
-				   sdio_irq_thread, 0,
+				   sdio_irq_thread, IRQF_NO_SUSPEND,
 				   DRV_NAME, trans);
 	if (ret)
 		return ret;
@@ -2067,7 +2067,7 @@ static int iwlwifi_plat_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, trans);
 
-	device_set_wakeup_capable(trans->dev, true);
+	device_init_wakeup(trans->dev, true);
 
 	return ret;
 }
