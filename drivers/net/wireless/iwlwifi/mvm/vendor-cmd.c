@@ -1146,7 +1146,7 @@ iwl_vendor_parse_ap_list(struct nlattr *info, u8 max,
 
 	nla_for_each_nested(nl_ap, info, rem_ap) {
 		if (i >= max)
-			return -EINVAL;
+			return 0;
 
 		if (nla_parse_nested(tb,
 				     MAX_IWL_MVM_VENDOR_GSCAN_AP_THRESHOLD_PARAM,
