@@ -669,7 +669,7 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (!(mvm-trans->dbg_cfg.fpga_bu_mode &&
+	if (!(mvm->trans->dbg_cfg.fpga_bu_mode &&
 	      cfg->no_power_up_nic_in_init) || !mvm->nvm_file_name)
 		iwl_trans_op_mode_leave(trans);
 #else
