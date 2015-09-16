@@ -415,6 +415,8 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS] = { .type = NLA_U8 },
 	[NL80211_ATTR_MAX_TOTAL_FTM_TARGETS] = { .type = NLA_U8 },
 	[NL80211_ATTR_LAST_MSG] = { .type = NLA_FLAG },
+	[NL80211_ATTR_LCI] = { .type = NLA_BINARY },
+	[NL80211_ATTR_CIVIC] = { .type = NLA_BINARY },
 };
 
 /* policy for the key attributes */
@@ -1568,6 +1570,8 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 			if (rdev->wiphy.features &
 					NL80211_FEATURE_SUPPORTS_WMM_ADMISSION)
 				CMD(add_tx_ts, ADD_TX_TS);
+			if (rdev->wiphy.flags & WIPHY_FLAG_HAS_FTM_RESPONDER)
+				CMD(start_ftm_responder, START_FTM_RESPONDER);
 		}
 		/* add into the if now */
 #undef CMD
@@ -10919,6 +10923,45 @@ free_request:
 	return err;
 }
 
+static int nl80211_start_ftm_responder(struct sk_buff *skb,
+				       struct genl_info *info)
+{
+	struct cfg80211_registered_device *rdev = info->user_ptr[0];
+	struct net_device *dev = info->user_ptr[1];
+	struct wireless_dev *wdev = dev->ieee80211_ptr;
+	struct cfg80211_ftm_responder_params params = {};
+	int err;
+
+	if (wdev->iftype != NL80211_IFTYPE_AP || !wdev->beacon_interval)
+		return -EOPNOTSUPP;
+
+	if (info->attrs[NL80211_ATTR_LCI]) {
+		if (nla_len(info->attrs[NL80211_ATTR_LCI]) > U8_MAX)
+			return -EINVAL;
+		/* check that subelements are well formed */
+		if (!is_valid_ie_attr(info->attrs[NL80211_ATTR_LCI]))
+			return -EINVAL;
+		params.lci = nla_data(info->attrs[NL80211_ATTR_LCI]);
+		params.lci_len = nla_len(info->attrs[NL80211_ATTR_LCI]);
+	}
+
+	if (info->attrs[NL80211_ATTR_CIVIC]) {
+		if (nla_len(info->attrs[NL80211_ATTR_CIVIC]) > U8_MAX)
+			return -EINVAL;
+		/* check that subelements are well formed */
+		if (!is_valid_ie_attr(info->attrs[NL80211_ATTR_CIVIC]))
+			return -EINVAL;
+		params.civic = nla_data(info->attrs[NL80211_ATTR_CIVIC]);
+		params.civic_len = nla_len(info->attrs[NL80211_ATTR_CIVIC]);
+	}
+
+	wdev_lock(wdev);
+	err = rdev_start_ftm_responder(rdev, dev, &params);
+	wdev_unlock(wdev);
+
+	return err;
+}
+
 #define NL80211_FLAG_NEED_WIPHY		0x01
 #define NL80211_FLAG_NEED_NETDEV	0x02
 #define NL80211_FLAG_NEED_RTNL		0x04
@@ -11754,6 +11797,14 @@ static __genl_const struct genl_ops nl80211_ops[] = {
 	{
 		.cmd = NL80211_CMD_MSRMENT_REQUEST,
 		.doit = nl80211_msrment_request,
+		.policy = nl80211_policy,
+		.flags = GENL_ADMIN_PERM,
+		.internal_flags = NL80211_FLAG_NEED_NETDEV_UP |
+				  NL80211_FLAG_NEED_RTNL,
+	},
+	{
+		.cmd = NL80211_CMD_START_FTM_RESPONDER,
+		.doit = nl80211_start_ftm_responder,
 		.policy = nl80211_policy,
 		.flags = GENL_ADMIN_PERM,
 		.internal_flags = NL80211_FLAG_NEED_NETDEV_UP |

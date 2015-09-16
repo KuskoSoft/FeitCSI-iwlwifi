@@ -2165,6 +2165,33 @@ TRACE_EVENT(rdev_abort_msrment,
 		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->cookie)
 );
 
+TRACE_EVENT(rdev_start_ftm_responder,
+	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
+		 struct cfg80211_ftm_responder_params *params),
+	TP_ARGS(wiphy, netdev, params),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		NETDEV_ENTRY
+		CHAN_DEF_ENTRY
+		__dynamic_array(u8, lci, params->lci_len)
+		__dynamic_array(u8, civic, params->civic_len)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		NETDEV_ASSIGN;
+		memcpy(__get_dynamic_array(lci), params->lci, params->lci_len);
+		memcpy(__get_dynamic_array(civic), params->civic,
+		       params->civic_len);
+	),
+	TP_printk(WIPHY_PR_FMT ", " NETDEV_PR_FMT
+		  "lci %s civic %s", WIPHY_PR_ARG,
+		  NETDEV_PR_ARG,
+		  __print_array(__get_dynamic_array(lci),
+				__get_dynamic_array_len(lci), 1),
+		  __print_array(__get_dynamic_array(civic),
+				__get_dynamic_array_len(civic), 1))
+);
+
 /*************************************************************
  *	     cfg80211 exported functions traces		     *
  *************************************************************/

@@ -2377,6 +2377,21 @@ struct cfg80211_msrment_response {
 };
 
 /**
+ * cfg80211_ftm_responder_params - FTM responder parameters
+ *
+ * @lci: LCI subelemnt content
+ * @civic: CIVIC subelemnt content
+ * @lci_len: LCI data len
+ * @civic_len: CIVIC data len
+ */
+struct cfg80211_ftm_responder_params {
+	const u8 *lci;
+	const u8 *civic;
+	size_t lci_len;
+	size_t civic_len;
+};
+
+/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -2655,6 +2670,8 @@ struct cfg80211_msrment_response {
  *	The cookie must be filled to a unique value for this request, for later
  *	possible aborting.
  * @abort_msrment: Abort a previously requested measurement.
+ *
+ * @start_ftm_responder: Start and configure FTM responder.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -2926,6 +2943,9 @@ struct cfg80211_ops {
 				   u64 *cookie);
 	int	(*abort_msrment)(struct wiphy *wiphy, struct wireless_dev *wdev,
 				 u64 cookie);
+	int	(*start_ftm_responder)(struct wiphy *wiphy,
+				       struct net_device *dev,
+				struct cfg80211_ftm_responder_params *params);
 };
 
 /*
@@ -2974,6 +2994,7 @@ struct cfg80211_ops {
  *	beaconing mode (AP, IBSS, Mesh, ...).
  * @WIPHY_FLAG_SUPPORTS_FTM_INITIATOR: Device supports 802.11 Fine Timing
  *	Measurement Initiator.
+ * @WIPHY_FLAG_HAS_FTM_RESPONDER: Device supports FTM responder
  */
 enum wiphy_flags {
 	/* use hole at 0 */
@@ -3000,6 +3021,7 @@ enum wiphy_flags {
 	WIPHY_FLAG_SUPPORTS_5_10_MHZ		= BIT(22),
 	WIPHY_FLAG_HAS_CHANNEL_SWITCH		= BIT(23),
 	WIPHY_FLAG_SUPPORTS_FTM_INITIATOR	= BIT(24),
+	WIPHY_FLAG_HAS_FTM_RESPONDER		= BIT(24),
 };
 
 /**

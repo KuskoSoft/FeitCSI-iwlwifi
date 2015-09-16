@@ -841,6 +841,9 @@
  *	This message might be sent multiple times for one response, splitting
  *	the response into several segments. The @NL80211_ATTR_LAST_MSG flag
  *	should be set in the last message of the response.
+ * @NL80211_CMD_START_FTM_RESPONDER: Start FTM responder and set its parameters.
+ *	This is supported only on AP interface. FTM responder cannot be stopped
+ *	without removing the interface.
  *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
@@ -1032,6 +1035,8 @@ enum nl80211_commands {
 
 	NL80211_CMD_MSRMENT_REQUEST,
 	NL80211_CMD_MSRMENT_RESPONSE,
+
+	NL80211_CMD_START_FTM_RESPONDER,
 
 	/* add new commands above here */
 
@@ -1830,6 +1835,11 @@ enum nl80211_commands {
  * @NL80211_ATTR_LAST_MSG: Indicates that this message is the last one in the
  *	series of messages. (flag)
  *
+ * @NL80211_ATTR_LCI: The content of measurement report IE (Section 8.4.2.21 in
+ *	spec) with type 8 - LCI (Section 8.4.2.21.10)
+ * @NL80211_ATTR_CIVIC: The content of measurement Report IE (Section 8.4.2.21
+ *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2213,6 +2223,9 @@ enum nl80211_attrs {
 	NL80211_ATTR_MAX_TOTAL_FTM_TARGETS,
 
 	NL80211_ATTR_LAST_MSG,
+
+	NL80211_ATTR_LCI,
+	NL80211_ATTR_CIVIC,
 
 	/* add attributes here, update the policy in nl80211.c */
 

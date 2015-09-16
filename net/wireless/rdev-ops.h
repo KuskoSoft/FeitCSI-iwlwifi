@@ -1099,4 +1099,18 @@ static inline int rdev_abort_msrment(struct cfg80211_registered_device *rdev,
 	return ret;
 }
 
+static inline int
+rdev_start_ftm_responder(struct cfg80211_registered_device *rdev,
+			 struct net_device *dev,
+			 struct cfg80211_ftm_responder_params *params)
+{
+	int ret = -EOPNOTSUPP;
+
+	trace_rdev_start_ftm_responder(&rdev->wiphy, dev, params);
+	if (rdev->ops->start_ftm_responder)
+		ret = rdev->ops->start_ftm_responder(&rdev->wiphy, dev, params);
+	trace_rdev_return_int(&rdev->wiphy, ret);
+	return ret;
+}
+
 #endif /* __CFG80211_RDEV_OPS */
