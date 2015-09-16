@@ -350,6 +350,14 @@ static int in_range(int val, int min, int max)
 	return (val >= min) && (val <= max);
 }
 
+static bool is_valid_lte_range(u16 min, u16 max)
+{
+	return (min == 0 && max == 0) ||
+	       (max >= min &&
+		in_range(min, LTE_FRQ_MIN, LTE_FRQ_MAX) &&
+		in_range(max, LTE_FRQ_MIN, LTE_FRQ_MAX));
+}
+
 static int iwl_vendor_lte_coex_dynamic_info_cmd(struct wiphy *wiphy,
 						struct wireless_dev *wdev,
 						const void *data, int data_len)
@@ -394,16 +402,10 @@ static int iwl_vendor_lte_coex_dynamic_info_cmd(struct wiphy *wiphy,
 		config->lte_frame_structure[i] =
 				cpu_to_le32(cmd->lte_frame_structure[i]);
 	}
-	if ((!in_range(cmd->wifi_tx_safe_freq_min, LTE_FRQ_MIN, LTE_FRQ_MAX) ||
-	     !in_range(cmd->wifi_tx_safe_freq_max, LTE_FRQ_MIN, LTE_FRQ_MAX) ||
-	     !in_range(cmd->wifi_rx_safe_freq_min, LTE_FRQ_MIN, LTE_FRQ_MAX) ||
-	     !in_range(cmd->wifi_rx_safe_freq_max, LTE_FRQ_MIN, LTE_FRQ_MAX) ||
-	     cmd->wifi_tx_safe_freq_max < cmd->wifi_tx_safe_freq_min ||
-	     cmd->wifi_rx_safe_freq_max < cmd->wifi_rx_safe_freq_min) &&
-	    (cmd->wifi_tx_safe_freq_min != 0 ||
-	     cmd->wifi_tx_safe_freq_max != 0 ||
-	     cmd->wifi_rx_safe_freq_min != 0 ||
-	     cmd->wifi_rx_safe_freq_max != 0)) {
+	if (!is_valid_lte_range(cmd->wifi_tx_safe_freq_min,
+				cmd->wifi_tx_safe_freq_max) ||
+	    !is_valid_lte_range(cmd->wifi_rx_safe_freq_min,
+				cmd->wifi_rx_safe_freq_max)) {
 		err = LTE_ILLEGAL_PARAMS;
 		goto out;
 	}
