@@ -3404,6 +3404,16 @@ static int ieee80211_abort_msrment(struct wiphy *wiphy,
 	return -EOPNOTSUPP;
 }
 
+static int ieee80211_start_ftm_responder(struct wiphy *wiphy,
+					 struct net_device *dev,
+			       struct cfg80211_ftm_responder_params *params)
+{
+	struct ieee80211_local *local = wiphy_priv(wiphy);
+	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
+
+	return drv_start_ftm_responder(local, sdata, params);
+}
+
 const struct cfg80211_ops mac80211_config_ops = {
 	.add_virtual_intf = ieee80211_add_iface,
 	.del_virtual_intf = ieee80211_del_iface,
@@ -3426,6 +3436,7 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.dump_survey = ieee80211_dump_survey,
 	.perform_msrment = ieee80211_perform_msrment,
 	.abort_msrment = ieee80211_abort_msrment,
+	.start_ftm_responder = ieee80211_start_ftm_responder,
 #ifdef CPTCFG_MAC80211_MESH
 	.add_mpath = ieee80211_add_mpath,
 	.del_mpath = ieee80211_del_mpath,
