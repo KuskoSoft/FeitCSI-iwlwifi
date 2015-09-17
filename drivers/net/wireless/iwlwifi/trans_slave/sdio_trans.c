@@ -2841,7 +2841,7 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 		 sizeof(trans->hw_id_str),
 		 "SDIO ID: 0x%04X\n", func->device);
 
-	trans->d0i3_mode = IWL_D0I3_MODE_ON_IDLE;
+	trans->runtime_pm_mode = IWL_PLAT_PM_MODE_D0I3;
 
 	ret = iwl_slv_init(trans);
 	if (ret < 0)

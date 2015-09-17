@@ -596,7 +596,7 @@ static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 	if (iwlwifi_mod_params.d0i3_disable)
 		return 0;
 
-	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE) {
+	if (trans->runtime_pm_mode == IWL_PLAT_PM_MODE_D0I3) {
 		ret = iwl_slv_fw_enter_d0i3(trans);
 		if (ret)
 			return ret;
@@ -619,7 +619,7 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 	if (iwlwifi_mod_params.d0i3_disable)
 		return 0;
 
-	if (trans->d0i3_mode == IWL_D0I3_MODE_ON_IDLE)
+	if (trans->runtime_pm_mode == IWL_PLAT_PM_MODE_D0I3)
 		ret = iwl_slv_fw_exit_d0i3(trans);
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
