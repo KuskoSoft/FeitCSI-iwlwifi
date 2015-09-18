@@ -76,11 +76,6 @@
 #define IWL_SLV_TX_Q_HIGH_THLD 320
 #define IWL_SLV_TX_Q_LOW_THLD 256
 
-/* wait for this amount of time after no refs are taken before entering D0i3 */
-static unsigned int d0i3_entry_timeout_ms = 1000;
-module_param_named(d0i3_timeout, d0i3_entry_timeout_ms, uint, S_IRUGO);
-MODULE_PARM_DESC(d0i3_timeout, "Timeout to D0i3 entry when idle (ms)");
-
 /* max time to wait for trans to become idle/non-idle on d0i3 enter/exit */
 #define TRANS_IDLE_TIMEOUT_MS 2000
 
@@ -787,7 +782,8 @@ static struct device *iwl_slv_rpm_add_device(struct iwl_trans *trans)
 	}
 
 	pm_runtime_set_active(&rpm_dev->dev);
-	pm_runtime_set_autosuspend_delay(&rpm_dev->dev, d0i3_entry_timeout_ms);
+	pm_runtime_set_autosuspend_delay(&rpm_dev->dev,
+					 iwlwifi_mod_params.d0i3_entry_delay);
 	pm_runtime_use_autosuspend(&rpm_dev->dev);
 	pm_runtime_enable(&rpm_dev->dev);
 
@@ -946,7 +942,7 @@ static int iwl_slv_mini_rpm_init(struct iwl_trans *trans)
 
 	rpm_config.runtime_suspend = iwl_slv_runtime_suspend;
 	rpm_config.runtime_resume = iwl_slv_runtime_resume;
-	rpm_config.autosuspend_delay = d0i3_entry_timeout_ms;
+	rpm_config.autosuspend_delay = iwlwifi_mod_params.d0i3_entry_delay;
 
 	return mini_rpm_init(trans_slv, &rpm_config);
 }
@@ -1962,7 +1958,8 @@ static ssize_t iwl_dbgfs_d0i3_timeout_read(struct file *file,
 	int pos = 0;
 	char buf[256];
 
-	pos += scnprintf(buf, sizeof(buf), "%d\n", d0i3_entry_timeout_ms);
+	pos += scnprintf(buf, sizeof(buf), "%d\n",
+			 iwlwifi_mod_params.d0i3_entry_delay);
 
 	return simple_read_from_buffer(user_buf, count, ppos, buf, pos);
 }
@@ -1981,7 +1978,7 @@ static ssize_t iwl_dbgfs_d0i3_timeout_write(struct file *file,
 	if (ret < 0)
 		return -EINVAL;
 
-	d0i3_entry_timeout_ms = value;
+	iwlwifi_mod_params.d0i3_entry_delay = value;
 #ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	trans_slv->rpm_config.autosuspend_delay = value;
 #else

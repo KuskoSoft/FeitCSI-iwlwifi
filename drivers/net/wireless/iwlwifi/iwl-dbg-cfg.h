@@ -253,6 +253,7 @@ struct iwl_dbg_cfg {
 	IWL_MOD_PARAM(int, amsdu_size_8K)
 	IWL_MOD_PARAM(int, sw_crypto)
 	IWL_MOD_PARAM(uint, disable_11n)
+	IWL_MOD_PARAM(uint, d0i3_entry_delay)
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	IWL_DBG_CFG(u32, WAKELOCK_TIMEOUT_MS)
 #endif /* CPTCFG_IWLMVM_WAKELOCK */
