@@ -345,6 +345,30 @@ void iwl_slv_txq_add_to_sent(struct iwl_trans_slv *trans_slv, u8 txq_id,
 	atomic_inc(&txq->sent_count);
 
 	spin_unlock_bh(&trans_slv->txq_lock);
+
+	if (trans_slv->cmd_queue != txq_id) {
+		struct iwl_trans *trans = IWL_TRANS_SLV_GET_IWL_TRANS(trans_slv);
+		struct iwl_slv_tx_data_entry *data_entry;
+		struct iwl_slv_tx_dtu_meta *dtu;
+		struct ieee80211_hdr *hdr;
+		u8 hdr_len;
+
+		IWL_SLV_TXQ_GET_ENTRY(txq_entry, data_entry);
+		dtu = &data_entry->txq_entry.dtu_meta;
+
+		trace_iwlwifi_dev_tx(trans->dev,
+				     data_entry->skb, NULL, 0,
+				     dtu->chunk_info[0].addr,
+				     dtu->chunk_info[0].len,
+				     dtu->chunk_info[1].addr,
+				     dtu->chunk_info[1].len);
+
+		hdr = (struct ieee80211_hdr *)data_entry->skb->data;
+		hdr_len = ieee80211_hdrlen(hdr->frame_control);
+		trace_iwlwifi_dev_tx_data(trans->dev, data_entry->skb,
+					  hdr_len,
+					  dtu->chunk_info[1].len - hdr_len);
+	}
 }
 
 /**
