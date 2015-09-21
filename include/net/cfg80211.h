@@ -1540,10 +1540,6 @@ struct cfg80211_sched_scan_plan {
  * @mac_addr_mask: MAC address mask used with randomisation, bits that
  *	are 0 in the mask should be randomised, bits that are 1 should
  *	be taken from the @mac_addr
- * @delay: delay in seconds to use before starting the first scan
- *	cycle.  The driver may ignore this parameter and start
- *	immediately (or at any other time), if this feature is not
- *	supported.
  * @scan_plans: scan plans to be executed in this scheduled scan. Lowest
  *	index must be executed first.
  * @n_scan_plans: number of scan plans, at least 1.
