@@ -1068,7 +1068,7 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 	gscan->wdev = wdev;
 
 	iwl_vendor_get_gp2_monotonic(mvm, &gscan->gp2, &ts);
-	gscan->timestamp = ts.tv_sec * USEC_PER_SEC +
+	gscan->timestamp = (u64)ts.tv_sec * USEC_PER_SEC +
 		ts.tv_nsec / NSEC_PER_USEC;
 
 unlock:
