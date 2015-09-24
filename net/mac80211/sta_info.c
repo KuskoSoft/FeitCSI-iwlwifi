@@ -328,7 +328,6 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 	struct ieee80211_tx_latency_threshold *tx_threshold;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
-	size_t size;
 #endif
 	int i;
 
@@ -425,7 +424,8 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	tx_consec = rcu_dereference(local->tx_consec);
 	/* init stations Tx consecutive loss statistics */
 	if (tx_consec) {
-		size = sizeof(struct ieee80211_tx_consec_loss_stat);
+		size_t size = sizeof(struct ieee80211_tx_consec_loss_stat);
+
 		sta->tx_consec = kzalloc(IEEE80211_NUM_TIDS * size,
 					 GFP_ATOMIC);
 		if (!sta->tx_consec) {
