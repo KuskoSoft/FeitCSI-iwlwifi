@@ -1414,17 +1414,18 @@ void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm)
 		.dataflags = { IWL_HCMD_DFL_NOCOPY, },
 	};
 
-	lockdep_assert_held(&mvm->mutex);
-
-	if (!fw_has_capa(&mvm->fw->ucode_capa,
-			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
-		return;
-
 	/*
 	 * Wait for pending gscan events before restarting gscan so
 	 * the timestamp for these events is calculated correctly.
 	 */
 	iwl_mvm_wait_for_async_handlers(mvm);
+
+	mutex_lock(&mvm->mutex);
+
+	if (!fw_has_capa(&mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
+		goto out;
+
 	flush_work(&mvm->gscan_beacons_work);
 
 	if (gscan->scan_params.bucket_count) {
@@ -1460,6 +1461,8 @@ void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm)
 				"Failed to send bssid hotlist set command: %d\n",
 				err);
 	}
+out:
+	mutex_unlock(&mvm->mutex);
 }
 
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
