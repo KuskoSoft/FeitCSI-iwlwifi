@@ -524,9 +524,6 @@ free_txq:
 		}
 		kfree(sta->tx_consec);
 	}
-
-	kfree(sta);
-	return NULL;
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 free:
 #ifdef CPTCFG_MAC80211_MESH
