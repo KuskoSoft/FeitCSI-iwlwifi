@@ -4380,8 +4380,8 @@ static int ieee80211_prep_connection(struct ieee80211_sub_if_data *sdata,
 
 	if (!have_sta) {
 		new_sta = sta_info_alloc(sdata, cbss->bssid, GFP_KERNEL);
-		if (!new_sta)
-			return -ENOMEM;
+		if (IS_ERR(new_sta))
+			return PTR_ERR(new_sta);
 	}
 
 	if (new_sta || override) {

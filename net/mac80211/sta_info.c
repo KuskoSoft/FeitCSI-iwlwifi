@@ -329,11 +329,11 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_tx_latency_threshold *tx_threshold;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
 #endif
-	int i;
+	int i, ret;
 
 	sta = kzalloc(sizeof(*sta) + hw->sta_data_size, gfp);
 	if (!sta)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	spin_lock_init(&sta->lock);
 	spin_lock_init(&sta->ps_lock);
@@ -343,8 +343,10 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 #ifdef CPTCFG_MAC80211_MESH
 	if (ieee80211_vif_is_mesh(&sdata->vif)) {
 		sta->mesh = kzalloc(sizeof(*sta->mesh), gfp);
-		if (!sta->mesh)
+		if (!sta->mesh) {
+			ret = -ENOMEM;
 			goto free;
+		}
 		spin_lock_init(&sta->mesh->plink_lock);
 		if (ieee80211_vif_is_mesh(&sdata->vif) &&
 		    !sdata->u.mesh.user_mpm)
@@ -376,8 +378,10 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 			   ALIGN(hw->txq_data_size, sizeof(void *));
 
 		txq_data = kcalloc(ARRAY_SIZE(sta->sta.txq), size, gfp);
-		if (!txq_data)
+		if (!txq_data) {
+			ret = -ENOMEM;
 			goto free;
+		}
 
 		for (i = 0; i < ARRAY_SIZE(sta->sta.txq); i++) {
 			struct txq_info *txq = txq_data + i * size;
@@ -397,6 +401,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 				      GFP_ATOMIC);
 		if (!sta->tx_lat) {
 			rcu_read_unlock();
+			ret = -ENOMEM;
 			goto free_txq;
 		}
 
@@ -410,6 +415,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 						sizeof(u32), GFP_ATOMIC);
 				if (!sta->tx_lat[i].bins) {
 					rcu_read_unlock();
+					ret = -ENOMEM;
 					goto free_txq;
 				}
 			}
@@ -430,6 +436,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 					 GFP_ATOMIC);
 		if (!sta->tx_consec) {
 			rcu_read_unlock();
+			ret = -ENOMEM;
 			goto free_txq;
 		}
 
@@ -450,6 +457,7 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 			    !sta->tx_consec[i].late_bins ||
 			    !sta->tx_consec[i].total_loss_bins) {
 				rcu_read_unlock();
+				ret = -ENOMEM;
 				goto free_txq;
 			}
 		}
@@ -458,7 +466,8 @@ struct sta_info *sta_info_alloc(struct ieee80211_sub_if_data *sdata,
 	rcu_read_unlock();
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
-	if (sta_prepare_rate_control(local, sta, gfp))
+	ret = sta_prepare_rate_control(local, sta, gfp);
+	if (ret)
 		goto free_txq;
 
 	for (i = 0; i < IEEE80211_NUM_TIDS; i++) {
@@ -530,7 +539,7 @@ free:
 	kfree(sta->mesh);
 #endif
 	kfree(sta);
-	return NULL;
+	return ERR_PTR(ret);
 }
 
 static int sta_info_insert_check(struct sta_info *sta)
