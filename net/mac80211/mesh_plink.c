@@ -464,7 +464,7 @@ __mesh_sta_info_alloc(struct ieee80211_sub_if_data *sdata, u8 *hw_addr)
 		return NULL;
 
 	sta = sta_info_alloc(sdata, hw_addr, GFP_KERNEL);
-	if (IS_ERR(sta))
+	if (!sta)
 		return NULL;
 
 	sta->mesh->plink_state = NL80211_PLINK_LISTEN;
