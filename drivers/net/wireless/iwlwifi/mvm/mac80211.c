@@ -1622,6 +1622,7 @@ static void iwl_mvm_mac_stop(struct ieee80211_hw *hw)
 	flush_work(&mvm->d0i3_exit_work);
 	flush_work(&mvm->async_handlers_wk);
 	cancel_delayed_work_sync(&mvm->fw_dump_wk);
+	cancel_delayed_work_sync(&mvm->tx_latency_watchdog_wk);
 	iwl_mvm_free_fw_dump_desc(mvm);
 
 	mutex_lock(&mvm->mutex);
@@ -4402,29 +4403,88 @@ ret:
  * The driver will retrieve monitor/usniffer data on the first driver
  * notification and wait for 1 second (during this 1 second it will not issue
  * another monitor/usniffer retrieve request). During this 1 second the driver
- * will store all notifications data to the trace, and specially mark
- * the notification that triggered the monitor/usniffer retrieval.
+ * will store all notifications data to the trace including GP2 timestamp for
+ * every notification. Also special mark will be sent to the firmware for every
+ * notification.
  *
  * Delayed Internal buffer mode:
  * During the window interval the driver will calculate which tx had the
  * largest latency. When the monitor_collect_window expires the driver will
- * retrieve monitor/sniffer for the tx packet with the max latency and print
- * the notification with the largest latency to the trace
+ * retrieve monitor/sniffer and print the notification for the packet with max
+ * latency to the trace including GP2 timestamp. Also special mark will be sent
+ * to the firmware for every notification.
  *
  * Continuous External buffer mode:
  * The mode is used when we are able to direct the usniffer logs to an external
  * memory device (should be started/stopped Manually).
  * During the window interval the driver will calculate which tx had the
- * largest latency. When the monitor_collect_window expires the driver will
- * retrieve send the metadata to the fw with the marker cmd, and add the
- * returned gp2 time to the metadat file and print the metadata to trace.
+ * largest latency. When the monitor_collect_window expires the driver print
+ * the notification for the packet with max latency to the trace including GP2
+ * timestamp. Also special mark will be sent to the firmware for every
+ * notification.
+ */
+
+/*
+ * TX latency monitor watchdog is armed upon first latency notification.
+ * It fires when monitor window is expired and does the following:
+ * - immediate internal buffer mode: just reset start_round_ts flag
+ * - delayed internal buffer mode: writes metadata to trace-cmd and collects
+ *   firmware dump
+ * - continuous external buffer mode: just writes metadata to trace-cmd
+ */
+void iwl_mvm_tx_latency_watchdog_wk(struct work_struct *wk)
+{
+	struct iwl_mvm *mvm =
+		container_of(wk, struct iwl_mvm, tx_latency_watchdog_wk.work);
+	struct iwl_fw_dbg_trigger_tlv *trig;
+	struct ieee80211_tx_latency_event *tx_lat = &mvm->last_tx_lat_event;
+	struct ieee80211_tx_latency_event *max = &mvm->round_max_tx_lat;
+	u32 round_dur = tx_lat->monitor_collec_wind;
+
+	mvm->start_round_ts = 0;
+
+	if (!round_dur)
+		return;
+
+	if (tx_lat->mode == IEEE80211_TX_LATENCY_EXT_BUF) {
+		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max,
+						     mvm->max_tx_latency_gp2,
+						     1);
+		return;
+	}
+
+	trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY);
+	trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max,
+					     mvm->max_tx_latency_gp2, 1);
+	iwl_mvm_fw_dbg_collect_trig(mvm, trig,
+				    "Tx Latency threshold was crossed");
+}
+
+/*
+ * TX latency monitor work is scheduled upon every latency event. Regardless of
+ * the monitor mode it as a first step sends firmware marker command containing
+ * problematic packet's data - latency measurement, sequence number and TID.
+ * It also obtains GP2 timestamp for this marker command.
+ * The rest depends on monitor mode as follows:
+ * 1. Immediate Internal Buffer mode.
+ *    - arms watchdog to fire after monitor period (1 sec)
+ *    - write packet's metadata to trace-cmd
+ *    - only if the packet is the first one starting the monitor period,
+ *      collect firmware dump
+ * 2. Delayed Internal Buffer mode.
+ *    - arms watchdog to fire after user defined monitor period
+ *    - save largest latency packet's metadata
+ * 3. Continuous External Buffer mode with delay.
+ *    - arms watchdog to fire after user defined monitor period
+ *    - save largest latency packet's metadata
+ * 4. Continuous External Buffer mode without delay.
+ *    - write packet's metadata to trace-cmd
  */
 void iwl_mvm_tx_latency_wk(struct work_struct *wk)
 {
-	struct iwl_fw_dbg_trigger_tlv *trig;
-	struct iwl_fw_dbg_trigger_tx_latency *tx_lat_trig;
 	struct iwl_mvm *mvm =
 		container_of(wk, struct iwl_mvm, tx_latency_wk);
+	struct iwl_fw_dbg_trigger_tlv *trig;
 	struct ieee80211_tx_latency_event *tx_lat = &mvm->last_tx_lat_event;
 	struct ieee80211_tx_latency_event *max = &mvm->round_max_tx_lat;
 	s64 ts = ktime_to_ms(ktime_get());
@@ -4433,61 +4493,53 @@ void iwl_mvm_tx_latency_wk(struct work_struct *wk)
 		tx_lat->monitor_collec_wind : MARKER_CMD_TX_LAT_DEFAULT_WIN;
 	bool first_pkt = false;
 	u32 gp2 = 0;
+	u32 delay = 0;
 
 	if (!iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY))
 		return;
 
 	trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY);
-	tx_lat_trig = (void *)trig->data;
 
+	gp2 = iwl_mvm_send_latency_marker_cmd(mvm, tx_lat->msrmnt,
+					      tx_lat->seq, tx_lat->tid);
 	/*
 	 * If this is the first packet that crossed the threshold in the round
 	 * update start time stamp
 	 */
 	if (!mvm->start_round_ts) {
-		memcpy(max, tx_lat, sizeof(*tx_lat));
 		mvm->start_round_ts = ts;
 		first_pkt = true;
+		memcpy(max, tx_lat, sizeof(*tx_lat));
+		mvm->max_tx_latency_gp2 = gp2;
+		if (round_dur)
+			delay = msecs_to_jiffies(round_dur);
+		else if (tx_lat->mode == IEEE80211_TX_LATENCY_INT_BUF)
+			delay = msecs_to_jiffies(round_end);
+		if (delay)
+			queue_delayed_work(system_wq,
+					   &mvm->tx_latency_watchdog_wk, delay);
 	}
 
 	/*
-	 * Updated the packet with the max latency,
-	 * unless we are running in internal buffer mode & we need to trigger
-	 * immediately (no point of updating max)
+	 * Updated the packet with the max latency.
 	 */
-	if (max->msrmnt < tx_lat->msrmnt &&
-	    !(tx_lat->mode == IEEE80211_TX_LATENCY_INT_BUF && !round_dur))
+	if (round_dur && max->msrmnt < tx_lat->msrmnt) {
 		memcpy(max, tx_lat, sizeof(*tx_lat));
+		mvm->max_tx_latency_gp2 = gp2;
+	}
 
-	/*
-	 * 1. If in external buffer mode & the round is finished,
-	 *	send marker cmd to mark the event & write metadata.
-	 * 2. If in delayed Internal buffer mode & round is finished,
-	 *	write metadata & fire the trigger
-	 * 3. If in immediate Internal buffer mode write metadata.
-	 *	if in addition we are the first packet in round write metadata.
-	 */
-	if (tx_lat->mode == IEEE80211_TX_LATENCY_EXT_BUF &&
-	    round_dur < ts - mvm->start_round_ts) {
-		gp2 = iwl_mvm_send_latency_marker_cmd(mvm, tx_lat->msrmnt,
-						      tx_lat->seq, tx_lat->tid);
-		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max, gp2, 1);
-	} else if (tx_lat->mode == IEEE80211_TX_LATENCY_INT_BUF && round_dur &&
-		   round_dur < ts - mvm->start_round_ts) {
-		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max, gp2, 1);
+	if (round_dur)
+		return;
+
+	if (tx_lat->mode == IEEE80211_TX_LATENCY_EXT_BUF) {
+		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, tx_lat, gp2, 0);
+		return;
+	}
+
+	trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, tx_lat, gp2, 0);
+	if (first_pkt)
 		iwl_mvm_fw_dbg_collect_trig(mvm, trig,
 					    "Tx Latency threshold was crossed");
-	} else if (tx_lat->mode == IEEE80211_TX_LATENCY_INT_BUF && !round_dur) {
-		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, tx_lat, gp2,
-						     first_pkt);
-		if (first_pkt)
-			iwl_mvm_fw_dbg_collect_trig(mvm, trig,
-						    "Tx Latency threshold was crossed");
-	}
-
-	/* reset start ts if round is finished */
-	if (round_end < ts - mvm->start_round_ts)
-		mvm->start_round_ts = 0;
 }
 
 static void

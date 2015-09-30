@@ -695,10 +695,11 @@ struct iwl_mvm {
 
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	struct work_struct tx_latency_wk;
+	struct delayed_work tx_latency_watchdog_wk;
 	struct ieee80211_tx_latency_event last_tx_lat_event;
 	struct ieee80211_tx_latency_event round_max_tx_lat;
 	s64 start_round_ts;
-	u32 max_tx_latency;
+	u32 max_tx_latency_gp2;
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 	unsigned long status;
@@ -1282,6 +1283,7 @@ bool iwl_mvm_bcast_filter_build_cmd(struct iwl_mvm *mvm,
 				    struct iwl_bcast_filter_cmd *cmd);
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 void iwl_mvm_tx_latency_wk(struct work_struct *wk);
+void iwl_mvm_tx_latency_watchdog_wk(struct work_struct *wk);
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
 /*
