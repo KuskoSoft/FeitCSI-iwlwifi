@@ -1959,7 +1959,7 @@ void iwl_mvm_rx_gscan_significant_change_event(struct iwl_mvm *mvm,
 	if (WARN_ON(!gscan->wdev))
 		return;
 
-	msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, gscan->wdev, 200,
+	msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, gscan->wdev, 1024,
 					  IWL_MVM_VENDOR_EVENT_IDX_SIGNIFICANT_CHANGE,
 					  GFP_KERNEL);
 	if (!msg)
