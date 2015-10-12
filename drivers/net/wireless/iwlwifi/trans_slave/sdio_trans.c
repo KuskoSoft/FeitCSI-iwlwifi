@@ -866,13 +866,14 @@ static int iwl_sdio_release_hw(struct iwl_trans *trans, bool low_power)
 	/* Release the interrupts registration */
 	sdio_release_irq(func);
 
+	/* Release Bus function access from the driver */
+	sdio_release_host(func);
+
 	/* Cancel any work items initiated by the interrupt handler */
 	cancel_work_sync(&trans_sdio->d2h_work);
 	cancel_work_sync(&trans_sdio->rx_work);
 	flush_workqueue(trans_sdio->rx_wq);
 
-	/* Release Bus function access from the driver */
-	sdio_release_host(func);
 	if (low_power)
 		iwl_sdio_set_power(trans, false);
 
