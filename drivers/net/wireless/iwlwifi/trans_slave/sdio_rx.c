@@ -214,7 +214,7 @@ static void iwl_sdio_rx_handle_rb(struct iwl_trans *trans,
 		len += sizeof(u32); /* account for status word */
 
 		/* Dispatch to op mode rx handler */
-		iwl_slv_rx_handle_dispatch(trans, &rxcb);
+		iwl_slv_rx_handle_dispatch(trans, &trans_sdio->napi, &rxcb);
 
 		page_stolen |= rxcb._page_stolen;
 		offset += len;
