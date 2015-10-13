@@ -367,7 +367,7 @@ void iwl_slv_txq_add_to_sent(struct iwl_trans_slv *trans_slv, u8 txq_id,
 		hdr_len = ieee80211_hdrlen(hdr->frame_control);
 		trace_iwlwifi_dev_tx_data(trans->dev, data_entry->skb,
 					  hdr_len,
-					  dtu->chunk_info[1].len - hdr_len);
+					  dtu->chunk_info[1].len);
 	}
 }
 
