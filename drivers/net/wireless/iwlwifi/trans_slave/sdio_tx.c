@@ -302,15 +302,15 @@ void iwl_sdio_tx_start(struct iwl_trans *trans, u32 scd_base_addr)
 	iwl_write_prph(trans, SCD_DRAM_BASE_ADDR,
 		       trans_sdio->sf_mem_addresses->bc_base_addr >> 10);
 
-	/* set SCD CB size to 64 */
-	iwl_write_prph(trans, SCD_CB_SIZE, 0);
+	/* set SCD CB size to 128 */
+	iwl_write_prph(trans, SCD_CB_SIZE, 1);
 
 	/* Set CB base pointer
 	 * Transaction to FH maps from PTFD entry in SNF to the actual TFD;
 	 * The FH assumes the data is address bits [35..8]
 	 */
 	for (i = 0; i < IWL_SDIO_CB_QUEUES_NUM; i++) {
-		data = i << 5;
+		data = i << 6;
 		iwl_write_direct32(trans, FH_MEM_CBBC_QUEUE(i), data);
 	}
 
@@ -690,7 +690,8 @@ static void iwl_sdio_config_adma(struct iwl_trans *trans,
 	/* SCD BC descriptor */
 	bc_addr = ALIGN_DW_LOW(trans_sdio->sf_mem_addresses->bc_base_addr +
 			       IWL_SDIO_BC_TABLE_ENTRY_SIZE_BYTES *
-			       ((2 * txq_id) * IWL_SDIO_CB_QUEUE_SIZE + tfd_num));
+			       (txq_id * (IWL_SDIO_CB_QUEUE_SIZE + 64) +
+				tfd_num));
 
 	adma_list[desc_idx].attr =
 		IWL_SDIO_ADMA_ATTR_VALID | IWL_SDIO_ADMA_ATTR_ACT2;
@@ -699,9 +700,13 @@ static void iwl_sdio_config_adma(struct iwl_trans *trans,
 	adma_list[desc_idx].addr = cpu_to_le32(bc_addr);
 	desc_idx++;
 
-	bc_addr = ALIGN_DW_LOW(trans_sdio->sf_mem_addresses->bc_base_addr +
-			       IWL_SDIO_BC_TABLE_ENTRY_SIZE_BYTES *
-			       ((2 * txq_id + 1) * IWL_SDIO_CB_QUEUE_SIZE + tfd_num));
+	/* BC duplication only needs to happen for first 64 TFDs */
+	if (tfd_num < 64)
+		bc_addr = ALIGN_DW_LOW(
+				    trans_sdio->sf_mem_addresses->bc_base_addr +
+				       IWL_SDIO_BC_TABLE_ENTRY_SIZE_BYTES *
+				       (txq_id * (IWL_SDIO_CB_QUEUE_SIZE + 64) +
+					IWL_SDIO_CB_QUEUE_SIZE + tfd_num));
 
 	adma_list[desc_idx].attr =
 		IWL_SDIO_ADMA_ATTR_VALID | IWL_SDIO_ADMA_ATTR_ACT2;

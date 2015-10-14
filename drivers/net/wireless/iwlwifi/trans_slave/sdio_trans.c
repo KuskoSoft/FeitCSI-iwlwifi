@@ -981,9 +981,19 @@ static int iwl_sdio_config_sdtm_register(struct iwl_trans *trans)
 	ret = iwl_sdio_ta_write(trans, IWL_SDIO_CONFIG_BASE_ADDRESS,
 				sizeof(config_buf), config_buf,
 				IWL_SDIO_TA_AC_DIRECT);
-	if (ret)
+	if (ret) {
 		IWL_ERR(trans,
 			"Failed to configure SDIO SDTM error msk, reason %d\n",
+			ret);
+		return ret;
+	}
+
+	/* Configure SDTM CB to 128 */
+	ret = iwl_sdio_ta_write32(trans, IWL_SDIO_SDTM_CB_SIZE, 1,
+				  IWL_SDIO_TA_AC_DIRECT);
+	if (ret)
+		IWL_ERR(trans,
+			"Failed to configure SDIO SDTM CB size, reason %d\n",
 			ret);
 	else
 		IWL_DEBUG_INFO(trans, "SDTM init completed successfully\n");
