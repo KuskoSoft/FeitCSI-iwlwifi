@@ -181,6 +181,9 @@ static void iwl_sdio_rx_handle_rb(struct iwl_trans *trans,
 	u32 len;
 	bool page_stolen = false;
 	u32 offset = 0;
+	u8 grp = 0;
+	u8 cmd;
+	u32 cmd_id;
 
 	offset = sizeof(struct iwl_sdio_rx_cmd);
 	while (offset < le32_to_cpu(rxb->rx_cmd.length)) {
@@ -192,14 +195,17 @@ static void iwl_sdio_rx_handle_rb(struct iwl_trans *trans,
 			.truesize = PAGE_SIZE << rxmd->page_order,
 		};
 		struct iwl_rx_packet *pkt = rxb_addr(&rxcb);
+		cmd = pkt->hdr.cmd;
+		grp = pkt->hdr.group_id;
+		cmd_id = iwl_cmd_id(cmd, grp, 0);
 
 		if (pkt->len_n_flags == cpu_to_le32(FH_RSCSR_FRAME_INVALID))
 			break;
 
 		IWL_DEBUG_RX(trans,
-			     "Handling RX packet %s (#%x, ofs %d, seq 0x%x)\n",
-			     get_cmd_string(trans_sdio, pkt->hdr.cmd),
-			     pkt->hdr.cmd, offset,
+			     "Handling RX packet %s (#%.2x.%.2x, ofs %d, seq 0x%x)\n",
+			     iwl_get_cmd_string(trans, cmd_id),
+			     grp, cmd, offset,
 			     le16_to_cpu(pkt->hdr.sequence));
 
 		if (pkt->hdr.cmd == 0xAC) {

@@ -1092,6 +1092,7 @@ static void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct iwl_device_cmd *dev_cmd;
+	u32 cmd;
 
 	if (WARN_ON(!cmd_entry)) {
 		IWL_WARN(trans, "Invalid cmd entry\n");
@@ -1111,35 +1112,34 @@ static void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
 	}
 
 	dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv, cmd_entry);
+
 	if (cmd_entry->hcmd_meta.flags & CMD_WANT_ASYNC_CALLBACK)
 		iwl_op_mode_async_cb(trans->op_mode, dev_cmd);
+
+	cmd = iwl_cmd_id(dev_cmd->hdr.cmd, dev_cmd->hdr.group_id, 0);
 
 	if (!(cmd_entry->hcmd_meta.flags & CMD_ASYNC)) {
 		if (!test_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status)) {
 			IWL_WARN(trans,
 				 "HCMD_ACTIVE already clear for command %s\n",
-				 trans_slv_get_cmd_string(trans_slv,
-					dev_cmd->hdr.cmd));
+				 iwl_get_cmd_string(trans, cmd));
 		}
 		clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
 		IWL_DEBUG_INFO(trans, "Clearing HCMD_ACTIVE for command %s\n",
-			       trans_slv_get_cmd_string(trans_slv,
-					dev_cmd->hdr.cmd));
+			       iwl_get_cmd_string(trans, cmd));
 		wake_up(&trans_slv->wait_command_queue);
 	}
 
 	if (cmd_entry->hcmd_meta.flags & CMD_MAKE_TRANS_IDLE) {
 		IWL_DEBUG_INFO(trans, "complete %s - mark trans as idle\n",
-			       trans_slv_get_cmd_string(trans_slv,
-			       dev_cmd->hdr.cmd));
+			       iwl_get_cmd_string(trans, cmd));
 		set_bit(STATUS_TRANS_IDLE, &trans->status);
 		wake_up(&trans_slv->d0i3_waitq);
 	}
 
 	if (cmd_entry->hcmd_meta.flags & CMD_WAKE_UP_TRANS) {
 		IWL_DEBUG_INFO(trans, "complete %s - clear trans idle flag\n",
-			       trans_slv_get_cmd_string(trans_slv,
-			       dev_cmd->hdr.cmd));
+			       iwl_get_cmd_string(trans, cmd));
 		clear_bit(STATUS_TRANS_IDLE, &trans->status);
 		wake_up(&trans_slv->d0i3_waitq);
 	}
@@ -1359,7 +1359,8 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 	struct iwl_device_cmd *dev_cmd;
 	u16 seq_num;
 	int ret;
-	int group_id = iwl_cmd_groupid(cmd->id);
+	u8 group_id = iwl_cmd_groupid(cmd->id);
+	u8 cmd_opcode = iwl_cmd_opcode(cmd->id);
 
 	BUG_ON(!trans_slv->txqs);
 	BUG_ON(!cmd);
@@ -1369,9 +1370,9 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 		 "unsupported wide command %#x\n", cmd->id))
 		return -EINVAL;
 
-	IWL_DEBUG_HC(trans, "Enqueue cmd %s (0x%x), flags 0x%x\n",
-		     trans_slv_get_cmd_string(trans_slv, cmd->id),
-		     cmd->id, cmd->flags);
+	IWL_DEBUG_HC(trans, "Enqueue cmd %s (%.2x.%.2x), flags 0x%x\n",
+		     iwl_get_cmd_string(trans, cmd->id),
+		     group_id, cmd_opcode, cmd->flags);
 
 	txq = &trans_slv->txqs[trans_slv->cmd_queue];
 	cmd_entry = kmem_cache_alloc(trans_slv->cmd_entry_pool, GFP_ATOMIC);
@@ -1643,7 +1644,6 @@ int iwl_trans_slv_tx_data_send(struct iwl_trans *trans, struct sk_buff *skb,
 static int iwl_slv_send_cmd_async(struct iwl_trans *trans,
 				struct iwl_host_cmd *cmd)
 {
-	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
 	/* An asynchronous command can not expect an SKB to be set. */
@@ -1654,7 +1654,7 @@ static int iwl_slv_send_cmd_async(struct iwl_trans *trans,
 	if (ret < 0) {
 		IWL_ERR(trans,
 			"Error sending %s: enqueue_hcmd failed: %d\n",
-			trans_slv_get_cmd_string(trans_slv, cmd->id), ret);
+			iwl_get_cmd_string(trans, cmd->id), ret);
 		return ret;
 	}
 	return 0;
@@ -1697,17 +1697,17 @@ static int iwl_slv_send_cmd_sync(struct iwl_trans *trans,
 	int ret;
 
 	IWL_DEBUG_INFO(trans, "Attempting to send sync command %s\n",
-		       trans_slv_get_cmd_string(trans_slv, cmd->id));
+		       iwl_get_cmd_string(trans, cmd->id));
 
 	if (WARN_ON(test_and_set_bit(STATUS_SYNC_HCMD_ACTIVE,
 				     &trans->status))) {
 		IWL_ERR(trans, "Command %s: a command is already active!\n",
-			trans_slv_get_cmd_string(trans_slv, cmd->id));
+			iwl_get_cmd_string(trans, cmd->id));
 		return -EIO;
 	}
 
 	IWL_DEBUG_INFO(trans, "Setting HCMD_ACTIVE for command %s\n",
-		       trans_slv_get_cmd_string(trans_slv, cmd->id));
+		       iwl_get_cmd_string(trans, cmd->id));
 
 	cmd_idx = iwl_slv_tx_enqueue_hcmd(trans, cmd);
 	if (cmd_idx < 0) {
@@ -1715,7 +1715,7 @@ static int iwl_slv_send_cmd_sync(struct iwl_trans *trans,
 		clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
 		IWL_ERR(trans,
 			"Error sending %s: enqueue_hcmd failed: %d\n",
-			trans_slv_get_cmd_string(trans_slv, cmd->id), ret);
+			iwl_get_cmd_string(trans, cmd->id), ret);
 		return ret;
 	}
 
@@ -1727,14 +1727,13 @@ static int iwl_slv_send_cmd_sync(struct iwl_trans *trans,
 		if (test_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status)) {
 			IWL_ERR(trans,
 				"Error sending %s: time out after %dms.\n",
-				trans_slv_get_cmd_string(trans_slv, cmd->id),
+				iwl_get_cmd_string(trans, cmd->id),
 				jiffies_to_msecs(HOST_COMPLETE_TIMEOUT));
 
 			clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
 			IWL_DEBUG_INFO(trans,
 				       "Clearing HCMD_ACTIVE for command %s\n",
-				       trans_slv_get_cmd_string(trans_slv,
-								cmd->id));
+				       iwl_get_cmd_string(trans, cmd->id));
 			ret = -ETIMEDOUT;
 			iwl_trans_fw_error(trans);
 			goto cancel;
@@ -1743,7 +1742,7 @@ static int iwl_slv_send_cmd_sync(struct iwl_trans *trans,
 
 	if (test_bit(STATUS_FW_ERROR, &trans->status)) {
 		IWL_ERR(trans, "FW error in SYNC CMD %s\n",
-			trans_slv_get_cmd_string(trans_slv, cmd->id));
+			iwl_get_cmd_string(trans, cmd->id));
 		dump_stack();
 		ret = -EIO;
 		goto cancel;
@@ -1751,7 +1750,7 @@ static int iwl_slv_send_cmd_sync(struct iwl_trans *trans,
 
 	if ((cmd->flags & CMD_WANT_SKB) && !cmd->resp_pkt) {
 		IWL_ERR(trans, "Error: Response NULL in '%s'\n",
-			trans_slv_get_cmd_string(trans_slv, cmd->id));
+			iwl_get_cmd_string(trans, cmd->id));
 		ret = -EIO;
 		goto cancel;
 	}

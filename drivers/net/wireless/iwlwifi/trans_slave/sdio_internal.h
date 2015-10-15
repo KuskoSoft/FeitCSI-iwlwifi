@@ -227,7 +227,6 @@ struct iwl_trans_sdio {
 	/* Misc configurations */
 	u32 rx_page_order;
 	bool bc_table_dword;
-	const char *const *command_names;
 
 	struct iwl_sdio_plat_data plat_data;
 
@@ -274,17 +273,6 @@ void iwl_sdio_d2h_work(struct work_struct *work);
 void iwl_sdio_rx_work(struct work_struct *work);
 void iwl_sdio_isr(struct sdio_func *func);
 void iwl_sdio_free_rx_mem(struct iwl_trans *trans);
-
-/*
- * Returns a string representation of the received RX command/reply
- */
-static inline const char *get_cmd_string(struct iwl_trans_sdio *trans_sdio,
-					 u8 cmd)
-{
-	if (!trans_sdio->command_names || !trans_sdio->command_names[cmd])
-		return "UNKNOWN";
-	return trans_sdio->command_names[cmd];
-}
 
 /*****************************************************
 * TX

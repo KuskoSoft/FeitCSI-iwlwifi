@@ -1496,7 +1496,8 @@ static void iwl_trans_sdio_configure(struct iwl_trans *trans,
 	}
 
 	/* Configure command names */
-	trans_sdio->command_names = trans_cfg->command_names;
+	trans->command_groups = trans_cfg->command_groups;
+	trans->command_groups_size = trans_cfg->command_groups_size;
 
 	/*Configure RX page order and size */
 	trans_sdio->bc_table_dword = trans_cfg->bc_table_dword;
@@ -1505,7 +1506,6 @@ static void iwl_trans_sdio_configure(struct iwl_trans *trans,
 
 	trans_slv->cmd_queue = trans_cfg->cmd_queue;
 	trans_slv->cmd_fifo = trans_cfg->cmd_fifo;
-	trans_slv->command_names = trans_cfg->command_names;
 
 	trans_slv->config.max_queues_num = IWL_SDIO_CB_QUEUES_NUM;
 	trans_slv->config.queue_size = IWL_SDIO_CB_QUEUE_SIZE;

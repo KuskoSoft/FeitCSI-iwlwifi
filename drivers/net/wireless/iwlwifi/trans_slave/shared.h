@@ -161,7 +161,6 @@ enum iwl_slv_rpm_flags {
  * @txq_lock:		sync access to tx queues.
  * @cmd_queue:		index of command queue
  * @cmd_fifo:		index of command fifo
- * @command_names:
  * @wait_command_queue:
  * @rx_page_order:	page order for receive buffer size
  * @n_no_reclaim_cmds:	number of no reclaim commands
@@ -188,7 +187,6 @@ struct iwl_trans_slv {
 	spinlock_t txq_lock;
 	u8 cmd_queue;
 	u8 cmd_fifo;
-	const char *const *command_names;
 	wait_queue_head_t wait_command_queue;
 
 	u32 rx_page_order;
@@ -366,15 +364,6 @@ void iwl_slv_txq_pushback_entry(struct iwl_trans_slv *trans_slv, u8 txq_id,
 
 void iwl_slv_txq_add_to_sent(struct iwl_trans_slv *trans_slv, u8 txq_id,
 			      struct iwl_slv_txq_entry *txq_entry);
-
-/* debug utilities */
-static inline const char *
-trans_slv_get_cmd_string(struct iwl_trans_slv *trans_slv, u8 cmd)
-{
-	if (!trans_slv->command_names || !trans_slv->command_names[cmd])
-		return "UNKNOWN";
-	return trans_slv->command_names[cmd];
-}
 
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
