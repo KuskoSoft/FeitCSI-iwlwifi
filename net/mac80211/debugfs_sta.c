@@ -59,7 +59,6 @@ static const struct file_operations sta_ ##name## _ops = {		\
 		STA_OPS(name)
 
 STA_FILE(aid, sta.aid, D);
-STA_FILE(last_ack_signal, last_ack_signal, D);
 
 static ssize_t sta_flags_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
@@ -620,7 +619,6 @@ void ieee80211_sta_debugfs_add(struct sta_info *sta)
 	DEBUGFS_ADD(agg_status);
 	DEBUGFS_ADD(ht_capa);
 	DEBUGFS_ADD(vht_capa);
-	DEBUGFS_ADD(last_ack_signal);
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	DEBUGFS_ADD(tx_consecutive_loss_stat);
 	DEBUGFS_ADD(tx_latency_stat);
