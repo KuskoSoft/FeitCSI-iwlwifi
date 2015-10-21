@@ -287,6 +287,9 @@ static int iwl_sdio_handle_data_ready(struct iwl_trans *trans)
 	void *page_addr;
 	int ret;
 
+	if (test_bit(STATUS_TRANS_DEAD, &trans->status))
+		return -EIO;
+
 	/* Read the byte count of the rx data */
 	rd_count = iwl_sdio_read8(trans, IWL_SDIO_READ_COUNT_BYTE_1, &ret);
 	if (ret) {
@@ -314,6 +317,7 @@ static int iwl_sdio_handle_data_ready(struct iwl_trans *trans)
 	ret = sdio_readsb(IWL_TRANS_SDIO_GET_FUNC(trans), page_addr,
 			  IWL_SDIO_DATA_ADDR, rd_count);
 	if (WARN_ON(ret)) {
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
 		ret = -EIO;
 		goto error;
 	}
