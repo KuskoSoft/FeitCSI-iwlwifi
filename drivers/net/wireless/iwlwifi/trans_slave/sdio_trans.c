@@ -1516,6 +1516,7 @@ static void iwl_trans_sdio_configure(struct iwl_trans *trans,
 	trans_slv->config.free_dtu_mem = iwl_sdio_tx_free_dtu_mem;
 	trans_slv->config.calc_desc_num = iwl_sdio_tx_calc_desc_num;
 	trans_slv->wide_cmd_header = trans_cfg->wide_cmd_header;
+	WARN_ON(trans_cfg->sw_csum_tx);
 
 	/* Initialize NAPI here - it should be before registering to mac80211
 	 * in the opmode but after the HW struct is allocated.
