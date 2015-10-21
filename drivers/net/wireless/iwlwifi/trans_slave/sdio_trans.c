@@ -2384,10 +2384,12 @@ static void iwl_trans_sdio_fw_alive(struct iwl_trans *trans, u32 scd_addr)
 static void iwl_trans_sdio_stop_device(struct iwl_trans *trans, bool low_power)
 {
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
+	bool enabled = test_and_clear_bit(STATUS_DEVICE_ENABLED,
+					  &trans->status);
 
 	IWL_DEBUG_INFO(trans, "%s\n", __func__);
 
-	if (test_and_clear_bit(STATUS_DEVICE_ENABLED, &trans->status)) {
+	if (enabled) {
 		/*
 		 * Take a reference to make sure the sdio card will stay active
 		 * even after removing its active slv_rpm_device child.
@@ -2395,15 +2397,18 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans, bool low_power)
 		pm_runtime_get_sync(trans->dev);
 		iwl_slv_tx_stop(trans);
 		iwl_sdio_tx_stop(trans);
-
 		iwl_sdio_unregister_plat_driver(trans);
-		iwl_slv_free(trans);
-		iwl_sdio_tx_free(trans);
 	}
 
 	/* Stop HW and power down */
 	sdio_claim_host(func);
 	iwl_sdio_release_hw(trans, low_power);
+
+	/* free resources only after all rx was stopped and flushed */
+	if (enabled) {
+		iwl_slv_free(trans);
+		iwl_sdio_tx_free(trans);
+	}
 
 	clear_bit(STATUS_TRANS_DEAD, &trans->status);
 
