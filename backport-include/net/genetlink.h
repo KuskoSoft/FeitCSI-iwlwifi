@@ -90,9 +90,10 @@ int genl_unregister_family(struct genl_family *family);
 extern void genl_notify(struct sk_buff *skb, struct net *net, u32 pid,
 			u32 group, struct nlmsghdr *nlh, gfp_t flags);
 #endif
-#define genl_notify(_fam, _skb, _net, _portid, _group, _nlh, _flags)	\
-	genl_notify(_skb, _net, _portid, (_fam)->mcgrps[_group].id,	\
-		    _nlh, _flags)
+#define genl_notify(_fam, _skb, _info, _group, _flags)			\
+	genl_notify(_skb, genl_info_net(_info),				\
+		    genl_info_snd_portid(_info),			\
+		    (_fam)->mcgrps[_group].id, _info->nlhdr, _flags)
 #define genlmsg_put(_skb, _pid, _seq, _fam, _flags, _cmd)		\
 	genlmsg_put(_skb, _pid, _seq, &(_fam)->family, _flags, _cmd)
 #define genlmsg_nlhdr(_hdr, _fam)					\
@@ -145,12 +146,10 @@ backport_genlmsg_multicast_allns(struct genl_family *family,
 #define __genl_const
 #else /* < 3.13 */
 #define __genl_const const
-#endif /* < 3.13 */
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 #define genl_notify(_fam, _skb, _info, _group, _flags)			\
-	genl_notify(_fam, _skb, genl_info_net(_info), _info->snd_portid,\
+	genl_notify(_fam, _skb, genl_info_net(_info),			\
+		    genl_info_snd_portid(_info),			\
 		    _group, _info->nlhdr, _flags)
-#endif
+#endif /* < 3.13 */
 
 #endif /* __BACKPORT_NET_GENETLINK_H */
