@@ -2,7 +2,7 @@
 #define __BACKPORT_TIMKEEPING_H
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,16,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,0)
 #include_next <linux/timekeeping.h>
 #endif
 
