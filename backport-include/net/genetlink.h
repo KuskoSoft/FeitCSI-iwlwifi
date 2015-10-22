@@ -143,33 +143,14 @@ backport_genlmsg_multicast_allns(struct genl_family *family,
 #define genlmsg_multicast_allns LINUX_BACKPORT(genlmsg_multicast_allns)
 
 #define __genl_const
-
-static inline int backport_genl_mcast_id(struct genl_family *family,
-					 unsigned int group)
-{
-	return family->mcgrps[group].id;
-}
 #else /* < 3.13 */
 #define __genl_const const
-static inline int backport_genl_mcast_id(struct genl_family *family,
-					 unsigned int group)
-{
-	if (WARN_ON_ONCE(group >= family->n_mcgrps))
-		return -EINVAL;
-	return family->mcgrp_offset + group;
-}
 #endif /* < 3.13 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-#define genl_has_listeners LINUX_BACKPORT(genl_has_listeners)
-static inline int genl_has_listeners(struct genl_family *family,
-				     struct net *net, unsigned int group)
-{
-	group = backport_genl_mcast_id(family, group);
-	if (group < 0)
-		return group;
-	return netlink_has_listeners(net->genl_sock, group);
-}
-#endif /* < 3.17 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+#define genl_notify(_fam, _skb, _info, _group, _flags)			\
+	genl_notify(_fam, _skb, genl_info_net(_info), _info->snd_portid,\
+		    _group, _info->nlhdr, _flags)
+#endif
 
 #endif /* __BACKPORT_NET_GENETLINK_H */
