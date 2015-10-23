@@ -54,4 +54,10 @@ static inline struct acpi_device *_acpi_get_companion(struct device *dev)
 #define ACPI_COMPANION(dev)	(NULL)
 #endif /* CONFIG_ACPI */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0) */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#define acpi_dev_remove_driver_gpios LINUX_BACKPORT(acpi_dev_remove_driver_gpios)
+static inline void acpi_dev_remove_driver_gpios(struct acpi_device *adev) {}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0) */
+
 #endif /* __BACKPORT_LINUX_ACPI_H */

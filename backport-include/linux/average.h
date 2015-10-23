@@ -1,8 +1,8 @@
-#ifndef _LINUX_AVERAGE_H
-#define _LINUX_AVERAGE_H
+#ifndef __BACKPORT_AVERAGE
+#define __BACKPORT_AVERAGE
+#include_next <linux/average.h>
 
-/* Exponentially weighted moving average (EWMA) */
-
+#ifndef DECLARE_EWMA
 #define DECLARE_EWMA(name, _factor, _weight)				\
 	struct ewma_##name {						\
 		unsigned long internal;					\
@@ -41,5 +41,6 @@
 				(val << factor)) >> weight :		\
 			(val << factor);				\
 	}
+#endif /* DECLARE_EWMA */
 
-#endif /* _LINUX_AVERAGE_H */
+#endif /* __BACKPORT_AVERAGE */

@@ -53,6 +53,15 @@
 # Variations are obviously possible.
 #
 
+config BP_MODULES
+	option modules
+	bool
+	default MODULES
+
+	help
+	This symbol is necessary for the newer kconf tool, it looks
+	for the "option modules" to control the 'm' state.
+
 config BPAUTO_BUILD_CORDIC
 	depends on n
 	tristate
@@ -64,18 +73,6 @@ config BPAUTO_BUILD_CORDIC
 	#c-file lib/cordic.c
 
 config BPAUTO_CORDIC
-	bool
-
-config BPAUTO_BUILD_AVERAGE
-	depends on n
-	bool
-	depends on !AVERAGE
-	default y if BPAUTO_USERSEL_BUILD_ALL
-	default y if BPAUTO_AVERAGE
-	#h-file linux/average.h
-	#c-file lib/average.c
-
-config BPAUTO_AVERAGE
 	bool
 
 config BPAUTO_MII
