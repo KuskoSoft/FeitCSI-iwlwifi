@@ -426,8 +426,6 @@ DECLARE_EWMA(signal, 1024, 8)
  * @cipher_scheme: optional cipher scheme for this station
  * @reserved_tid: reserved TID (if any, otherwise IEEE80211_TID_UNRESERVED)
  * @fast_tx: TX fastpath information
- * @processed_beacon: set to true after peer rates and capabilities are
- *	processed
  * @tdls_chandef: a TDLS peer can have a wider chandef that is compatible to
  *	the BSS one.
  * @tx_stats: TX statistics
@@ -531,29 +529,6 @@ struct sta_info {
 	struct ieee80211_tx_latency_stat *tx_lat;
 	u32 *tx_lat_thrshld;
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
-
-#ifdef CPTCFG_MAC80211_MESH
-	/*
-	 * Mesh peer link attributes, protected by plink_lock.
-	 * TODO: move to a sub-structure that is referenced with pointer?
-	 */
-	spinlock_t plink_lock;
-	u16 llid;
-	u16 plid;
-	u16 reason;
-	u8 plink_retries;
-	enum nl80211_plink_state plink_state;
-	u32 plink_timeout;
-	struct timer_list plink_timer;
-
-	s64 t_offset;
-	s64 t_offset_setpoint;
-	/* mesh power save */
-	enum nl80211_mesh_power_mode local_pm;
-	enum nl80211_mesh_power_mode peer_pm;
-	enum nl80211_mesh_power_mode nonpeer_pm;
-	bool processed_beacon;
-#endif
 
 #ifdef CPTCFG_MAC80211_DEBUGFS
 	struct sta_info_debugfsdentries {
