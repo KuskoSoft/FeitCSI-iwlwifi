@@ -190,6 +190,20 @@ const struct iwl_cfg iwl8260_2ac_cfg = {
 	.max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
 };
 
+const struct iwl_cfg iwl8265_2ac_cfg = {
+	.name = "Intel(R) Dual Band Wireless AC 8265",
+	.fw_name_pre = IWL8000_FW_PRE,
+	IWL_DEVICE_8000,
+	.ht_params = &iwl8000_ht_params,
+	.nvm_ver = IWL8000_NVM_VERSION,
+	.nvm_calib_ver = IWL8000_TX_POWER_VERSION,
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+	/* No need to load INIT image on FPGA */
+	.no_power_up_nic_in_init = true,
+#endif
+	.max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
+};
+
 const struct iwl_cfg iwl4165_2ac_cfg = {
 	.name = "Intel(R) Dual Band Wireless AC 4165",
 	.fw_name_pre = IWL8000_FW_PRE,
