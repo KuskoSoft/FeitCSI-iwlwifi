@@ -3,7 +3,6 @@
 #
 
 menuconfig WLAN
-	depends on n
 	bool "Wireless LAN"
 	depends on !S390
 	depends on NET
