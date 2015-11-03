@@ -86,6 +86,7 @@ struct iwl_dbg_cfg {
 #define IWL_DBG_CFG(type, name)		type name;
 #define IWL_DBG_CFG_NODEF(type, name)	type name;
 #define IWL_DBG_CFG_BIN(name)		struct iwl_dbg_cfg_bin name;
+#define IWL_DBG_CFG_STR(name)	const char *name;
 #define IWL_DBG_CFG_BINA(name, max)	struct iwl_dbg_cfg_bin name[max]; \
 					int n_ ## name;
 #define IWL_DBG_CFG_RANGE(type, name, min, max)	IWL_DBG_CFG(type, name)
@@ -267,6 +268,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(bool, fpga_bu_mode)
 #endif /* CPTCFG_IWLWIFI_SUPPORT_FPGA_BU */
 #undef IWL_DBG_CFG
+#undef IWL_DBG_CFG_STR
 #undef IWL_DBG_CFG_NODEF
 #undef IWL_DBG_CFG_BIN
 #undef IWL_DBG_CFG_BINA
