@@ -74,18 +74,6 @@ config IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	depends on IWLWIFI
 	bool "enable default value override (for debugging)"
 
-config IWLWIFI_WANT_PM_RUNTIME
-	bool
-
-config IWLWIFI_MINI_PM_RUNTIME
-	bool
-	depends on IWLWIFI_WANT_PM_RUNTIME
-	default y if !PM_RUNTIME
-	help
-	  Enable use of an internal reference counting framework for the
-	  purpose of getting the FW and bus into a low power state when
-	  the WiFi component is idle.
-
 config IWLWIFI_FORCE_OFDM_RATE
 	bool "force transmit to OFDM low rate"
 	depends on IWLMVM

@@ -625,7 +625,6 @@ struct iwl_slv_rpm_device {
 	struct device dev;
 };
 
-#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 static void iwl_slv_rpm_dev_release(struct device *dev)
 {
 	struct iwl_slv_rpm_device *rpm_dev =
@@ -799,7 +798,6 @@ static void iwl_slv_rpm_del_device(struct device *dev)
 	pm_runtime_disable(dev);
 	device_unregister(dev);
 }
-#endif
 
 void iwl_slv_free_data_queue(struct iwl_trans *trans, int txq_id)
 {
@@ -927,26 +925,8 @@ void iwl_slv_free(struct iwl_trans *trans)
 		trans_slv->policy_wq = NULL;
 	}
 
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-	mini_rpm_destroy(trans_slv);
-#else
 	iwl_slv_rpm_del_device(trans_slv->d0i3_dev);
-#endif
 }
-
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-static int iwl_slv_mini_rpm_init(struct iwl_trans *trans)
-{
-	struct slv_mini_rpm_config rpm_config;
-	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
-
-	rpm_config.runtime_suspend = iwl_slv_runtime_suspend;
-	rpm_config.runtime_resume = iwl_slv_runtime_resume;
-	rpm_config.autosuspend_delay = iwlwifi_mod_params.d0i3_entry_delay;
-
-	return mini_rpm_init(trans_slv, &rpm_config);
-}
-#endif
 
 int iwl_slv_init(struct iwl_trans *trans)
 {
@@ -979,18 +959,12 @@ int iwl_slv_init(struct iwl_trans *trans)
 					       WQ_HIGHPRI | WQ_UNBOUND, 1);
 	INIT_WORK(&trans_slv->policy_trigger, trans_slv->config.policy_trigger);
 
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-	ret = iwl_slv_mini_rpm_init(trans);
-	if (ret)
-		goto error;
-#else
 	trans_slv->d0i3_dev = iwl_slv_rpm_add_device(trans);
 	if (IS_ERR(trans_slv->d0i3_dev)) {
 		ret = PTR_ERR(trans_slv->d0i3_dev);
 		trans_slv->d0i3_dev = NULL;
 		goto error;
 	}
-#endif
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	/* The transport wakelock is locked on init. We only
@@ -1016,7 +990,6 @@ int iwl_slv_register_drivers(void)
 {
 	int ret;
 
-#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	/*
 	 * register a new class because some older kernels
 	 * don't support calling the runtime_pm callbacks
@@ -1025,7 +998,6 @@ int iwl_slv_register_drivers(void)
 	ret = class_register(&iwl_slv_rpm_class);
 	if (ret)
 		return ret;
-#endif
 
 	ret = iwl_sdio_register_driver();
 	if (ret)
@@ -1040,17 +1012,13 @@ int iwl_slv_register_drivers(void)
 unregister_sdio:
 	iwl_sdio_unregister_driver();
 unregister_class:
-#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	class_unregister(&iwl_slv_rpm_class);
-#endif
 	return ret;
 }
 
 void iwl_slv_unregister_drivers(void)
 {
-#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	class_unregister(&iwl_slv_rpm_class);
-#endif
 	iwl_sdio_unregister_driver();
 	iwl_idi_unregister_driver();
 }
@@ -1979,11 +1947,7 @@ static ssize_t iwl_dbgfs_d0i3_timeout_write(struct file *file,
 		return -EINVAL;
 
 	iwlwifi_mod_params.d0i3_entry_delay = value;
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-	trans_slv->rpm_config.autosuspend_delay = value;
-#else
 	pm_runtime_set_autosuspend_delay(trans_slv->d0i3_dev, value);
-#endif
 	return count;
 }
 DEBUGFS_READ_WRITE_FILE_OPS(d0i3_timeout);
@@ -2015,31 +1979,22 @@ int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans,
 void iwl_trans_slv_ref(struct iwl_trans *trans)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-	mini_rpm_get(trans_slv);
-#else
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
 	pm_runtime_get(trans_slv->d0i3_dev);
-#endif
 }
 
 void iwl_trans_slv_unref(struct iwl_trans *trans)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-	mini_rpm_put(trans_slv);
-#else
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
 	pm_runtime_mark_last_busy(trans_slv->d0i3_dev);
 	pm_runtime_put_autosuspend(trans_slv->d0i3_dev);
-#endif
 }
 
 int iwl_trans_slv_suspend(struct iwl_trans *trans)
 {
-#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
@@ -2051,14 +2006,12 @@ int iwl_trans_slv_suspend(struct iwl_trans *trans)
 	ret = iwl_slv_fw_enter_d0i3(trans);
 	if (ret)
 		return ret;
-#endif
 	trans_slv->wowlan_enabled = true;
 	return 0;
 }
 
 void iwl_trans_slv_resume(struct iwl_trans *trans)
 {
-#ifndef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
@@ -2069,6 +2022,5 @@ void iwl_trans_slv_resume(struct iwl_trans *trans)
 	 * and the runtime_pm handlers are frozen at this point)
 	 */
 	iwl_slv_fw_exit_d0i3(trans);
-#endif
 	trans_slv->wowlan_enabled = false;
 }

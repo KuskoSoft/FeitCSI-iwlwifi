@@ -205,16 +205,6 @@ struct iwl_trans_slv {
 
 	bool wowlan_enabled;
 
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-	/* protects rpm data (refcount, suspended) */
-	spinlock_t rpm_lock;
-	int refcount;
-	bool suspended;
-	struct workqueue_struct *rpm_wq;
-	struct work_struct rpm_resume_work;
-	struct delayed_work rpm_suspend_work;
-	struct slv_mini_rpm_config rpm_config;
-#endif
 	unsigned long rpm_flags;
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	struct wake_lock slv_wake_lock;
@@ -417,12 +407,4 @@ void iwl_trans_slv_unref(struct iwl_trans *trans);
 int iwl_trans_slv_suspend(struct iwl_trans *trans);
 void iwl_trans_slv_resume(struct iwl_trans *trans);
 int iwl_slv_get_next_queue(struct iwl_trans_slv *trans_slv);
-/* mini runtime pm */
-#ifdef CPTCFG_IWLWIFI_MINI_PM_RUNTIME
-int mini_rpm_init(struct iwl_trans_slv *trans_slv,
-		  struct slv_mini_rpm_config *rpm_config);
-void mini_rpm_destroy(struct iwl_trans_slv *trans_slv);
-void mini_rpm_get(struct iwl_trans_slv *trans_slv);
-void mini_rpm_put(struct iwl_trans_slv *trans_slv);
-#endif /* CPTCFG_IWLWIFI_MINI_PM_RUNTIME */
 #endif
