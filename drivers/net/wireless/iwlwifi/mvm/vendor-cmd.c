@@ -2120,7 +2120,7 @@ static void iwl_mvm_send_gscan_beacon(struct iwl_mvm *mvm,
 	msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, mvm->gscan.wdev,
 					  100 + beacon->len,
 					  IWL_MVM_VENDOR_EVENT_IDX_GSCAN_BEACON,
-					  GFP_KERNEL);
+					  GFP_ATOMIC);
 	if (!msg)
 		return;
 
@@ -2145,7 +2145,7 @@ static void iwl_mvm_send_gscan_beacon(struct iwl_mvm *mvm,
 	}
 
 	nla_nest_end(msg, res);
-	cfg80211_vendor_event(msg, GFP_KERNEL);
+	cfg80211_vendor_event(msg, GFP_ATOMIC);
 }
 
 void iwl_mvm_gscan_beacons_work(struct work_struct *work)
