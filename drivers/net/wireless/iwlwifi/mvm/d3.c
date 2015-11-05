@@ -1242,6 +1242,8 @@ static void iwl_mvm_report_wakeup_reasons(struct iwl_mvm *mvm,
 		goto report;
 	}
 
+	pm_wakeup_event(mvm->dev, 0);
+
 	if (reasons & IWL_WOWLAN_WAKEUP_BY_MAGIC_PACKET)
 		wakeup.magic_pkt = true;
 
