@@ -147,4 +147,16 @@ struct dentry *debugfs_create_devm_seqfile(struct device *dev, const char *name,
 }
 EXPORT_SYMBOL_GPL(debugfs_create_devm_seqfile);
 
+int skb_ensure_writable(struct sk_buff *skb, int write_len)
+{
+	if (!pskb_may_pull(skb, write_len))
+		return -ENOMEM;
+
+	if (!skb_cloned(skb) || skb_clone_writable(skb, write_len))
+		return 0;
+
+	return pskb_expand_head(skb, 0, 0, GFP_ATOMIC);
+}
+EXPORT_SYMBOL(skb_ensure_writable);
+
 #endif /* CONFIG_DEBUG_FS */

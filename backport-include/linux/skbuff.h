@@ -294,6 +294,10 @@ static inline int skb_put_padto(struct sk_buff *skb, unsigned int len)
 	}
 	return 0;
 }
+
+#define skb_ensure_writable LINUX_BACKPORT(skb_ensure_writable)
+int skb_ensure_writable(struct sk_buff *skb, int write_len);
+
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
 
 #endif /* __BACKPORT_SKBUFF_H */
