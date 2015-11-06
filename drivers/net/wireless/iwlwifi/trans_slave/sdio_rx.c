@@ -432,8 +432,8 @@ static void iwl_sdio_paging_handler(struct iwl_trans *trans)
 			PAGE_2_EXP_SIZE;
 
 		IWL_DEBUG_FW(trans,
-			     "Paging: upload dram address is 0x%p sram address is 0x%08x\n",
-			     page_addr, sram_addr);
+			     "Paging: upload data offset 0x%08x from sram address 0x%08x\n",
+			     addr, sram_addr);
 
 		iwl_trans_read_mem_bytes(trans, sram_addr, page_addr,
 					 FW_PAGING_SIZE);
@@ -449,8 +449,8 @@ static void iwl_sdio_paging_handler(struct iwl_trans *trans)
 			PAGE_2_EXP_SIZE;
 
 		IWL_DEBUG_FW(trans,
-			     "Paging: download dram address is 0x%p sram address is 0x%08x\n",
-			     page_addr, sram_addr);
+			     "Paging: download data offset 0x%08x to sram address 0x%08x\n",
+			     addr, sram_addr);
 
 		ret = iwl_sdio_download_fw_page(trans, sram_addr, page_addr);
 		if (ret)
