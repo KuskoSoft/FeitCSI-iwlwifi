@@ -1044,7 +1044,7 @@ static int iwl_sdio_config_sdtm(struct iwl_trans *trans)
  *
  *@func - The SDIO HW function bus driver.
  */
-static int iwl_sdio_config_adma(struct iwl_trans *trans)
+static int iwl_sdio_init_adma(struct iwl_trans *trans)
 {
 	int ret, i;
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
@@ -1430,7 +1430,7 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 	ret = iwl_sdio_config_sdtm(trans);
 	if (ret)
 		goto release_hw;
-	ret = iwl_sdio_config_adma(trans);
+	ret = iwl_sdio_init_adma(trans);
 	if (ret)
 		goto release_hw;
 
