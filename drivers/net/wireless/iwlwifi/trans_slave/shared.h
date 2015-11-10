@@ -228,16 +228,6 @@ void iwl_slv_set_reclaim_cmds(struct iwl_trans_slv *trans_slv,
 		       trans_slv->n_no_reclaim_cmds * sizeof(u8));
 }
 
-static inline
-void iwl_slv_set_rx_page_order(struct iwl_trans_slv *trans_slv,
-			       const struct iwl_trans_config *trans_cfg)
-{
-	if (trans_cfg->rx_buf_size_8k)
-		trans_slv->rx_page_order = get_order(8 * 1024);
-	else
-		trans_slv->rx_page_order = get_order(4 * 1024);
-}
-
 static inline struct iwl_trans_slv *
 IWL_TRANS_GET_SLV_TRANS(struct iwl_trans *trans)
 {

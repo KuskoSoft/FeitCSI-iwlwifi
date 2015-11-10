@@ -226,7 +226,6 @@ struct iwl_trans_sdio {
 
 	/* Misc configurations */
 	u32 rx_page_order;
-	bool rx_buf_size_8k;
 	bool bc_table_dword;
 	const char *const *command_names;
 

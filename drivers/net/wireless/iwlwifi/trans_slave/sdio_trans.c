@@ -1464,13 +1464,19 @@ static void iwl_trans_sdio_configure(struct iwl_trans *trans,
 	WARN_ON(trans_cfg == NULL);
 
 	iwl_slv_set_reclaim_cmds(trans_slv, trans_cfg);
-	iwl_slv_set_rx_page_order(trans_slv, trans_cfg);
+
+	trans_slv->rx_page_order =
+		iwl_trans_get_rb_size_order(trans_cfg->rx_buf_size);
+	if (trans_cfg->rx_buf_size >= IWL_AMSDU_12K) {
+		pr_err("%s: can't have 12K AMSDU in SDIO\n", KBUILD_MODNAME);
+		trans_slv->rx_page_order =
+			iwl_trans_get_rb_size_order(IWL_AMSDU_4K);
+	}
 
 	/* Configure command names */
 	trans_sdio->command_names = trans_cfg->command_names;
 
 	/*Configure RX page order and size */
-	trans_sdio->rx_buf_size_8k = trans_cfg->rx_buf_size_8k;
 	trans_sdio->bc_table_dword = trans_cfg->bc_table_dword;
 
 	trans_sdio->sdio_adma_addr = trans_cfg->sdio_adma_addr;
