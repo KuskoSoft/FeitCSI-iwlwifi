@@ -2520,9 +2520,12 @@ static u32 iwl_trans_sdio_fh_regs_dump(struct iwl_trans *trans,
 static u32 iwl_trans_sdio_dump_csr(struct iwl_trans *trans,
 				   struct iwl_fw_error_dump_data **data)
 {
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	u32 csr_len = sizeof(**data) + IWL_CSR_TO_DUMP;
 	__le32 *val;
 	int i;
+
+	mutex_lock(&trans_sdio->target_access_mtx);
 
 	(*data)->type = cpu_to_le32(IWL_FW_ERROR_DUMP_CSR);
 	(*data)->len = cpu_to_le32(IWL_CSR_TO_DUMP);
@@ -2532,6 +2535,8 @@ static u32 iwl_trans_sdio_dump_csr(struct iwl_trans *trans,
 		*val++ = cpu_to_le32(iwl_trans_sdio_read32(trans, i));
 
 	*data = iwl_fw_error_next_data(*data);
+
+	mutex_unlock(&trans_sdio->target_access_mtx);
 
 	return csr_len;
 }
