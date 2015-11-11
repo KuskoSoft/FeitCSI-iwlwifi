@@ -191,7 +191,7 @@ static int iwl_sdio_probe(struct sdio_func *func,
 	}
 
 	/* register transport layer debugfs here */
-	ret = iwl_trans_slv_dbgfs_register(trans, trans->dbgfs_dir);
+	ret = iwl_trans_slv_dbgfs_register(trans);
 	if (ret)
 		goto out_free_drv;
 

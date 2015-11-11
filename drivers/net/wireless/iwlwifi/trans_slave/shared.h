@@ -400,11 +400,18 @@ void iwl_slv_tx_stop(struct iwl_trans *trans);
 void iwl_slv_free(struct iwl_trans *trans);
 int iwl_slv_init(struct iwl_trans *trans);
 void iwl_slv_free_data_queue(struct iwl_trans *trans, int txq_id);
-int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans,
-				 struct dentry *dir);
 void iwl_trans_slv_ref(struct iwl_trans *trans);
 void iwl_trans_slv_unref(struct iwl_trans *trans);
 int iwl_trans_slv_suspend(struct iwl_trans *trans);
 void iwl_trans_slv_resume(struct iwl_trans *trans);
 int iwl_slv_get_next_queue(struct iwl_trans_slv *trans_slv);
+
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans);
+#else
+static inline int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans)
+{
+	return 0;
+}
+#endif
 #endif

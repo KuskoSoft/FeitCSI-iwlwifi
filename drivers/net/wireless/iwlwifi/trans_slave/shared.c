@@ -1952,28 +1952,16 @@ static ssize_t iwl_dbgfs_d0i3_timeout_write(struct file *file,
 }
 DEBUGFS_READ_WRITE_FILE_OPS(d0i3_timeout);
 
-int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans,
-				 struct dentry *dir)
+int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans)
 {
-	int ret;
-
-	ret = iwl_trans_dbgfs_register(trans, dir);
-	if (ret)
-		return ret;
+	struct dentry *dir = trans->dbgfs_dir;
 
 	DEBUGFS_ADD_FILE(d0i3_timeout, dir, S_IWUSR | S_IRUSR);
-
 	return 0;
-
 err:
 	IWL_ERR(trans, "failed to create the trans debugfs entry\n");
 	return -ENOMEM;
 }
-
-#else
-int iwl_trans_slv_dbgfs_register(struct iwl_trans *trans,
-				 struct dentry *dir)
-{ return 0; }
 #endif /*CPTCFG_IWLWIFI_DEBUGFS */
 
 void iwl_trans_slv_ref(struct iwl_trans *trans)

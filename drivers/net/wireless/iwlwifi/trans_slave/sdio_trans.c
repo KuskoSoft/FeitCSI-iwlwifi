@@ -2416,20 +2416,6 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans, bool low_power)
 	pm_runtime_put(trans->dev);
 }
 
-#ifdef CPTCFG_IWLWIFI_DEBUGFS
-static int iwl_trans_sdio_dbgfs_register(struct iwl_trans *trans,
-					 struct dentry *dir)
-{
-	return 0;
-}
-#else
-static int iwl_trans_sdio_dbgfs_register(struct iwl_trans *trans,
-					 struct dentry *dir)
-{
-	return 0;
-}
-#endif /*CPTCFG_IWLWIFI_DEBUGFS */
-
 #ifdef CONFIG_PM_SLEEP
 void _iwl_sdio_suspend(struct iwl_trans *trans)
 {
@@ -2770,8 +2756,6 @@ static const struct iwl_trans_ops trans_ops_sdio = {
 	/* NIC Access */
 	.grab_nic_access = iwl_trans_sdio_grab_nic_access,
 	.release_nic_access = iwl_trans_sdio_release_nic_access,
-
-	.dbgfs_register = iwl_trans_sdio_dbgfs_register,
 
 	.ref = iwl_trans_slv_ref,
 	.unref = iwl_trans_slv_unref,
