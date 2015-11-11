@@ -145,8 +145,7 @@ static void iwl_sdio_set_power(struct iwl_trans *trans, bool on)
 	if (on) {
 		pm_runtime_forbid(trans_slv->host_dev);
 		mmc_power_restore_host(sdio_func->card->host);
-	}
-	else {
+	} else {
 		mmc_power_save_host(sdio_func->card->host);
 		pm_runtime_allow(trans_slv->host_dev);
 	}
@@ -240,7 +239,7 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 	access_control = iwl_sdio_set_cmd_access_control(ac_mode,
 							 target_addr, true);
 
-	/* Fill target acess command */
+	/* Fill target access command */
 	ta_write_cmd = &trans_sdio->ta_buff.ta_cmd;
 	ta_write_cmd->hdr.op_code = IWL_SDIO_OP_CODE_WRITE | IWL_SDIO_EOT_BIT;
 	ta_write_cmd->hdr.seq_number = iwl_sdio_get_cmd_seq(trans_sdio, true);
@@ -325,7 +324,7 @@ void iwl_sdio_handle_ta_read_ready(struct iwl_trans *trans,
 
 	/* Copy to the given read buffer */
 	if (WARN_ON(!trans_sdio->ta_read_buff))
-			return;
+		return;
 	memcpy(trans_sdio->ta_read_buff, ta_buff->payload,
 	       le32_to_cpu(ta_buff->ta_cmd.length));
 
@@ -706,7 +705,7 @@ static int iwl_sdio_access_cons_mem(struct iwl_trans *trans, u32 addr,
 	if (!buf)
 		return -EINVAL;
 
-	/*Lock register acccess lock */
+	/* Lock register access lock */
 	mutex_lock(&trans_sdio->target_access_mtx);
 	sdio_claim_host(func);
 	IWL_DEBUG_INFO(trans,
@@ -719,15 +718,15 @@ static int iwl_sdio_access_cons_mem(struct iwl_trans *trans, u32 addr,
 		copy_size = min_t(u32,
 				  IWL_SDIO_MAX_PAYLOAD_SIZE,
 				  length - offset);
-		if (write_access) {
+		if (write_access)
 			ret = iwl_sdio_ta_write(trans, addr + offset, copy_size,
 					       buf ? buf + offset : NULL,
 					       IWL_SDIO_TA_AC_INDIRECT);
-		} else {
+		else
 			ret = iwl_sdio_ta_read(trans, addr + offset, copy_size,
 					       buf + offset,
 					       IWL_SDIO_TA_AC_INDIRECT);
-		}
+
 		if (ret)
 			break;
 	}
@@ -845,7 +844,6 @@ static int iwl_sdio_clear_interrupts(struct iwl_trans *trans)
  * Register access is disabled after this flow.
  * The host should be claimed before calling this function.
  *
- *@trans - the generic transport layer.
  * If succeeded returns 0, else return a negative value describing the error.
  */
 static int iwl_sdio_release_hw(struct iwl_trans *trans, bool low_power)
@@ -883,8 +881,6 @@ static int iwl_sdio_release_hw(struct iwl_trans *trans, bool low_power)
 /*
  * Disable retention of the SDIO HW function.
  * Disables the HW from going to low power state.
- *
- *@trans - the generic transport layer.
  */
 static int iwl_sdio_disable_retention(struct iwl_trans *trans)
 {
@@ -912,10 +908,8 @@ exit_err:
 /*
  * Enable retention of the SDIO HW function.
  * Eable the HW to go to low power state in case it is idle.
- *
- *@trans - the generic transport layer.
  */
-static __maybe_unused int iwl_sdio_enable_retention(struct iwl_trans *trans)
+static int iwl_sdio_enable_retention(struct iwl_trans *trans)
 {
 	int ret, ret_val;
 
@@ -968,7 +962,8 @@ static int iwl_sdio_config_sdtm_register(struct iwl_trans *trans)
 
 	/* Configure H2D GP:
 	 * TODO: Check if we need to configure the SDTM with
-	 * IWL_SDIO_MSG_SDTM_ALL */
+	 * IWL_SDIO_MSG_SDTM_ALL
+	 */
 
 	/* Target write the data to the SDTM */
 	ret = iwl_sdio_ta_write(trans, IWL_SDIO_CONFIG_BASE_ADDRESS,
@@ -1009,11 +1004,7 @@ static int iwl_sdio_update_sdtm(struct iwl_trans *trans,
 	return ret;
 }
 
-/*
- * Configure the SDTM in the SDIO AL.
- *
- *@func - The SDIO HW function bus driver.
- */
+/* Configure the SDTM in the SDIO AL. */
 static int iwl_sdio_config_sdtm(struct iwl_trans *trans)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
@@ -1041,14 +1032,11 @@ static int iwl_sdio_config_sdtm(struct iwl_trans *trans)
  * Init ADMA descriptors memory (due to ADMA-bug) :
  * By writing a non-zero value to S/F memory ADMA descriptors memory
  * base (0x82A00), 88 bytes (use pattern 0x47554232414D4441).
- *
- *@func - The SDIO HW function bus driver.
  */
 static int iwl_sdio_init_adma(struct iwl_trans *trans)
 {
 	int ret, i;
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
-
 	__le64 config_buf[IWL_SDIO_SF_MEM_ADMA_DSC_LENGTH / sizeof(u64)];
 
 	for (i = 0; i < ARRAY_SIZE(config_buf); i++) {
