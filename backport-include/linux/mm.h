@@ -95,7 +95,7 @@ static inline unsigned long *frame_vector_pfns(struct frame_vector *vec)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0) && \
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,9) && \
      LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
 #define page_is_pfmemalloc LINUX_BACKPORT(page_is_pfmemalloc)
 static inline bool page_is_pfmemalloc(struct page *page)

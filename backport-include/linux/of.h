@@ -167,4 +167,21 @@ static inline struct device_node *of_find_compatible_node(
 #endif
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#define of_property_read_u64_array LINUX_BACKPORT(of_property_read_u64_array)
+#ifdef CONFIG_OF
+extern int of_property_read_u64_array(const struct device_node *np,
+				      const char *propname,
+				      u64 *out_values,
+				      size_t sz);
+#else
+static inline int of_property_read_u64_array(const struct device_node *np,
+					     const char *propname,
+					     u64 *out_values, size_t sz)
+{
+	return -ENOSYS;
+}
+#endif /* CONFIG_OF */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0) */
+
 #endif	/* _COMPAT_LINUX_OF_H */

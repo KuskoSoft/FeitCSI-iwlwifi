@@ -15,6 +15,7 @@
 #include <linux/skbuff.h>
 #include <linux/errqueue.h>
 #include <linux/wait.h>
+#include <linux/of.h>
 
 /**
  * eth_get_headlen - determine the the length of header for an ethernet frame
@@ -221,3 +222,39 @@ __sched int bit_wait_timeout(struct wait_bit_key *word)
 }
 EXPORT_SYMBOL_GPL(bit_wait_timeout);
 #endif
+
+#ifdef CONFIG_OF
+/**
+ * of_property_read_u64_array - Find and read an array of 64 bit integers
+ * from a property.
+ *
+ * @np:		device node from which the property value is to be read.
+ * @propname:	name of the property to be searched.
+ * @out_values:	pointer to return value, modified only if return value is 0.
+ * @sz:		number of array elements to read
+ *
+ * Search for a property in a device node and read 64-bit value(s) from
+ * it. Returns 0 on success, -EINVAL if the property does not exist,
+ * -ENODATA if property does not have a value, and -EOVERFLOW if the
+ * property data isn't large enough.
+ *
+ * The out_values is modified only if a valid u64 value can be decoded.
+ */
+int of_property_read_u64_array(const struct device_node *np,
+			       const char *propname, u64 *out_values,
+			       size_t sz)
+{
+	const __be32 *val = of_find_property_value_of_size(np, propname,
+						(sz * sizeof(*out_values)));
+
+	if (IS_ERR(val))
+		return PTR_ERR(val);
+
+	while (sz--) {
+		*out_values++ = of_read_number(val, 2);
+		val += 2;
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(of_property_read_u64_array);
+#endif /* CONFIG_OF */

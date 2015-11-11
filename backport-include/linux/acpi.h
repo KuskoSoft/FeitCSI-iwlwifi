@@ -36,7 +36,7 @@
 #endif /* CONFIG_ACPI */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
+#ifndef ACPI_COMPANION
 #ifdef CONFIG_ACPI
 static inline struct acpi_device *_acpi_get_companion(struct device *dev)
 {
@@ -53,7 +53,7 @@ static inline struct acpi_device *_acpi_get_companion(struct device *dev)
 #else
 #define ACPI_COMPANION(dev)	(NULL)
 #endif /* CONFIG_ACPI */
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0) */
+#endif /* ACPI_COMPANION */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 #define acpi_dev_remove_driver_gpios LINUX_BACKPORT(acpi_dev_remove_driver_gpios)

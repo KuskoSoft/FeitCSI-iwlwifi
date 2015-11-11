@@ -167,4 +167,26 @@ static inline struct in6_addr nla_get_in6_addr(const struct nlattr *nla)
 }
 #endif /* < 4.1 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+/**
+ * nla_get_le32 - return payload of __le32 attribute
+ * @nla: __le32 netlink attribute
+ */
+#define nla_get_le32 LINUX_BACKPORT(nla_get_le32)
+static inline __le32 nla_get_le32(const struct nlattr *nla)
+{
+	return *(__le32 *) nla_data(nla);
+}
+
+/**
+ * nla_get_le64 - return payload of __le64 attribute
+ * @nla: __le64 netlink attribute
+ */
+#define nla_get_le64 LINUX_BACKPORT(nla_get_le64)
+static inline __le64 nla_get_le64(const struct nlattr *nla)
+{
+	return *(__le64 *) nla_data(nla);
+}
+#endif /* < 4.4 */
+
 #endif /* __BACKPORT_NET_NETLINK_H */
