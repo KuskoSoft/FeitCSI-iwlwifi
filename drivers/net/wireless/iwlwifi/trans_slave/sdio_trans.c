@@ -2335,26 +2335,6 @@ static int iwl_trans_sdio_update_sf(struct iwl_trans *trans,
 }
 
 /*
- * Generic method to handle grab/release nic access.
- * According to the grab_access bool flag grabs/releases the nic access.
- */
-static bool iwl_sdio_change_nic_access(struct iwl_trans *trans,
-				       bool silent, bool grab_access)
-{
-	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
-	char *action = ((grab_access) ? "grabbed" : "released");
-
-	if (grab_access)
-		mutex_lock(&trans_sdio->target_access_mtx);
-
-	if (!grab_access)
-		mutex_unlock(&trans_sdio->target_access_mtx);
-
-	IWL_DEBUG_INFO(trans, "Successfully %s nic access\n", action);
-	return true;
-}
-
-/*
  * Grab nic access.
  * Make sure the device is powered up and ready to handle
  * undirect memory read/writes.
@@ -2362,7 +2342,12 @@ static bool iwl_sdio_change_nic_access(struct iwl_trans *trans,
 static bool iwl_trans_sdio_grab_nic_access(struct iwl_trans *trans, bool silent,
 					   unsigned long *flags)
 {
-	return iwl_sdio_change_nic_access(trans, silent, true);
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+
+	mutex_lock(&trans_sdio->target_access_mtx);
+	IWL_DEBUG_INFO(trans, "Successfully grabbed nic access\n");
+
+	return true;
 }
 
 /*
@@ -2372,7 +2357,10 @@ static bool iwl_trans_sdio_grab_nic_access(struct iwl_trans *trans, bool silent,
 static void
 iwl_trans_sdio_release_nic_access(struct iwl_trans *trans, unsigned long *flags)
 {
-	iwl_sdio_change_nic_access(trans, true, false);
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+
+	mutex_unlock(&trans_sdio->target_access_mtx);
+	IWL_DEBUG_INFO(trans, "Successfully released nic access\n");
 }
 
 static void iwl_trans_sdio_fw_alive(struct iwl_trans *trans, u32 scd_addr)
