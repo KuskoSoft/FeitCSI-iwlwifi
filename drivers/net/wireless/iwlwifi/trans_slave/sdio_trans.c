@@ -1386,13 +1386,6 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 		goto release_hw;
 	}
 
-	/*
-	 * Clear out hw_rev before reading the CSR, so it doesn't skip the
-	 * overwriting of the IWL_SDIO_INTR_CAUSE_REG in iwl_sdio_isr() until
-	 * CSR_SDTM_REG is set
-	 */
-	trans->hw_rev = 0;
-
 	ret = iwl_sdio_update_hw_rev(trans);
 	if (ret)
 		goto release_hw;
