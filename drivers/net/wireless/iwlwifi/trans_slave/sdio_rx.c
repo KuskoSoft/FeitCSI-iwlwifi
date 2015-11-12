@@ -470,8 +470,9 @@ void iwl_sdio_d2h_work(struct work_struct *work)
 							 d2h_work);
 	struct iwl_trans *trans = trans_sdio->trans;
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
-	u32 err_val = 0;
-	u8 *p_err_val = (u8 *)&err_val;
+	__le32 err_val_le;
+	u32 err_val;
+	u8 *p_err_val = (u8 *)&err_val_le;
 	int i;
 	int ret;
 
@@ -489,6 +490,8 @@ void iwl_sdio_d2h_work(struct work_struct *work)
 		}
 	}
 	sdio_release_host(func);
+
+	err_val = le32_to_cpu(err_val_le);
 
 	/* D2H messages must be acknowledged, even if they are unhandled, or all
 	 * messages will be masked.
