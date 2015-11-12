@@ -77,14 +77,23 @@
 #include "sdio_tx.h"
 
 /* Extractors */
-#define IWL_TRANS_GET_SDIO_TRANS(_iwl_trans) ((struct iwl_trans_sdio *)\
-		((IWL_TRANS_GET_SLV_TRANS(_iwl_trans))->bus_specific))
+static inline struct iwl_trans_sdio *
+IWL_TRANS_GET_SDIO_TRANS(struct iwl_trans *trans)
+{
+	return (void *)IWL_TRANS_GET_SLV_TRANS(trans)->bus_specific;
+}
 
-#define IWL_TRANS_SDIO_GET_FUNC(_iwl_trans) \
-		dev_to_sdio_func(((struct iwl_trans *)(_iwl_trans))->dev)
+static inline struct sdio_func *
+IWL_TRANS_SDIO_GET_FUNC(struct iwl_trans *trans)
+{
+	return dev_to_sdio_func(trans->dev);
+}
 
-#define IWL_TRANS_SLV_GET_SDIO_TRANS(_slv_trans)\
-	((struct iwl_trans_sdio *)((_slv_trans)->bus_specific))
+static inline struct iwl_trans_sdio *
+IWL_TRANS_SLV_GET_SDIO_TRANS(struct iwl_trans_slv *slv_trans)
+{
+	return (void *)slv_trans->bus_specific;
+}
 
 /*
  * SDIO properties configurations

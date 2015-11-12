@@ -238,11 +238,18 @@ void iwl_slv_set_rx_page_order(struct iwl_trans_slv *trans_slv,
 		trans_slv->rx_page_order = get_order(4 * 1024);
 }
 
-#define IWL_TRANS_GET_SLV_TRANS(_iwl_trans)\
-	((struct iwl_trans_slv *)((_iwl_trans)->trans_specific))
+static inline struct iwl_trans_slv *
+IWL_TRANS_GET_SLV_TRANS(struct iwl_trans *trans)
+{
+	return (void *)trans->trans_specific;
+}
 
-#define IWL_TRANS_SLV_GET_IWL_TRANS(_slv_trans)\
-	container_of((void *)_slv_trans, struct iwl_trans, trans_specific)
+static inline struct iwl_trans *
+IWL_TRANS_SLV_GET_IWL_TRANS(struct iwl_trans_slv *slv_trans)
+{
+	return container_of((void *)slv_trans, struct iwl_trans,
+			    trans_specific);
+}
 
 /**
  * struct iwl_slv_tx_hcmd_meta - meta data for host commands
