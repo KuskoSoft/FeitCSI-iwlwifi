@@ -1314,6 +1314,18 @@ int iwl_sdio_read_hw_rev_nic_off(struct iwl_trans *trans)
 		goto disable_hw;
 	}
 
+	/*
+	 * Turn INTR read optimization on or else calling
+	 * iwl_sdio_update_hw_rev() next will cause issues
+	 */
+	ret = iwl_sdio_ta_write32(trans, CSR_SDTM_REG, 1,
+				  IWL_SDIO_TA_AC_DIRECT);
+	if (ret) {
+		IWL_ERR(trans,
+			"Failed to set SDIO to optimized reading\n");
+		goto disable_hw;
+	}
+
 	ret = iwl_sdio_update_hw_rev(trans);
 	if (ret)
 		goto disable_int;
@@ -1396,21 +1408,18 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 		goto release_hw;
 	}
 
-	ret = iwl_sdio_update_hw_rev(trans);
-	if (ret)
-		goto release_hw;
-
-	/*
-	 * Set SDTM CSR register to disabled read optimization on 8000
-	 * family B/C-step, as the optimization currently causes issues
-	 */
-	ret = iwl_sdio_ta_write32(trans, CSR_SDTM_REG, 0,
+	/* Turn INTR read optimization on */
+	ret = iwl_sdio_ta_write32(trans, CSR_SDTM_REG, 1,
 				  IWL_SDIO_TA_AC_DIRECT);
 	if (ret) {
 		IWL_ERR(trans,
 			"Failed to set SDIO to optimized reading\n");
 		goto release_hw;
 	}
+
+	ret = iwl_sdio_update_hw_rev(trans);
+	if (ret)
+		goto release_hw;
 
 	/* Enable the retention */
 	ret = iwl_sdio_enter_retention_flow(trans);

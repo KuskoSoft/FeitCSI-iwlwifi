@@ -74,8 +74,6 @@
 #include "shared.h"
 #include "iwl-prph.h"
 
-#define ISR_MAX_LOOPS 64
-
 /*
  * Checks the RX packet for validity.
  * If hte packet fails then an error status is returned indicating that the
@@ -537,75 +535,54 @@ void iwl_sdio_isr(struct sdio_func *func)
 	struct iwl_trans *trans = sdio_get_drvdata(func);
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	u8 val;
-	int count = 0;
 	int ret;
 
-	do {
-		/* Read the interrupt cause */
-		val = iwl_sdio_read8(trans, IWL_SDIO_INTR_CAUSE_REG, &ret);
+	/* Read the interrupt cause */
+	val = iwl_sdio_read8(trans, IWL_SDIO_INTR_CAUSE_REG, &ret);
+	if (ret) {
+		IWL_ERR(trans,
+			"Failed to read from INTR_CAUSE_REG, ret 0x%x\n", ret);
+		return;
+	}
+	IWL_DEBUG_ISR(trans, "SDIO interrupt called with value %d\n", val);
+
+	if (!val) {
+		IWL_ERR(trans, "An interrupt was called but with no cause\n");
+		return;
+	}
+
+	if (val & IWL_SDIO_INTR_READ_ERROR) {
+		IWL_ERR(trans, "Got err interrupt...\n");
+		return;
+	}
+
+	if (!(val & IWL_SDIO_INTR_CAUSE_VALID_MASK)) {
+		IWL_ERR(trans, "No known interrupt occurred 0x08%x\n", val);
+		return;
+	}
+
+	/*
+	 * Interrupts Cause handling
+	 */
+
+	/* Device has message to the host */
+	if (val & IWL_SDIO_INTR_D2H_GPR_MSG) {
+		IWL_ERR(trans, "Got D2H message, queuing work\n");
+		schedule_work(&trans_sdio->d2h_work);
+	}
+
+	/* Device Acked last message */
+	if (val & IWL_SDIO_INTR_H2D_GPR_MSG_ACK)
+		IWL_DEBUG_ISR(trans, "Device Acked the message\n");
+
+	/* Target Access read/RX data ready */
+	if (val & IWL_SDIO_INTR_DATA_READY) {
+		ret = iwl_sdio_handle_data_ready(trans);
 		if (ret) {
-			IWL_ERR(trans,
-				"Failed to read from INTR_CAUSE_REG, ret 0x%x\n",
-				ret);
+			IWL_ERR(trans, "Error in handling RX\n");
 			return;
 		}
-		IWL_DEBUG_ISR(trans, "SDIO interrupt called with value %d\n",
-			      val);
-
-		if (!val) {
-			if (!count)
-				IWL_ERR(trans,
-					"An interrupt was called but with no cause\n");
-			return;
-		}
-
-		/*
-		 * SDTM CSR register to enable read optimization on 8000 family
-		 * B-step and onwards is currently disabled due to some HW/FW
-		 * issue. In this optimization there is no need to clear the
-		 * IWL_SDIO_INTR_CAUSE_REG
-		 */
-		ret = iwl_sdio_write8(trans, IWL_SDIO_INTR_CAUSE_REG, val);
-		if (ret)
-			IWL_ERR(trans,
-				"Failed to clear the int val %d, reason %d\n",
-				val, ret);
-
-
-		if (val & IWL_SDIO_INTR_READ_ERROR) {
-			IWL_ERR(trans, "Got err interrupt...\n");
-			return;
-		}
-
-		if (!(val & IWL_SDIO_INTR_CAUSE_VALID_MASK)) {
-			IWL_ERR(trans, "No known interrupt occurred 0x08%x\n",
-				val);
-			return;
-		}
-
-		/*
-		 * Interrupts Cause handling
-		 */
-
-		/* Device has message to the host */
-		if (val & IWL_SDIO_INTR_D2H_GPR_MSG) {
-			IWL_ERR(trans, "Got D2H message, queuing work\n");
-			schedule_work(&trans_sdio->d2h_work);
-		}
-
-		/* Device Acked last message */
-		if (val & IWL_SDIO_INTR_H2D_GPR_MSG_ACK)
-			IWL_DEBUG_ISR(trans, "Device Acked the message\n");
-
-		/* Target Access read/RX data ready */
-		if (val & IWL_SDIO_INTR_DATA_READY) {
-			ret = iwl_sdio_handle_data_ready(trans);
-			if (ret) {
-				IWL_ERR(trans, "Error in handling RX\n");
-				return;
-			}
-		}
-	} while (++count < ISR_MAX_LOOPS);
+	}
 }
 
 /*
