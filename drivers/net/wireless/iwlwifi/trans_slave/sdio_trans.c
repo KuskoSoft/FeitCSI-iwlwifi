@@ -2046,7 +2046,7 @@ exit_err:
  */
 static struct iwl_trans *iwl_sdio_plat_trans;
 
-static irqreturn_t sdio_irq_handler(int irq, void *data)
+static irqreturn_t iwl_sdio_irq_handler(int irq, void *data)
 {
 	struct iwl_trans *trans = (struct iwl_trans *)data;
 
@@ -2060,7 +2060,7 @@ static irqreturn_t sdio_irq_handler(int irq, void *data)
 	return IRQ_WAKE_THREAD;
 }
 
-static irqreturn_t sdio_irq_thread(int irq, void *data)
+static irqreturn_t iwl_sdio_irq_thread(int irq, void *data)
 {
 	struct iwl_trans *trans = (struct iwl_trans *)data;
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
@@ -2085,8 +2085,8 @@ static int iwl_setup_oob_irq(struct iwl_trans *trans, int irq)
 	int ret;
 
 	IWL_DEBUG_INFO(trans, "request irq %d\n", irq);
-	ret = request_threaded_irq(irq, sdio_irq_handler,
-				   sdio_irq_thread, IRQF_NO_SUSPEND,
+	ret = request_threaded_irq(irq, iwl_sdio_irq_handler,
+				   iwl_sdio_irq_thread, IRQF_NO_SUSPEND,
 				   DRV_NAME, trans);
 	if (ret)
 		return ret;
@@ -2406,7 +2406,7 @@ void _iwl_sdio_resume(struct iwl_trans *trans)
 	IWL_DEBUG_ISR(trans, "setting trans_sdio->suspended = false\n");
 	trans_sdio->suspended = false;
 	if (trans_sdio->pending_irq) {
-		sdio_irq_thread(0, trans);
+		iwl_sdio_irq_thread(0, trans);
 		enable_irq(trans_sdio->plat_data.irq);
 		trans_sdio->pending_irq = false;
 	}
