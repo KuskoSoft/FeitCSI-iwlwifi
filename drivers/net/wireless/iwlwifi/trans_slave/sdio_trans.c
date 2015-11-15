@@ -1340,7 +1340,7 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
-	u32 val;
+	u32 val = 0;
 	int ret;
 
 	/*
