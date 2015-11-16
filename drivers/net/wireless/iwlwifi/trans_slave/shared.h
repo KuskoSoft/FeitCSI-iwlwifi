@@ -390,8 +390,6 @@ int iwl_trans_slv_wait_txq_empty(struct iwl_trans *trans, u32 txq_bm);
 int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 			       struct napi_struct *napi,
 			       struct iwl_rx_cmd_buffer *rxcb);
-int iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans, struct iwl_rx_packet *pkt,
-			     struct iwl_slv_tx_cmd_entry **cmd_entry);
 
 void iwl_slv_tx_stop(struct iwl_trans *trans);
 void iwl_slv_free(struct iwl_trans *trans);

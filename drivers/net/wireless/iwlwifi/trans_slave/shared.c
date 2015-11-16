@@ -1024,9 +1024,10 @@ void iwl_slv_unregister_drivers(void)
 }
 
 /* iwl_slv_tx_get_cmd_entry - get requested cmd entry */
-int iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
-			     struct iwl_rx_packet *pkt,
-			     struct iwl_slv_tx_cmd_entry **cmd_entry)
+
+static struct iwl_slv_tx_cmd_entry *
+iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
+			 struct iwl_rx_packet *pkt)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct iwl_slv_tx_queue *txq = &trans_slv->txqs[trans_slv->cmd_queue];
@@ -1034,15 +1035,14 @@ int iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
 	int txq_id = SEQ_TO_QUEUE(sequence);
 	struct iwl_slv_txq_entry *txq_entry, *tmp;
 	struct iwl_device_cmd *dev_cmd;
+	struct iwl_slv_tx_cmd_entry *cmd_entry = NULL;
 	int cmd_list_idx;
-
-	*cmd_entry = NULL;
 
 	if (WARN(txq_id != trans_slv->cmd_queue,
 		 "wrong command queue %d (should be %d), sequence 0x%X\n",
 		 txq_id, trans_slv->cmd_queue, sequence)) {
 		iwl_print_hex_error(priv, pkt, 32);
-		return -EINVAL;
+		return NULL;
 	}
 
 	/* FIXME - when not found? */
@@ -1050,13 +1050,13 @@ int iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
 
 	if (WARN(list_empty(&txq->sent), "empty sent queue.\n")) {
 		spin_unlock_bh(&trans_slv->txq_lock);
-		return -EINVAL;
+		return NULL;
 	}
 
 	cmd_list_idx = 0;
 	list_for_each_entry_safe(txq_entry, tmp, &txq->sent, list) {
-		IWL_SLV_TXQ_GET_ENTRY(txq_entry, *cmd_entry);
-		dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv, *cmd_entry);
+		IWL_SLV_TXQ_GET_ENTRY(txq_entry, cmd_entry);
+		dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv, cmd_entry);
 
 		if (dev_cmd->hdr.sequence != pkt->hdr.sequence) {
 			cmd_list_idx++;
@@ -1077,7 +1077,7 @@ int iwl_slv_tx_get_cmd_entry(struct iwl_trans *trans,
 	iwl_slv_recalc_rpm_ref(trans);
 	spin_unlock_bh(&trans_slv->txq_lock);
 
-	return 0;
+	return cmd_entry;
 }
 
 /**
@@ -1824,9 +1824,8 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 			       struct iwl_rx_cmd_buffer *rxcb)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
-	int reclaim, ret;
+	int reclaim;
 	struct iwl_rx_packet *pkt = rxb_addr(rxcb);
-	struct iwl_slv_tx_cmd_entry *cmd_entry = NULL;
 	u32 len;
 
 	/* Calculate length and trace */
@@ -1849,9 +1848,11 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 	}
 
 	if (reclaim) {
-		ret = iwl_slv_tx_get_cmd_entry(trans, pkt, &cmd_entry);
-		if (ret || cmd_entry == NULL)
-			return ret;
+		struct iwl_slv_tx_cmd_entry *cmd_entry =
+			iwl_slv_tx_get_cmd_entry(trans, pkt);
+
+		if (cmd_entry == NULL)
+			return -EINVAL;
 
 		if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_KEEP_BUS) &&
 		    (cmd_entry->hcmd_meta.flags & CMD_MAKE_TRANS_IDLE) &&
