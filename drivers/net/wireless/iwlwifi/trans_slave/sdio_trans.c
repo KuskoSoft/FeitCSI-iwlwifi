@@ -227,7 +227,7 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 	}
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort TA write\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort TA write\n");
 		return -EINVAL;
 	}
 
@@ -257,11 +257,11 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 	memset(trans_sdio->ta_buff.payload + length,
 	       IWL_SDIO_CMD_PAD_BYTE, padding_length);
 
-	IWL_DEBUG_INFO(trans,
-		"### TA WRITE COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
-		ta_write_cmd->address, ta_write_cmd->length,
-		ta_write_cmd->hdr.seq_number,
-		trans_sdio->ta_buff.payload[0]);
+	IWL_DEBUG_IO(trans,
+		     "### TA WRITE COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
+		     ta_write_cmd->address, ta_write_cmd->length,
+		     ta_write_cmd->hdr.seq_number,
+		     trans_sdio->ta_buff.payload[0]);
 
 	/* Stream the data to the SDTM */
 	ret = sdio_writesb(func, IWL_SDIO_DATA_ADDR,
@@ -304,12 +304,12 @@ void iwl_sdio_handle_ta_read_ready(struct iwl_trans *trans,
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct iwl_sdio_ta_cmd *ta_cmd;
 
-	IWL_DEBUG_INFO(trans,
-		"TA READ addr 0x%.8x length 0x%x, access ctrl 0x%x seq %d\n",
-		le32_to_cpu(ta_buff->ta_cmd.address),
-		le32_to_cpu(ta_buff->ta_cmd.length),
-		le32_to_cpu(ta_buff->ta_cmd.access_control),
-		ta_buff->ta_cmd.hdr.seq_number);
+	IWL_DEBUG_IO(trans,
+		     "TA READ addr 0x%.8x length 0x%x, access ctrl 0x%x seq %d\n",
+		     le32_to_cpu(ta_buff->ta_cmd.address),
+		     le32_to_cpu(ta_buff->ta_cmd.length),
+		     le32_to_cpu(ta_buff->ta_cmd.access_control),
+		     ta_buff->ta_cmd.hdr.seq_number);
 
 	/* Mark that the TA transaction has ended */
 	WARN_ON(!test_and_clear_bit(STATUS_TA_ACTIVE, &trans->status));
@@ -385,7 +385,7 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 		return -ENOMEM;
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort TA read\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort TA read\n");
 		return -EINVAL;
 	}
 
@@ -448,11 +448,11 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	} else {
 		ret = 0; /* Clear the time left after waiting */
 
-		IWL_DEBUG_INFO(trans,
-			       "### TA READ COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
-			       ta_read_cmd->address, ta_read_cmd->length,
-			       ta_read_cmd->hdr.seq_number,
-			       *((u32 *)trans_sdio->ta_read_buff));
+		IWL_DEBUG_IO(trans,
+			     "### TA READ COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
+			     ta_read_cmd->address, ta_read_cmd->length,
+			     ta_read_cmd->hdr.seq_number,
+			     *((u32 *)trans_sdio->ta_read_buff));
 	}
 
 	/*
@@ -460,7 +460,7 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	 * The actual data has already been copied to the given buffer
 	 */
 	trans_sdio->ta_read_buff = NULL;
-	IWL_DEBUG_INFO(trans, "Target access read has successfully finished\n");
+	IWL_DEBUG_IO(trans, "Target access read has successfully finished\n");
 	return ret;
 }
 
@@ -476,7 +476,7 @@ static void iwl_trans_sdio_write8(struct iwl_trans *trans, u32 ofs, u8 val)
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort SDIO write\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort SDIO write\n");
 		return;
 	}
 
@@ -507,7 +507,7 @@ static void iwl_trans_sdio_write32(struct iwl_trans *trans, u32 ofs, u32 val)
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort SDIO read\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort SDIO read\n");
 		return;
 	}
 
@@ -538,7 +538,7 @@ static u32 iwl_trans_sdio_read32(struct iwl_trans *trans, u32 ofs)
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort SDIO read\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort SDIO read\n");
 		return IWL_SDIO_READ_VAL_ERR;
 	}
 
@@ -571,7 +571,7 @@ static void iwl_trans_sdio_write_prph(struct iwl_trans *trans, u32 addr,
 	int ret;
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph write\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort prph write\n");
 		return;
 	}
 
@@ -604,7 +604,7 @@ static void iwl_sdio_write_prph_no_claim(struct iwl_trans *trans, u32 addr,
 	int ret;
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph write\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort prph write\n");
 		return;
 	}
 
@@ -636,7 +636,7 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 	int ret;
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph read\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort prph read\n");
 		return IWL_SDIO_READ_VAL_ERR;
 	}
 
@@ -673,7 +673,7 @@ static u32 iwl_trans_sdio_read_prph(struct iwl_trans *trans, u32 addr)
 	int ret;
 
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status)) {
-		IWL_DEBUG_INFO(trans, "Trans is dead - abort prph read\n");
+		IWL_DEBUG_IO(trans, "Trans is dead - abort prph read\n");
 		return IWL_SDIO_READ_VAL_ERR;
 	}
 
@@ -716,9 +716,9 @@ static int iwl_sdio_access_cons_mem(struct iwl_trans *trans, u32 addr,
 	/* Lock register access lock */
 	mutex_lock(&trans_sdio->target_access_mtx);
 	sdio_claim_host(func);
-	IWL_DEBUG_INFO(trans,
-		       "TA access memory: length %d, addr 0x%x write %d\n",
-		       length, addr, write_access);
+	IWL_DEBUG_IO(trans,
+		     "TA access memory: length %d, addr 0x%x write %d\n",
+		     length, addr, write_access);
 
 	/* Read the requested memory by MAX_PAYLOAD size */
 	for (offset = 0; offset < length;
@@ -744,7 +744,7 @@ static int iwl_sdio_access_cons_mem(struct iwl_trans *trans, u32 addr,
 			"Failed to access mem in NIC, ret%d write %d\n",
 			ret, write_access);
 	else
-		IWL_DEBUG_INFO(trans, "Successfully accessed memory in NIC\n");
+		IWL_DEBUG_IO(trans, "Successfully accessed memory in NIC\n");
 
 	sdio_release_host(func);
 	mutex_unlock(&trans_sdio->target_access_mtx);
@@ -2354,7 +2354,7 @@ static bool iwl_trans_sdio_grab_nic_access(struct iwl_trans *trans, bool silent,
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
 	mutex_lock(&trans_sdio->target_access_mtx);
-	IWL_DEBUG_INFO(trans, "Successfully grabbed nic access\n");
+	IWL_DEBUG_IO(trans, "Successfully grabbed nic access\n");
 
 	return true;
 }
@@ -2369,7 +2369,7 @@ iwl_trans_sdio_release_nic_access(struct iwl_trans *trans, unsigned long *flags)
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
 	mutex_unlock(&trans_sdio->target_access_mtx);
-	IWL_DEBUG_INFO(trans, "Successfully released nic access\n");
+	IWL_DEBUG_IO(trans, "Successfully released nic access\n");
 }
 
 static void iwl_trans_sdio_fw_alive(struct iwl_trans *trans, u32 scd_addr)
@@ -2900,8 +2900,8 @@ int iwl_sdio_write8(struct iwl_trans *trans, u32 ofs, u8 val)
 
 	trace_iwlwifi_dev_iowrite8(trans->dev, ofs, val);
 	sdio_writeb(IWL_TRANS_SDIO_GET_FUNC(trans), val, ofs, &ret);
-	IWL_DEBUG_INFO(trans, "%s: return value: %d, addr 0x%x, val 0x%x\n",
-		 __func__, ret, ofs, val);
+	IWL_DEBUG_IO(trans, "return value: %d, addr 0x%x, val 0x%x\n",
+		     ret, ofs, val);
 	return ret;
 }
 
@@ -2919,8 +2919,8 @@ int iwl_sdio_write32(struct iwl_trans *trans, u32 ofs, u32 val)
 	int ret;
 	trace_iwlwifi_dev_iowrite32(trans->dev, ofs, val);
 	sdio_writel(IWL_TRANS_SDIO_GET_FUNC(trans), val, ofs, &ret);
-	IWL_DEBUG_INFO(trans, "%s: return value: %d, addr 0x%x, val 0x%x\n",
-		 __func__, ret, ofs, val);
+	IWL_DEBUG_IO(trans, "return value: %d, addr 0x%x, val 0x%x\n",
+		     ret, ofs, val);
 	return ret;
 }
 
@@ -2939,8 +2939,8 @@ u8 iwl_sdio_read8(struct iwl_trans *trans, u32 ofs, int *ret)
 	u8 ret_val;
 	ret_val = sdio_readb(IWL_TRANS_SDIO_GET_FUNC(trans), ofs, ret);
 	trace_iwlwifi_dev_ioread32(trans->dev, ofs, (u32)ret_val);
-	IWL_DEBUG_INFO(trans, "%s: return value: %d, addr 0x%x, val 0x%x\n",
-		       __func__, *ret, ofs, ret_val);
+	IWL_DEBUG_IO(trans, "return value: %d, addr 0x%x, val 0x%x\n",
+		     *ret, ofs, ret_val);
 	return ret_val;
 }
 
@@ -2950,8 +2950,8 @@ u8 iwl_sdio_f0_read8(struct iwl_trans *trans, u32 ofs, int *ret)
 	u8 ret_val;
 	ret_val = sdio_f0_readb(IWL_TRANS_SDIO_GET_FUNC(trans), ofs, ret);
 	trace_iwlwifi_dev_ioread32(trans->dev, ofs, (u32)ret_val);
-	IWL_DEBUG_INFO(trans, "%s: return value: %d, addr 0x%x, val 0x%x\n",
-		       __func__, *ret, ofs, ret_val);
+	IWL_DEBUG_IO(trans, "return value: %d, addr 0x%x, val 0x%x\n",
+		     *ret, ofs, ret_val);
 	return ret_val;
 }
 
@@ -2970,7 +2970,7 @@ u32 iwl_sdio_read32(struct iwl_trans *trans, u32 ofs, int *ret)
 	u32 ret_val;
 	ret_val = sdio_readl(IWL_TRANS_SDIO_GET_FUNC(trans), ofs, ret);
 	trace_iwlwifi_dev_ioread32(trans->dev, ofs, ret_val);
-	IWL_DEBUG_INFO(trans, "%s: return value: %d, addr 0x%x, val 0x%x\n",
-		       __func__, *ret, ofs, ret_val);
+	IWL_DEBUG_INFO(trans, "return value: %d, addr 0x%x, val 0x%x\n",
+		       *ret, ofs, ret_val);
 	return ret_val;
 }
