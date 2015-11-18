@@ -710,6 +710,9 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	if (!cfg->no_power_up_nic_in_init || !mvm->nvm_file_name)
 		iwl_trans_op_mode_leave(trans);
 #endif
+#ifdef CPTCFG_IWLMVM_WAKELOCK
+	wake_lock_destroy(&mvm->recovery_wake_lock);
+#endif
 	ieee80211_free_hw(mvm->hw);
 	return NULL;
 }
