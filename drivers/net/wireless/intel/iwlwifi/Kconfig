@@ -180,4 +180,4 @@ endmenu
 
 endif
 
-source "drivers/net/wireless/iwlwifi/Kconfig.noupstream"
+source "drivers/net/wireless/intel/iwlwifi/Kconfig.noupstream"

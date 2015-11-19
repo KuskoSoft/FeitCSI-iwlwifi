@@ -38,7 +38,6 @@ obj-$(CPTCFG_WLAN)		+= realtek/
 #
 #obj-$(CPTCFG_MWL8K)	+= mwl8k.o
 
-obj-$(CPTCFG_IWLWIFI)	+= iwlwifi/
 #obj-$(CONFIG_RT2X00)	+= rt2x00/
 #
 #obj-$(CONFIG_WL_MEDIATEK)	+= mediatek/
