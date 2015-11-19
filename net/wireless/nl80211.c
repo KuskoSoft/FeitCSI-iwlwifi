@@ -5765,12 +5765,13 @@ static int validate_scan_freqs(struct nlattr *freqs)
 	return n_channels;
 }
 
-static int nl80211_parse_random_mac(struct nlattr **attrs,
+static int nl80211_parse_random_mac(struct nlattr *mac_attr,
+				    struct nlattr *mac_mask_attr,
 				    u8 *mac_addr, u8 *mac_addr_mask)
 {
 	int i;
 
-	if (!attrs[NL80211_ATTR_MAC] && !attrs[NL80211_ATTR_MAC_MASK]) {
+	if (!mac_attr && !mac_mask_attr) {
 		eth_zero_addr(mac_addr);
 		eth_zero_addr(mac_addr_mask);
 		mac_addr[0] = 0x2;
@@ -5780,11 +5781,11 @@ static int nl80211_parse_random_mac(struct nlattr **attrs,
 	}
 
 	/* need both or none */
-	if (!attrs[NL80211_ATTR_MAC] || !attrs[NL80211_ATTR_MAC_MASK])
+	if (!mac_attr || !mac_mask_attr)
 		return -EINVAL;
 
-	memcpy(mac_addr, nla_data(attrs[NL80211_ATTR_MAC]), ETH_ALEN);
-	memcpy(mac_addr_mask, nla_data(attrs[NL80211_ATTR_MAC_MASK]), ETH_ALEN);
+	memcpy(mac_addr, nla_data(mac_attr), ETH_ALEN);
+	memcpy(mac_addr_mask, nla_data(mac_mask_attr), ETH_ALEN);
 
 	/* don't allow or configure an mcast address */
 	if (!is_multicast_ether_addr(mac_addr_mask) ||
@@ -5992,9 +5993,10 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 				goto out_free;
 			}
 
-			err = nl80211_parse_random_mac(info->attrs,
-						       request->mac_addr,
-						       request->mac_addr_mask);
+			err = nl80211_parse_random_mac(
+				info->attrs[NL80211_ATTR_MAC],
+				info->attrs[NL80211_ATTR_MAC_MASK],
+				request->mac_addr, request->mac_addr_mask);
 			if (err)
 				goto out_free;
 		}
@@ -6410,8 +6412,9 @@ nl80211_parse_sched_scan(struct wiphy *wiphy, struct wireless_dev *wdev,
 				goto out_free;
 			}
 
-			err = nl80211_parse_random_mac(attrs, request->mac_addr,
-						       request->mac_addr_mask);
+			err = nl80211_parse_random_mac(attrs[NL80211_ATTR_MAC],
+				attrs[NL80211_ATTR_MAC_MASK], request->mac_addr,
+				request->mac_addr_mask);
 			if (err)
 				goto out_free;
 		}
