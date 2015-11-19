@@ -17,6 +17,8 @@ menuconfig WLAN
 
 if WLAN
 
+source drivers/net/wireless/intel/Kconfig
+
 config PCMCIA_RAYCS
 	depends on n
 	tristate "Aviator/Raytheon 2.4GHz wireless support"
@@ -304,7 +306,6 @@ config MWL8K
 #source "drivers/net/wireless/hostap/Kconfig"
 #source "drivers/net/wireless/ipw2x00/Kconfig"
 source "drivers/net/wireless/iwlwifi/Kconfig"
-#source "drivers/net/wireless/iwlegacy/Kconfig"
 #source "drivers/net/wireless/libertas/Kconfig"
 #source "drivers/net/wireless/orinoco/Kconfig"
 #source "drivers/net/wireless/p54/Kconfig"

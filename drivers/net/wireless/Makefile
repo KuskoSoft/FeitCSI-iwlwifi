@@ -2,9 +2,8 @@
 # Makefile for the Linux Wireless network device drivers.
 #
 #
-#obj-$(CONFIG_IPW2100) += ipw2x00/
-#obj-$(CONFIG_IPW2200) += ipw2x00/
-#
+obj-$(CPTCFG_WLAN_VENDOR_INTEL) += intel/
+
 #obj-$(CONFIG_HERMES)		+= orinoco/
 #
 #obj-$(CPTCFG_AIRO)		+= airo.o
@@ -40,7 +39,6 @@ obj-$(CPTCFG_WLAN)		+= realtek/
 #obj-$(CPTCFG_MWL8K)	+= mwl8k.o
 
 obj-$(CPTCFG_IWLWIFI)	+= iwlwifi/
-#obj-$(CONFIG_IWLEGACY)	+= iwlegacy/
 #obj-$(CONFIG_RT2X00)	+= rt2x00/
 #
 #obj-$(CONFIG_WL_MEDIATEK)	+= mediatek/
