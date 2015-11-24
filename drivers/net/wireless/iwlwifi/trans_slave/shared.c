@@ -1111,6 +1111,9 @@ static void iwl_slv_tx_cmd_complete(struct iwl_trans *trans,
 	}
 
 	dev_cmd = iwl_cmd_entry_get_dev_cmd(trans_slv, cmd_entry);
+	if (cmd_entry->hcmd_meta.flags & CMD_WANT_ASYNC_CALLBACK)
+		iwl_op_mode_async_cb(trans->op_mode, dev_cmd);
+
 	if (!(cmd_entry->hcmd_meta.flags & CMD_ASYNC)) {
 		if (!test_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status)) {
 			IWL_WARN(trans,
