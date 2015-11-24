@@ -282,8 +282,10 @@ static int iwl_sdio_ta_write(struct iwl_trans *trans,
 static int iwl_sdio_ta_write32(struct iwl_trans *trans, u32 target_addr,
 			       u32 data, enum iwl_sdio_ta_ac_flags ac_mode)
 {
+	__le32 le_data = cpu_to_le32(data);
+
 	return iwl_sdio_ta_write(trans, target_addr, sizeof(data),
-				 &data, ac_mode);
+				 &le_data, ac_mode);
 }
 
 static int iwl_sdio_ta_write8(struct iwl_trans *trans, u32 target_addr,
