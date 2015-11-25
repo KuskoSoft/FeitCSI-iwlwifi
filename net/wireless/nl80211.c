@@ -417,6 +417,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_NAN_DUAL] = { .type = NLA_U8 },
 	[NL80211_ATTR_NAN_FUNC] = { .type = NLA_NESTED },
 	[NL80211_ATTR_NAN_FUNC_INST_ID] = { .type = NLA_U8 },
+	[NL80211_ATTR_BEACON_LOSS_DO_NOT_DISCONNECT] = { .type = NLA_FLAG },
 };
 
 /* policy for the key attributes */
@@ -7389,6 +7390,13 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 		req.flags |= ASSOC_REQ_USE_RRM;
 	}
 
+	if (nla_get_flag(info->attrs[NL80211_ATTR_BEACON_LOSS_DO_NOT_DISCONNECT])) {
+		if (!wiphy_ext_feature_isset(&rdev->wiphy,
+					     NL80211_EXT_FEATURE_BEACON_LOSS_DO_NOT_DISCONNECT))
+			return -EINVAL;
+		req.flags |= ASSOC_REQ_BEACON_LOSS_DO_NOT_DISCONNECT;
+	}
+
 	err = nl80211_crypto_settings(rdev, info, &req.crypto, 1);
 	if (!err) {
 		wdev_lock(dev->ieee80211_ptr);
@@ -8081,6 +8089,13 @@ static int nl80211_connect(struct sk_buff *skb, struct genl_info *info)
 			return -EINVAL;
 		}
 		connect.flags |= ASSOC_REQ_USE_RRM;
+	}
+
+	if (nla_get_flag(info->attrs[NL80211_ATTR_BEACON_LOSS_DO_NOT_DISCONNECT])) {
+		if (!wiphy_ext_feature_isset(&rdev->wiphy,
+					     NL80211_EXT_FEATURE_BEACON_LOSS_DO_NOT_DISCONNECT))
+			return -EINVAL;
+		connect.flags |= ASSOC_REQ_BEACON_LOSS_DO_NOT_DISCONNECT;
 	}
 
 	wdev_lock(dev->ieee80211_ptr);
