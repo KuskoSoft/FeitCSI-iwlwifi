@@ -183,3 +183,9 @@ config IWLWIFI_RTPM_WIFI_OFF
 	  S0i3 when the device doesn't enter runtime suspend.
 
 	  If unsure, select N.
+
+config IWLWIFI_NUM_STA_INTERFACES
+	int "number of supported concurrent station interfaces"
+	range 1 2
+	default 1
+	depends on IWLMVM
