@@ -2017,7 +2017,8 @@ void iwl_trans_pcie_unref(struct iwl_trans *trans)
 	if (trans_pcie->ref_count == 0 &&
 	    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE) {
 		wake_unlock(&trans_pcie->ref_wake_lock);
-		wake_lock_timeout(&trans_pcie->timed_wake_lock,
+		if (!trans->suspending)
+			wake_lock_timeout(&trans_pcie->timed_wake_lock,
 				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
 	}
 #endif
