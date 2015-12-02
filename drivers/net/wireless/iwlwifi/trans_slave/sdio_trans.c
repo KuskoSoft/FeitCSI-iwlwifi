@@ -140,15 +140,11 @@ static u32 iwl_sdio_get_addr_auto_inc_flag(u32 address)
 static void iwl_sdio_set_power(struct iwl_trans *trans, bool on)
 {
 	struct sdio_func *sdio_func = IWL_TRANS_SDIO_GET_FUNC(trans);
-	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
-	if (on) {
-		pm_runtime_forbid(trans_slv->host_dev);
+	if (on)
 		mmc_power_restore_host(sdio_func->card->host);
-	} else {
+	else
 		mmc_power_save_host(sdio_func->card->host);
-		pm_runtime_allow(trans_slv->host_dev);
-	}
 }
 
 /*
@@ -863,6 +859,7 @@ static int iwl_sdio_release_hw(struct iwl_trans *trans, bool low_power)
 	int ret = 0;
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
 	/* Power down */
 	IWL_DEBUG_INFO(trans, "Powering down the NIC\n");
@@ -886,6 +883,7 @@ static int iwl_sdio_release_hw(struct iwl_trans *trans, bool low_power)
 
 	if (low_power)
 		iwl_sdio_set_power(trans, false);
+	pm_runtime_allow(trans_slv->host_dev);
 
 	return ret;
 }
@@ -1372,6 +1370,7 @@ clear_locks:
 static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 	int ret;
 
@@ -1382,8 +1381,10 @@ static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 	 */
 	pm_runtime_get_sync(trans->dev);
 
+	pm_runtime_forbid(trans_slv->host_dev);
 	if (low_power)
 		iwl_sdio_set_power(trans, true);
+
 	mutex_lock(&trans_sdio->target_access_mtx);
 	sdio_claim_host(func);
 	func->enable_timeout = IWL_SDIO_ENABLE_TIMEOUT;
@@ -2861,6 +2862,9 @@ free_trans:
 void iwl_trans_sdio_free(struct iwl_trans *trans)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+
+	/* restore the powered-on sdio state */
+	iwl_sdio_set_power(trans, true);
 
 	/* Destroy the RX workqueue */
 	if (trans_sdio->rx_wq) {
