@@ -148,6 +148,11 @@
 int __must_check hex2bin(u8 *dst, const char *src, size_t count);
 #endif /* < 3.2 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#undef clamp
+#define clamp(val, lo, hi) min((typeof(val))max(val, lo), hi)
+#endif /* < 3.18 */
+
 #endif /* __BACKPORT_KERNEL_H */
 
 /*

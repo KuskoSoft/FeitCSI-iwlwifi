@@ -237,8 +237,8 @@ EXPORT_SYMBOL_GPL(bit_wait_timeout);
  * property data isn't large enough.
  *
  */
-static void *of_find_property_value_of_size(const struct device_node *np,
-			const char *propname, u32 len)
+void *of_find_property_value_of_size(const struct device_node *np,
+				     const char *propname, u32 len)
 {
 	struct property *prop = of_find_property(np, propname, NULL);
 

@@ -2,6 +2,7 @@
 #define __BACKPORT_ASM_ATOMIC_H
 #include_next <asm/atomic.h>
 #include <linux/version.h>
+#include <asm/barrier.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
 /*
@@ -13,10 +14,6 @@
 #if (!defined(ATOMIC64_INIT) && !defined(CONFIG_X86) && !(defined(CONFIG_ARM) && !defined(CONFIG_GENERIC_ATOMIC64)))
 #include <asm-generic/atomic64.h>
 #endif
-#endif
-
-#ifndef smp_mb__after_atomic
-#define smp_mb__after_atomic smp_mb__after_clear_bit
 #endif
 
 #endif /* __BACKPORT_ASM_ATOMIC_H */

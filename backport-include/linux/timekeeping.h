@@ -15,6 +15,12 @@ static inline u64 ktime_get_ns(void)
 {
 	return ktime_to_ns(ktime_get());
 }
+
+extern ktime_t ktime_get_boottime(void);
+static inline u64 ktime_get_boot_ns(void)
+{
+	return ktime_to_ns(ktime_get_boottime());
+}
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
