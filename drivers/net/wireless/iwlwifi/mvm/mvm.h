@@ -1786,6 +1786,7 @@ void iwl_mvm_gscan_reconfig(struct iwl_mvm *mvm);
 void iwl_mvm_gscan_beacons_work(struct work_struct *work);
 
 void iwl_mvm_recalc_multicast(struct iwl_mvm *mvm);
+int iwl_mvm_configure_bcast_filter(struct iwl_mvm *mvm);
 
 void iwl_mvm_active_rx_filters(struct iwl_mvm *mvm);
 

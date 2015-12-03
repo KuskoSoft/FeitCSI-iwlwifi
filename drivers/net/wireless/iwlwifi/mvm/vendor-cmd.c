@@ -1549,8 +1549,9 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
-	enum iwl_mvm_vendor_rxfilter_flags filter, rx_filters;
+	enum iwl_mvm_vendor_rxfilter_flags filter, rx_filters, old_rx_filters;
 	enum iwl_mvm_vendor_rxfilter_op op;
+	u32 mask;
 	int retval;
 
 	retval = iwl_mvm_parse_vendor_data(tb, data, data_len);
@@ -1589,9 +1590,18 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 
 	mutex_lock(&mvm->mutex);
 
+	old_rx_filters = mvm->rx_filters;
 	mvm->rx_filters = rx_filters;
-	iwl_mvm_active_rx_filters(mvm);
-	iwl_mvm_recalc_multicast(mvm);
+
+	mask = IWL_MVM_VENDOR_RXFILTER_MCAST4 | IWL_MVM_VENDOR_RXFILTER_MCAST6;
+	if ((old_rx_filters & mask) != (rx_filters & mask)) {
+		iwl_mvm_active_rx_filters(mvm);
+		iwl_mvm_recalc_multicast(mvm);
+	}
+
+	mask = IWL_MVM_VENDOR_RXFILTER_BCAST;
+	if ((old_rx_filters & mask) != (rx_filters & mask))
+		iwl_mvm_configure_bcast_filter(mvm);
 
 	mutex_unlock(&mvm->mutex);
 
