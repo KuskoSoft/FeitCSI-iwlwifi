@@ -1847,7 +1847,7 @@ S:	Supported
 F:	drivers/net/wireless/ath/ath6kl/
 
 WILOCITY WIL6210 WIRELESS DRIVER
-M:	Vladimir Kondratiev <qca_vkondrat@qca.qualcomm.com>
+M:	Maya Erez <qca_merez@qca.qualcomm.com>
 L:	linux-wireless@vger.kernel.org
 L:	wil6210@qca.qualcomm.com
 S:	Supported
@@ -5708,13 +5708,6 @@ IP MASQUERADING
 M:	Juanjo Ciarlante <jjciarla@raiz.uncu.edu.ar>
 S:	Maintained
 F:	net/ipv4/netfilter/ipt_MASQUERADE.c
-
-IP1000A 10/100/1000 GIGABIT ETHERNET DRIVER
-M:	Francois Romieu <romieu@fr.zoreil.com>
-M:	Sorbica Shieh <sorbica@icplus.com.tw>
-L:	netdev@vger.kernel.org
-S:	Maintained
-F:	drivers/net/ethernet/icplus/ipg.*
 
 IPATH DRIVER
 M:	Mike Marciniszyn <infinipath@intel.com>
