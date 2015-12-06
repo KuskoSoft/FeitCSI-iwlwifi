@@ -1661,8 +1661,8 @@ enum iwl_fm_chan_change_action {
 
 int iwl_mvm_fm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 			    s8 txpower);
-int iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
-				     enum iwl_fm_chan_change_action action);
+void iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
+				      enum iwl_fm_chan_change_action action);
 void iwl_mvm_fm_notify_current_dcdc(void);
 int iwl_mvm_fm_register(struct iwl_mvm *mvm);
 int iwl_mvm_fm_unregister(struct iwl_mvm *mvm);

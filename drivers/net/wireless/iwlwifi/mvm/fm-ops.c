@@ -90,6 +90,8 @@ struct iui_fm_wlan_info last_chan_notif;
 int g_dcdc_div0;
 int g_dcdc_div1;
 
+static struct work_struct fm_chan_notif_wk;
+
 /*
  * Search for an interface with a given frequency
  */
@@ -695,14 +697,39 @@ static void iwl_mvm_fm_remove_channels(struct iui_fm_wlan_info *winfo)
 	}
 }
 
+static void iwl_mvm_fm_notif_chan_change_wk(struct work_struct *wk)
+{
+	int ret;
+	struct iui_fm_freq_notification notification;
+
+	/* FM is enabled - but registration failed */
+	if (!g_mvm)
+		return;
+
+	mutex_lock(&g_mvm->mutex);
+
+	notification.type = IUI_FM_FREQ_NOTIFICATION_TYPE_WLAN;
+	notification.info.wlan_info = &last_chan_notif;
+	/* parameter not yet supported */
+	notification.info.wlan_info->wlan_adc_dac_freq = 0;
+
+	ret = iwl_mvm_fm_notify_frequency(debug_mode, IUI_FM_MACRO_ID_WLAN,
+					  &notification);
+
+	IWL_DEBUG_EXTERNAL(g_mvm,
+			   "FM: notified fm about channel change (fail = %d)\n",
+			   ret);
+
+	mutex_unlock(&g_mvm->mutex);
+}
+
 /*
  * Notify Frequency Manager that an interface changed a channel.
  */
-int iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
-				     enum iwl_fm_chan_change_action action)
+void iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
+				      enum iwl_fm_chan_change_action action)
 {
-	int ret, i;
-	struct iui_fm_freq_notification notification;
+	int i;
 	struct iui_fm_wlan_info winfo = {
 		.num_channels  = 0,
 	};
@@ -713,7 +740,9 @@ int iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
 
 	/* FM is enabled - but registration failed */
 	if (!g_mvm)
-		return -EINVAL;
+		return;
+
+	lockdep_assert_held(&g_mvm->mutex);
 
 	/*
 	 * if notifying the FM about adding/removing a channel ctx we
@@ -738,11 +767,6 @@ int iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
 					    iwl_mvm_fm_chan_iterator,
 					    &chan_info);
 
-	notification.type = IUI_FM_FREQ_NOTIFICATION_TYPE_WLAN;
-	notification.info.wlan_info = &winfo;
-	/* parameter not yet supported */
-	notification.info.wlan_info->wlan_adc_dac_freq = 0;
-
 	iwl_mvm_fm_remove_channels(&winfo);
 
 	for (i = 0; i < winfo.num_channels; i++)
@@ -753,22 +777,14 @@ int iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
 
 	/* Do not report to FM if no change happened */
 	if (!iwl_mvm_fm_channel_changed(&winfo))
-		return 0;
+		return;
 
 	/* mark the change that we are reporting */
 	winfo.bitmask = WLAN_UPDATE;
-
-	ret =  iwl_mvm_fm_notify_frequency(debug_mode, IUI_FM_MACRO_ID_WLAN,
-					   &notification);
-
-	IWL_DEBUG_EXTERNAL(g_mvm,
-			   "FM: notified fm about channel change (fail = %d)\n",
-			   ret);
-
 	/* Update the last notification to the FM */
 	memcpy(&last_chan_notif, &winfo, sizeof(struct iui_fm_wlan_info));
 
-	return ret ? -EINVAL : ret;
+	schedule_work(&fm_chan_notif_wk);
 }
 
 /*
@@ -784,6 +800,7 @@ int iwl_mvm_fm_register(struct iwl_mvm *mvm)
 		return -EINVAL;
 
 	g_mvm = mvm;
+	INIT_WORK(&fm_chan_notif_wk, iwl_mvm_fm_notif_chan_change_wk);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	debug_mode = g_mvm->trans->dbg_cfg.fm_debug_mode;
@@ -820,6 +837,7 @@ int iwl_mvm_fm_unregister(struct iwl_mvm *mvm)
 			   "FM: unregistering fm callback function (fail = %d)\n",
 			   ret);
 
+	cancel_work_sync(&fm_chan_notif_wk);
 	g_mvm = NULL;
 
 	return ret ? -EINVAL : ret;
