@@ -10871,7 +10871,7 @@ static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
 	struct net_device *dev = info->user_ptr[1];
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct cfg80211_msrment_request request = {0};
-	struct cfg80211_active_msrment *msrment;
+	struct cfg80211_active_msrment *msrment = NULL;
 	u64 cookie = 0;
 	int err;
 
@@ -10916,6 +10916,7 @@ static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
 	return 0;
 
 free_request:
+	kfree(msrment);
 	nl80211_msrment_request_free(&request);
 	return err;
 }
