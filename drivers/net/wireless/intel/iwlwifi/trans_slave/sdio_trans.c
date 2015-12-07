@@ -1539,9 +1539,9 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 				  u32 sram_address, u32 data_len,
 				  u8 *section_data)
 {
-	int ret = 0, desc_idx;
+	int ret = 0, desc_idx, reg_polls = 10;
 	u32 *data_ptr;
-	u32 send_len, send_len_aligned, block_pad_len;
+	u32 val, send_len, send_len_aligned, block_pad_len;
 	struct iwl_sdio_adma_desc *adma_list;
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	struct iwl_sdio_tx_dtu_hdr *dtu_hdr;
@@ -1655,7 +1655,8 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 	fh_desc->ptr_in_sram = cpu_to_le32(sram_address);
 	fh_desc->fh_cmd = cpu_to_le32(FDL_FH_CONTROL_CMD1);
 	fh_desc->const_0 = cpu_to_le32(0);
-	fh_desc->f_kick = cpu_to_le32(FDL_FH_KICK);
+	fh_desc->f_kick = cpu_to_le32(FDL_FH_KICK |
+				      FDL_FH_CIRQ_HOST_ENDTFD);
 
 	/* pad */
 	data_ptr = fh_desc->pad;
@@ -1668,14 +1669,34 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 			   temp_fw_buff_t,
 			   send_len + block_pad_len);
 
-	if (ret)
+	if (ret) {
 		IWL_ERR(trans, "Cannot send buffer %d\n", ret);
+		return ret;
+	}
 
 	IWL_DEBUG_FW(trans,
 		     "data buffer in SRAM; data len = %d, address = %x\n",
 		     data_len, sram_address);
 
-	return ret;
+	/* poll on the interrupt to make sure the chunk has been loaded */
+	sdio_release_host(func);
+	while (reg_polls > 0) {
+		val = iwl_trans_sdio_read32(trans, CSR_INT);
+		if (val & CSR_INT_BIT_FH_TX) {
+			/* ack and clean the interrupt */
+			iwl_trans_sdio_write32(trans, CSR_INT,
+					       CSR_INT_BIT_FH_TX);
+			iwl_trans_sdio_write32(trans, CSR_FH_INT_STATUS,
+					       CSR_FH_INT_TX_MASK);
+			sdio_claim_host(func);
+			return 0;
+		}
+		udelay(50);
+		reg_polls--;
+	}
+	sdio_claim_host(func);
+
+	return -ETIMEDOUT;
 }
 
 static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
@@ -1709,18 +1730,6 @@ static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
 				section_num);
 			goto exit_err;
 		}
-
-		/* Let the internal memory transaction complete */
-		mdelay(1);
-	}
-
-	/* W/A for WP B0 */
-	if (section_num == IWL_UCODE_SECTION_INST) {
-		ret = iwl_sdio_ta_write32(trans, CSR_INT_MASK,
-					  CSR_INI_SET_MASK,
-					  IWL_SDIO_TA_AC_DIRECT);
-		if (ret)
-			IWL_ERR(trans, "Failed to set interrupt mask.\n");
 	}
 
 exit_err:
