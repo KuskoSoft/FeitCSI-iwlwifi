@@ -2962,6 +2962,11 @@ TRACE_EVENT(rdev_set_coalesce,
 		  WIPHY_PR_ARG, __entry->n_rules)
 );
 
+DEFINE_EVENT(wiphy_wdev_evt, rdev_abort_scan,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev),
+	TP_ARGS(wiphy, wdev)
+);
+
 TRACE_EVENT(cfg80211_measurement_response,
 	TP_PROTO(struct wiphy *wiphy,
 		 struct cfg80211_msrment_response *response),

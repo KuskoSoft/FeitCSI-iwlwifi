@@ -517,6 +517,7 @@ struct mac80211_hwsim_data {
 	bool ps_poll_pending;
 	struct dentry *debugfs;
 
+	uintptr_t pending_cookie;
 	struct sk_buff_head pending;	/* packets pending */
 	/*
 	 * Only radios in the same group can communicate together (the
@@ -813,6 +814,9 @@ static void mac80211_hwsim_monitor_rx(struct ieee80211_hw *hw,
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(tx_skb);
 	struct ieee80211_rate *txrate = ieee80211_get_tx_rate(hw, info);
 
+	if (WARN_ON(!txrate))
+		return;
+
 	if (!netif_running(hwsim_mon))
 		return;
 
@@ -963,6 +967,7 @@ static void mac80211_hwsim_tx_frame_nl(struct ieee80211_hw *hw,
 	unsigned int hwsim_flags = 0;
 	int i;
 	struct hwsim_tx_rate tx_attempts[IEEE80211_TX_MAX_RATES];
+	uintptr_t cookie;
 
 	if (data->ps != PS_DISABLED)
 		hdr->frame_control |= cpu_to_le16(IEEE80211_FCTL_PM);
@@ -1021,7 +1026,10 @@ static void mac80211_hwsim_tx_frame_nl(struct ieee80211_hw *hw,
 		goto nla_put_failure;
 
 	/* We create a cookie to identify this skb */
-	if (nla_put_u64(skb, HWSIM_ATTR_COOKIE, (unsigned long) my_skb))
+	data->pending_cookie++;
+	cookie = data->pending_cookie;
+	info->rate_driver_data[0] = (void *)cookie;
+	if (nla_put_u64(skb, HWSIM_ATTR_COOKIE, cookie))
 		goto nla_put_failure;
 
 	genlmsg_end(skb, msg_head);
@@ -1250,6 +1258,7 @@ static void mac80211_hwsim_tx(struct ieee80211_hw *hw,
 {
 	struct mac80211_hwsim_data *data = hw->priv;
 	struct ieee80211_tx_info *txi = IEEE80211_SKB_CB(skb);
+	struct ieee80211_hdr *hdr = (void *)skb->data;
 	struct ieee80211_chanctx_conf *chanctx_conf;
 	struct ieee80211_channel *channel;
 	bool ack;
@@ -1295,6 +1304,22 @@ static void mac80211_hwsim_tx(struct ieee80211_hw *hw,
 				       ARRAY_SIZE(txi->control.rates));
 
 	txi->rate_driver_data[0] = channel;
+
+	if (skb->len >= 24 + 8 &&
+	    ieee80211_is_probe_resp(hdr->frame_control)) {
+		/* fake header transmission time */
+		struct ieee80211_mgmt *mgmt;
+		struct ieee80211_rate *txrate;
+		u64 ts;
+
+		mgmt = (struct ieee80211_mgmt *)skb->data;
+		txrate = ieee80211_get_tx_rate(hw, txi);
+		ts = mac80211_hwsim_get_tsf_raw();
+		mgmt->u.probe_resp.timestamp =
+			cpu_to_le64(ts + data->tsf_offset +
+				    24 * 8 * 10 / txrate->bitrate);
+	}
+
 	mac80211_hwsim_monitor_rx(hw, skb, channel);
 
 	/* wmediumd mode check */
@@ -1874,7 +1899,8 @@ static void hw_scan_work(struct work_struct *work)
 		    req->channels[hwsim->scan_chan_idx]->center_freq);
 
 	hwsim->tmp_chan = req->channels[hwsim->scan_chan_idx];
-	if (hwsim->tmp_chan->flags & IEEE80211_CHAN_NO_IR ||
+	if (hwsim->tmp_chan->flags & (IEEE80211_CHAN_NO_IR |
+				      IEEE80211_CHAN_RADAR) ||
 	    !req->n_ssids) {
 		dwell = 120;
 	} else {
@@ -2431,6 +2457,7 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 			       NL80211_FEATURE_STATIC_SMPS |
 			       NL80211_FEATURE_DYNAMIC_SMPS |
 			       NL80211_FEATURE_SCAN_RANDOM_MAC_ADDR;
+	wiphy_ext_feature_set(hw->wiphy, NL80211_EXT_FEATURE_VHT_IBSS);
 
 	/* ask mac80211 to reserve space for magic */
 	hw->vif_data_size = sizeof(struct hwsim_vif_priv);
@@ -2734,7 +2761,7 @@ static int hwsim_tx_info_frame_received_nl(struct sk_buff *skb_2,
 	struct mac80211_hwsim_data *data2;
 	struct ieee80211_tx_info *txi;
 	struct hwsim_tx_rate *tx_attempts;
-	unsigned long ret_skb_ptr;
+	u64 ret_skb_cookie;
 	struct sk_buff *skb, *tmp;
 	const u8 *src;
 	unsigned int hwsim_flags;
@@ -2752,7 +2779,7 @@ static int hwsim_tx_info_frame_received_nl(struct sk_buff *skb_2,
 
 	src = (void *)nla_data(info->attrs[HWSIM_ATTR_ADDR_TRANSMITTER]);
 	hwsim_flags = nla_get_u32(info->attrs[HWSIM_ATTR_FLAGS]);
-	ret_skb_ptr = nla_get_u64(info->attrs[HWSIM_ATTR_COOKIE]);
+	ret_skb_cookie = nla_get_u64(info->attrs[HWSIM_ATTR_COOKIE]);
 
 	data2 = get_hwsim_data_ref_from_addr(src);
 	if (!data2)
@@ -2760,7 +2787,12 @@ static int hwsim_tx_info_frame_received_nl(struct sk_buff *skb_2,
 
 	/* look for the skb matching the cookie passed back from user */
 	skb_queue_walk_safe(&data2->pending, skb, tmp) {
-		if ((unsigned long)skb == ret_skb_ptr) {
+		u64 skb_cookie;
+
+		txi = IEEE80211_SKB_CB(skb);
+		skb_cookie = (u64)(uintptr_t)txi->rate_driver_data[0];
+
+		if (skb_cookie == ret_skb_cookie) {
 			skb_unlink(skb, &data2->pending);
 			found = true;
 			break;
@@ -2851,10 +2883,25 @@ static int hwsim_cloned_frame_received_nl(struct sk_buff *skb_2,
 
 	/* A frame is received from user space */
 	memset(&rx_status, 0, sizeof(rx_status));
-	/* TODO: Check ATTR_FREQ if it exists, and maybe throw away off-channel
-	 * packets?
-	 */
-	rx_status.freq = data2->channel->center_freq;
+	if (info->attrs[HWSIM_ATTR_FREQ]) {
+		/* throw away off-channel packets, but allow both the temporary
+		 * ("hw" scan/remain-on-channel) and regular channel, since the
+		 * internal datapath also allows this
+		 */
+		mutex_lock(&data2->mutex);
+		rx_status.freq = nla_get_u32(info->attrs[HWSIM_ATTR_FREQ]);
+
+		if (rx_status.freq != data2->channel->center_freq &&
+		    (!data2->tmp_chan ||
+		     rx_status.freq != data2->tmp_chan->center_freq)) {
+			mutex_unlock(&data2->mutex);
+			goto out;
+		}
+		mutex_unlock(&data2->mutex);
+	} else {
+		rx_status.freq = data2->channel->center_freq;
+	}
+
 	rx_status.band = data2->channel->band;
 	rx_status.rate_idx = nla_get_u32(info->attrs[HWSIM_ATTR_RX_RATE]);
 	rx_status.signal = nla_get_u32(info->attrs[HWSIM_ATTR_SIGNAL]);

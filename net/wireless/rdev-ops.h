@@ -427,6 +427,14 @@ static inline int rdev_scan(struct cfg80211_registered_device *rdev,
 	return ret;
 }
 
+static inline void rdev_abort_scan(struct cfg80211_registered_device *rdev,
+				   struct wireless_dev *wdev)
+{
+	trace_rdev_abort_scan(&rdev->wiphy, wdev);
+	rdev->ops->abort_scan(&rdev->wiphy, wdev);
+	trace_rdev_return_void(&rdev->wiphy);
+}
+
 static inline int rdev_auth(struct cfg80211_registered_device *rdev,
 			    struct net_device *dev,
 			    struct cfg80211_auth_request *req)
@@ -1090,4 +1098,5 @@ static inline int rdev_abort_msrment(struct cfg80211_registered_device *rdev,
 	trace_rdev_return_int(&rdev->wiphy, ret);
 	return ret;
 }
+
 #endif /* __CFG80211_RDEV_OPS */
