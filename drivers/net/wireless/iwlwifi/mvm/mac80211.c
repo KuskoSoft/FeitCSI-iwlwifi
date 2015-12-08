@@ -445,13 +445,6 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	ieee80211_hw_set(hw, SUPPORTS_AMSDU_IN_AMPDU);
 	ieee80211_hw_set(hw, NEEDS_UNIQUE_STA_ADDR);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-	if (mvm->trans->max_skb_frags)
-		hw->netdev_features = NETIF_F_HIGHDMA | NETIF_F_SG;
-#endif
-	/* allow these to be toggled by user */
-	hw->netdev_hw_features = hw->netdev_features;
-
 	hw->queues = mvm->first_agg_queue;
 	hw->offchannel_tx_hw_queue = IWL_MVM_OFFCHANNEL_QUEUE;
 	hw->radiotap_mcs_details |= IEEE80211_RADIOTAP_MCS_HAVE_FEC |
@@ -4309,15 +4302,6 @@ static void iwl_mvm_mac_event_callback(struct ieee80211_hw *hw,
 	}
 }
 
-static int iwl_mvm_mac_set_features(struct ieee80211_hw *hw,
-				    struct ieee80211_vif *vif,
-				    netdev_features_t features,
-				    netdev_features_t changed)
-{
-	/* nothing to do yet */
-	return 0;
-}
-
 static int iwl_mvm_perform_ftm(struct ieee80211_hw *hw, u64 cookie,
 			       struct ieee80211_vif *vif,
 			       struct cfg80211_ftm_request *ftm_req)
@@ -4419,7 +4403,6 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 #endif
 	.get_survey = iwl_mvm_mac_get_survey,
 	.sta_statistics = iwl_mvm_mac_sta_statistics,
-	.set_features = iwl_mvm_mac_set_features,
 	.perform_ftm = iwl_mvm_perform_ftm,
 	.abort_ftm = iwl_mvm_abort_ftm,
 };
