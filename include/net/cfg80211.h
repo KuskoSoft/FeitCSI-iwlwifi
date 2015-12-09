@@ -2239,6 +2239,11 @@ struct cfg80211_qos_map {
  *	Ignored if num_of_bursts_exp is 0.
  * @samples_per_burst: Number of measurement frames requested per burst.
  * @retries: Number of retries per sample.
+ * @burst_duration: duration of an rtt burst. Valid values are 2-11 and 15
+ * @ftm_preamble: Allowed preamble types to be used for FTM frames.
+ *	Bitfield, as specified in @enum nl80211_ftm_preamble.
+ * @ftm_bw: Allowed bandwidths to be used for FTM frames.
+ *	Bitfield, as specified in @enum nl80211_ftm_bw.
  */
 struct cfg80211_ftm_target {
 	u64 cookie;
@@ -2252,6 +2257,9 @@ struct cfg80211_ftm_target {
 	u16 burst_period;
 	u8 samples_per_burst;
 	u8 retries;
+	u8 burst_duration;
+	u8 ftm_preamble;
+	u8 ftm_bw;
 };
 
 /**

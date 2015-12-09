@@ -4758,6 +4758,38 @@ enum nl80211_msrment_status {
 };
 
 /**
+ * enum nl80211_ftm_preamble - Allowed preamble types to use in FTM frames
+ *
+ * @NL80211_FTM_PREAMBLE_LEGACY: Legacy preamble
+ * @NL80211_FTM_PREAMBLE_HT: HT preamble
+ * @NL80211_FTM_PREAMBLE_VHT: VHT preamble
+ */
+enum nl80211_ftm_preamble {
+	NL80211_FTM_PREAMBLE_LEGACY = 1 << 0,
+	NL80211_FTM_PREAMBLE_HT     = 1 << 1,
+	NL80211_FTM_PREAMBLE_VHT    = 1 << 2
+};
+
+/**
+ * enum nl80211_ftm_bw - Allowed bandwidths to use in FTM frames
+ *
+ * @NL80211_FTM_BW_5: 5Mhz
+ * @NL80211_FTM_BW_10: 10Mhz
+ * @NL80211_FTM_BW_20: 20Mhz
+ * @NL80211_FTM_BW_40: 40Mhz
+ * @NL80211_FTM_BW_80: 80Mhz
+ * @NL80211_FTM_BW_160: 160Mhz
+ */
+enum nl80211_ftm_bw {
+	NL80211_FTM_BW_5   = 1 << 0,
+	NL80211_FTM_BW_10  = 1 << 1,
+	NL80211_FTM_BW_20  = 1 << 2,
+	NL80211_FTM_BW_40  = 1 << 3,
+	NL80211_FTM_BW_80  = 1 << 4,
+	NL80211_FTM_BW_160 = 1 << 5
+};
+
+/**
  * enum nl80211_ftm_target - attributes for an FTM target
  *
  * An FTM target is a station with which to perform measurements.
@@ -4782,6 +4814,8 @@ enum nl80211_msrment_status {
  *	requested per burst. Optional (default: 2) (u8)
  * @NL80211_FTM_TARGET_ATTR_RETRIES: Number of retries per sample.
  *	Optional (default: 3). (u8)
+ * @NL80211_FTM_TARGET_ATTR_BURST_DURATION: duration of an rtt burst.
+ *	Valid values are 2-11 and 15. Optional (default: 15) (u8)
  * @NL80211_FTM_TARGET_ATTR_ASAP: Whether to perform the measurement in ASAP
  *	mode. Ignored if one-sided. (flag)
  * @NL80211_FTM_TARGET_QUERY_LCI: Whether to include an LCI query in the
@@ -4791,6 +4825,10 @@ enum nl80211_msrment_status {
  * @NL80211_FTM_TARGET_ATTR_COOKIE: Extra data for the use of the invoking
  *	component. This will be passed back to the caller in the response, along
  *	with the rest of the request. Optional. (u64)
+ * @NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE: Allowed preamble types to be used for
+ *	FTM frames. Bitfield, as specified in @enum nl80211_ftm_preamble. (u8)
+ * @NL80211_FTM_TARGET_ATTR_FTM_BW: Allowed bandwidths to be used for FTM
+ *	frames. Bitfield, as specified in @enum nl80211_ftm_bw. (u8)
  * @__NL80211_FTM_TARGET_ATTR_AFTER_LAST: internal
  * @NL80211_FTM_TARGET_ATTR_MAX: highest FTM target attribute
  */
@@ -4806,10 +4844,13 @@ enum nl80211_ftm_target {
 	NL80211_FTM_TARGET_ATTR_BURST_PERIOD,
 	NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST,
 	NL80211_FTM_TARGET_ATTR_RETRIES,
+	NL80211_FTM_TARGET_ATTR_BURST_DURATION,
 	NL80211_FTM_TARGET_ATTR_ASAP,
 	NL80211_FTM_TARGET_ATTR_QUERY_LCI,
 	NL80211_FTM_TARGET_ATTR_QUERY_CIVIC,
 	NL80211_FTM_TARGET_ATTR_COOKIE,
+	NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE,
+	NL80211_FTM_TARGET_ATTR_FTM_BW,
 
 	/* keep last */
 	__NL80211_FTM_TARGET_ATTR_AFTER_LAST,

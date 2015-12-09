@@ -10708,10 +10708,13 @@ nl80211_ftm_target_policy[NL80211_FTM_TARGET_ATTR_MAX + 1] = {
 	[NL80211_FTM_TARGET_ATTR_BURST_PERIOD] = { .type = NLA_U16 },
 	[NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST] = { .type = NLA_U8 },
 	[NL80211_FTM_TARGET_ATTR_RETRIES] = { .type = NLA_U8 },
+	[NL80211_FTM_TARGET_ATTR_BURST_DURATION] = { .type = NLA_U8},
 	[NL80211_FTM_TARGET_ATTR_ASAP] = { .type = NLA_FLAG },
 	[NL80211_FTM_TARGET_ATTR_QUERY_LCI] = { .type = NLA_FLAG },
 	[NL80211_FTM_TARGET_ATTR_QUERY_CIVIC] = { .type = NLA_FLAG },
 	[NL80211_FTM_TARGET_ATTR_COOKIE] = { .type = NLA_U64 },
+	[NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE] = { .type = NLA_U8},
+	[NL80211_FTM_TARGET_ATTR_FTM_BW] = { .type = NLA_U8},
 };
 
 static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
@@ -10773,6 +10776,10 @@ static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
 		target->retries =
 			nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_RETRIES]);
 
+	target->burst_duration =
+		tb[NL80211_FTM_TARGET_ATTR_BURST_DURATION] ?
+		nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_BURST_DURATION]) : 15;
+
 	target->one_sided = nla_get_flag(tb[NL80211_FTM_TARGET_ATTR_ONE_SIDED]);
 	target->asap = nla_get_flag(tb[NL80211_FTM_TARGET_ATTR_ASAP]);
 	target->lci = nla_get_flag(tb[NL80211_FTM_TARGET_ATTR_QUERY_LCI]);
@@ -10781,6 +10788,12 @@ static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
 	if (tb[NL80211_FTM_TARGET_ATTR_COOKIE])
 		target->cookie =
 			nla_get_u64(tb[NL80211_FTM_TARGET_ATTR_COOKIE]);
+	if (tb[NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE])
+		target->ftm_preamble =
+			nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE]);
+	if (tb[NL80211_FTM_TARGET_ATTR_FTM_BW])
+		target->ftm_bw =
+			nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_FTM_BW]);
 
 	return 0;
 }
@@ -13765,7 +13778,13 @@ static int nl80211_put_ftm_resp_target(struct sk_buff *msg,
 	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST,
 		       target->samples_per_burst) ||
 	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_RETRIES, target->retries) ||
-	    nla_put_u64(msg, NL80211_FTM_TARGET_ATTR_COOKIE, target->cookie))
+	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_BURST_DURATION,
+		       target->burst_duration) ||
+	    nla_put_u64(msg, NL80211_FTM_TARGET_ATTR_COOKIE, target->cookie) ||
+	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE,
+		       target->ftm_preamble) ||
+	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_FTM_BW,
+		       target->ftm_bw))
 		return -ENOBUFS;
 
 	if (target->one_sided &&
