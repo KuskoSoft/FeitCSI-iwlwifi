@@ -1707,7 +1707,7 @@ static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
 		if (ret) {
 			IWL_ERR(trans, "Failed to download fw section %d\n",
 				section_num);
-			break;
+			goto exit_err;
 		}
 
 		/* Let the internal memory transaction complete */
@@ -1723,6 +1723,7 @@ static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
 			IWL_ERR(trans, "Failed to set interrupt mask.\n");
 	}
 
+exit_err:
 	kfree(temp_fw_buff_t);
 
 	return ret;
