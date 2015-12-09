@@ -1665,9 +1665,12 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 	IWL_DEBUG_FW(trans,
 		     "send %d bytes to sdio\n", send_len + block_pad_len);
 
+	mutex_lock(&trans_sdio->target_access_mtx);
+	sdio_claim_host(func);
 	ret = sdio_writesb(func, IWL_SDIO_DATA_ADDR,
 			   temp_fw_buff_t,
 			   send_len + block_pad_len);
+	sdio_release_host(func);
 
 	if (ret) {
 		IWL_ERR(trans, "Cannot send buffer %d\n", ret);
@@ -1679,7 +1682,6 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 		     data_len, sram_address);
 
 	/* poll on the interrupt to make sure the chunk has been loaded */
-	sdio_release_host(func);
 	while (reg_polls > 0) {
 		val = iwl_trans_sdio_read32(trans, CSR_INT);
 		if (val & CSR_INT_BIT_FH_TX) {
@@ -1688,13 +1690,13 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 					       CSR_INT_BIT_FH_TX);
 			iwl_trans_sdio_write32(trans, CSR_FH_INT_STATUS,
 					       CSR_FH_INT_TX_MASK);
-			sdio_claim_host(func);
+			mutex_unlock(&trans_sdio->target_access_mtx);
 			return 0;
 		}
 		udelay(50);
 		reg_polls--;
 	}
-	sdio_claim_host(func);
+	mutex_unlock(&trans_sdio->target_access_mtx);
 
 	return -ETIMEDOUT;
 }
@@ -1743,17 +1745,12 @@ int iwl_sdio_download_fw_page(struct iwl_trans *trans, u32 page_sram_addr,
 {
 	int ret = 0;
 	void *buf = trans->paging_download_buf;
-	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
-
-	sdio_claim_host(func);
 
 	ret = iwl_sdio_load_fw_chunk(trans, buf, 0, NULL, page_sram_addr,
 				     FW_PAGING_SIZE, page_dram_addr);
 
 	if (ret)
 		IWL_ERR(trans, "Paging: failed to download fw page\n");
-
-	sdio_release_host(func);
 
 	return ret;
 }
@@ -1847,6 +1844,8 @@ static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 				      int cpu,
 				      int *first_ucode_section)
 {
+	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
+	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 	int shift_param;
 	u32 load_status;
 	int i, ret = 0, sec_num = 1;
@@ -1885,10 +1884,15 @@ static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 			return ret;
 		/* send to ucode the section number and the status */
 		load_status |= (sec_num << shift_param);
+
+		mutex_lock(&trans_sdio->target_access_mtx);
+		sdio_claim_host(func);
 		ret = iwl_sdio_ta_write32(trans, FH_UCODE_LOAD_STATUS,
 					  load_status, IWL_SDIO_TA_AC_DIRECT);
 		if (ret)
-			return ret;
+			goto out_unlock;
+		sdio_release_host(func);
+		mutex_unlock(&trans_sdio->target_access_mtx);
 
 		sec_num = (sec_num << 1) | 0x1;
 	}
@@ -1901,12 +1905,15 @@ static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 	else
 		load_status = 0xFFFFFFFF;
 
+	mutex_lock(&trans_sdio->target_access_mtx);
+	sdio_claim_host(func);
 	ret = iwl_sdio_ta_write32(trans, FH_UCODE_LOAD_STATUS,
 				  load_status, IWL_SDIO_TA_AC_DIRECT);
-	if (ret)
-		return ret;
+out_unlock:
+	sdio_release_host(func);
+	mutex_unlock(&trans_sdio->target_access_mtx);
 
-	return 0;
+	return ret;
 }
 
 static void iwl_sdio_apply_destination(struct iwl_trans *trans)
@@ -2010,9 +2017,7 @@ static void iwl_sdio_apply_destination(struct iwl_trans *trans)
 static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 				     const struct fw_img *image)
 {
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
-#endif
 	int ret = 0;
 	int first_ucode_section;
 
@@ -2023,16 +2028,11 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 		     image->is_dual_cpus ? "Dual" : "Single");
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-		/*
-		 * The unlocking is required otherwise the writing to periphery
-		 * regs will get stuck due to being unable to grab nic access
-		 */
-		sdio_release_host(trans_sdio->func);
-		mutex_unlock(&trans_sdio->target_access_mtx);
-		iwl_dnt_configure(trans, image);
-		mutex_lock(&trans_sdio->target_access_mtx);
-		sdio_claim_host(trans_sdio->func);
+	iwl_dnt_configure(trans, image);
 #endif
+
+	mutex_lock(&trans_sdio->target_access_mtx);
+	sdio_claim_host(trans_sdio->func);
 
 	if (trans->dbg_dest_tlv)
 		iwl_sdio_apply_destination(trans);
@@ -2041,7 +2041,7 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 	/* TODO: remove in the next Si step */
 	ret = iwl_sdio_rsa_race_bug_wa(trans);
 	if (ret)
-		goto exit_err;
+		goto unlock;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_sdio_override_secure_boot_cfg(trans);
@@ -2051,19 +2051,22 @@ static int iwl_sdio_load_given_ucode(struct iwl_trans *trans,
 	iwl_sdio_write_prph_no_claim(trans, RELEASE_CPU_RESET,
 				     RELEASE_CPU_RESET_BIT);
 
+	sdio_release_host(trans_sdio->func);
+	mutex_unlock(&trans_sdio->target_access_mtx);
+
 	/* load to FW the binary Secured sections of CPU1 */
 	ret = iwl_sdio_load_cpu_sections(trans, image, 1,
 					 &first_ucode_section);
 	if (ret)
-		goto exit_err;
+		return ret;
 
 	/* load to FW the binary sections of CPU2 */
-	ret = iwl_sdio_load_cpu_sections(trans, image, 2,
-					 &first_ucode_section);
-	if (ret)
-		goto exit_err;
+	return iwl_sdio_load_cpu_sections(trans, image, 2,
+					  &first_ucode_section);
 
-exit_err:
+unlock:
+	sdio_release_host(trans_sdio->func);
+	mutex_unlock(&trans_sdio->target_access_mtx);
 	return ret;
 }
 
@@ -2253,7 +2256,7 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 	/* Clear interrupts */
 	ret = iwl_sdio_clear_interrupts(trans);
 	if (ret)
-		goto free_tx;
+		goto unlock;
 
 	/* Nic init */
 
@@ -2263,16 +2266,16 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 
 	/* really make sure rfkill handshake bits are cleared */
 
+	/* Release the host without powering down the NIC */
+	sdio_release_host(IWL_TRANS_SDIO_GET_FUNC(trans));
+	mutex_unlock(&trans_sdio->target_access_mtx);
+
 	/* Load the given image to the HW */
 	ret = iwl_sdio_load_given_ucode(trans, fw);
 	if (ret) {
 		IWL_ERR(trans, "Failed to load given FW Image\n");
 		goto free_tx;
 	}
-
-	/* Release the host without powering down the NIC */
-	sdio_release_host(IWL_TRANS_SDIO_GET_FUNC(trans));
-	mutex_unlock(&trans_sdio->target_access_mtx);
 
 	/*
 	 * Release the reference. the platform device will take care
@@ -2283,10 +2286,11 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 	set_bit(STATUS_DEVICE_ENABLED, &trans->status);
 	return 0;
 
-free_tx:
+unlock:
 	/* Release the host without powering down the NIC */
 	sdio_release_host(IWL_TRANS_SDIO_GET_FUNC(trans));
 	mutex_unlock(&trans_sdio->target_access_mtx);
+free_tx:
 	iwl_sdio_tx_free(trans);
 free_plat:
 	iwl_sdio_unregister_plat_driver(trans);
