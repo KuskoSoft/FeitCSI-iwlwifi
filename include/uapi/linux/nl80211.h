@@ -4751,8 +4751,9 @@ enum nl80211_msrment_status {
  *
  * @__NL80211_FTM_TARGET_ATTR_INVALID: invalid
  * @NL80211_FTM_TARGET_ATTR_FREQ: Target's frequency (u32)
- * @NL80211_FTM_TARGET_ATTR_BW: Target's channel bandwidth. Only BWs supported
- *	by the device are allowed. (u8, one of &enum nl80211_chan_width)
+ * @NL80211_FTM_TARGET_ATTR_BW: Target's actual channel bandwidth. Only BWs
+ *	supported by the device are allowed. (u8, one of
+ *	&enum nl80211_chan_width)
  * @NL80211_FTM_TARGET_ATTR_CNTR_FREQ_1: Center freq., 1st segment, if relevant
  *	(u32)
  * @NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2: Center freq., 2nd segment, if relevant
@@ -4760,10 +4761,10 @@ enum nl80211_msrment_status {
  * @NL80211_FTM_TARGET_ATTR_BSSID: Target's BSSID (6 octets)
  * @NL80211_FTM_TARGET_ATTR_ONE_SIDED: whether to perform a one-sided (flag set)
  *	or two-sided (flag clear) measurement. (flag)
- * @NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS: number of measurement iterations.
- *	Optional (default: 1). (u16)
+ * @NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS_EXP: Exponent of 2 of the number of
+ *	measurement iterations. Optional (default: 0). (u8)
  * @NL80211_FTM_TARGET_ATTR_BURST_PERIOD: Measurement periodicity in units of
- *	100ms. Ignored if num of bursts is 1. (u16)
+ *	100ms. Ignored if num of bursts exp is 0. (u16)
  * @NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST: Number of measurement frames
  *	requested per burst. Optional (default: 2) (u8)
  * @NL80211_FTM_TARGET_ATTR_RETRIES: Number of retries per sample.
@@ -4788,7 +4789,7 @@ enum nl80211_ftm_target {
 	NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2,
 	NL80211_FTM_TARGET_ATTR_BSSID,
 	NL80211_FTM_TARGET_ATTR_ONE_SIDED,
-	NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS,
+	NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS_EXP,
 	NL80211_FTM_TARGET_ATTR_BURST_PERIOD,
 	NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST,
 	NL80211_FTM_TARGET_ATTR_RETRIES,
@@ -4892,15 +4893,15 @@ enum nl80211_ftm_response_status {
  *	range: -128-0. (s8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD: The difference between max and min
  *	measured RSSI values. (u8)
- * @NL80211_FTM_RESP_ENTRY_ATTR_RATE_INFO: Rate-related data. (nested. see enum
- *	nl80211_rate_info)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO: tx Rate-related data. (nested. see
+ *	enum nl80211_rate_info)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RTT: The Round Trip Time that took for the last
- *	measurement for current target, in nsec. (u32)
+ *	measurement for current target, in psec. (u64)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR: The variance of the RTT values measured
- *	for current target, in nsec^2. (u32)
+ *	for current target, in psec^2. (u64)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD: The difference between max and min
  *	RTT values measured for the current target in the current session, given
- *	in nsec (u32)
+ *	in psec (u64)
  */
 enum nl80211_ftm_response_entry {
 	__NL80211_FTM_RESP_ENTRY_ATTR_INVALID,
@@ -4912,7 +4913,7 @@ enum nl80211_ftm_response_entry {
 	NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX,
 	NL80211_FTM_RESP_ENTRY_ATTR_RSSI,
 	NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
-	NL80211_FTM_RESP_ENTRY_ATTR_RATE_INFO,
+	NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,

@@ -10700,7 +10700,7 @@ nl80211_ftm_target_policy[NL80211_FTM_TARGET_ATTR_MAX + 1] = {
 	[NL80211_FTM_TARGET_ATTR_CNTR_FREQ_2] = { .type = NLA_U32 },
 	[NL80211_FTM_TARGET_ATTR_BSSID] = { .len = ETH_ALEN },
 	[NL80211_FTM_TARGET_ATTR_ONE_SIDED] = { .type = NLA_FLAG },
-	[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS] = { .type = NLA_U16 },
+	[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS_EXP] = { .type = NLA_U8 },
 	[NL80211_FTM_TARGET_ATTR_BURST_PERIOD] = { .type = NLA_U16 },
 	[NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST] = { .type = NLA_U8 },
 	[NL80211_FTM_TARGET_ATTR_RETRIES] = { .type = NLA_U8 },
@@ -10748,13 +10748,11 @@ static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
 	if (!cfg80211_chandef_valid(&target->chan_def))
 		return -EINVAL;
 
-	if (!tb[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS])
-		target->num_of_bursts = 1;
-	else
-		target->num_of_bursts =
-			nla_get_u16(tb[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS]);
+	if (tb[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS_EXP])
+		target->num_of_bursts_exp =
+		      nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS_EXP]);
 
-	if (target->num_of_bursts == 1) {
+	if (target->num_of_bursts_exp != 0) {
 		if (!tb[NL80211_FTM_TARGET_ATTR_BURST_PERIOD])
 			return -EINVAL;
 		target->burst_period =
@@ -13709,8 +13707,8 @@ static int nl80211_put_ftm_resp_target(struct sk_buff *msg,
 			target->chan_def.center_freq2) ||
 	    nla_put(msg, NL80211_FTM_TARGET_ATTR_BSSID, ETH_ALEN,
 		    target->bssid) ||
-	    nla_put_u16(msg, NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS,
-		       target->num_of_bursts) ||
+	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_NUM_OF_BURSTS_EXP,
+		       target->num_of_bursts_exp) ||
 	    nla_put_u16(msg, NL80211_FTM_TARGET_ATTR_BURST_PERIOD,
 			target->burst_period) ||
 	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_SAMPLES_PER_BURST,
@@ -13759,12 +13757,12 @@ static int nl80211_put_ftm_result(struct sk_buff *msg,
 	    nla_put_s8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI, ftm->rssi) ||
 	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
 		       ftm->rssi_spread) ||
-	    nl80211_put_sta_rate(msg, &ftm->rate_info,
-				 NL80211_FTM_RESP_ENTRY_ATTR_RATE_INFO) ||
-	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
-	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
+	    nl80211_put_sta_rate(msg, &ftm->tx_rate_info,
+				 NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO) ||
+	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
+	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
 			ftm->rtt_variance) ||
-	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,
+	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,
 			ftm->rtt_spread))
 		return -ENOBUFS;
 

@@ -390,9 +390,7 @@ int iwl_mvm_tof_perform_ftm(struct iwl_mvm *mvm, u64 cookie,
 
 		memcpy(cmd_target->bssid, req_target->bssid, ETH_ALEN);
 		cmd_target->measure_type = req_target->one_sided;
-		cmd_target->num_of_bursts = req_target->one_sided ?
-			req_target->num_of_bursts :
-			fls(req_target->num_of_bursts);
+		cmd_target->num_of_bursts = req_target->num_of_bursts_exp;
 		cmd_target->burst_period =
 			cpu_to_le16(req_target->burst_period);
 		cmd_target->samples_per_burst = req_target->samples_per_burst;
@@ -646,16 +644,16 @@ static int iwl_mvm_tof_range_resp(struct iwl_mvm *mvm, void *data)
 		result->rssi = fw_ap->rssi;
 		result->rssi_spread = fw_ap->rssi_spread;
 		if (iwl_mvm_tof_is_ht(mvm, fw_ap->measure_bw))
-			result->rate_info.flags |= RATE_INFO_FLAGS_MCS;
+			result->tx_rate_info.flags |= RATE_INFO_FLAGS_MCS;
 		if (iwl_mvm_tof_is_vht(mvm, fw_ap->measure_bw))
-			result->rate_info.flags |= RATE_INFO_FLAGS_VHT_MCS;
+			result->tx_rate_info.flags |= RATE_INFO_FLAGS_VHT_MCS;
 		/* TODO: FW to investigate */
-		result->rate_info.mcs = 12;
+		result->tx_rate_info.mcs = 12;
 		/* TODO: FW to investigate */
-		result->rate_info.legacy = 60;
+		result->tx_rate_info.legacy = 60;
 		/* TODO: FW to investigate */
-		result->rate_info.nss = 1;
-		result->rate_info.bw =
+		result->tx_rate_info.nss = 1;
+		result->tx_rate_info.bw =
 			iwl_mvm_tof_fw_bw_to_rate_info_bw(fw_ap->measure_bw);
 		result->rtt = le32_to_cpu(fw_ap->rtt);
 		result->rtt_variance = le32_to_cpu(fw_ap->rtt_variance);

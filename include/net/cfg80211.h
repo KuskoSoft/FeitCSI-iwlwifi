@@ -2234,9 +2234,9 @@ struct cfg80211_qos_map {
  * @asap: Whether to perform the measurement in ASAP mode. Ignored if one-sided.
  * @lci: Whether to query for LCI in the request. Ignored if one-sided.
  * @civic: Whether to query for CIVIC in the request. Ignored if one-sided.
- * @num_of_bursts: number of measurement iterations.
- * @burst_period: Measurement periodicity in units of 100ms. Ignored if num of
- *	bursts is 1.
+ * @num_of_bursts_exp: exponent of 2 of the number of measurement iterations.
+ * @burst_period: Measurement periodicity in units of 100ms.
+ *	Ignored if num_of_bursts_exp is 0.
  * @samples_per_burst: Number of measurement frames requested per burst.
  * @retries: Number of retries per sample.
  */
@@ -2248,7 +2248,7 @@ struct cfg80211_ftm_target {
 	bool asap;
 	bool lci;
 	bool civic;
-	u16 num_of_bursts;
+	u8 num_of_bursts_exp;
 	u16 burst_period;
 	u8 samples_per_burst;
 	u8 retries;
@@ -2321,13 +2321,13 @@ struct cfg80211_msrment_request {
  * @burst_index: Ordinal number of currently reported measurement iteration.
  * @rssi: Measured RSSI, given in dBm. Valid values range: -128-0.
  * @rssi_spread: The difference between max and min measured RSSI values
- * @rate_info: Used rate-related data.
+ * @tx_rate_info: Used tx rate-related data.
  * @rtt: The Round Trip Time that took for the last measurement for current
- *	target, in nsec.
+ *	target, in psec.
  * @rtt_variance: The variance of the RTT values measured for current target, in
- *	nsec^2.
+ *	psec^2.
  * @rtt_spread: The difference between max and min RTT values measured for
- *	the current target in the current session, in nsec.
+ *	the current target in the current session, in psec.
  */
 struct cfg80211_ftm_result {
 	enum nl80211_ftm_response_status status;
@@ -2338,10 +2338,10 @@ struct cfg80211_ftm_result {
 	u8 burst_index;
 	s8 rssi;
 	u8 rssi_spread;
-	struct rate_info rate_info;
-	u32 rtt;
-	u32 rtt_variance;
-	u32 rtt_spread;
+	struct rate_info tx_rate_info;
+	u64 rtt;
+	u64 rtt_variance;
+	u64 rtt_spread;
 };
 
 /**
