@@ -497,6 +497,11 @@ static int iwl_slv_fw_enter_d0i3(struct iwl_trans *trans)
 	if (test_bit(STATUS_FW_ERROR, &trans->status))
 		return 0;
 
+	if (trans->state != IWL_TRANS_FW_ALIVE) {
+		IWL_DEBUG_RPM(trans, "no fw - don't send d0i3 commands\n");
+		return 0;
+	}
+
 	set_bit(STATUS_TRANS_GOING_IDLE, &trans->status);
 
 	/* config the fw */
@@ -547,6 +552,11 @@ static int iwl_slv_fw_exit_d0i3(struct iwl_trans *trans)
 	/* sometimes a D0i3 entry is not followed through */
 	if (!test_bit(STATUS_TRANS_IDLE, &trans->status))
 		return 0;
+
+	if (trans->state != IWL_TRANS_FW_ALIVE) {
+		IWL_DEBUG_RPM(trans, "no fw - don't send d0i3 commands\n");
+		return 0;
+	}
 
 	if (!(IWL_D0I3_DEBUG & IWL_D0I3_DBG_KEEP_BUS) &&
 	    trans_slv->config.grab_bus) {
