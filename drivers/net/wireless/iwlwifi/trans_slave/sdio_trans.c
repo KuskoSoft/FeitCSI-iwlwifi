@@ -2220,7 +2220,7 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	int ret;
 
-	ret = iwl_slv_init(trans);
+	ret = iwl_slv_start(trans);
 	if (ret)
 		goto exit_err;
 
@@ -2285,7 +2285,7 @@ free_tx:
 free_plat:
 	iwl_sdio_unregister_plat_driver(trans);
 free_slv:
-	iwl_slv_free(trans);
+	iwl_slv_stop(trans);
 
 exit_err:
 	return ret;
@@ -2404,7 +2404,7 @@ static void iwl_trans_sdio_stop_device(struct iwl_trans *trans, bool low_power)
 
 	/* free resources only after all rx was stopped and flushed */
 	if (enabled) {
-		iwl_slv_free(trans);
+		iwl_slv_stop(trans);
 		iwl_sdio_tx_free(trans);
 	}
 
@@ -2843,6 +2843,10 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 
 	trans->d0i3_mode = IWL_D0I3_MODE_ON_IDLE;
 
+	ret = iwl_slv_init(trans);
+	if (ret < 0)
+		goto free_trans;
+
 	IWL_DEBUG_INFO(trans,
 		 "Allocated SDIO trans: Device %s\n"
 		 "iwlwifi-SDIO: HW ID 0x%x\n",
@@ -2881,6 +2885,8 @@ void iwl_trans_sdio_free(struct iwl_trans *trans)
 
 	if (trans_sdio->napi.poll)
 		netif_napi_del(&trans_sdio->napi);
+
+	iwl_slv_destroy(trans);
 
 	/* free generic + specific transport */
 	iwl_trans_free(trans);
