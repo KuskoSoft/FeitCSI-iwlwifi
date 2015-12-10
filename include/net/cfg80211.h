@@ -2327,9 +2327,19 @@ struct cfg80211_msrment_request {
  *	is associated to. This value is not an estimation. If field
  *	&report_tsf in the request is not set, this field is ignored.
  * @burst_index: Ordinal number of currently reported measurement iteration.
+ * @measurement_num: Total FTM measurement frames attempted
+ * @success_num: Total successful FTM measurement frames
+ * @num_per_burst: Maximum number of FTM frames per burst supported by the
+ *	responder. Applies to 2-sided FTM only.
+ * @retry_after_duration: When status == NL80211_FTM_RESP_TARGET_BUSY, the
+ *	initiator may retry after this given time. In sec
+ * @burst_duration: Actual time taken by the FW to finish one burst. In usec.
+ * @negotiated_burst_num: Number of bursts allowed by the responder. Applies
+ *	to 2-sided FTM only
  * @rssi: Measured RSSI, given in dBm. Valid values range: -128-0.
  * @rssi_spread: The difference between max and min measured RSSI values
  * @tx_rate_info: Used tx rate-related data.
+ * @rx_rate_info: Used rx rate-related data.
  * @rtt: The Round Trip Time that took for the last measurement for current
  *	target, in psec.
  * @rtt_variance: The variance of the RTT values measured for current target, in
@@ -2344,9 +2354,16 @@ struct cfg80211_ftm_result {
 	u64 host_time;
 	u64 tsf;
 	u8 burst_index;
+	u32 measurement_num;
+	u32 success_num;
+	u8 num_per_burst;
+	u8 retry_after_duration;
+	u32 burst_duration;
+	u32 negotiated_burst_num;
 	s8 rssi;
 	u8 rssi_spread;
 	struct rate_info tx_rate_info;
+	struct rate_info rx_rate_info;
 	u64 rtt;
 	u64 rtt_variance;
 	u64 rtt_spread;

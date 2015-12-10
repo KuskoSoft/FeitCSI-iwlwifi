@@ -4943,11 +4943,26 @@ enum nl80211_ftm_response_status {
  *	associated AP exists. Also, this value is not an estimation. (u64)
  * @NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX: Ordinal number of currently
  *	reported measurement iteration. (u8)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_MSRMNT_NUM: Total FTM measurement frames
+ *	attempted. (u32)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_SUCCESS_NUM: Total FTM measurement frames
+ *	attempted. (u32)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_NUM_PER_BURST: Maximum number of FTM frames per
+ *	burst supported by the responder. Applies to 2-sided FTM only. (u8)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RETRY_DUR: When
+ *	status == NL80211_FTM_RESP_TARGET_BUSY, the initiator may retry after
+ *	this given time. In sec. (u8)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_BURST_DUR: Actual time taken by the FW to finish
+ *	one burst. In usec. (u32)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_NEG_BURST_NUM: Number of bursts allowed by the
+ *	responder. Applies to 2-sided FTM only (u32)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RSSI: Measured RSSI, given in dBm. Valid values
  *	range: -128-0. (s8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD: The difference between max and min
  *	measured RSSI values. (u8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO: tx Rate-related data. (nested. see
+ *	enum nl80211_rate_info)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO: rx Rate-related data. (nested. see
  *	enum nl80211_rate_info)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RTT: The Round Trip Time that took for the last
  *	measurement for current target, in psec. (u64)
@@ -4965,9 +4980,16 @@ enum nl80211_ftm_response_entry {
 	NL80211_FTM_RESP_ENTRY_ATTR_HOST_TIME,
 	NL80211_FTM_RESP_ENTRY_ATTR_TSF,
 	NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX,
+	NL80211_FTM_RESP_ENTRY_ATTR_MSRMNT_NUM,
+	NL80211_FTM_RESP_ENTRY_ATTR_SUCCESS_NUM,
+	NL80211_FTM_RESP_ENTRY_ATTR_NUM_PER_BURST,
+	NL80211_FTM_RESP_ENTRY_ATTR_RETRY_DUR,
+	NL80211_FTM_RESP_ENTRY_ATTR_BURST_DUR,
+	NL80211_FTM_RESP_ENTRY_ATTR_NEG_BURST_NUM,
 	NL80211_FTM_RESP_ENTRY_ATTR_RSSI,
 	NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
 	NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO,
+	NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,

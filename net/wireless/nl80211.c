@@ -13779,11 +13779,25 @@ static int nl80211_put_ftm_result(struct sk_buff *msg,
 				     ftm->tsf)) ||
 	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX,
 		       ftm->burst_index) ||
+	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_MSRMNT_NUM,
+			ftm->measurement_num) ||
+	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_SUCCESS_NUM,
+			ftm->success_num) ||
+	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_NUM_PER_BURST,
+		       ftm->num_per_burst) ||
+	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RETRY_DUR,
+		       ftm->retry_after_duration) ||
+	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_BURST_DUR,
+			ftm->burst_duration) ||
+	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_NEG_BURST_NUM,
+			ftm->negotiated_burst_num) ||
 	    nla_put_s8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI, ftm->rssi) ||
 	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
 		       ftm->rssi_spread) ||
 	    nl80211_put_sta_rate(msg, &ftm->tx_rate_info,
 				 NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO) ||
+	    nl80211_put_sta_rate(msg, &ftm->rx_rate_info,
+				 NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO) ||
 	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
 	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
 			ftm->rtt_variance) ||
