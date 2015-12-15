@@ -109,13 +109,6 @@ __cfg80211_wdev_from_attrs(struct net *netns, struct nlattr **attrs)
 				result = wdev;
 				break;
 			}
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-			if (have_ifidx && wdev->p2pdev &&
-			    wdev->p2pdev->ifindex == ifidx) {
-				result = wdev;
-				break;
-			}
-#endif
 			if (have_wdev_id && wdev->identifier == (u32)wdev_id) {
 				result = wdev;
 				break;
@@ -2607,14 +2600,6 @@ static int nl80211_set_interface(struct sk_buff *skb, struct genl_info *info)
 			return -EINVAL;
 	}
 
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	if (otype == NL80211_IFTYPE_P2P_DEVICE) {
-		if (ntype == NL80211_IFTYPE_P2P_DEVICE)
-			return 0;
-		return -EINVAL;
-	}
-#endif
-
 	if (info->attrs[NL80211_ATTR_MESH_ID]) {
 		struct wireless_dev *wdev = dev->ieee80211_ptr;
 
@@ -2768,16 +2753,6 @@ static int nl80211_new_interface(struct sk_buff *skb, struct genl_info *info)
 		wdev->identifier = ++rdev->wdev_id;
 		list_add_rcu(&wdev->list, &rdev->wdev_list);
 		rdev->devlist_generation++;
-
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-		err = cfg80211_android_create_p2p_device(wdev,
-				nla_data(info->attrs[NL80211_ATTR_IFNAME]));
-		if (err) {
-			nlmsg_free(msg);
-			rdev_del_virtual_intf(rdev, wdev);
-			return err;
-		}
-#endif
 		break;
 	default:
 		break;
@@ -6782,11 +6757,6 @@ static int nl80211_send_bss(struct sk_buff *msg, struct netlink_callback *cb,
 	if (wdev->netdev &&
 	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, wdev->netdev->ifindex))
 		goto nla_put_failure;
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	if (wdev->p2pdev &&
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, wdev->p2pdev->ifindex))
-		goto nla_put_failure;
-#endif
 	if (nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
 		goto nla_put_failure;
 
@@ -10033,10 +10003,6 @@ static int nl80211_start_p2p_device(struct sk_buff *skb, struct genl_info *info)
 
 	wdev->p2p_started = true;
 
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	WARN_ON(wdev->p2pdev && dev_open(wdev->p2pdev));
-#endif
-
 	rdev->opencount++;
 
 	return 0;
@@ -10054,10 +10020,6 @@ static int nl80211_stop_p2p_device(struct sk_buff *skb, struct genl_info *info)
 		return -EOPNOTSUPP;
 
 	cfg80211_stop_p2p_device(rdev, wdev);
-
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	WARN_ON(wdev->p2pdev && dev_close(wdev->p2pdev));
-#endif
 
 	return 0;
 }
@@ -11021,12 +10983,6 @@ static int nl80211_pre_doit(__genl_const struct genl_ops *ops, struct sk_buff *s
 		dev = wdev->netdev;
 		rdev = wiphy_to_rdev(wdev->wiphy);
 
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-		if (wdev->iftype == NL80211_IFTYPE_P2P_DEVICE &&
-		    info->genlhdr->cmd == NL80211_CMD_SET_INTERFACE)
-			dev = wdev->p2pdev;
-#endif
-
 		if (ops->internal_flags & NL80211_FLAG_NEED_NETDEV) {
 			if (!dev) {
 				if (rtnl)
@@ -11908,12 +11864,6 @@ static int nl80211_send_scan_msg(struct sk_buff *msg,
 	    nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
 		goto nla_put_failure;
 
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	if (wdev->p2pdev &&
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, wdev->p2pdev->ifindex))
-		goto nla_put_failure;
-#endif
-
 	/* ignore errors and send incomplete event anyway */
 	nl80211_add_scan_req(msg, rdev);
 
@@ -12585,12 +12535,6 @@ static void nl80211_send_remain_on_chan_event(
 	    nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie))
 		goto nla_put_failure;
 
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	if (wdev->p2pdev &&
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, wdev->p2pdev->ifindex))
-		goto nla_put_failure;
-#endif
-
 	if (cmd == NL80211_CMD_REMAIN_ON_CHANNEL &&
 	    nla_put_u32(msg, NL80211_ATTR_DURATION, duration))
 		goto nla_put_failure;
@@ -12831,12 +12775,6 @@ int nl80211_send_mgmt(struct cfg80211_registered_device *rdev,
 	     nla_put_u32(msg, NL80211_ATTR_RXMGMT_FLAGS, flags)))
 		goto nla_put_failure;
 
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	if (wdev->p2pdev &&
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, wdev->p2pdev->ifindex))
-		goto nla_put_failure;
-#endif
-
 	genlmsg_end(msg, hdr);
 
 	return genlmsg_unicast(wiphy_net(&rdev->wiphy), msg, nlportid);
@@ -12876,12 +12814,6 @@ void cfg80211_mgmt_tx_status(struct wireless_dev *wdev, u64 cookie,
 	    nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie) ||
 	    (ack && nla_put_flag(msg, NL80211_ATTR_ACK)))
 		goto nla_put_failure;
-
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	if (wdev->p2pdev &&
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, wdev->p2pdev->ifindex))
-		goto nla_put_failure;
-#endif
 
 	genlmsg_end(msg, hdr);
 

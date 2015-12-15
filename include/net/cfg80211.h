@@ -3768,10 +3768,6 @@ struct wireless_dev {
 		bool prev_bssid_valid;
 	} wext;
 #endif
-
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	struct net_device *p2pdev;
-#endif
 };
 
 static inline u8 *wdev_address(struct wireless_dev *wdev)

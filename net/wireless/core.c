@@ -159,12 +159,6 @@ int cfg80211_switch_netns(struct cfg80211_registered_device *rdev,
 		return -EOPNOTSUPP;
 
 	list_for_each_entry(wdev, &rdev->wdev_list, list) {
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-		if (wdev->iftype == NL80211_IFTYPE_P2P_DEVICE) {
-			err = -EBUSY;
-			break;
-		}
-#endif
 		if (!wdev->netdev)
 			continue;
 		wdev->netdev->features &= ~NETIF_F_NETNS_LOCAL;
@@ -933,9 +927,6 @@ void cfg80211_unregister_wdev(struct wireless_dev *wdev)
 	case NL80211_IFTYPE_P2P_DEVICE:
 		cfg80211_mlme_purge_registrations(wdev);
 		cfg80211_stop_p2p_device(rdev, wdev);
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-		cfg80211_android_destroy_p2p_device(wdev);
-#endif
 		break;
 	default:
 		WARN_ON_ONCE(1);
@@ -1057,11 +1048,6 @@ static int cfg80211_netdev_notifier_call(struct notifier_block *nb,
 	rdev = wiphy_to_rdev(wdev->wiphy);
 
 	WARN_ON(wdev->iftype == NL80211_IFTYPE_UNSPECIFIED);
-
-#ifdef CPTCFG_CFG80211_ANDROID_P2P_HACK
-	if (wdev->iftype == NL80211_IFTYPE_P2P_DEVICE)
-		return NOTIFY_DONE;
-#endif
 
 	switch (state) {
 	case NETDEV_POST_INIT:

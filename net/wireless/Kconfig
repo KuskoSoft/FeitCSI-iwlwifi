@@ -183,13 +183,6 @@ config CFG80211_WEXT_EXPORT
 	  Drivers should select this option if they require cfg80211's
 	  wext compatibility symbols to be exported.
 
-config CFG80211_ANDROID_P2P_HACK
-	bool "Android P2P netdevice hack"
-	depends on CFG80211
-	depends on !CFG80211_WEXT
-	help
-	  Enable this option for Android P2P w/ P2P Device.
-
 config LIB80211
 	tristate
 	depends on m
