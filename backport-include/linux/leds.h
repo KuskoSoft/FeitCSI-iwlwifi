@@ -38,9 +38,9 @@ static inline void led_trigger_remove(struct led_classdev *led_cdev) {}
 #endif
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) && \
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0) && \
     LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
-#define netif_tx_napi_add LINUX_BACKPORT(netif_tx_napi_add)
+#define led_set_brightness_sync LINUX_BACKPORT(led_set_brightness_sync)
 /**
  * led_set_brightness_sync - set LED brightness synchronously
  * @led_cdev: the LED to set
@@ -54,7 +54,7 @@ static inline void led_trigger_remove(struct led_classdev *led_cdev) {}
  */
 extern int led_set_brightness_sync(struct led_classdev *led_cdev,
 				   enum led_brightness value);
-#endif /* < 4.4 && >= 3.19 */
+#endif /* < 4.5 && >= 3.19 */
 
 #include <backport/leds-disabled.h>
 

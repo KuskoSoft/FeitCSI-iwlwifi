@@ -15,6 +15,20 @@ static inline void kernel_param_unlock(struct module *mod)
 }
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0)
+#undef __MODULE_INFO
+#ifdef MODULE
+#define __MODULE_INFO(tag, name, info)					  \
+static const char __UNIQUE_ID(name)[]					  \
+  __used __attribute__((section(".modinfo"), unused, aligned(1)))	  \
+  = __stringify(tag) "=" info
+#else  /* !MODULE */
+/* This struct is here for syntactic coherency, it is not used */
+#define __MODULE_INFO(tag, name, info)					  \
+  struct __UNIQUE_ID(name) {}
+#endif
+#endif /* < 3.8 */
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)
 extern struct kernel_param_ops param_ops_ullong;
 extern int param_set_ullong(const char *val, const struct kernel_param *kp);

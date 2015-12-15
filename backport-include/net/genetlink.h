@@ -146,10 +146,12 @@ backport_genlmsg_multicast_allns(struct genl_family *family,
 #define __genl_const
 #else /* < 3.13 */
 #define __genl_const const
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 #define genl_notify(_fam, _skb, _info, _group, _flags)			\
 	genl_notify(_fam, _skb, genl_info_net(_info),			\
 		    genl_info_snd_portid(_info),			\
 		    _group, _info->nlhdr, _flags)
+#endif /* < 4.4 */
 #endif /* < 3.13 */
 
 #endif /* __BACKPORT_NET_GENETLINK_H */

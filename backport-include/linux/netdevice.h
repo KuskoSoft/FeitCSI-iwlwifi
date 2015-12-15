@@ -300,7 +300,7 @@ static inline void napi_complete_done(struct napi_struct *n, int work_done)
 }
 #endif /* < 3.19 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)
 #define netif_tx_napi_add LINUX_BACKPORT(netif_tx_napi_add)
 /**
  *	netif_tx_napi_add - initialize a napi context
@@ -320,6 +320,6 @@ static inline void netif_tx_napi_add(struct net_device *dev,
 {
 	netif_napi_add(dev, napi, poll, weight);
 }
-#endif /* < 4.4 */
+#endif /* < 4.5 */
 
 #endif /* __BACKPORT_NETDEVICE_H */

@@ -13,6 +13,7 @@
 #include <linux/export.h>
 #include <linux/net.h>
 #include <linux/netdevice.h>
+#include <linux/skbuff.h>
 #include <linux/debugfs.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,12)
@@ -147,6 +148,8 @@ struct dentry *debugfs_create_devm_seqfile(struct device *dev, const char *name,
 }
 EXPORT_SYMBOL_GPL(debugfs_create_devm_seqfile);
 
+#endif /* CONFIG_DEBUG_FS */
+
 int skb_ensure_writable(struct sk_buff *skb, int write_len)
 {
 	if (!pskb_may_pull(skb, write_len))
@@ -157,6 +160,4 @@ int skb_ensure_writable(struct sk_buff *skb, int write_len)
 
 	return pskb_expand_head(skb, 0, 0, GFP_ATOMIC);
 }
-EXPORT_SYMBOL(skb_ensure_writable);
-
-#endif /* CONFIG_DEBUG_FS */
+EXPORT_SYMBOL_GPL(skb_ensure_writable);

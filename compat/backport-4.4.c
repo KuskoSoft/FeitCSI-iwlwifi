@@ -9,8 +9,15 @@
  */
 
 #include <linux/debugfs.h>
+#include <linux/export.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
+#include <linux/if_vlan.h>
+#include <linux/mm.h>
+#include <linux/skbuff.h>
+#include <net/ip.h>
+#include <net/tso.h>
+#include <asm/unaligned.h>
 
 #ifdef CONFIG_DEBUG_FS
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
@@ -65,12 +72,6 @@ struct dentry *debugfs_create_bool(const char *name, umode_t mode,
 EXPORT_SYMBOL_GPL(debugfs_create_bool);
 #endif /* CONFIG_DEBUG_FS */
 
-#include <linux/export.h>
-#include <linux/if_vlan.h>
-#include <net/ip.h>
-#include <net/tso.h>
-#include <asm/unaligned.h>
-
 /* Calculate expected number of TX descriptors */
 int tso_count_descs(struct sk_buff *skb)
 {
@@ -122,7 +123,7 @@ void tso_build_data(struct sk_buff *skb, struct tso_t *tso, int size)
 
 		/* Move to next segment */
 		tso->size = frag->size;
-		tso->data = page_address(frag->page.p) + frag->page_offset;
+		tso->data = page_address(skb_frag_page(frag)) + frag->page_offset;
 		tso->next_frag_idx++;
 	}
 }
@@ -146,7 +147,7 @@ void tso_start(struct sk_buff *skb, struct tso_t *tso)
 
 		/* Move to next segment */
 		tso->size = frag->size;
-		tso->data = page_address(frag->page.p) + frag->page_offset;
+		tso->data = page_address(skb_frag_page(frag)) + frag->page_offset;
 		tso->next_frag_idx++;
 	}
 }

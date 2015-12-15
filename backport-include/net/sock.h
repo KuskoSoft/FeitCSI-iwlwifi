@@ -47,4 +47,20 @@
 #define sk_alloc(net, family, priority, prot, kern) sk_alloc(net, family, priority, prot)
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)
+#define sk_set_bit LINUX_BACKPORT(sk_set_bit)
+static inline void sk_set_bit(int nr, struct sock *sk)
+{
+	set_bit(nr, &sk->sk_socket->flags);
+}
+#endif /* < 4.5 */
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)
+#define sk_clear_bit LINUX_BACKPORT(sk_clear_bit)
+static inline void sk_clear_bit(int nr, struct sock *sk)
+{
+	clear_bit(nr, &sk->sk_socket->flags);
+}
+#endif /* < 4.5 */
+
 #endif /* __BACKPORT_NET_SOCK_H */
