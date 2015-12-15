@@ -1854,9 +1854,11 @@ static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 
 	if (cpu == 1) {
 		shift_param = 0;
+		load_status = 0;
 		*first_ucode_section = 0;
 	} else {
 		shift_param = 16;
+		load_status = 0xFFFF;
 		(*first_ucode_section)++;
 	}
 
@@ -1879,11 +1881,6 @@ static int iwl_sdio_load_cpu_sections(struct iwl_trans *trans,
 		}
 
 		ret = iwl_sdio_load_fw_section(trans, i, &image->sec[i]);
-		if (ret)
-			return ret;
-		ret = iwl_sdio_ta_read(trans, FH_UCODE_LOAD_STATUS,
-				       sizeof(u32), &load_status,
-				       IWL_SDIO_TA_AC_DIRECT);
 		if (ret)
 			return ret;
 		/* send to ucode the section number and the status */
