@@ -5736,6 +5736,27 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 				  enum nl80211_nan_func_term_reason reason,
 				  u64 cookie, gfp_t gfp);
 
+/**
+ * cfg80211_free_nan_func_members - free nan function members
+ * @f: NAN function that should be freed
+ *
+ * Frees all the allocated members of the given function, however
+ * it doesn't frees the pointed memory. This function can be only called if @f
+ * was cloned using cfg80211_clone_nan_func_members()
+ */
+void cfg80211_free_nan_func_members(struct cfg80211_nan_func *f);
+
+/**
+ * cfg80211_clone_nan_func_members - clone nan function
+ * @f1: destination
+ * @f2: source
+ *
+ * Clones @f2 to @f1. The function doesn't allocate @f1. Returns 0 on success.
+ * To free @f1's members cfg80211_free_nan_func_members() should be used.
+ */
+int cfg80211_clone_nan_func_members(struct cfg80211_nan_func *f1,
+				    const struct cfg80211_nan_func *f2);
+
 /* ethtool helper */
 void cfg80211_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info);
 
