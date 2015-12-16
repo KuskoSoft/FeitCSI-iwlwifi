@@ -58,7 +58,7 @@ endif
 
 iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL) $(INTEL_IWL_MOD_DEP)
 
-INTEL_IWL_SRC_FILES := $(shell find $(INTEL_IWL_SRC_DIR))
+INTEL_IWL_SRC_FILES := $(shell find $(INTEL_IWL_SRC_DIR) -path $(INTEL_IWL_SRC_DIR)/.git -prune -o -print)
 $(INTEL_IWL_OUT_DIR): $(INTEL_IWL_SRC_FILES)
 	@echo Copying directory $(INTEL_IWL_SRC_DIR) to $(INTEL_IWL_OUT_DIR)
 	@rm -rf $(INTEL_IWL_OUT_DIR)
