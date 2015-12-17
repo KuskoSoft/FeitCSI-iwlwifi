@@ -31,6 +31,7 @@
 #include <linux/ieee80211.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
+#include <net/ip6_checksum.h>
 #include <net/tso.h>
 
 #include "iwl-debug.h"
