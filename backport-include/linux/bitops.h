@@ -16,4 +16,8 @@
 
 #endif
 
+#ifndef BIT_ULL
+#define BIT_ULL(nr) (1ULL << (nr))
+#endif
+
 #endif /* __BACKPORT_BITOPS_H */
