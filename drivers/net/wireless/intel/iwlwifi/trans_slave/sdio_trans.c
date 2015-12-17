@@ -2359,7 +2359,7 @@ static int iwl_trans_sdio_update_sf(struct iwl_trans *trans,
  * Make sure the device is powered up and ready to handle
  * undirect memory read/writes.
  */
-static bool iwl_trans_sdio_grab_nic_access(struct iwl_trans *trans, bool silent,
+static bool iwl_trans_sdio_grab_nic_access(struct iwl_trans *trans,
 					   unsigned long *flags)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
@@ -2479,7 +2479,7 @@ static u32 iwl_trans_sdio_fh_regs_dump(struct iwl_trans *trans,
 	u32 offset, copy_size;
 	int ret;
 
-	if (!iwl_trans_grab_nic_access(trans, false, &flags))
+	if (!iwl_trans_grab_nic_access(trans, &flags))
 		return 0;
 	sdio_claim_host(func);
 
