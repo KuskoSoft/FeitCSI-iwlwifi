@@ -589,6 +589,7 @@ err:
 	return ret;
 }
 
+#ifdef CONFIG_PM_RUNTIME
 static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 {
 	int ret;
@@ -685,7 +686,9 @@ static int iwl_slv_rpm_runtime_idle(struct device *dev)
 	pm_request_autosuspend(dev);
 	return -EBUSY;
 }
+#endif
 
+#ifdef CONFIG_PM
 static int iwl_slv_rpm_suspend(struct device *dev)
 {
 	struct iwl_slv_rpm_device *rpm_dev =
@@ -716,6 +719,7 @@ static int iwl_slv_rpm_suspend(struct device *dev)
 
 	return 0;
 }
+#endif
 
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
@@ -738,6 +742,7 @@ void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
 }
 #endif
 
+#ifdef CONFIG_PM
 static int iwl_slv_rpm_resume(struct device *dev)
 {
 	struct iwl_slv_rpm_device *rpm_dev =
@@ -753,6 +758,7 @@ static int iwl_slv_rpm_resume(struct device *dev)
 	 */
 	return 0;
 }
+#endif
 
 static const struct dev_pm_ops iwl_slv_rpm_pm_ops = {
 	SET_RUNTIME_PM_OPS(iwl_slv_rpm_runtime_suspend,
@@ -764,6 +770,7 @@ static const struct dev_pm_ops iwl_slv_rpm_pm_ops = {
 #endif
 };
 
+#ifdef CONFIG_PM_RUNTIME
 static struct class iwl_slv_rpm_class = {
 	.name = "iwl_slv_rpm_class",
 	.owner = THIS_MODULE,
@@ -809,6 +816,7 @@ static void iwl_slv_rpm_del_device(struct device *dev)
 	pm_runtime_disable(dev);
 	device_unregister(dev);
 }
+#endif
 
 void iwl_slv_free_data_queue(struct iwl_trans *trans, int txq_id)
 {
@@ -941,6 +949,7 @@ void iwl_slv_stop(struct iwl_trans *trans)
 
 int iwl_slv_init(struct iwl_trans *trans)
 {
+#ifdef CONFIG_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
@@ -950,17 +959,20 @@ int iwl_slv_init(struct iwl_trans *trans)
 		trans_slv->d0i3_dev = NULL;
 		return ret;
 	}
+#endif
 	return 0;
 }
 
 void iwl_slv_destroy(struct iwl_trans *trans)
 {
+#ifdef CONFIG_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
 	if (trans_slv->d0i3_dev) {
 		iwl_slv_rpm_del_device(trans_slv->d0i3_dev);
 		trans_slv->d0i3_dev = NULL;
 	}
+#endif
 }
 
 int iwl_slv_start(struct iwl_trans *trans)
@@ -1018,6 +1030,7 @@ int iwl_slv_register_drivers(void)
 {
 	int ret;
 
+#ifdef CONFIG_PM_RUNTIME
 	/*
 	 * register a new class because some older kernels
 	 * don't support calling the runtime_pm callbacks
@@ -1026,7 +1039,7 @@ int iwl_slv_register_drivers(void)
 	ret = class_register(&iwl_slv_rpm_class);
 	if (ret)
 		return ret;
-
+#endif
 	ret = iwl_sdio_register_driver();
 	if (ret)
 		goto unregister_class;
@@ -1040,7 +1053,9 @@ int iwl_slv_register_drivers(void)
 unregister_sdio:
 	iwl_sdio_unregister_driver();
 unregister_class:
+#ifdef CONFIG_PM_RUNTIME
 	class_unregister(&iwl_slv_rpm_class);
+#endif
 	return ret;
 }
 
@@ -1048,7 +1063,9 @@ void iwl_slv_unregister_drivers(void)
 {
 	iwl_sdio_unregister_driver();
 	iwl_idi_unregister_driver();
+#ifdef CONFIG_PM_RUNTIME
 	class_unregister(&iwl_slv_rpm_class);
+#endif
 }
 
 /* iwl_slv_tx_get_cmd_entry - get requested cmd entry */
@@ -1997,19 +2014,23 @@ err:
 
 void iwl_trans_slv_ref(struct iwl_trans *trans)
 {
+#ifdef CONFIG_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
 	pm_runtime_get(trans_slv->d0i3_dev);
+#endif
 }
 
 void iwl_trans_slv_unref(struct iwl_trans *trans)
 {
+#ifdef CONFIG_PM_RUNTIME
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
 	pm_runtime_mark_last_busy(trans_slv->d0i3_dev);
 	pm_runtime_put_autosuspend(trans_slv->d0i3_dev);
+#endif
 }
 
 int iwl_trans_slv_suspend(struct iwl_trans *trans)
@@ -2017,9 +2038,11 @@ int iwl_trans_slv_suspend(struct iwl_trans *trans)
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	int ret;
 
+#ifdef CONFIG_PM_RUNTIME
 	IWL_DEBUG_RPM(trans, "suspending: %d, rpm counter: %d\n",
 		      trans_slv->suspending,
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
+#endif
 
 	/* set the device back into d0i3 (see iwl_slv_rpm_suspend()) */
 	ret = iwl_slv_fw_enter_d0i3(trans);
@@ -2033,8 +2056,10 @@ void iwl_trans_slv_resume(struct iwl_trans *trans)
 {
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 
+#ifdef CONFIG_PM_RUNTIME
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
+#endif
 
 	/*
 	 * set the device active again (mac80211 might interact with it,
