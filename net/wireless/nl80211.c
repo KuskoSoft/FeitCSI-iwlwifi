@@ -10852,6 +10852,8 @@ static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct cfg80211_msrment_request request = {0};
 	struct cfg80211_active_msrment *msrment = NULL;
+	struct sk_buff *msg;
+	void *hdr;
 	u64 cookie = 0;
 	int err;
 
@@ -10889,12 +10891,30 @@ static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
 	msrment->wdev = wdev;
 	msrment->cookie = cookie;
 	msrment->nl_portid = genl_info_snd_portid(info);
+
+	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
+		if (!msg) {
+			err = -ENOMEM;
+			goto free_request;
+		}
+
+	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
+			     NL80211_CMD_MSRMENT_REQUEST);
+	if (!hdr || nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie)) {
+		err = -ENOBUFS;
+		goto free_msg;
+	}
+
+	genlmsg_end(msg, hdr);
+
 	spin_lock_bh(&rdev->msrments_lock);
 	list_add_tail(&msrment->list, &rdev->msrments_list);
 	spin_unlock_bh(&rdev->msrments_lock);
 
-	return 0;
+	return genlmsg_reply(msg, info);
 
+free_msg:
+	nlmsg_free(msg);
 free_request:
 	kfree(msrment);
 	nl80211_msrment_request_free(&request);
