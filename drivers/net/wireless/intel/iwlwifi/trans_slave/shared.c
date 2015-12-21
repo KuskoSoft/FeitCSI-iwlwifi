@@ -686,7 +686,6 @@ static int iwl_slv_rpm_runtime_idle(struct device *dev)
 	pm_request_autosuspend(dev);
 	return -EBUSY;
 }
-#endif
 
 #ifdef CONFIG_PM
 static int iwl_slv_rpm_suspend(struct device *dev)
@@ -719,30 +718,7 @@ static int iwl_slv_rpm_suspend(struct device *dev)
 
 	return 0;
 }
-#endif
 
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
-				 u8 txq_id,
-				 struct iwl_slv_txq_entry *txq_entry)
-{
-	s64 temp = ktime_to_ms(ktime_get());
-	s64 ts_1;
-	s64 diff;
-	struct iwl_slv_tx_data_entry *data_entry;
-
-	if (txq_id == trans_slv->cmd_queue)
-		return;
-
-	IWL_SLV_TXQ_GET_ENTRY(txq_entry, data_entry);
-
-	ts_1 = data_entry->skb->tstamp.tv64 >> 32;
-	diff = temp - ts_1;
-	data_entry->skb->tstamp.tv64 += diff << 16;
-}
-#endif
-
-#ifdef CONFIG_PM
 static int iwl_slv_rpm_resume(struct device *dev)
 {
 	struct iwl_slv_rpm_device *rpm_dev =
@@ -770,7 +746,6 @@ static const struct dev_pm_ops iwl_slv_rpm_pm_ops = {
 #endif
 };
 
-#ifdef CONFIG_PM_RUNTIME
 static struct class iwl_slv_rpm_class = {
 	.name = "iwl_slv_rpm_class",
 	.owner = THIS_MODULE,
@@ -815,6 +790,27 @@ static void iwl_slv_rpm_del_device(struct device *dev)
 	pm_runtime_put_noidle(dev);
 	pm_runtime_disable(dev);
 	device_unregister(dev);
+}
+#endif
+
+#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
+void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
+				 u8 txq_id,
+				 struct iwl_slv_txq_entry *txq_entry)
+{
+	s64 temp = ktime_to_ms(ktime_get());
+	s64 ts_1;
+	s64 diff;
+	struct iwl_slv_tx_data_entry *data_entry;
+
+	if (txq_id == trans_slv->cmd_queue)
+		return;
+
+	IWL_SLV_TXQ_GET_ENTRY(txq_entry, data_entry);
+
+	ts_1 = data_entry->skb->tstamp.tv64 >> 32;
+	diff = temp - ts_1;
+	data_entry->skb->tstamp.tv64 += diff << 16;
 }
 #endif
 
