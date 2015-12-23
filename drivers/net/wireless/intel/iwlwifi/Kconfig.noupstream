@@ -189,3 +189,4 @@ config IWLWIFI_NUM_STA_INTERFACES
 	range 1 2
 	default 1
 	depends on IWLMVM
+
