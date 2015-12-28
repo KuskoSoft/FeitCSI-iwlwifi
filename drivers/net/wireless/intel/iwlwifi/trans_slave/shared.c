@@ -770,6 +770,7 @@ static struct device *iwl_slv_rpm_add_device(struct iwl_trans *trans)
 	ret = device_register(&rpm_dev->dev);
 	if (ret) {
 		put_device(&rpm_dev->dev);
+		kfree(rpm_dev);
 		return ERR_PTR(ret);
 	}
 
