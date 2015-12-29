@@ -14354,10 +14354,10 @@ static int nl80211_put_ftm_result(struct sk_buff *msg,
 	    nla_put_s8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI, ftm->rssi) ||
 	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
 		       ftm->rssi_spread) ||
-	    nl80211_put_sta_rate(msg, &ftm->tx_rate_info,
-				 NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO) ||
-	    nl80211_put_sta_rate(msg, &ftm->rx_rate_info,
-				 NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO) ||
+	    !nl80211_put_sta_rate(msg, &ftm->tx_rate_info,
+				  NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO) ||
+	    !nl80211_put_sta_rate(msg, &ftm->rx_rate_info,
+				  NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO) ||
 	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
 	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
 			ftm->rtt_variance) ||
@@ -14408,36 +14408,54 @@ nl80211_send_measurement_response(struct wiphy *wiphy,
 	genlmsg_unicast(wiphy_net(wiphy), msg, response->nl_portid);
 }
 
-static void nl80211_ftm_response(struct wiphy *wiphy,
-				 struct cfg80211_msrment_response *response,
-				 gfp_t gfp)
+static void
+nl80211_send_single_ftm_resp(struct wiphy *wiphy,
+			     struct cfg80211_msrment_response *response,
+			     struct cfg80211_ftm_result *entry, bool last,
+			     gfp_t gfp)
 {
 	void *hdr;
-	struct cfg80211_ftm_results ftm = response->u.ftm;
-	struct sk_buff *msg;
-	int i;
+	struct sk_buff *msg = nl80211_alloc_measurement_response(wiphy,
+								 response, &hdr,
+								 gfp);
+	if (!msg)
+		return;
 
-	for (i = 0; i < ftm.num_of_entries; i++) {
-		msg = nl80211_alloc_measurement_response(wiphy, response,
-							 &hdr, gfp);
-		if (!msg)
-			return;
+	if (entry && nl80211_put_ftm_result(msg, entry))
+		goto nla_put_failure;
 
-		if (nl80211_put_ftm_result(msg, &ftm.entries[i]))
-			goto nla_put_failure;
+	if (last && nla_put_flag(msg, NL80211_ATTR_LAST_MSG))
+		goto nla_put_failure;
 
-		if (i == ftm.num_of_entries - 1 &&
-		    nla_put_flag(msg, NL80211_ATTR_LAST_MSG))
-			goto nla_put_failure;
-
-		nl80211_send_measurement_response(wiphy, response, msg, hdr);
-	}
+	nl80211_send_measurement_response(wiphy, response, msg, hdr);
 
 	return;
 
 nla_put_failure:
 	WARN_ON(1);
 	nlmsg_free(msg);
+}
+
+static void nl80211_ftm_response(struct wiphy *wiphy,
+				 struct cfg80211_msrment_response *response,
+				 gfp_t gfp)
+{
+	struct cfg80211_ftm_results ftm = response->u.ftm;
+	int i;
+
+	if (response->status != NL80211_MSRMENT_STATUS_SUCCESS) {
+		nl80211_send_single_ftm_resp(wiphy, response, NULL, true, gfp);
+		return;
+	}
+
+	for (i = 0; i < ftm.num_of_entries; i++) {
+		nl80211_send_single_ftm_resp(wiphy, response, &ftm.entries[i],
+					     (i == ftm.num_of_entries - 1),
+					     gfp);
+	}
+
+	return;
+
 }
 
 void cfg80211_measurement_response(struct wiphy *wiphy,
@@ -14462,6 +14480,8 @@ void cfg80211_measurement_response(struct wiphy *wiphy,
 	/* if not found or no portid it was canceled already */
 	if (!msrment || !msrment->nl_portid)
 		goto free;
+
+	response->nl_portid = msrment->nl_portid;
 
 	switch (response->type) {
 	case NL80211_MSRMENT_TYPE_FTM:
