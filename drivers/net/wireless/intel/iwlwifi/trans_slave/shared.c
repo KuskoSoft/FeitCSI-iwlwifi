@@ -1016,6 +1016,11 @@ int iwl_slv_start(struct iwl_trans *trans)
 		wake_lock(&trans_slv->slv_wake_lock);
 #endif
 
+#ifdef CONFIG_PM_RUNTIME
+	/* in case of previous error, reset power.runtime_error */
+	pm_runtime_set_active(trans_slv->d0i3_dev);
+#endif
+
 	if (iwlwifi_mod_params.d0i3_disable)
 		IWL_DEBUG_RPM(trans, "D0i3 transition disabled\n");
 
