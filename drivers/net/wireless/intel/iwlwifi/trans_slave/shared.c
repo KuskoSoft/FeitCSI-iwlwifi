@@ -604,7 +604,8 @@ static int iwl_slv_runtime_suspend(struct iwl_trans *trans)
 	}
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
-	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
+	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
+	    trans->state == IWL_TRANS_FW_ALIVE)
 		wake_unlock(&IWL_TRANS_GET_SLV_TRANS(trans)->slv_wake_lock);
 #endif
 
@@ -625,6 +626,7 @@ static int iwl_slv_runtime_resume(struct iwl_trans *trans)
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	if (trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
+	    trans->state == IWL_TRANS_FW_ALIVE &&
 	    !trans_slv->suspending)
 		wake_lock(&trans_slv->slv_wake_lock);
 #endif
