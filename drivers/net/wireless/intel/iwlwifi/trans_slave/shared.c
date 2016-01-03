@@ -690,7 +690,7 @@ static int iwl_slv_rpm_runtime_idle(struct device *dev)
 }
 
 #ifdef CONFIG_PM
-static int iwl_slv_rpm_suspend(struct device *dev)
+static int iwl_slv_rpm_prepare(struct device *dev)
 {
 	struct iwl_slv_rpm_device *rpm_dev =
 			container_of(dev, struct iwl_slv_rpm_device, dev);
@@ -703,13 +703,17 @@ static int iwl_slv_rpm_suspend(struct device *dev)
 	 * and the runtime_suspend/resume callbacks won't get called
 	 * as the pm workqueue is frozen.
 	 *
-	 * since this suspend handler is get called before mac80211's one,
+	 * since the prepare() handler gets called before mac80211's suspend(),
 	 * get out of d0i3 here (by calling pm_runtime_resume).
 	 * we'll get back into d0i3 in iwl_trans_slv_suspend() (called
 	 * after mac80211's suspend handler.
 	 *
 	 * set trans_slv->suspending to avoid taking wakelock during
 	 * this process (which will abort the suspend)
+	 *
+	 * we have to use the .prepare() handler (rather than suspend),
+	 * since our device is registered before the wiphy, but we
+	 * want the handler to run before mac80211's suspend callback.
 	 */
 	IWL_DEBUG_RPM(trans, "call pm_runtime_resume - rpm counter: %d\n",
 		      atomic_read(&trans->dev->power.usage_count));
@@ -720,22 +724,6 @@ static int iwl_slv_rpm_suspend(struct device *dev)
 
 	return 0;
 }
-
-static int iwl_slv_rpm_resume(struct device *dev)
-{
-	struct iwl_slv_rpm_device *rpm_dev =
-			container_of(dev, struct iwl_slv_rpm_device, dev);
-	struct iwl_trans *trans = rpm_dev->trans;
-
-	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
-		      atomic_read(&trans->dev->power.usage_count));
-
-	/*
-	 * Nothing to do here. runtime_pm should be active at this point,
-	 * and will be autosuspended later on.
-	 */
-	return 0;
-}
 #endif
 
 static const struct dev_pm_ops iwl_slv_rpm_pm_ops = {
@@ -743,8 +731,7 @@ static const struct dev_pm_ops iwl_slv_rpm_pm_ops = {
 			   iwl_slv_rpm_runtime_resume,
 			   iwl_slv_rpm_runtime_idle)
 #ifdef CONFIG_PM
-	.suspend = iwl_slv_rpm_suspend,
-	.resume = iwl_slv_rpm_resume,
+	.prepare = iwl_slv_rpm_prepare,
 #endif
 };
 
