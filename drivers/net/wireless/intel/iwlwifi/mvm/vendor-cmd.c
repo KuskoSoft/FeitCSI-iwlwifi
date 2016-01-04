@@ -7,6 +7,7 @@
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2016 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -33,6 +34,7 @@
  *
  * Copyright(c) 2012 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2016 Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,6 +69,7 @@
 #include <net/netlink.h>
 #include "mvm.h"
 #include "vendor-cmd.h"
+#include "fw-dbg.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 #include "lte-coex.h"
@@ -97,6 +100,7 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_GSCAN_MIN_BREACHING] = { .type = NLA_U8 },
 	[IWL_MVM_VENDOR_ATTR_RXFILTER] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_RXFILTER_OP] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER] = { .type = NLA_STRING },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -1587,6 +1591,32 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 	return 0;
 }
 
+static int iwl_mvm_vendor_dbg_collect(struct wiphy *wiphy,
+				      struct wireless_dev *wdev,
+				      const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	int err, len = 0;
+	const char *trigger_desc;
+
+	err = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (err)
+		return err;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER])
+		return -EINVAL;
+
+	trigger_desc = nla_data(tb[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER]);
+	len = nla_len(tb[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER]);
+
+	iwl_mvm_fw_dbg_collect(mvm, FW_DBG_TRIGGER_USER_EXTENDED, trigger_desc,
+			       len, NULL);
+
+	return 0;
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -1774,6 +1804,15 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_NETDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_mvm_vendor_rxfilter,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_DBG_COLLECT,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mvm_vendor_dbg_collect,
 	},
 };
 
