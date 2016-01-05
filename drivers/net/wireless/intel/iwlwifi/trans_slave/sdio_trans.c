@@ -2650,7 +2650,7 @@ static u32 iwl_trans_sdio_dump_monitor(struct iwl_trans *trans,
 
 static struct iwl_trans_dump_data
 *iwl_trans_sdio_dump_data(struct iwl_trans *trans,
-			  struct iwl_fw_dbg_trigger_tlv *trigger)
+			  const struct iwl_fw_dbg_trigger_tlv *trigger)
 {
 	struct iwl_fw_error_dump_data *data;
 	struct iwl_trans_dump_data *dump_data;
