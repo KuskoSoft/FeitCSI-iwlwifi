@@ -190,3 +190,9 @@ config IWLWIFI_NUM_STA_INTERFACES
 	default 1
 	depends on IWLMVM
 
+config IWLWIFI_DISABLE_FW_DUMP
+	bool "disable fw debug data dump support"
+	depends on IWLMVM
+	help
+	  Say Y to disable fw debug data dump when the ucode was not
+	  configured, and the MVM_COLLECT_FW_ERR_DUMP flag wasn't enabled.
