@@ -1172,4 +1172,19 @@ rdev_start_ftm_responder(struct cfg80211_registered_device *rdev,
 	return ret;
 }
 
+static inline int
+rdev_get_ftm_responder_stats(struct cfg80211_registered_device *rdev,
+			     struct net_device *dev,
+			     struct cfg80211_ftm_responder_stats *ftm_stats)
+{
+	int ret = -EOPNOTSUPP;
+
+	trace_rdev_get_ftm_responder_stats(&rdev->wiphy, dev, ftm_stats);
+	if (rdev->ops->get_ftm_responder_stats)
+		ret = rdev->ops->get_ftm_responder_stats(&rdev->wiphy, dev,
+							ftm_stats);
+	trace_rdev_return_int(&rdev->wiphy, ret);
+	return ret;
+}
+
 #endif /* __CFG80211_RDEV_OPS */

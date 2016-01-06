@@ -5,7 +5,7 @@
  *
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014 Intel Mobile Communications GmbH
- * Copyright 2015	Intel Deutschland GmbH
+ * Copyright 2015-2016	Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2417,6 +2417,40 @@ struct cfg80211_ftm_responder_params {
 };
 
 /**
+ * cfg80211_ftm_responder_stats - FTM responder statistics
+ *
+ * @filled: bitflag of flags using the bits of &enum nl80211_ftm_stats to
+ *	indicate the relevant values in this struct for them
+ * @success_num: number of FTM sessions in which all frames were successfully
+ *	answered
+ * @partial_num: number of FTM sessions in which part of frames were
+ *	successfully answered
+ * @failed_num: number of failed FTM sessions
+ * @asap_num: number of ASAP FTM sessions
+ * @non_asap_num: number of  non-ASAP FTM sessions
+ * @total_duration_ms: total sessions durations - gives an indication
+ *	of how much time the responder was busy
+ * @unknown_triggers_num: number of unknown FTM triggers - triggers from
+ *	initiators that didn't finish successfully the negotiation phase with
+ *	the responder
+ * @reschedule_requests_num: number of FTM reschedule requests - initiator asks
+ *	for a new scheduling although it already has scheduled FTM slot
+ * @out_of_window_triggers_num: total FTM triggers out of scheduled window
+ */
+struct cfg80211_ftm_responder_stats {
+	u32 filled;
+	u32 success_num;
+	u32 partial_num;
+	u32 failed_num;
+	u32 asap_num;
+	u32 non_asap_num;
+	u64 total_duration_ms;
+	u32 unknown_triggers_num;
+	u32 reschedule_requests_num;
+	u32 out_of_window_triggers_num;
+};
+
+/**
  * struct cfg80211_nan_conf - nan configuration
  *
  * This struct defines nan configuration parameters
@@ -3071,6 +3105,9 @@ struct cfg80211_ops {
 	int	(*start_ftm_responder)(struct wiphy *wiphy,
 				       struct net_device *dev,
 				struct cfg80211_ftm_responder_params *params);
+	int	(*get_ftm_responder_stats)(struct wiphy *wiphy,
+					   struct net_device *dev,
+				struct cfg80211_ftm_responder_stats *ftm_stats);
 	int	(*start_nan)(struct wiphy *wiphy, struct wireless_dev *wdev,
 			     struct cfg80211_nan_conf *conf);
 	void	(*stop_nan)(struct wiphy *wiphy, struct wireless_dev *wdev);
