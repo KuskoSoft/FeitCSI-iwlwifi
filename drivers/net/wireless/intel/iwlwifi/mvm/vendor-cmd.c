@@ -118,6 +118,8 @@ static int iwl_mvm_set_low_latency(struct wiphy *wiphy,
 	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
 	int err = iwl_mvm_parse_vendor_data(tb, data, data_len);
 	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	bool prev;
 
 	if (err)
 		return err;
@@ -126,8 +128,9 @@ static int iwl_mvm_set_low_latency(struct wiphy *wiphy,
 		return -ENODEV;
 
 	mutex_lock(&mvm->mutex);
-	err = iwl_mvm_update_low_latency(mvm, vif,
-					 tb[IWL_MVM_VENDOR_ATTR_LOW_LATENCY]);
+	prev = iwl_mvm_vif_low_latency(mvmvif);
+	mvmvif->low_latency_vcmd = tb[IWL_MVM_VENDOR_ATTR_LOW_LATENCY];
+	err = iwl_mvm_update_low_latency(mvm, vif, prev);
 	mutex_unlock(&mvm->mutex);
 
 	return err;
@@ -148,7 +151,7 @@ static int iwl_mvm_get_low_latency(struct wiphy *wiphy,
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 100);
 	if (!skb)
 		return -ENOMEM;
-	if (mvmvif->low_latency &&
+	if (iwl_mvm_vif_low_latency(mvmvif) &&
 	    nla_put_flag(skb, IWL_MVM_VENDOR_ATTR_LOW_LATENCY)) {
 		kfree_skb(skb);
 		return -ENOBUFS;
