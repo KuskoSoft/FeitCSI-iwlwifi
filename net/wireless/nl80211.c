@@ -11449,9 +11449,7 @@ static int nl80211_start_ftm_responder(struct sk_buff *skb,
 	if (info->attrs[NL80211_ATTR_LCI]) {
 		if (nla_len(info->attrs[NL80211_ATTR_LCI]) > U8_MAX)
 			return -EINVAL;
-		/* check that subelements are well formed */
-		if (!is_valid_ie_attr(info->attrs[NL80211_ATTR_LCI]))
-			return -EINVAL;
+
 		params.lci = nla_data(info->attrs[NL80211_ATTR_LCI]);
 		params.lci_len = nla_len(info->attrs[NL80211_ATTR_LCI]);
 	}
@@ -11459,9 +11457,7 @@ static int nl80211_start_ftm_responder(struct sk_buff *skb,
 	if (info->attrs[NL80211_ATTR_CIVIC]) {
 		if (nla_len(info->attrs[NL80211_ATTR_CIVIC]) > U8_MAX)
 			return -EINVAL;
-		/* check that subelements are well formed */
-		if (!is_valid_ie_attr(info->attrs[NL80211_ATTR_CIVIC]))
-			return -EINVAL;
+
 		params.civic = nla_data(info->attrs[NL80211_ATTR_CIVIC]);
 		params.civic_len = nla_len(info->attrs[NL80211_ATTR_CIVIC]);
 	}
