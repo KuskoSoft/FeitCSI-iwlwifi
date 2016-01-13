@@ -11406,10 +11406,10 @@ static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
 	msrment->nl_portid = genl_info_snd_portid(info);
 
 	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
-		if (!msg) {
-			err = -ENOMEM;
-			goto free_request;
-		}
+	if (!msg) {
+		err = -ENOMEM;
+		goto free_request;
+	}
 
 	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_MSRMENT_REQUEST);
