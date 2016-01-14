@@ -174,16 +174,6 @@ config IWLWIFI_D0I3_DEFAULT_DISABLE
 
 	  If unsure, select N.
 
-config IWLWIFI_RTPM_WIFI_OFF
-	bool "Allow runtime PM with WiFi off"
-	depends on IWLMVM
-	help
-	  Say Y to use a dummy runtime PM implementation when WiFi is
-	  turned off.  This is needed for platforms that cannot go into
-	  S0i3 when the device doesn't enter runtime suspend.
-
-	  If unsure, select N.
-
 config IWLWIFI_NUM_STA_INTERFACES
 	int "number of supported concurrent station interfaces"
 	range 1 2
