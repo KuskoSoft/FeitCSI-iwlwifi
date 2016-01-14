@@ -979,29 +979,6 @@ static int iwl_vendor_gscan_parse_buckets(struct nlattr *info, u32 max_buckets,
 	return 0;
 }
 
-static void iwl_vendor_get_gp2_boottime(struct iwl_mvm *mvm, u32 *gp2,
-					u64 *boottime)
-{
-	bool ps_disabled;
-
-	lockdep_assert_held(&mvm->mutex);
-
-	/* Disable power save when reading GP2 */
-	ps_disabled = mvm->ps_disabled;
-	if (!ps_disabled) {
-		mvm->ps_disabled = true;
-		iwl_mvm_power_update_device(mvm);
-	}
-
-	*gp2 = iwl_read_prph(mvm->trans, DEVICE_SYSTEM_TIME_REG);
-	*boottime = ktime_get_boot_ns();
-
-	if (!ps_disabled) {
-		mvm->ps_disabled = ps_disabled;
-		iwl_mvm_power_update_device(mvm);
-	}
-}
-
 static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 				  struct wireless_dev *wdev,
 				  const void *data, int data_len)
@@ -1080,7 +1057,7 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 
 	gscan->wdev = wdev;
 
-	iwl_vendor_get_gp2_boottime(mvm, &gscan->gp2, &boottime);
+	iwl_mvm_get_sync_time(mvm, &gscan->gp2, &boottime);
 	gscan->timestamp = DIV_ROUND_CLOSEST_ULL(boottime, NSEC_PER_USEC);
 
 unlock:
