@@ -979,8 +979,8 @@ static int iwl_vendor_gscan_parse_buckets(struct nlattr *info, u32 max_buckets,
 	return 0;
 }
 
-static void iwl_vendor_get_gp2_monotonic(struct iwl_mvm *mvm, u32 *gp2,
-					 struct timespec *ts)
+static void iwl_vendor_get_gp2_boottime(struct iwl_mvm *mvm, u32 *gp2,
+					u64 *boottime)
 {
 	bool ps_disabled;
 
@@ -994,7 +994,7 @@ static void iwl_vendor_get_gp2_monotonic(struct iwl_mvm *mvm, u32 *gp2,
 	}
 
 	*gp2 = iwl_read_prph(mvm->trans, DEVICE_SYSTEM_TIME_REG);
-	ktime_get_ts(ts);
+	*boottime = ktime_get_boot_ns();
 
 	if (!ps_disabled) {
 		mvm->ps_disabled = ps_disabled;
@@ -1021,7 +1021,7 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
 	int err;
 	u32 tmp;
-	struct timespec ts;
+	u64 boottime;
 
 	if (!fw_has_capa(&mvm->fw->ucode_capa,
 			 IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT))
@@ -1080,9 +1080,8 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 
 	gscan->wdev = wdev;
 
-	iwl_vendor_get_gp2_monotonic(mvm, &gscan->gp2, &ts);
-	gscan->timestamp = (u64)ts.tv_sec * USEC_PER_SEC +
-		ts.tv_nsec / NSEC_PER_USEC;
+	iwl_vendor_get_gp2_boottime(mvm, &gscan->gp2, &boottime);
+	gscan->timestamp = DIV_ROUND_CLOSEST_ULL(boottime, NSEC_PER_USEC);
 
 unlock:
 	mutex_unlock(&mvm->mutex);
@@ -1891,7 +1890,7 @@ static int iwl_vendor_put_one_result(struct sk_buff *skb,
 	u64 ts;
 
 	/*
-	 * Convert the timestamp of the result to monotonic time,
+	 * Convert the timestamp of the result to boottime time,
 	 * which is what gscan expects.
 	 */
 	gp2_ts = le32_to_cpu(res->timestamp);
