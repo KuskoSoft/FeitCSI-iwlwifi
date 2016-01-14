@@ -1674,7 +1674,7 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 
 	if (ret) {
 		IWL_ERR(trans, "Cannot send buffer %d\n", ret);
-		return ret;
+		goto out;
 	}
 
 	IWL_DEBUG_FW(trans,
@@ -1690,15 +1690,16 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 					       CSR_INT_BIT_FH_TX);
 			iwl_trans_sdio_write32(trans, CSR_FH_INT_STATUS,
 					       CSR_FH_INT_TX_MASK);
-			mutex_unlock(&trans_sdio->target_access_mtx);
-			return 0;
+			ret = 0;
+			goto out;
 		}
 		udelay(50);
 		reg_polls--;
 	}
+	ret = -ETIMEDOUT;
+out:
 	mutex_unlock(&trans_sdio->target_access_mtx);
-
-	return -ETIMEDOUT;
+	return ret;
 }
 
 static int iwl_sdio_load_fw_section(struct iwl_trans *trans, u8 section_num,
