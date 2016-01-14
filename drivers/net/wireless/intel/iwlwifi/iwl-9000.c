@@ -76,7 +76,7 @@
 #define IWL9000_SMEM_LEN		0x68000
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-#define IWL9000_FW_PRE "fpga-iwlwifi-Pulsar-"
+#define IWL9000_FW_PRE "fpga-iwlwifi-Pulsar1dot5-"
 #else
 #define  IWL9000_FW_PRE "iwlwifi-9000-"
 #endif
