@@ -101,6 +101,8 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_RXFILTER] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_RXFILTER_OP] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER] = { .type = NLA_STRING },
+	[IWL_MVM_VENDOR_ATTR_NAN_FAW_FREQ] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_NAN_FAW_SLOTS] = { .type = NLA_U8 },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -1617,6 +1619,44 @@ static int iwl_mvm_vendor_dbg_collect(struct wiphy *wiphy,
 	return 0;
 }
 
+static int iwl_mvm_vendor_nan_faw_conf(struct wiphy *wiphy,
+				       struct wireless_dev *wdev,
+				       const void *data, int data_len)
+{
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct cfg80211_chan_def def = {};
+	struct ieee80211_channel *chan;
+	u32 freq;
+	u8 slots;
+	int retval;
+
+	retval = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (retval)
+		return retval;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_NAN_FAW_SLOTS])
+		return -EINVAL;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_NAN_FAW_FREQ])
+		return -EINVAL;
+
+	freq = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_NAN_FAW_FREQ]);
+	slots = nla_get_u8(tb[IWL_MVM_VENDOR_ATTR_NAN_FAW_SLOTS]);
+
+	chan = ieee80211_get_channel(wiphy, freq);
+	if (!chan)
+		return -EINVAL;
+
+	cfg80211_chandef_create(&def, chan, NL80211_CHAN_NO_HT);
+
+	if (!cfg80211_chandef_usable(wiphy, &def, IEEE80211_CHAN_DISABLED))
+		return -EINVAL;
+
+	return iwl_mvm_nan_config_nan_faw_cmd(mvm, &def, slots);
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -1813,6 +1853,16 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_mvm_vendor_dbg_collect,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+
+			.subcmd = IWL_MVM_VENDOR_CMD_NAN_FAW_CONF,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mvm_vendor_nan_faw_conf,
 	},
 };
 
