@@ -3593,6 +3593,7 @@ void ieee80211_nan_func_terminated(struct ieee80211_vif *vif,
 {
 	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
 	struct ieee80211_nan_func *func;
+	struct wireless_dev *wdev;
 	u64 cookie;
 
 	if (WARN_ON(vif->type != NL80211_IFTYPE_NAN))
@@ -3615,8 +3616,10 @@ void ieee80211_nan_func_terminated(struct ieee80211_vif *vif,
 	cfg80211_free_nan_func_members(&func->func);
 	kfree(func);
 
-	cfg80211_nan_func_terminated(ieee80211_vif_to_wdev(vif), inst_id,
-				     reason, cookie, gfp);
+	wdev = ieee80211_vif_to_wdev(vif);
+	if (!WARN_ON_ONCE(!wdev))
+		cfg80211_nan_func_terminated(wdev, inst_id,
+					     reason, cookie, gfp);
 }
 EXPORT_SYMBOL(ieee80211_nan_func_terminated);
 
@@ -3626,6 +3629,7 @@ void ieee80211_nan_func_match(struct ieee80211_vif *vif,
 {
 	struct ieee80211_sub_if_data *sdata = vif_to_sdata(vif);
 	struct ieee80211_nan_func *func;
+	struct wireless_dev *wdev;
 
 	if (WARN_ON(vif->type != NL80211_IFTYPE_NAN))
 		return;
@@ -3641,7 +3645,9 @@ void ieee80211_nan_func_match(struct ieee80211_vif *vif,
 
 	spin_unlock_bh(&sdata->u.nan.func_lock);
 
-	cfg80211_nan_match(ieee80211_vif_to_wdev(vif), match, gfp);
+	wdev = ieee80211_vif_to_wdev(vif);
+	if (!WARN_ON_ONCE(!wdev))
+		cfg80211_nan_match(wdev, match, gfp);
 }
 EXPORT_SYMBOL(ieee80211_nan_func_match);
 
