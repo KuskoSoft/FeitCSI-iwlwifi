@@ -11217,6 +11217,8 @@ static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
 
 	target->chan_def.chan = ieee80211_get_channel(&rdev->wiphy,
 		nla_get_u32(tb[NL80211_FTM_TARGET_ATTR_FREQ]));
+	if (!target->chan_def.chan)
+		return -EINVAL;
 
 	target->chan_def.width = nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_BW]);
 
