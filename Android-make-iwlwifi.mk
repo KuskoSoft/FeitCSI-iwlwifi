@@ -53,10 +53,8 @@ iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL) $(INTEL_IWL_MOD_DEP)
 
 INTEL_IWL_SRC_FILES := $(shell find $(INTEL_IWL_SRC_DIR) -path $(INTEL_IWL_SRC_DIR)/.git -prune -o -print)
 $(INTEL_IWL_OUT_DIR): $(INTEL_IWL_SRC_FILES)
-	@echo Copying directory $(INTEL_IWL_SRC_DIR) to $(INTEL_IWL_OUT_DIR)
-	@rm -rf $(INTEL_IWL_OUT_DIR)
-	@mkdir -p $(INTEL_IWL_OUT_DIR)
-	@cp -rfl $(INTEL_IWL_SRC_DIR)/. $(INTEL_IWL_OUT_DIR)/
+	@echo Syncing directory $(INTEL_IWL_SRC_DIR) to $(INTEL_IWL_OUT_DIR)
+	@rsync -rt --del $(INTEL_IWL_SRC_DIR)/ $(INTEL_IWL_OUT_DIR)
 
 $(IWLWIFI_CONFIGURE): $(INTEL_IWL_KERNEL_DEPEND) $(INTEL_IWL_OUT_DIR)
 	@echo Configuring kernel module iwlwifi with defconfig-$(INTEL_IWL_BOARD_CONFIG)
