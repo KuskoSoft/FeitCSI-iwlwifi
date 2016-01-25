@@ -9,8 +9,8 @@
 .PHONY: iwlwifi
 
 INTEL_IWL_SRC_DIR := $(call my-dir)
-INTEL_IWL_OUT_DIR := $(ANDROID_BUILD_TOP)/$(PRODUCT_OUT)/iwlwifi
-INTEL_IWL_COMPAT_INSTALL_PATH ?= $(ANDROID_BUILD_TOP)/$(TARGET_OUT)
+INTEL_IWL_OUT_DIR := $(abspath $(PRODUCT_OUT)/iwlwifi)
+INTEL_IWL_COMPAT_INSTALL_PATH ?= $(abspath $(TARGET_OUT))
 
 ifeq ($(CROSS_COMPILE),)
 ifneq ($(TARGET_TOOLS_PREFIX),)
@@ -38,7 +38,7 @@ endif
 
 ifeq ($(INTEL_IWL_USE_RM_MAC_CFG),y)
 copy_modules_to_root: iwlwifi
-INTEL_IWL_COMPAT_INSTALL_PATH := $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_MODINSTALL)
+INTEL_IWL_COMPAT_INSTALL_PATH := $(abspath $(KERNEL_OUT_MODINSTALL))
 INTEL_IWL_KERNEL_DEPEND := modules_install
 INTEL_IWL_RM_MAC_CFG_DEPEND := iwlwifi_rm_mac_cfg
 INTEL_IWL_INSTALL_MOD_STRIP := INSTALL_MOD_STRIP=1
@@ -47,14 +47,7 @@ endif
 # IWLWIFI_CONFIGURE is a rule to use a defconfig for iwlwifi
 IWLWIFI_CONFIGURE := $(INTEL_IWL_OUT_DIR)/.config
 
-# some build envs define KERNEL_OUT_DIR as relative to ANDROID_BUILD_TOP,
-# while others define it as the absolute path. check for it
-# and define KERNEL_OUT_ABS_DIR appropriately.
-ifeq (/,$(shell echo $(KERNEL_OUT_DIR) | cut -c1))
-KERNEL_OUT_ABS_DIR := $(KERNEL_OUT_DIR)
-else
-KERNEL_OUT_ABS_DIR := $(ANDROID_BUILD_TOP)/$(KERNEL_OUT_DIR)
-endif
+KERNEL_OUT_ABS_DIR := $(abspath $(KERNEL_OUT_DIR))
 
 iwlwifi: iwlwifi_build $(INTEL_IWL_COMPAT_INSTALL) $(INTEL_IWL_MOD_DEP)
 
