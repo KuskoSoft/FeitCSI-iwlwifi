@@ -322,4 +322,8 @@ static inline void netif_tx_napi_add(struct net_device *dev,
 }
 #endif /* < 4.5 */
 
+#ifndef NETIF_F_CSUM_MASK
+#define NETIF_F_CSUM_MASK (NETIF_F_V4_CSUM | NETIF_F_V6_CSUM)
+#endif
+
 #endif /* __BACKPORT_NETDEVICE_H */
