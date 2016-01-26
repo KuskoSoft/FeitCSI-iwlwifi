@@ -1046,6 +1046,12 @@ struct iwl_mvm {
 #endif
 
 	struct ieee80211_vif *nan_vif;
+
+	/*
+	 * Drop beacons from other APs in AP mode when there are no connected
+	 * clients.
+	 */
+	bool drop_bcn_ap_mode;
 };
 
 /* Extract MVM priv from op_mode and _hw */
