@@ -225,6 +225,7 @@ const struct iwl_cfg iwl8265_2ac_cfg = {
 	.no_power_up_nic_in_init = true,
 #endif
 	.max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
+	.vht_mu_mimo_supported = true,
 };
 
 const struct iwl_cfg iwl4165_2ac_cfg = {
