@@ -7,7 +7,7 @@
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
- * Copyright(c) 2015 Intel Deutschland GmbH
+ * Copyright(c) 2015 - 2016 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -110,6 +110,16 @@ void iwl_sdio_tx_policy_trigger(struct work_struct *data)
 			container_of(data, struct iwl_trans_slv,
 				     policy_trigger);
 	struct iwl_trans *trans = IWL_TRANS_SLV_GET_IWL_TRANS(trans_slv);
+
+	/*
+	 * In some corner cases (e.g. tx reclaim during hw restart),
+	 * policy trigger may be scheduled after iwl_sdio_tx_stop()
+	 * was called, but before the txqs were freed.
+	 * Don't try sending frames in this scenario, as some structs
+	 * are not initialized anymore.
+	 */
+	if (unlikely(!test_bit(STATUS_DEVICE_ENABLED, &trans->status)))
+		return;
 
 	while (1) {
 		int ret, qidx, waiting_in_qidx;
