@@ -105,6 +105,7 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_NAN_FAW_SLOTS] = { .type = NLA_U8 },
 	[IWL_MVM_VENDOR_ATTR_LQM_DURATION] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_LQM_TIMEOUT] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD_NUM] = { .type = NLA_U32 },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -943,33 +944,68 @@ static int iwl_vendor_gscan_parse_buckets(struct nlattr *info, u32 max_buckets,
 	bucket_policy[MAX_IWL_MVM_VENDOR_BUCKET_SPEC + 1] = {
 		[IWL_MVM_VENDOR_BUCKET_SPEC_INDEX] = { .type = NLA_U8 },
 		[IWL_MVM_VENDOR_BUCKET_SPEC_BAND] = { .type = NLA_U32 },
-		[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD] = {.type = NLA_U32 },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD] = { .type = NLA_U32 },
 		[IWL_MVM_VENDOR_BUCKET_SPEC_REPORT_MODE] = { .type = NLA_U32 },
 		[IWL_MVM_VENDOR_BUCKET_SPEC_CHANNELS] = { .type = NLA_NESTED },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_MAX_PERIOD] = { .type = NLA_U32 },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_EXPONENT] = { .type = NLA_U32 },
+		[IWL_MVM_VENDOR_BUCKET_SPEC_STEP_CNT] = { .type = NLA_U32 },
 	};
 
 	if (!max_buckets)
 		return -EINVAL;
 
 	nla_for_each_nested(nl_bucket, info, rem_bucket) {
-		u32 tmp;
+		u32 tmp, scan_period;
 
 		if (nla_parse_nested(tb, MAX_IWL_MVM_VENDOR_BUCKET_SPEC,
 				     nl_bucket, bucket_policy) ||
 		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_INDEX] ||
 		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD] ||
-		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_REPORT_MODE])
+		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_REPORT_MODE] ||
+		    !tb[IWL_MVM_VENDOR_BUCKET_SPEC_MAX_PERIOD])
 			return -EINVAL;
 
-		tmp = nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD]);
-		buckets[i].scan_interval = cpu_to_le32(tmp);
+		scan_period =
+			nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_PERIOD]);
+		buckets[i].scan_period = cpu_to_le32(scan_period);
+
 		tmp = nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_REPORT_MODE]);
-		if (tmp >= NUM_IWL_MVM_VENDOR_GSCAN_REPORT)
+		if (tmp == IWL_MVM_VENDOR_GSCAN_REPORT_HISTORY_RESERVED ||
+		    tmp >= NUM_IWL_MVM_VENDOR_GSCAN_REPORT)
 			return -EINVAL;
 
 		buckets[i].report_policy = cpu_to_le32(tmp);
+
 		buckets[i].index =
 			nla_get_u8(tb[IWL_MVM_VENDOR_BUCKET_SPEC_INDEX]);
+
+		tmp = nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_MAX_PERIOD]);
+		if (tmp && tmp < scan_period)
+			return -EINVAL;
+
+		buckets[i].max_scan_period = cpu_to_le32(tmp);
+
+		/* if max_scan_period is non zero or different than period,
+		 * then this bucket is an exponential backoff bucket
+		 */
+		if (tmp > scan_period) {
+			if (!(tb[IWL_MVM_VENDOR_BUCKET_SPEC_EXPONENT] &&
+			      tb[IWL_MVM_VENDOR_BUCKET_SPEC_STEP_CNT]))
+				return -EINVAL;
+
+			tmp =
+			   nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_EXPONENT]);
+
+			buckets[i].exponent = cpu_to_le32(tmp);
+
+			tmp =
+			   nla_get_u32(tb[IWL_MVM_VENDOR_BUCKET_SPEC_STEP_CNT]);
+			if (tmp <= 0)
+				return -EINVAL;
+
+			buckets[i].step_count = cpu_to_le32(tmp);
+		}
 
 		/*
 		 * If a band is specified, the channel list is not used and all
@@ -1039,7 +1075,8 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 		goto unlock;
 
 	if (!tb[IWL_MVM_VENDOR_ATTR_GSCAN_MAX_AP_PER_SCAN] ||
-	    !tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD] ||
+	    (!tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD] &&
+	     !tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD_NUM]) ||
 	    !tb[IWL_MVM_VENDOR_ATTR_GSCAN_BUCKET_SPECS]) {
 		err = -EINVAL;
 		goto unlock;
@@ -1062,11 +1099,23 @@ static int iwl_vendor_start_gscan(struct wiphy *wiphy,
 
 	cmd->max_scan_aps = cpu_to_le32(tmp);
 
-	tmp = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD]);
-	if (tmp > capa->max_scan_reporting_threshold)
-		tmp = capa->max_scan_reporting_threshold;
+	if (tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD]) {
+		tmp =
+		    nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD]);
+		if (tmp > capa->max_scan_reporting_threshold)
+			tmp = capa->max_scan_reporting_threshold;
+		cmd->report_threshold = cpu_to_le32(tmp);
+	} else {
+		cmd->report_threshold = 0;
+	}
 
-	cmd->report_threshold = cpu_to_le32(tmp);
+	if (tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD_NUM]) {
+		tmp =
+		nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_GSCAN_REPORT_THRESHOLD_NUM]);
+		cmd->report_threshold_num_scans = cpu_to_le32(tmp);
+	} else {
+		cmd->report_threshold_num_scans = 0;
+	}
 
 	err = iwl_vendor_gscan_parse_buckets(tb[IWL_MVM_VENDOR_ATTR_GSCAN_BUCKET_SPECS],
 					     capa->max_scan_buckets, cmd);
