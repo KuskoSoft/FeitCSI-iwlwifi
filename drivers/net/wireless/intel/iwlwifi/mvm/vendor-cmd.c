@@ -863,7 +863,20 @@ static int iwl_vendor_gscan_get_capabilities(struct wiphy *wiphy,
 			gscan_capa->max_significant_change_aps) ||
 	    nla_put_u32(skb,
 			IWL_MVM_VENDOR_ATTR_GSCAN_MAX_BSSID_HISTORY_ENTRIES,
-			gscan_capa->max_bssid_history_entries)) {
+			gscan_capa->max_bssid_history_entries) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_GSCAN_MAX_HOTLIST_SSIDS,
+			gscan_capa->max_hotlist_ssids) ||
+	    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_GSCAN_MAX_NUM_EPNO_NETWORKS,
+			gscan_capa->max_number_epno_networks) ||
+	    nla_put_u32(skb,
+			IWL_MVM_VENDOR_ATTR_GSCAN_MAX_NUM_EPNO_NETWORKS_BY_SSID,
+			gscan_capa->max_number_epno_networks_by_ssid) ||
+	    nla_put_u32(skb,
+			IWL_MVM_VENDOR_ATTR_GSCAN_MAX_NUM_WHITE_LISTED_SSID,
+			gscan_capa->max_number_of_white_listed_ssid) ||
+	    nla_put_u32(skb,
+			IWL_MVM_VENDOR_ATTR_GSCAN_MAX_NUM_BLACK_LISTED_SSID,
+			gscan_capa->max_number_of_black_listed_ssid)) {
 		kfree_skb(skb);
 		return -ENOBUFS;
 	}
