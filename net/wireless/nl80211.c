@@ -11354,7 +11354,7 @@ static int nl80211_parse_ftm_request(struct cfg80211_registered_device *rdev,
 		return -EINVAL;
 
 	if (!tb[NL80211_FTM_REQ_ATTR_TIMEOUT])
-		ftm->timeout = 50;
+		ftm->timeout = 9;
 	else
 		ftm->timeout = nla_get_u8(tb[NL80211_FTM_REQ_ATTR_TIMEOUT]);
 
