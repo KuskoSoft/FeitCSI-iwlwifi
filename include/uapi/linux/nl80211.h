@@ -870,8 +870,8 @@
  *	which just terminated.
  * @NL80211_CMD_RM_NAN_FUNCTION: remove a NAN function based on its instance
  *	id and cookie.
- * @NL80211_CMD_CHANGE_NAN_CONFIG: Changes current NAN configuration. NAN
- *	must be opeartional (%NL80211_CMD_START_NAN was executed).
+ * @NL80211_CMD_CHANGE_NAN_CONFIG: Change current NAN configuration. NAN
+ *	must be operational (%NL80211_CMD_START_NAN was executed).
  *	It must contain at least one of the following attributes:
  *	%NL80211_ATTR_NAN_MASTER_PREF, %NL80211_ATTR_NAN_DUAL.
  * @NL80211_CMD_NAN_FUNC_MATCH: Notification sent when a match is reported.
