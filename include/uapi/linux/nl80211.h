@@ -1888,7 +1888,7 @@ enum nl80211_commands {
  *	&NL80211_CMD_START_NAN and optionally with
  *	&NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0, 1 or
  *	255.
- * @NL80211_ATTR_NAN_DUAL: NaN dual band operation config (see
+ * @NL80211_ATTR_NAN_DUAL: NAN dual band operation config (see
  *	&enum nl80211_nan_dual_band_conf). This attribute is used with
  *	&NL80211_CMD_START_NAN and optionally with
  *	&NL80211_CMD_CHANGE_NAN_CONFIG.
@@ -5077,8 +5077,8 @@ enum nl80211_ftm_response_entry {
  * Defines the NAN dual band mode of operation
  *
  * @NL80211_NAN_BAND_DEFAULT: device default mode
- * @NL80211_NAN_BAND_SINGLE: 2.4Ghz only mode
- * @NL80211_NAN_BAND_DUAL: 2.4Ghz and 5.2Ghz mode
+ * @NL80211_NAN_BAND_SINGLE: 2.4GHz only mode
+ * @NL80211_NAN_BAND_DUAL: 2.4GHz and 5.2GHz mode
   */
 enum nl80211_nan_dual_band_conf {
 	NL80211_NAN_BAND_DEFAULT,
