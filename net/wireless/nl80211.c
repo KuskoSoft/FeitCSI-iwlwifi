@@ -10511,7 +10511,7 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 	if (!msg)
 		return;
 
-	hdr = nl80211hdr_put(msg, 0, 0, 0, NL80211_CMD_NAN_FUNC_TERM);
+	hdr = nl80211hdr_put(msg, 0, 0, 0, NL80211_CMD_RM_NAN_FUNCTION);
 	if (!hdr) {
 		nlmsg_free(msg);
 		return;

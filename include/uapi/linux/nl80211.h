@@ -868,8 +868,10 @@
  *	event may be handled by the user space after it has already added a
  *	new function that got the same instace id from the kernel as the one
  *	which just terminated.
- * @NL80211_CMD_RM_NAN_FUNCTION: remove a NAN function based on its instance
- *	id and cookie.
+ * @NL80211_CMD_RM_NAN_FUNCTION: Remove a NAN function identified by its
+ *	cookie. This command is also used as a notification when a NAN function
+ *	terminates. In that case, it will contain
+ *	a %NL80211_ATTR_NAN_FUNC_INST_ID and a %NL80211_ATTR_COOKIE attributes.
  * @NL80211_CMD_CHANGE_NAN_CONFIG: Change current NAN configuration. NAN
  *	must be operational (%NL80211_CMD_START_NAN was executed).
  *	It must contain at least one of the following attributes:
@@ -877,9 +879,6 @@
  * @NL80211_CMD_NAN_FUNC_MATCH: Notification sent when a match is reported.
  *	This will contain a %NL80211_ATTR_NAN_MATCH nested attribute and
  *	%NL80211_ATTR_COOKIE.
- * @NL80211_CMD_NAN_FUNC_TERM: Notification sent when a NAN function is
- *	terminated. This will contain a %NL80211_ATTR_NAN_FUNC_INST_ID
- *	and %NL80211_ATTR_COOKIE attributes.
  *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
@@ -1080,7 +1079,6 @@ enum nl80211_commands {
 	NL80211_CMD_RM_NAN_FUNCTION,
 	NL80211_CMD_CHANGE_NAN_CONFIG,
 	NL80211_CMD_NAN_MATCH,
-	NL80211_CMD_NAN_FUNC_TERM,
 
 	/* add new commands above here */
 
