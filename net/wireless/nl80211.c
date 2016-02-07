@@ -10153,7 +10153,7 @@ static int handle_nan_filter(struct nlattr *attr_filter,
 
 	n_entries = validate_nan_filter(attr_filter);
 	if (n_entries < 0)
-		return -EINVAL;
+		return n_entries;
 
 	BUILD_BUG_ON(sizeof(*func->rx_filters) != sizeof(*func->tx_filters));
 
