@@ -10226,10 +10226,7 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 	if (!info->attrs[NL80211_ATTR_NAN_FUNC])
 		return -EINVAL;
 
-	if (!info->attrs[NL80211_ATTR_COOKIE])
-		return -EINVAL;
-
-	func.cookie = nla_get_u64(info->attrs[NL80211_ATTR_COOKIE]);
+	func.cookie = wdev->wiphy->cookie_counter++;
 
 	err = nla_parse(tb, NL80211_NAN_FUNC_ATTR_MAX,
 			nla_data(info->attrs[NL80211_ATTR_NAN_FUNC]),
@@ -10386,9 +10383,10 @@ out:
 		return err;
 	}
 
-	/* propagate the instance id to userspace  */
+	/* propagate the instance id and cookie to userspace  */
 	if (WARN_ON(nla_put_u8(msg, NL80211_ATTR_NAN_FUNC_INST_ID,
-			       func.instance_id))) {
+			       func.instance_id) ||
+		    nla_put_u64(msg, NL80211_ATTR_COOKIE, func.cookie))) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}
@@ -10402,7 +10400,6 @@ static int nl80211_nan_rm_func(struct sk_buff *skb,
 {
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
 	struct wireless_dev *wdev = info->user_ptr[1];
-	u8 instance_id;
 	u64 cookie;
 
 	if (wdev->iftype != NL80211_IFTYPE_NAN)
@@ -10411,16 +10408,12 @@ static int nl80211_nan_rm_func(struct sk_buff *skb,
 	if (!wdev->nan_started)
 		return -ENOTCONN;
 
-	if (!info->attrs[NL80211_ATTR_NAN_FUNC_INST_ID])
-		return -EINVAL;
-
 	if (!info->attrs[NL80211_ATTR_COOKIE])
 		return -EINVAL;
 
-	instance_id = nla_get_u8(info->attrs[NL80211_ATTR_NAN_FUNC_INST_ID]);
 	cookie = nla_get_u64(info->attrs[NL80211_ATTR_COOKIE]);
 
-	rdev_rm_nan_func(rdev, wdev, instance_id, cookie);
+	rdev_rm_nan_func(rdev, wdev, cookie);
 
 	return 0;
 }

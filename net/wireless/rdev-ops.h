@@ -921,11 +921,10 @@ rdev_add_nan_func(struct cfg80211_registered_device *rdev,
 }
 
 static inline void rdev_rm_nan_func(struct cfg80211_registered_device *rdev,
-				    struct wireless_dev *wdev,
-				    u8 instance_id, u64 cookie)
+				    struct wireless_dev *wdev, u64 cookie)
 {
-	trace_rdev_rm_nan_func(&rdev->wiphy, wdev, instance_id, cookie);
-	rdev->ops->rm_nan_func(&rdev->wiphy, wdev, instance_id, cookie);
+	trace_rdev_rm_nan_func(&rdev->wiphy, wdev, cookie);
+	rdev->ops->rm_nan_func(&rdev->wiphy, wdev, cookie);
 	trace_rdev_return_void(&rdev->wiphy);
 }
 

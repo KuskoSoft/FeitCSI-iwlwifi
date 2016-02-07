@@ -3114,7 +3114,7 @@ struct cfg80211_ops {
 	int	(*add_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
 				struct cfg80211_nan_func *nan_func);
 	void	(*rm_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
-			       u8 instance_id, u64 cookie);
+			       u64 cookie);
 	int	(*nan_change_conf)(struct wiphy *wiphy,
 				   struct wireless_dev *wdev,
 				   struct cfg80211_nan_conf *conf,
@@ -3572,6 +3572,8 @@ struct wiphy_ftm_initiator_capa {
  *	This value should be set in MHz.
  * @ftm_initiator_capa: FTM initiator capabilities. If NULL, ftm initiator is
  *	not supported.
+ *
+ * @cookie_counter: unique generic cookie counter, used to identify objects.
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -3698,6 +3700,8 @@ struct wiphy {
 	u8 max_adj_channel_rssi_comp;
 
 	const struct wiphy_ftm_initiator_capa *ftm_initiator_capa;
+
+	u64 cookie_counter;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };

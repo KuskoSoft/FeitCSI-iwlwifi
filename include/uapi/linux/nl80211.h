@@ -855,23 +855,23 @@
  *	After this command NAN functions can be added.
  * @NL80211_CMD_STOP_NAN: Stop the NAN operation, identified by
  *	its %NL80211_ATTR_WDEV interface.
- * @NL80211_CMD_ADD_NAN_FUNCTION: add a NAN function. The function is defined
+ * @NL80211_CMD_ADD_NAN_FUNCTION: Add a NAN function. The function is defined
  *	with %NL80211_ATTR_NAN_FUNC nested attribute. When called, this
  *	operation returns the strictly positive and unique instance id
- *	(%NL80211_ATTR_NAN_FUNC_INST_ID) of the function upon success.
- *	In addition, a user defined cookie must be provided with
- *	%NL80211_ATTR_COOKIE. The cookie is provided by the userspace and has
- *	to be unique (or at least fairly random). The kernel will ignore it
- *	but it will be passed to the user space for any match or termination
- *	event. Since instance ID's can be re-used, this cookie is the right
+ *	(%NL80211_ATTR_NAN_FUNC_INST_ID) and a cookie (%NL80211_ATTR_COOKIE)
+ *	of the function upon success.
+ *	Since instance ID's can be re-used, this cookie is the right
  *	way to identify the function. This will avoid races when a termination
- *	event may be handled by the user space after it has already added a
- *	new function that got the same instace id from the kernel as the one
+ *	event is handled by the user space after it has already added a new
+ *	function that got the same instance id from the kernel as the one
  *	which just terminated.
- * @NL80211_CMD_RM_NAN_FUNCTION: Remove a NAN function identified by its
- *	cookie. This command is also used as a notification when a NAN function
- *	terminates. In that case, it will contain
- *	a %NL80211_ATTR_NAN_FUNC_INST_ID and a %NL80211_ATTR_COOKIE attributes.
+ *	This cookie may be used in NAN events even before the command
+ *	returns, so userspace shouldn't process NAN events until it processes
+ *	the response to this command.
+ * @NL80211_CMD_RM_NAN_FUNCTION: Remove a NAN function by cookie.
+ *	This command is also used as a notification sent when a NAN function is
+ *	terminated. This will contain a %NL80211_ATTR_NAN_FUNC_INST_ID
+ *	and %NL80211_ATTR_COOKIE attributes.
  * @NL80211_CMD_CHANGE_NAN_CONFIG: Change current NAN configuration. NAN
  *	must be operational (%NL80211_CMD_START_NAN was executed).
  *	It must contain at least one of the following attributes:

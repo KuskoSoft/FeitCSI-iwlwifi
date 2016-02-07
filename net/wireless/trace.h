@@ -1972,24 +1972,20 @@ TRACE_EVENT(rdev_add_nan_func,
 
 TRACE_EVENT(rdev_rm_nan_func,
 	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev,
-		 u8 instance_id, u64 cookie),
-	TP_ARGS(wiphy, wdev, instance_id, cookie),
+		 u64 cookie),
+	TP_ARGS(wiphy, wdev, cookie),
 	TP_STRUCT__entry(
 		WIPHY_ENTRY
 		WDEV_ENTRY
-		__field(u8, instance_id)
 		__field(u64, cookie)
 	),
 	TP_fast_assign(
 		WIPHY_ASSIGN;
 		WDEV_ASSIGN;
-		__entry->instance_id = instance_id;
 		__entry->cookie = cookie;
 	),
-	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT
-		  ", instance id=%u, cookie=%llu",
-		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->instance_id,
-		  __entry->cookie)
+	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", cookie=%llu",
+		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->cookie)
 );
 
 TRACE_EVENT(rdev_set_mac_acl,
