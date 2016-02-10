@@ -2172,7 +2172,8 @@ void iwl_trans_pcie_ref(struct iwl_trans *trans)
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	/* take ref wakelock on first reference */
 	if (trans_pcie->ref_count == 1 &&
-	    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE)
+	    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
+	    !trans->suspending)
 		wake_lock(&trans_pcie->ref_wake_lock);
 #endif
 	pm_runtime_get(&trans_pcie->pci_dev->dev);
@@ -2201,10 +2202,10 @@ void iwl_trans_pcie_unref(struct iwl_trans *trans)
 	 * last reference is released.
 	 */
 	if (trans_pcie->ref_count == 0 &&
-	    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE) {
+	    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
+	    !trans->suspending) {
 		wake_unlock(&trans_pcie->ref_wake_lock);
-		if (!trans->suspending)
-			wake_lock_timeout(&trans_pcie->timed_wake_lock,
+		wake_lock_timeout(&trans_pcie->timed_wake_lock,
 				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
 	}
 #endif
