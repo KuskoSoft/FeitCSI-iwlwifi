@@ -1154,7 +1154,6 @@ iwl_vendor_parse_ap_list(struct nlattr *info, u8 max,
 		[IWL_MVM_VENDOR_AP_BSSID] = { .len = ETH_ALEN },
 		[IWL_MVM_VENDOR_AP_LOW_RSSI_THRESHOLD] = { .type = NLA_S8 },
 		[IWL_MVM_VENDOR_AP_HIGH_RSSI_THRESHOLD] = { .type = NLA_S8 },
-		[IWL_MVM_VENDOR_AP_CHANNEL_HINT] = { .type = NLA_U8 },
 	};
 
 	nla_for_each_nested(nl_ap, info, rem_ap) {
@@ -1178,10 +1177,6 @@ iwl_vendor_parse_ap_list(struct nlattr *info, u8 max,
 			-nla_get_s8(tb[IWL_MVM_VENDOR_AP_LOW_RSSI_THRESHOLD]);
 		ap_list[i].high_threshold =
 			-nla_get_s8(tb[IWL_MVM_VENDOR_AP_HIGH_RSSI_THRESHOLD]);
-
-		if (tb[IWL_MVM_VENDOR_AP_CHANNEL_HINT])
-			ap_list[i].channel =
-				nla_get_u8(tb[IWL_MVM_VENDOR_AP_CHANNEL_HINT]);
 
 		i++;
 	}
