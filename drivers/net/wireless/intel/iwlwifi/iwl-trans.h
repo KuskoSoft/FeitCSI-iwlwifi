@@ -851,9 +851,7 @@ struct iwl_trans {
 
 	enum iwl_plat_pm_mode system_pm_mode;
 	enum iwl_plat_pm_mode runtime_pm_mode;
-#ifdef CPTCFG_IWLMVM_WAKELOCK
 	bool suspending;
-#endif /* CPTCFG_IWLMVM_WAKELOCK */
 
 	/* pointer to trans specific struct */
 	/*Ensure that this pointer will always be aligned to sizeof pointer */
