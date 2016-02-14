@@ -2065,6 +2065,7 @@ static int iwl_vendor_put_one_result(struct sk_buff *skb,
 {
 	u32 gp2_ts, diff;
 	u64 ts;
+	u16 beacon_period, capability;
 
 	/*
 	 * Convert the timestamp of the result to boottime time,
@@ -2074,6 +2075,9 @@ static int iwl_vendor_put_one_result(struct sk_buff *skb,
 	diff = gp2_ts - gscan->gp2;
 	ts = gscan->timestamp + diff;
 
+	beacon_period = le16_to_cpu(res->beacon_period);
+	capability = le16_to_cpu(res->capability);
+
 	/* FW sends RSSI as absolute values, so negate here to get dB values */
 	if (nla_put_s8(skb, IWL_MVM_VENDOR_GSCAN_RESULT_RSSI, -res->rssi) ||
 	    nla_put_u64(skb, IWL_MVM_VENDOR_GSCAN_RESULT_TIMESTAMP, ts) ||
@@ -2082,8 +2086,99 @@ static int iwl_vendor_put_one_result(struct sk_buff *skb,
 	    nla_put(skb, IWL_MVM_VENDOR_GSCAN_RESULT_BSSID, ETH_ALEN,
 		    res->bssid) ||
 	    nla_put(skb, IWL_MVM_VENDOR_GSCAN_RESULT_SSID,
-		    IEEE80211_MAX_SSID_LEN, res->ssid))
+		    IEEE80211_MAX_SSID_LEN, res->ssid) ||
+	    nla_put_u16(skb, IWL_MVM_VENDOR_GSCAN_RESULT_BEACON_PERIOD,
+			beacon_period) ||
+	    nla_put_u16(skb, IWL_MVM_VENDOR_GSCAN_RESULT_CAPABILITY,
+			capability))
 		return -ENOBUFS;
+
+	return 0;
+}
+
+static int parse_ssid_data(u8 data[], struct iwl_ssid *ssids_ptr[],
+			   u8 num_ssid)
+{
+	u8 *pos = data;
+	int i;
+
+	for (i = 0; i < num_ssid; i++) {
+		ssids_ptr[i] = (struct iwl_ssid *)pos;
+		if (ssids_ptr[i]->ssid_len > IEEE80211_MAX_SSID_LEN)
+			return -EINVAL;
+
+		pos += sizeof(struct iwl_ssid) + ssids_ptr[i]->ssid_len;
+	}
+	return 0;
+}
+
+static int
+iwl_vendor_put_one_cached_result(struct sk_buff *skb,
+				 struct gscan_data *gscan,
+				 struct iwl_bssid *bssids, u8 num_bssids,
+				 u8 num_ssids, struct iwl_ssid *ssids_ptr[],
+				 struct iwl_gscan_cached_scan_result *res)
+{
+	struct nlattr *nl_results;
+	int i;
+
+	if (res->num_aps && (!num_bssids || !num_ssids))
+		return -EINVAL;
+
+	if (nla_put_u8(skb, IWL_MVM_VENDOR_GSCAN_CACHED_RES_FLAGS,
+		       res->flags) ||
+	    nla_put_u16(skb, IWL_MVM_VENDOR_GSCAN_CACHED_RES_SCAN_ID,
+			le16_to_cpu(res->scan_id)))
+		return -ENOBUFS;
+
+	nl_results = nla_nest_start(skb, IWL_MVM_VENDOR_GSCAN_CACHED_RES_APS);
+	if (!nl_results)
+		return -ENOBUFS;
+
+	for (i = 0; i < res->num_aps; i++) {
+		struct iwl_gscan_packed_scan_result *tmp_ap;
+		struct iwl_gscan_scan_result ap;
+		u8 bssid_idx, ssid_idx;
+		u32 ssid_len;
+		struct nlattr *nl_result = nla_nest_start(skb, i + 1);
+
+		if (!nl_result)
+			return -ENOBUFS;
+
+		tmp_ap = (void *)&res->aps[i];
+		bssid_idx = le16_to_cpu(tmp_ap->bssid_idx);
+		if (bssid_idx >= num_bssids)
+			return -EINVAL;
+
+		ssid_idx = le16_to_cpu(bssids[bssid_idx].ssid_idx);
+		if (ssid_idx > num_ssids)
+			return -EINVAL;
+
+		ssid_len = ssids_ptr[ssid_idx]->ssid_len;
+
+		/* The following params should be converted to CPU endian.
+		 * Copy the values to struct iwl_gscan_scan_result and convert
+		 * them in iwl_vendor_put_one_result()
+		 */
+		ap.timestamp = tmp_ap->timestamp;
+		ap.beacon_period = tmp_ap->beacon_period;
+		ap.capability = tmp_ap->capability;
+		ap.channel = tmp_ap->channel;
+		ap.rssi = tmp_ap->rssi;
+		ether_addr_copy(ap.bssid, bssids[bssid_idx].bssid);
+		memcpy(&ap.ssid, &ssids_ptr[ssid_idx]->ssid, ssid_len);
+
+		/* we don't need to add '\0' if all 32 ssid bytes were used */
+		if (ssid_len < IEEE80211_MAX_SSID_LEN)
+			ap.ssid[ssid_len] = '\0';
+
+		if (iwl_vendor_put_one_result(skb, gscan, &ap))
+			return -ENOBUFS;
+
+		nla_nest_end(skb, nl_result);
+	}
+
+	nla_nest_end(skb, nl_results);
 
 	return 0;
 }
@@ -2095,60 +2190,102 @@ void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	struct iwl_gscan_results_event *event = (void *)pkt->data;
 	enum iwl_mvm_vendor_results_event_type event_type;
-	struct sk_buff *msg;
-	struct nlattr *results;
-	u32 num_res = le32_to_cpu(event->num_res);
-	int i, start_idx = 0;
+	struct sk_buff *msg = NULL;
+	struct nlattr *nl_cached_results;
+	struct iwl_ssid **ssids_ptr = NULL;
+	struct iwl_gscan_cached_scan_result *cached_res;
+	u16 offset_ssid, num_cached_res = le16_to_cpu(event->num_cached_res);
+	int i, res, start_idx = 0;
+	u8 *results;
+	struct iwl_bssid *bssid_data;
 
 	lockdep_assert_held(&mvm->mutex);
 
 	if (WARN_ON(!gscan->wdev))
 		return;
 
-	while (start_idx < num_res) {
+	if (event->num_ssid && event->num_bssid) {
+		ssids_ptr = kcalloc(event->num_ssid, sizeof(struct iwl_ssid *),
+				    GFP_KERNEL);
+		if (!ssids_ptr)
+			return;
+
+		offset_ssid = le16_to_cpu(event->offset_ssid);
+		if (parse_ssid_data(event->data + offset_ssid,
+				    ssids_ptr, event->num_ssid))
+			goto out_free;
+	}
+
+	results = event->data + le16_to_cpu(event->offset_cached_results);
+	bssid_data = (void *)(event->data + le16_to_cpu(event->offset_bssid));
+
+	while (start_idx < num_cached_res) {
 		msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy, gscan->wdev,
 						  3500,
 						  IWL_MVM_VENDOR_EVENT_IDX_GSCAN_RESULTS,
 						  GFP_KERNEL);
 		if (!msg)
-			return;
+			goto out_free;
 
 		event_type = le32_to_cpu(event->event_type);
 		if (event_type >= NUM_IWL_VENDOR_RESULTS_NOTIF_EVENT_TYPE ||
 		    nla_put_u32(msg,
 				IWL_MVM_VENDOR_ATTR_GSCAN_RESULTS_EVENT_TYPE,
 				event_type)) {
-			kfree_skb(msg);
-			return;
+			goto out_free;
 		}
 
-		results = nla_nest_start(msg,
-					 IWL_MVM_VENDOR_ATTR_GSCAN_RESULTS);
-		if (!results) {
-			kfree_skb(msg);
-			return;
-		}
+		nl_cached_results =
+		       nla_nest_start(msg,
+				      IWL_MVM_VENDOR_ATTR_GSCAN_CACHED_RESULTS);
 
-		for (i = start_idx; i < num_res; i++) {
-			struct nlattr *result = nla_nest_start(msg, i + 1);
+		if (!nl_cached_results)
+			goto out_free;
 
-			if (!result)
+		for (i = start_idx; i < num_cached_res; i++) {
+			struct nlattr *nl_cached_res = nla_nest_start(msg,
+								      i + 1);
+			if (!nl_cached_res)
 				break;
 
-			if (iwl_vendor_put_one_result(msg, gscan,
-						      &event->results[i])) {
-				nla_nest_cancel(msg, result);
-				break;
+			cached_res = (void *)results;
+
+			res = iwl_vendor_put_one_cached_result(msg, gscan,
+							       bssid_data,
+							       event->num_bssid,
+							       event->num_ssid,
+							       ssids_ptr,
+							       cached_res);
+			if (res) {
+				if (res == -ENOBUFS) {
+					nla_nest_cancel(msg, nl_cached_res);
+					break;
+				}
+				goto out_free;
 			}
+			nla_nest_end(msg, nl_cached_res);
 
-			nla_nest_end(msg, result);
+			results += sizeof(*cached_res) + cached_res->num_aps *
+				   sizeof(struct iwl_gscan_packed_scan_result);
 		}
+		nla_nest_end(msg, nl_cached_results);
 
-		nla_nest_end(msg, results);
+		/*
+		 * If we failed to add the first cached result, don't try to
+		 * handle it anymore to avoid endless loop.
+		 */
+		if (i == 0)
+			goto out_free;
 
 		start_idx = i;
 		cfg80211_vendor_event(msg, GFP_KERNEL);
 	}
+
+	return;
+
+ out_free:
+	kfree_skb(msg);
+	kfree(ssids_ptr);
 }
 
 static int iwl_vendor_put_hotlist_results(struct sk_buff *msg,
