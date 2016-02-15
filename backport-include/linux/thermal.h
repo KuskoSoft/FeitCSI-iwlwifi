@@ -44,11 +44,15 @@ struct old_thermal_zone_device_ops {
 static inline struct thermal_zone_device *old_thermal_zone_device_register(
 	const char *type, int trips, int mask, void *devdata,
 	struct old_thermal_zone_device_ops *_ops,
-	const struct thermal_zone_params *tzp,
+	const struct thermal_zone_params *_tzp,
 	int passive_delay, int polling_delay)
 {
 	struct thermal_zone_device_ops *ops =
 		(struct thermal_zone_device_ops *) _ops;
+
+	/* cast the const away */
+	struct thermal_zone_params *tzp =
+		(struct thermal_zone_params *)_tzp;
 
 	return thermal_zone_device_register(type, trips, mask, devdata,
 					    ops, tzp, passive_delay,
