@@ -17,11 +17,12 @@ static inline u64 ktime_get_ns(void)
 }
 
 extern ktime_t ktime_get_boottime(void);
+#define ktime_get_boot_ns LINUX_BACKPORT(ktime_get_boot_ns)
 static inline u64 ktime_get_boot_ns(void)
 {
 	return ktime_to_ns(ktime_get_boottime());
 }
-#endif
+#endif /* < 3.17 */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 static inline time64_t ktime_get_seconds(void)

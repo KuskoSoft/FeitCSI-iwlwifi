@@ -43,4 +43,10 @@ static inline struct inode *file_inode(struct file *f)
 	} while(0)
 #endif /* replace_fops */
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0))
+#define no_seek_end_llseek LINUX_BACKPORT(no_seek_end_llseek)
+extern loff_t no_seek_end_llseek(struct file *, loff_t, int);
+#endif /* < 4.5 && >= 3.2 */
+
 #endif	/* _COMPAT_LINUX_FS_H */

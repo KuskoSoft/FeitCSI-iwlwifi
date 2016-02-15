@@ -4,7 +4,6 @@
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)
 extern int bit_wait(void *);
-#define bit_wait_io LINUX_BACKPORT(bit_wait_io)
 extern int bit_wait_io(void *);
 
 static inline int
