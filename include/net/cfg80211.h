@@ -2320,6 +2320,8 @@ struct cfg80211_msrment_request {
 /**
  * struct cfg80211_ftm_result - data for an FTM result of a single target
  *
+ * @filled: bitmap using the bits of &enum nl80211_ftm_response_entry to
+ *	indicate which field is relevant in this struct.
  * @status: Status of measurement
  * @complete: Whether this measurement is the last one expected for this target.
  *	This implies that resources associated with this target may be released.
@@ -2350,13 +2352,24 @@ struct cfg80211_msrment_request {
  * @tx_rate_info: Used tx rate-related data.
  * @rx_rate_info: Used rx rate-related data.
  * @rtt: The Round Trip Time that took for the last measurement for current
- *	target, in psec.
+ *	target, in psec. Since a measurement can have an error tolerance, this
+ *	value can be negative.
  * @rtt_variance: The variance of the RTT values measured for current target, in
  *	psec^2.
  * @rtt_spread: The difference between max and min RTT values measured for
  *	the current target in the current session, in psec.
+ * @distance: distance from target, in cm.  Since a measurement can have an
+ *	error tolerance, this value can be negative.
+ * @distance_variance: variance of the distance, in cm^2.
+ * @distance_spread: The difference between max and min distance values measured
+ *	for the current target in the current session, in cm.
+ * @lci_len: length of the LCI buffer.
+ * @lci: the LCI info buffer.
+ * @civic_len: length of the CIVIC buffer.
+ * @civic: the CIVIC info buffer.
  */
 struct cfg80211_ftm_result {
+	u32 filled;
 	enum nl80211_ftm_response_status status;
 	bool complete;
 	struct cfg80211_ftm_target *target;
@@ -2373,9 +2386,16 @@ struct cfg80211_ftm_result {
 	u8 rssi_spread;
 	struct rate_info tx_rate_info;
 	struct rate_info rx_rate_info;
-	u64 rtt;
+	s64 rtt;
 	u64 rtt_variance;
 	u64 rtt_spread;
+	s64 distance;
+	u64 distance_variance;
+	u64 distance_spread;
+	u32 lci_len;
+	const u8 *lci;
+	u32 civic_len;
+	const u8 *civic;
 };
 
 /**

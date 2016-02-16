@@ -4849,11 +4849,15 @@ enum nl80211_msrment_type {
  *	measurement. Note that not every measurement can be performed at every
  *	given moment in time. See specific measurement details for execution
  *	conditions.
+ * @NL80211_MSRMENT_STATUS_TIMEOUT: Timeout given in
+ *	@NL80211_FTM_REQ_ATTR_TIMEOUT has expired before request completion.
+ *	The response will include completed measurements.
  * @NL80211_MSRMENT_STATUS_FAIL: Measurement failed.
  */
 enum nl80211_msrment_status {
 	NL80211_MSRMENT_STATUS_SUCCESS,
 	NL80211_MSRMENT_STATUS_REFUSED,
+	NL80211_MSRMENT_STATUS_TIMEOUT,
 	NL80211_MSRMENT_STATUS_FAIL,
 };
 
@@ -5053,12 +5057,16 @@ enum nl80211_ftm_request {
  * @NL80211_FTM_RESP_SUCCESS: Successful measurement, given results are valid.
  * @NL80211_FTM_RESP_TARGET_INCAPAB: Target reported incapable
  * @NL80211_FTM_RESP_TARGET_BUSY: Target reported busy
+ * @NL80211_FTM_RESP_NOT_MEASURED: Target not measured due to timeout expiration
+ * @NL80211_FTM_RESP_TARGET_UNAVAILABLE: Target is unavailable.
  * @NL80211_FTM_RESP_FAIL: Failed for some other reason.
  */
 enum nl80211_ftm_response_status {
 	NL80211_FTM_RESP_SUCCESS,
 	NL80211_FTM_RESP_TARGET_INCAPAB,
 	NL80211_FTM_RESP_TARGET_BUSY,
+	NL80211_FTM_RESP_NOT_MEASURED,
+	NL80211_FTM_RESP_TARGET_UNAVAILABLE,
 	NL80211_FTM_RESP_FAIL,
 };
 
@@ -5082,41 +5090,59 @@ enum nl80211_ftm_response_status {
  *	- in case of success - successful measurement started
  *	Note that this reported value is an estimation of the actual event time,
  *	with expected error of up to 20ms off the actual mark. Underlying
- *	devices must make sure they comply with this limited tolerance. (u64)
+ *	devices must make sure they comply with this limited tolerance.
+ *	Optional. (u64)
  * @NL80211_FTM_RESP_ENTRY_ATTR_TSF: Same as %NL80211_FTM_RESP_ATTR_HOST_TIME,
  *	but the value is TSF of the associated AP. Optional - present only if
  *	%NL80211_FTM_REQ_ATTR_AP_REPORT_TSF was set in the request, and an
- *	associated AP exists. Also, this value is not an estimation. (u64)
+ *	associated AP exists. Also, this value is not an estimation.
+ *	Optional.(u64)
  * @NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX: Ordinal number of currently
- *	reported measurement iteration. (u8)
+ *	reported measurement iteration. Optional.(u8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_MSRMNT_NUM: Total FTM measurement frames
- *	attempted. (u32)
- * @NL80211_FTM_RESP_ENTRY_ATTR_SUCCESS_NUM: Total FTM measurement frames
- *	attempted. (u32)
+ *	attempted. Optional.(u32)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_SUCCESS_NUM: Total successful FTM measurement
+ *	frames. Optional.(u32)
  * @NL80211_FTM_RESP_ENTRY_ATTR_NUM_PER_BURST: Maximum number of FTM frames per
- *	burst supported by the responder. Applies to 2-sided FTM only. (u8)
+ *	burst supported by the responder. Applies to 2-sided FTM only.
+ *	Optional.(u8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RETRY_DUR: When
  *	status == NL80211_FTM_RESP_TARGET_BUSY, the initiator may retry after
- *	this given time. In sec. (u8)
+ *	this given time. In sec. Optional.(u8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_BURST_DUR: Actual time taken by the FW to finish
- *	one burst. In usec. (u32)
+ *	one burst. In usec. Optional.(u32)
  * @NL80211_FTM_RESP_ENTRY_ATTR_NEG_BURST_NUM: Number of bursts allowed by the
- *	responder. Applies to 2-sided FTM only (u32)
+ *	responder. Applies to 2-sided FTM only. Optional.(u32)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RSSI: Measured RSSI, given in dBm. Valid values
- *	range: -128-0. (s8)
+ *	range: -128-0. Optional.(s8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD: The difference between max and min
- *	measured RSSI values. (u8)
+ *	measured RSSI values. Optional.(u8)
  * @NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO: tx Rate-related data. (nested. see
- *	enum nl80211_rate_info)
+ *	enum nl80211_rate_info). Optional.
  * @NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO: rx Rate-related data. (nested. see
- *	enum nl80211_rate_info)
+ *	enum nl80211_rate_info). Optional.
  * @NL80211_FTM_RESP_ENTRY_ATTR_RTT: The Round Trip Time that took for the last
- *	measurement for current target, in psec. (u64)
+ *	measurement for current target, in psec. Since a measurement can have an
+ *	error tolerance, it can be negative. (s64)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR: The variance of the RTT values measured
- *	for current target, in psec^2. (u64)
+ *	for current target, in psec^2. Optional.(u64)
  * @NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD: The difference between max and min
  *	RTT values measured for the current target in the current session, given
- *	in psec (u64)
+ *	in psec. Optional.(u64)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_DISTANCE: distance from target, in cm. Since a
+ *	measurement can have an error tolerance, it can be negative. Optional.
+ *	(s64)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_DISTANCE_VAR: variance of the distance, in cm^2.
+ *	Optional. (u64)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_DISTANCE_SPREAD: The difference between max and
+ *	min distance values measured for the current target in the current
+ *	session, in cm. Optional. (u64)
+ * @NL80211_FTM_RESP_ENTRY_ATTR_LCI: the LCI data buffer of the target. Will be
+ *	provided only if available and %NL80211_FTM_TARGET_QUERY_LCI was set in
+ *	the request.
+ * @NL80211_FTM_RESP_ENTRY_ATTR_CIVIC: the CIVIC data buffer of the target. Will
+ *	be provided only if available and %NL80211_FTM_TARGET_QUERY_CIVIC was
+ *	set in the request.
  */
 enum nl80211_ftm_response_entry {
 	__NL80211_FTM_RESP_ENTRY_ATTR_INVALID,
@@ -5139,6 +5165,11 @@ enum nl80211_ftm_response_entry {
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
 	NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,
+	NL80211_FTM_RESP_ENTRY_ATTR_DISTANCE,
+	NL80211_FTM_RESP_ENTRY_ATTR_DISTANCE_VAR,
+	NL80211_FTM_RESP_ENTRY_ATTR_DISTANCE_SPREAD,
+	NL80211_FTM_RESP_ENTRY_ATTR_LCI,
+	NL80211_FTM_RESP_ENTRY_ATTR_CIVIC,
 
 	/* keep last */
 	__NL80211_FTM_RESP_ENTRY_ATTR_AFTER_LAST,

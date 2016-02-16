@@ -14499,41 +14499,47 @@ static int nl80211_put_ftm_result(struct sk_buff *msg,
 	if (!resp)
 		return -ENOBUFS;
 
+#define FTM_RES_FILLED(attr) \
+	(ftm->filled & BIT(NL80211_FTM_RESP_ENTRY_ATTR_##attr))
+
+#define PUT_FTM_RES(field, attr, type) \
+	(FTM_RES_FILLED(attr) && \
+	 nla_put_##type(msg, NL80211_FTM_RESP_ENTRY_ATTR_##attr, ftm->field))
+
 	if (nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_STATUS, ftm->status) ||
 	    (ftm->complete &&
 	     nla_put_flag(msg, NL80211_FTM_RESP_ENTRY_ATTR_COMPLETE)) ||
 	    nl80211_put_ftm_resp_target(msg, ftm->target) ||
-	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_HOST_TIME,
-			ftm->host_time) ||
-	    (ftm->tsf && nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_TSF,
-				     ftm->tsf)) ||
-	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_BURST_INDEX,
-		       ftm->burst_index) ||
-	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_MSRMNT_NUM,
-			ftm->measurement_num) ||
-	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_SUCCESS_NUM,
-			ftm->success_num) ||
-	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_NUM_PER_BURST,
-		       ftm->num_per_burst) ||
-	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RETRY_DUR,
-		       ftm->retry_after_duration) ||
-	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_BURST_DUR,
-			ftm->burst_duration) ||
-	    nla_put_u32(msg, NL80211_FTM_RESP_ENTRY_ATTR_NEG_BURST_NUM,
-			ftm->negotiated_burst_num) ||
-	    nla_put_s8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI, ftm->rssi) ||
-	    nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_RSSI_SPREAD,
-		       ftm->rssi_spread) ||
-	    !nl80211_put_sta_rate(msg, &ftm->tx_rate_info,
-				  NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO) ||
-	    !nl80211_put_sta_rate(msg, &ftm->rx_rate_info,
-				  NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO) ||
-	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
-	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_VAR,
-			ftm->rtt_variance) ||
-	    nla_put_u64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT_SPREAD,
-			ftm->rtt_spread))
+	    nla_put_s64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
+	    PUT_FTM_RES(host_time, HOST_TIME, u64) ||
+	    PUT_FTM_RES(tsf, TSF, u64) ||
+	    PUT_FTM_RES(burst_index, BURST_INDEX, u8) ||
+	    PUT_FTM_RES(measurement_num, MSRMNT_NUM, u32) ||
+	    PUT_FTM_RES(success_num, SUCCESS_NUM, u32) ||
+	    PUT_FTM_RES(num_per_burst, NUM_PER_BURST, u8) ||
+	    PUT_FTM_RES(retry_after_duration, RETRY_DUR, u8) ||
+	    PUT_FTM_RES(burst_duration, BURST_DUR, u32) ||
+	    PUT_FTM_RES(negotiated_burst_num, NEG_BURST_NUM, u32) ||
+	    PUT_FTM_RES(rssi, RSSI, s8) ||
+	    PUT_FTM_RES(rssi_spread, RSSI_SPREAD, u8) ||
+	    PUT_FTM_RES(rtt_variance, RTT_VAR, u64) ||
+	    PUT_FTM_RES(rtt_spread, RTT_SPREAD, u64) ||
+	    PUT_FTM_RES(distance, DISTANCE, s64) ||
+	    PUT_FTM_RES(distance_variance, DISTANCE_VAR, u64) ||
+	    PUT_FTM_RES(distance_spread, DISTANCE_SPREAD, u64) ||
+	    (FTM_RES_FILLED(TX_RATE_INFO) &&
+	     !nl80211_put_sta_rate(msg, &ftm->tx_rate_info,
+				   NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO)) ||
+	    (FTM_RES_FILLED(RX_RATE_INFO) &&
+	     !nl80211_put_sta_rate(msg, &ftm->rx_rate_info,
+				   NL80211_FTM_RESP_ENTRY_ATTR_RX_RATE_INFO)) ||
+	    (ftm->lci && nla_put(msg, NL80211_FTM_RESP_ENTRY_ATTR_LCI,
+				 ftm->lci_len, ftm->lci)) ||
+	    (ftm->civic && nla_put(msg, NL80211_FTM_RESP_ENTRY_ATTR_CIVIC,
+				   ftm->civic_len, ftm->civic)))
 		return -ENOBUFS;
+#undef PUT_FTM_RES
+#undef FTM_RES_FILLED
 
 	nla_nest_end(msg, resp);
 
@@ -14613,7 +14619,9 @@ static void nl80211_ftm_response(struct wiphy *wiphy,
 	struct cfg80211_ftm_results ftm = response->u.ftm;
 	int i;
 
-	if (response->status != NL80211_MSRMENT_STATUS_SUCCESS) {
+	if ((response->status != NL80211_MSRMENT_STATUS_SUCCESS &&
+	     response->status != NL80211_MSRMENT_STATUS_TIMEOUT) ||
+	    ftm.num_of_entries == 0) {
 		nl80211_send_single_ftm_resp(wiphy, response, NULL, true, gfp);
 		return;
 	}
