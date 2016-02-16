@@ -61,6 +61,14 @@
 #define U16_MAX		((u16)~0U)
 #endif
 
+#ifndef S16_MAX
+#define S16_MAX         ((s16)(U16_MAX>>1))
+#endif
+
+#ifndef S16_MIN
+#define S16_MIN         ((s16)(-S16_MAX - 1))
+#endif
+
 #ifndef U32_MAX
 #define U32_MAX		((u32)~0U)
 #endif
