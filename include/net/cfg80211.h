@@ -3165,8 +3165,6 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_SUPPORTS_5_10_MHZ: Device supports 5 MHz and 10 MHz channels.
  * @WIPHY_FLAG_HAS_CHANNEL_SWITCH: Device supports channel switch in
  *	beaconing mode (AP, IBSS, Mesh, ...).
- * @WIPHY_FLAG_SUPPORTS_FTM_INITIATOR: Device supports 802.11 Fine Timing
- *	Measurement Initiator.
  * @WIPHY_FLAG_HAS_FTM_RESPONDER: Device supports FTM responder
  */
 enum wiphy_flags {
@@ -3193,8 +3191,7 @@ enum wiphy_flags {
 	WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL	= BIT(21),
 	WIPHY_FLAG_SUPPORTS_5_10_MHZ		= BIT(22),
 	WIPHY_FLAG_HAS_CHANNEL_SWITCH		= BIT(23),
-	WIPHY_FLAG_SUPPORTS_FTM_INITIATOR	= BIT(24),
-	WIPHY_FLAG_HAS_FTM_RESPONDER		= BIT(25),
+	WIPHY_FLAG_HAS_FTM_RESPONDER		= BIT(24),
 };
 
 /**
@@ -3402,6 +3399,36 @@ struct wiphy_vendor_command {
 };
 
 /**
+ * struct wiphy_ftm_initiator_capa - wiphy FTM initiator capabilities
+ *
+ * @max_two_sided_ftm_targets: Max number of 2-sided targets allowed by the
+ *	device in an FTM request.
+ * @max_total_ftm_targets: Max number of targets (both 1-sided and 2-sided)
+ *	allowed by the device in an FTM request.
+ * @asap: true if ASAP is supported.
+ * @non_asap: true if non-ASAP is supported.
+ * @req_tsf: true if user can request to report the associated AP's TSF.
+ *	see %NL80211_FTM_REQ_ATTR_REPORT_TSF.
+ * @req_lci: true if reporting target's LCI is supported.
+ * @req_civic: true if reporting target's CIVIC is supported.
+ * @preamble: bitmap of supported preambles for FTM frames. Values are defined
+ *	in &enum nl80211_ftm_preamble.
+ * @bw: bitmap of supported bandwidths for FTM frames. Values are defined in
+ *	&enum nl80211_ftm_bw.
+ */
+struct wiphy_ftm_initiator_capa {
+	u32 max_two_sided_ftm_targets;
+	u32 max_total_ftm_targets;
+	bool asap;
+	bool non_asap;
+	bool req_tsf;
+	bool req_lci;
+	bool req_civic;
+	u32 preamble;
+	u32 bw;
+};
+
+/**
  * struct wiphy - wireless hardware description
  * @reg_notifier: the driver's regulatory notification callback,
  *	note that if your driver uses wiphy_apply_custom_regulatory()
@@ -3543,11 +3570,8 @@ struct wiphy_vendor_command {
  *	low rssi when a frame is heard on different channel, then it should set
  *	this variable to the maximal offset for which it can compensate.
  *	This value should be set in MHz.
- *
- * @max_two_sided_ftm_targets: max number of 2-sided targets allowed in an FTM
- *	request.
- * @max_total_ftm_targets: max number of targets (both 1-sided and 2-sided) in
- *	an FTM request. A value of 0 implies no FTM support.
+ * @ftm_initiator_capa: FTM initiator capabilities. If NULL, ftm initiator is
+ *	not supported.
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -3673,8 +3697,7 @@ struct wiphy {
 	u8 max_num_csa_counters;
 	u8 max_adj_channel_rssi_comp;
 
-	u8 max_two_sided_ftm_targets;
-	u8 max_total_ftm_targets;
+	const struct wiphy_ftm_initiator_capa *ftm_initiator_capa;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };

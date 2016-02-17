@@ -1872,12 +1872,9 @@ enum nl80211_commands {
  *	attempted (nested. see &enum nl80211_ftm_response_entry)
  *	An FTM response consists of series of such messages, where the last
  *	message is marked with the @NL80211_ATTR_LAST_MSG flag.
- * @NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS: Max number of 2-sided targets
- *	allowed by the device in an FTM request. Not in use in case FTM is not
- *	supported. (u32)
- * @NL80211_ATTR_MAX_TOTAL_FTM_TARGETS: Max number of targets (both 1-sided and
- *	2-sided) allowed by the device in an FTM request. Not in use in case FTM
- *	is not supported. (u32)
+ * @NL80211_ATTR_MSRMENT_FTM_CAPA: FTM initiator capabilities. see
+ *	&enum nl80211_ftm_initiator_capa. Not in use in case FTM is not
+ *	supported. nested.
  * @NL80211_ATTR_LAST_MSG: Indicates that this message is the last one in the
  *	series of messages. (flag)
  *
@@ -2283,8 +2280,7 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_MSRMENT_FTM_REQUEST,
 	NL80211_ATTR_MSRMENT_FTM_RESPONSE,
-	NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS,
-	NL80211_ATTR_MAX_TOTAL_FTM_TARGETS,
+	NL80211_ATTR_MSRMENT_FTM_CAPA,
 
 	NL80211_ATTR_LAST_MSG,
 
@@ -4871,6 +4867,42 @@ enum nl80211_ftm_bw {
 };
 
 /**
+ * enum nl80211_ftm_initiator_capa - FTM initiator capabilities
+ *
+ * @NL80211_FTM_CAPA_MAX_2_SIDED: Max number of 2-sided targets allowed by the
+ *	device in an FTM request. (u32)
+ * @NL80211_FTM_CAPA_MAX_TOTAL: Max number of targets (both 1-sided and 2-sided)
+ *	allowed by the device in an FTM request. (u32)
+ * @NL80211_FTM_CAPA_ASAP: Set if ASAP is supported. (flag)
+ * @NL80211_FTM_CAPA_NON_ASAP: Set if non-ASAP is supported. (flag)
+ * @NL80211_FTM_CAPA_REQ_TSF: Set if user can request to report the associated
+ *	AP's TSF. see %NL80211_FTM_REQ_ATTR_REPORT_TSF. (flag)
+ * @NL80211_FTM_CAPA_REQ_LCI: Set if reporting target's LCI is supported. (flag)
+ * @NL80211_FTM_CAPA_REQ_CIVIC: Set if reporting target's CIVIC is supported.
+ *	(flag)
+ * @NL80211_FTM_CAPA_PREAMBLE: supported preambles for FTM frames. bitmap of
+ *	&enum nl80211_ftm_preamble. (u32)
+ * @NL80211_FTM_CAPA_BW: supported bandwidths for FTM frames. bitmap of
+ *	enum nl80211_ftm_bw. (u32)
+ */
+enum nl80211_ftm_initiator_capa {
+	__NL80211_FTM_CAPA_INVALID,
+	NL80211_FTM_CAPA_MAX_2_SIDED,
+	NL80211_FTM_CAPA_MAX_TOTAL,
+	NL80211_FTM_CAPA_ASAP,
+	NL80211_FTM_CAPA_NON_ASAP,
+	NL80211_FTM_CAPA_REQ_TSF,
+	NL80211_FTM_CAPA_REQ_LCI,
+	NL80211_FTM_CAPA_REQ_CIVIC,
+	NL80211_FTM_CAPA_PREAMBLE,
+	NL80211_FTM_CAPA_BW,
+
+	/* keep last */
+	__NL80211_FTM_CAPA_AFTER_LAST,
+	NL80211_FTM_CAPA_MAX = __NL80211_FTM_CAPA_AFTER_LAST - 1
+};
+
+/**
  * enum nl80211_ftm_target - attributes for an FTM target
  *
  * An FTM target is a station with which to perform measurements.
@@ -4898,18 +4930,27 @@ enum nl80211_ftm_bw {
  * @NL80211_FTM_TARGET_ATTR_BURST_DURATION: duration of an rtt burst.
  *	Valid values are 2-11 and 15. Optional (default: 15) (u8)
  * @NL80211_FTM_TARGET_ATTR_ASAP: Whether to perform the measurement in ASAP
- *	mode. Ignored if one-sided. (flag)
+ *	mode. Ignored if one-sided. Request will be refused if:
+ *	ASAP requested and %NL80211_FTM_CAPA_ASAP isn't set by the device, or
+ *	non-ASAP requested and %NL80211_FTM_CAPA_NON_ASAP isn't set by the
+ *	device. (flag)
  * @NL80211_FTM_TARGET_QUERY_LCI: Whether to include an LCI query in the
- *	request. (flag)
+ *	request. Request will be refused if %NL80211_FTM_CAPA_REQ_LCI isn't set
+ *	by the device. (flag)
  * @NL80211_FTM_TARGET_QUERY_CIVIC: Whether to include a CIVIC query in the
- *	request. (flag)
+ *	request. Request will be refused if %NL80211_FTM_CAPA_REQ_CIVIC isn't
+ *	set by the device. (flag)
  * @NL80211_FTM_TARGET_ATTR_COOKIE: Extra data for the use of the invoking
  *	component. This will be passed back to the caller in the response, along
  *	with the rest of the request. Optional. (u64)
  * @NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE: Allowed preamble types to be used for
- *	FTM frames. Bitfield, as specified in @enum nl80211_ftm_preamble. (u8)
+ *	FTM frames. Bitfield, as specified in @enum nl80211_ftm_preamble.
+ *	Request will be refused if the supplied bitfield isn't supported in
+ *	%NL80211_FTM_CAPA_PREAMBLE. (u8)
  * @NL80211_FTM_TARGET_ATTR_FTM_BW: Allowed bandwidths to be used for FTM
- *	frames. Bitfield, as specified in @enum nl80211_ftm_bw. (u8)
+ *	frames. Bitfield, as specified in @enum nl80211_ftm_bw. Request will be
+ *	refused if the supplied bitfield isn't supported in
+ *	%NL80211_FTM_CAPA_BW. (u8)
  * @__NL80211_FTM_TARGET_ATTR_AFTER_LAST: internal
  * @NL80211_FTM_TARGET_ATTR_MAX: highest FTM target attribute
  */
@@ -4958,12 +4999,13 @@ enum nl80211_ftm_target {
  *	AP's TSF in the %NL80211_FTM_RESP_ENTRY_ATTR_TSF field in the response.
  *	Useful for RRM requests, where an associated AP requires to perform FTM,
  *	and expects a timestamp in its own TSF. If not set, no tsf value is
- *	reported in the response. Ignored if no AP is associated. (flag)
+ *	reported in the response. Ignored if no AP is associated.
+ *	Request will be refused if %NL80211_FTM_CAPA_REQ_TSF is not set. (flag)
  * @NL80211_FTM_REQ_ATTR_TARGETS: List of targets with which to perform
  *	measurements. Length shall not exceed the value reported for the device
- *	in %NL80211_ATTR_MAX_TOTAL_FTM_TARGETS. Among these targets, the number
+ *	in %NL80211_FTM_CAPA_MAX_TOTAL. Among these targets, the number
  *	of 2-sided requests shall not exceed the value reported for the device
- *	in %NL80211_ATTR_MAX_2_SIDED_FTM_TARGETS.
+ *	in %NL80211_FTM_CAPA_MAX_2_SIDED.
  *	(nested. see &enum nl80211_ftm_target)
  *
  * @__NL80211_FTM_REQ_ATTR_AFTER_LAST: internal

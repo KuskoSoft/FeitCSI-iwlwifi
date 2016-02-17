@@ -685,7 +685,7 @@ int wiphy_register(struct wiphy *wiphy)
 		     !rdev->ops->set_mac_acl)))
 		return -EINVAL;
 
-	if (WARN_ON((wiphy->flags & WIPHY_FLAG_SUPPORTS_FTM_INITIATOR) &&
+	if (WARN_ON((wiphy->ftm_initiator_capa) &&
 		    (!rdev->ops->perform_msrment || !rdev->ops->abort_msrment)))
 		return -EINVAL;
 

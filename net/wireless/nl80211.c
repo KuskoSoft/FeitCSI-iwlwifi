@@ -407,8 +407,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_MSRMENT_STATUS] = { .type = NLA_U8 },
 	[NL80211_ATTR_MSRMENT_FTM_REQUEST] = { .type = NLA_NESTED },
 	[NL80211_ATTR_MSRMENT_FTM_RESPONSE] = { .type = NLA_NESTED },
-	[NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS] = { .type = NLA_U8 },
-	[NL80211_ATTR_MAX_TOTAL_FTM_TARGETS] = { .type = NLA_U8 },
+	[NL80211_ATTR_MSRMENT_FTM_CAPA] = { .type = NLA_NESTED },
 	[NL80211_ATTR_LAST_MSG] = { .type = NLA_FLAG },
 	[NL80211_ATTR_LCI] = { .type = NLA_BINARY },
 	[NL80211_ATTR_CIVIC] = { .type = NLA_BINARY },
@@ -1304,6 +1303,34 @@ struct nl80211_dump_wiphy_state {
 	bool split;
 };
 
+static int
+nl80211_put_ftm_initiator_capa(struct cfg80211_registered_device *rdev,
+			       struct sk_buff *msg)
+{
+	const struct wiphy_ftm_initiator_capa *capa =
+		rdev->wiphy.ftm_initiator_capa;
+	struct nlattr *capabs = nla_nest_start(msg,
+					       NL80211_ATTR_MSRMENT_FTM_CAPA);
+
+	if (!capabs || nla_put_u32(msg, NL80211_FTM_CAPA_MAX_2_SIDED,
+				   capa->max_two_sided_ftm_targets) ||
+	    nla_put_u32(msg, NL80211_FTM_CAPA_MAX_TOTAL,
+			capa->max_total_ftm_targets) ||
+	    (capa->asap && nla_put_flag(msg, NL80211_FTM_CAPA_ASAP)) ||
+	    (capa->non_asap && nla_put_flag(msg, NL80211_FTM_CAPA_NON_ASAP)) ||
+	    (capa->req_tsf && nla_put_flag(msg, NL80211_FTM_CAPA_REQ_TSF)) ||
+	    (capa->req_lci && nla_put_flag(msg, NL80211_FTM_CAPA_REQ_LCI)) ||
+	    (capa->req_civic &&
+	     nla_put_flag(msg, NL80211_FTM_CAPA_REQ_CIVIC)) ||
+	    nla_put_u32(msg, NL80211_FTM_CAPA_PREAMBLE, capa->preamble) ||
+	    nla_put_u32(msg, NL80211_FTM_CAPA_BW, capa->bw))
+		return -ENOBUFS;
+
+	nla_nest_end(msg, capabs);
+
+	return 0;
+}
+
 static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 			      enum nl80211_commands cmd,
 			      struct sk_buff *msg, u32 portid, u32 seq,
@@ -1438,11 +1465,8 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 					rdev->wiphy.interface_modes))
 				goto nla_put_failure;
 
-		if ((rdev->wiphy.flags & WIPHY_FLAG_SUPPORTS_FTM_INITIATOR) &&
-		    (nla_put_u32(msg, NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS,
-				 rdev->wiphy.max_two_sided_ftm_targets) ||
-		     nla_put_u32(msg, NL80211_ATTR_MAX_TOTAL_FTM_TARGETS,
-				 rdev->wiphy.max_total_ftm_targets)))
+		if ((rdev->wiphy.ftm_initiator_capa) &&
+		    nl80211_put_ftm_initiator_capa(rdev, msg))
 			goto nla_put_failure;
 
 		state->split_start++;
@@ -11205,6 +11229,8 @@ static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
 				    struct cfg80211_ftm_target *target)
 {
 	struct nlattr *tb[NL80211_FTM_TARGET_ATTR_MAX + 1];
+	const struct wiphy_ftm_initiator_capa *capa =
+		rdev->wiphy.ftm_initiator_capa;
 	int err;
 
 	err = nla_parse_nested(tb, NL80211_FTM_TARGET_ATTR_MAX, ftm_target_attr,
@@ -11280,6 +11306,14 @@ static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
 		target->ftm_bw =
 			nla_get_u8(tb[NL80211_FTM_TARGET_ATTR_FTM_BW]);
 
+	if ((target->asap && !capa->asap) ||
+	    (!target->asap && !capa->non_asap) ||
+	    (target->lci && !capa->req_lci) ||
+	    (target->civic && !capa->req_civic) ||
+	    ((target->ftm_preamble & capa->preamble) != target->ftm_preamble) ||
+	    ((target->ftm_bw & capa->bw) != target->ftm_bw))
+		return -ENOTSUPP;
+
 	return 0;
 }
 
@@ -11301,6 +11335,8 @@ static int nl80211_parse_ftm_request(struct cfg80211_registered_device *rdev,
 	struct nlattr *ap_attr;
 	int tmp, i, two_sided_counter;
 	int err;
+	const struct wiphy_ftm_initiator_capa *capa =
+		rdev->wiphy.ftm_initiator_capa;
 
 	err = nla_parse_nested(tb, NL80211_FTM_REQ_ATTR_MAX, ftm_attr,
 			       nl80211_ftm_request_policy);
@@ -11322,8 +11358,11 @@ static int nl80211_parse_ftm_request(struct cfg80211_registered_device *rdev,
 	else
 		ftm->timeout = nla_get_u8(tb[NL80211_FTM_REQ_ATTR_TIMEOUT]);
 
-	if (tb[NL80211_FTM_REQ_ATTR_REPORT_TSF])
+	if (tb[NL80211_FTM_REQ_ATTR_REPORT_TSF]) {
+		if (!capa->req_tsf)
+			return -ENOTSUPP;
 		ftm->report_tsf = true;
+	}
 
 	nla_for_each_nested(ap_attr, tb[NL80211_FTM_REQ_ATTR_TARGETS], tmp)
 		ftm->num_of_targets++;
@@ -11342,15 +11381,17 @@ static int nl80211_parse_ftm_request(struct cfg80211_registered_device *rdev,
 			two_sided_counter++;
 		i++;
 	}
-	if (ftm->num_of_targets > rdev->wiphy.max_total_ftm_targets ||
-	    two_sided_counter > rdev->wiphy.max_two_sided_ftm_targets)
+	if (ftm->num_of_targets > capa->max_total_ftm_targets ||
+	    two_sided_counter > capa->max_two_sided_ftm_targets) {
+		err = -E2BIG;
 		goto free_targets;
+	}
 
 	return 0;
 
 free_targets:
 	kfree(ftm->targets);
-	return -EINVAL;
+	return err;
 }
 
 static void nl80211_msrment_request_free(struct cfg80211_msrment_request *req)
