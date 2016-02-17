@@ -2278,6 +2278,14 @@ static int iwl_trans_sdio_start_fw(struct iwl_trans *trans,
 		goto free_tx;
 	}
 
+	ret = iwl_sdio_ta_write32(trans, CSR_INT_MASK, CSR_INI_SET_MASK,
+				  IWL_SDIO_TA_AC_DIRECT);
+	if (ret) {
+		IWL_ERR(trans,
+			"Failed to load given FW Image -can't set interrupt mask\n");
+		goto free_tx;
+	}
+
 	/*
 	 * Release the reference. the platform device will take care
 	 * of keeping the sdio awake (if needed) from now on.
