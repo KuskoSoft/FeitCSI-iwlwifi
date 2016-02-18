@@ -103,6 +103,8 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER] = { .type = NLA_STRING },
 	[IWL_MVM_VENDOR_ATTR_NAN_FAW_FREQ] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_NAN_FAW_SLOTS] = { .type = NLA_U8 },
+	[IWL_MVM_VENDOR_ATTR_LQM_DURATION] = { .type = NLA_U32 },
+	[IWL_MVM_VENDOR_ATTR_LQM_TIMEOUT] = { .type = NLA_U32 },
 };
 
 static int iwl_mvm_parse_vendor_data(struct nlattr **tb,
@@ -1670,6 +1672,41 @@ static int iwl_mvm_vendor_nan_faw_conf(struct wiphy *wiphy,
 	return iwl_mvm_nan_config_nan_faw_cmd(mvm, &def, slots);
 }
 
+static int iwl_mvm_vendor_link_quality_measurements(struct wiphy *wiphy,
+						    struct wireless_dev *wdev,
+						    const void *data,
+						    int data_len)
+{
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+	struct iwl_mvm_vif *mvm_vif = iwl_mvm_vif_from_mac80211(vif);
+	struct nlattr *tb[NUM_IWL_MVM_VENDOR_ATTR];
+	u32 duration;
+	u32 timeout;
+	int retval;
+
+	if (vif->type != NL80211_IFTYPE_STATION || vif->p2p ||
+	    !vif->bss_conf.assoc)
+		return -EINVAL;
+
+	retval = iwl_mvm_parse_vendor_data(tb, data, data_len);
+	if (retval)
+		return retval;
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_LQM_DURATION] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_LQM_TIMEOUT])
+		return -EINVAL;
+
+	duration = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_LQM_DURATION]);
+	timeout = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_LQM_TIMEOUT]);
+
+	mutex_lock(&mvm_vif->mvm->mutex);
+	retval = iwl_mvm_send_lqm_cmd(vif, LQM_CMD_OPERATION_START_MEASUREMENT,
+				      duration, timeout);
+	mutex_unlock(&mvm_vif->mvm->mutex);
+
+	return retval;
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -1877,6 +1914,15 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_mvm_vendor_nan_faw_conf,
 	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_QUALITY_MEASUREMENTS,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mvm_vendor_link_quality_measurements,
+	},
 };
 
 enum iwl_mvm_vendor_events_idx {
@@ -1887,6 +1933,7 @@ enum iwl_mvm_vendor_events_idx {
 	IWL_MVM_VENDOR_EVENT_IDX_HOTLIST_CHANGE,
 	IWL_MVM_VENDOR_EVENT_IDX_SIGNIFICANT_CHANGE,
 	IWL_MVM_VENDOR_EVENT_IDX_GSCAN_BEACON,
+	IWL_MVM_VENDOR_EVENT_IDX_LQM,
 	NUM_IWL_MVM_VENDOR_EVENT_IDX
 };
 
@@ -1913,6 +1960,10 @@ iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
 	[IWL_MVM_VENDOR_EVENT_IDX_GSCAN_BEACON] = {
 		.vendor_id = INTEL_OUI,
 		.subcmd = IWL_MVM_VENDOR_CMD_GSCAN_BEACON_EVENT,
+	},
+	[IWL_MVM_VENDOR_EVENT_IDX_LQM] = {
+		.vendor_id = INTEL_OUI,
+		.subcmd = IWL_MVM_VENDOR_CMD_QUALITY_MEASUREMENTS,
 	},
 };
 
@@ -2252,4 +2303,86 @@ void iwl_mvm_gscan_beacons_work(struct work_struct *work)
 		kfree(beacon);
 	}
 	spin_unlock_bh(&mvm->gscan_beacons_lock);
+}
+
+void iwl_mvm_lqm_notif_iterator(void *_data, u8 *mac,
+				struct ieee80211_vif *vif)
+{
+	struct iwl_link_qual_msrmnt_notif *report = _data;
+	struct iwl_mvm_vif *mvm_vif = iwl_mvm_vif_from_mac80211(vif);
+	u32 frequent_stations_air_time[LQM_NUMBER_OF_STATIONS_IN_REPORT];
+	u32 status, num_of_stations;
+	struct sk_buff *msg;
+	struct nlattr *res;
+	int i;
+
+	if (mvm_vif->id != le32_to_cpu(report->mac_id))
+		return;
+
+	msg = cfg80211_vendor_event_alloc(mvm_vif->mvm->hw->wiphy,
+					  ieee80211_vif_to_wdev(vif), 2048,
+					  IWL_MVM_VENDOR_EVENT_IDX_LQM,
+					  GFP_ATOMIC);
+	if (!msg)
+		return;
+
+	res = nla_nest_start(msg, IWL_MVM_VENDOR_ATTR_LQM_RESULT);
+	if (!res)
+		goto nla_put_failure;
+
+	status = le32_to_cpu(report->status);
+	mvm_vif->lqm_active = false;
+
+	switch (status) {
+	case LQM_STATUS_SUCCESS:
+		status = IWL_MVM_VENDOR_LQM_STATUS_SUCCESS;
+		break;
+	case LQM_STATUS_TIMEOUT:
+		status = IWL_MVM_VENDOR_LQM_STATUS_TIMEOUT;
+		break;
+	case LQM_STATUS_ABORT:
+	default:
+		status = IWL_MVM_VENDOR_LQM_STATUS_ABORT;
+		break;
+	}
+
+	num_of_stations = le32_to_cpu(report->number_of_stations);
+	for (i = 0; i < num_of_stations; i++)
+		frequent_stations_air_time[i] =
+			le32_to_cpu(report->frequent_stations_air_time[i]);
+
+	if (nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_MEAS_STATUS,
+			status) ||
+	    nl80211_send_chandef(msg, &vif->bss_conf.chandef) ||
+	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_RETRY_LIMIT,
+			le32_to_cpu(report->tx_frame_dropped)) ||
+	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_MEAS_TIME,
+			le32_to_cpu(report->time_in_measurement_window)) ||
+	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_OTHER_STA,
+			le32_to_cpu(report->total_air_time_other_stations)) ||
+	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_NUM_OF_STATIONS,
+			num_of_stations) ||
+	    nla_put(msg, IWL_MVM_VENDOR_ATTR_LQM_ACTIVE_STA_AIR_TIME,
+		    sizeof(u32) * LQM_NUMBER_OF_STATIONS_IN_REPORT,
+		    frequent_stations_air_time))
+		goto nla_put_failure;
+
+	nla_nest_end(msg, res);
+	cfg80211_vendor_event(msg, GFP_ATOMIC);
+
+	return;
+
+nla_put_failure:
+	kfree_skb(msg);
+}
+
+void iwl_mvm_vendor_lqm_notif(struct iwl_mvm *mvm,
+			      struct iwl_rx_cmd_buffer *rxb)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_link_qual_msrmnt_notif *report = (void *)pkt->data;
+
+	ieee80211_iterate_active_interfaces_atomic(
+		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+		iwl_mvm_lqm_notif_iterator, report);
 }

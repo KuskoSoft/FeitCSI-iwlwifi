@@ -477,6 +477,12 @@ struct iwl_mvm_vif {
 	netdev_features_t features;
 
 	bool ftm_responder;
+
+	/*
+	 * link quality measurement - used to check whether this interface
+	 * is in the middle of a link quality measurement
+	 */
+	bool lqm_active;
 };
 
 static inline struct iwl_mvm_vif *
@@ -1918,6 +1924,10 @@ int iwl_mvm_configure_bcast_filter(struct iwl_mvm *mvm);
 
 void iwl_mvm_active_rx_filters(struct iwl_mvm *mvm);
 
+void iwl_mvm_vendor_lqm_notif(struct iwl_mvm *mvm,
+			      struct iwl_rx_cmd_buffer *rxb);
+void iwl_mvm_lqm_notif_iterator(void *_data, u8 *mac,
+				struct ieee80211_vif *vif);
 #endif
 
 /* NAN */
@@ -1939,5 +1949,11 @@ void iwl_mvm_rm_nan_func(struct ieee80211_hw *hw,
 int iwl_mvm_nan_config_nan_faw_cmd(struct iwl_mvm *mvm,
 				   struct cfg80211_chan_def *chandef,
 				   u8 slots);
+
+/* Link Quality Measurement */
+int iwl_mvm_send_lqm_cmd(struct ieee80211_vif *vif,
+			 enum iwl_lqm_cmd_operatrions operation,
+			 u32 duration, u32 timeout);
+bool iwl_mvm_lqm_active(struct iwl_mvm *mvm);
 
 #endif /* __IWL_MVM_H__ */

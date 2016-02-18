@@ -338,6 +338,8 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 		       iwl_mvm_nan_de_term_notif, RX_HANDLER_SYNC),
 	RX_HANDLER_GRP(NAN_GROUP, NAN_DISCOVERY_EVENT_NOTIF,
 		       iwl_mvm_nan_match, RX_HANDLER_SYNC),
+	RX_HANDLER_GRP(MAC_CONF_GROUP, LINK_QUALITY_MEASUREMENT_COMPLETE_NOTIF,
+		       iwl_mvm_vendor_lqm_notif, RX_HANDLER_SYNC),
 #endif
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
@@ -480,6 +482,14 @@ static const struct iwl_hcmd_names iwl_mvm_system_names[] = {
 /* Please keep this array *SORTED* by hex value.
  * Access is done through binary search
  */
+static const struct iwl_hcmd_names iwl_mvm_mac_conf_names[] = {
+	HCMD_NAME(LINK_QUALITY_MEASUREMENT_CMD),
+	HCMD_NAME(LINK_QUALITY_MEASUREMENT_COMPLETE_NOTIF),
+};
+
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
 static const struct iwl_hcmd_names iwl_mvm_phy_names[] = {
 	HCMD_NAME(CMD_DTS_MEASUREMENT_TRIGGER_WIDE),
 	HCMD_NAME(CTDP_CONFIG_CMD),
@@ -536,6 +546,7 @@ static const struct iwl_hcmd_arr iwl_mvm_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mvm_legacy_names),
 	[LONG_GROUP] = HCMD_ARR(iwl_mvm_legacy_names),
 	[SYSTEM_GROUP] = HCMD_ARR(iwl_mvm_system_names),
+	[MAC_CONF_GROUP] = HCMD_ARR(iwl_mvm_mac_conf_names),
 	[PHY_OPS_GROUP] = HCMD_ARR(iwl_mvm_phy_names),
 	[DATA_PATH_GROUP] = HCMD_ARR(iwl_mvm_data_path_names),
 	[SCAN_GROUP] = HCMD_ARR(iwl_mvm_scan_names),
