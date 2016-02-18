@@ -1742,13 +1742,13 @@ exit_err:
 }
 
 int iwl_sdio_download_fw_page(struct iwl_trans *trans, u32 page_sram_addr,
-			      void *page_dram_addr)
+			      void *page_dram_addr, u32 size)
 {
 	int ret = 0;
 	void *buf = trans->paging_download_buf;
 
 	ret = iwl_sdio_load_fw_chunk(trans, buf, 0, NULL, page_sram_addr,
-				     FW_PAGING_SIZE, page_dram_addr);
+				     size, page_dram_addr);
 
 	if (ret)
 		IWL_ERR(trans, "Paging: failed to download fw page\n");

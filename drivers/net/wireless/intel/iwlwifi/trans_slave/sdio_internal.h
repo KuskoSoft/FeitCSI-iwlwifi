@@ -308,6 +308,6 @@ u8 iwl_sdio_f0_read8(struct iwl_trans *trans, u32 ofs, int *ret);
 u32 iwl_sdio_read32(struct iwl_trans *trans, u32 ofs, int *ret);
 u8 iwl_sdio_get_cmd_seq(struct iwl_trans_sdio *trans_sdio, bool write);
 int iwl_sdio_download_fw_page(struct iwl_trans *trans, u32 page_sram_addr,
-			      void *page_dram_addr);
+			      void *page_dram_addr, u32 size);
 
 #endif /* __iwl_trans_int_sdio_h__ */

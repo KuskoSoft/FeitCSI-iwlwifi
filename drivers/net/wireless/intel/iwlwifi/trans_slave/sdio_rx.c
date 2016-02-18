@@ -6,7 +6,7 @@
  * GPL LICENSE SUMMARY
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
- * Copyright (C) 2015 Intel Deutschland GmbH
+ * Copyright (C) 2015 - 2016 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -32,6 +32,7 @@
  * BSD LICENSE
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
+ * Copyright (C) 2016 Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -417,6 +418,7 @@ static void iwl_sdio_paging_handler(struct iwl_trans *trans)
 	u8 *page_addr;
 	u32 sram_addr;
 	void *buf = trans->paging_download_buf;
+	u32 size;
 
 	if (!trans->paging_req_addr || !trans->paging_db || !buf) {
 		IWL_ERR(trans,
@@ -428,6 +430,15 @@ static void iwl_sdio_paging_handler(struct iwl_trans *trans)
 	iwl_trans_read_mem_bytes(trans, trans->paging_req_addr, &page_req,
 				 sizeof(struct iwl_sdio_page_req));
 
+	size = le32_to_cpu(page_req.byte_cnt);
+
+	if (size > MAX_PAGING_IMAGE_SIZE) {
+		IWL_ERR(trans,
+			"Paging: Invalid upload/download size (req = %u, max = %u)\n",
+			size, MAX_PAGING_IMAGE_SIZE);
+		return;
+	}
+
 	/* Upload page from FW */
 	if (le32_to_cpu(page_req.flag) & UMAC_SDIO_PAGE_FLAG_UPLOAD_MSK) {
 		u32 addr = le32_to_cpu(page_req.up_dst_dram_addr);
@@ -438,11 +449,10 @@ static void iwl_sdio_paging_handler(struct iwl_trans *trans)
 			PAGE_2_EXP_SIZE;
 
 		IWL_DEBUG_FW(trans,
-			     "Paging: upload data offset 0x%08x from sram address 0x%08x\n",
-			     addr, sram_addr);
+			     "Paging: upload data offset 0x%08x from sram address 0x%08x (size = %u)\n",
+			     addr, sram_addr, size);
 
-		iwl_trans_read_mem_bytes(trans, sram_addr, page_addr,
-					 FW_PAGING_SIZE);
+		iwl_trans_read_mem_bytes(trans, sram_addr, page_addr, size);
 	}
 
 	/* Download page to FW */
@@ -455,10 +465,11 @@ static void iwl_sdio_paging_handler(struct iwl_trans *trans)
 			PAGE_2_EXP_SIZE;
 
 		IWL_DEBUG_FW(trans,
-			     "Paging: download data offset 0x%08x to sram address 0x%08x\n",
-			     addr, sram_addr);
+			     "Paging: download data offset 0x%08x to sram address 0x%08x (size = %u)\n",
+			     addr, sram_addr, size);
 
-		ret = iwl_sdio_download_fw_page(trans, sram_addr, page_addr);
+		ret = iwl_sdio_download_fw_page(trans, sram_addr, page_addr,
+						size);
 		if (ret)
 			IWL_ERR(trans, "Paging: failed to download FW page\n");
 	}
