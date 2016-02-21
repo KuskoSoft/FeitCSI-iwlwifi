@@ -10240,6 +10240,10 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 
 	func.cookie = wdev->wiphy->cookie_counter++;
 
+	if (wdev->owner_nlportid &&
+	    wdev->owner_nlportid != genl_info_snd_portid(info))
+		return -ENOTCONN;
+
 	err = nla_parse(tb, NL80211_NAN_FUNC_ATTR_MAX,
 			nla_data(info->attrs[NL80211_ATTR_NAN_FUNC]),
 			nla_len(info->attrs[NL80211_ATTR_NAN_FUNC]),
@@ -10423,6 +10427,10 @@ static int nl80211_nan_rm_func(struct sk_buff *skb,
 	if (!info->attrs[NL80211_ATTR_COOKIE])
 		return -EINVAL;
 
+	if (wdev->owner_nlportid &&
+	    wdev->owner_nlportid != genl_info_snd_portid(info))
+		return -ENOTCONN;
+
 	cookie = nla_get_u64(info->attrs[NL80211_ATTR_COOKIE]);
 
 	rdev_rm_nan_func(rdev, wdev, cookie);
@@ -10517,8 +10525,13 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	nla_nest_end(msg, match_attr);
 	genlmsg_end(msg, hdr);
 
-	genlmsg_multicast_netns(&nl80211_fam, wiphy_net(&rdev->wiphy), msg, 0,
-				NL80211_MCGRP_NAN, gfp);
+	if (!wdev->owner_nlportid)
+		genlmsg_multicast_netns(&nl80211_fam, wiphy_net(&rdev->wiphy),
+					msg, 0, NL80211_MCGRP_NAN, gfp);
+	else
+		genlmsg_unicast(wiphy_net(&rdev->wiphy), msg,
+				wdev->owner_nlportid);
+
 	return;
 
 nla_put_failure:
@@ -10563,8 +10576,13 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 
 	genlmsg_end(msg, hdr);
 
-	genlmsg_multicast_netns(&nl80211_fam, wiphy_net(&rdev->wiphy), msg, 0,
-				NL80211_MCGRP_NAN, gfp);
+	if (!wdev->owner_nlportid)
+		genlmsg_multicast_netns(&nl80211_fam, wiphy_net(&rdev->wiphy),
+					msg, 0, NL80211_MCGRP_NAN, gfp);
+	else
+		genlmsg_unicast(wiphy_net(&rdev->wiphy), msg,
+				wdev->owner_nlportid);
+
 	return;
 
 nla_put_failure:

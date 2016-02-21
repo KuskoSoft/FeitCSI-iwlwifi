@@ -868,6 +868,7 @@
  *	This cookie may be used in NAN events even before the command
  *	returns, so userspace shouldn't process NAN events until it processes
  *	the response to this command.
+ *	Look at %NL80211_ATTR_SOCKET_OWNER as well.
  * @NL80211_CMD_RM_NAN_FUNCTION: Remove a NAN function by cookie.
  *	This command is also used as a notification sent when a NAN function is
  *	terminated. This will contain a %NL80211_ATTR_NAN_FUNC_INST_ID
@@ -1786,6 +1787,12 @@ enum nl80211_commands {
  *	regulatory indoor configuration would be owned by the netlink socket
  *	that configured the indoor setting, and the indoor operation would be
  *	cleared when the socket is closed.
+ *	If set during NAN interface creation, the interface will be destroyed
+ *	if the socket is closed just like any other interface. Moreover, only
+ *	the netlink socket that created the interface will be allowed to add
+ *	and remove functions. NAN notifications will be sent in unicast to that
+ *	socket. Without this attribute, any socket can add functions and the
+ *	notifications will be sent to the %NL80211_MCGRP_NAN multicast group.
  *
  * @NL80211_ATTR_TDLS_INITIATOR: flag attribute indicating the current end is
  *	the TDLS link initiator.
