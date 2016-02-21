@@ -94,12 +94,6 @@ config IWLMVM_P2P_OPPPS_TEST_WA
 	  user space to mimic power management behavior. Update quota to normal
 	  value otherwise.
 
-config IWLMVM_P2P_UAPSD_STANDALONE
-	bool "Allow U-APSD on P2P standalone client"
-	depends on IWLMVM
-	---help---
-	  Supports U-APSD on P2P standalone client.
-
 config IWLMVM_VENDOR_CMDS
 	bool "enable vendor commands"
 	depends on IWLMVM

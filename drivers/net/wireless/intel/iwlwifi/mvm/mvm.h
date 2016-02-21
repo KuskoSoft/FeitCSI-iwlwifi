@@ -1246,13 +1246,9 @@ static inline bool iwl_mvm_is_mplut_supported(struct iwl_mvm *mvm)
 static inline
 bool iwl_mvm_is_p2p_standalone_uapsd_supported(struct iwl_mvm *mvm)
 {
-#ifdef CPTCFG_IWLMVM_P2P_UAPSD_STANDALONE
 	return fw_has_capa(&mvm->fw->ucode_capa,
 			   IWL_UCODE_TLV_CAPA_P2P_STANDALONE_UAPSD) &&
 		IWL_MVM_P2P_UAPSD_STANDALONE;
-#else
-	return false;
-#endif
 }
 
 static inline bool iwl_mvm_has_new_rx_api(struct iwl_mvm *mvm)
