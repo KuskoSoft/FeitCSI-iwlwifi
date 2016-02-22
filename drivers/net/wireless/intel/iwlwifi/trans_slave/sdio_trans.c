@@ -7,6 +7,7 @@
  *
  * Copyright(c) 2007 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2015 - 2016 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -33,6 +34,7 @@
  *
  * Copyright(c) 2005 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2015 - 2016 Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -2115,14 +2117,14 @@ static irqreturn_t iwl_sdio_irq_thread(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int iwl_setup_oob_irq(struct iwl_trans *trans, int irq)
+static int iwl_setup_oob_irq(struct iwl_trans *trans, int irq, int flags)
 {
 	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 	int ret;
 
-	IWL_DEBUG_INFO(trans, "request irq %d\n", irq);
+	IWL_DEBUG_INFO(trans, "request irq %d, flags 0x%x\n", irq, flags);
 	ret = request_threaded_irq(irq, iwl_sdio_irq_handler,
-				   iwl_sdio_irq_thread, IRQF_NO_SUSPEND,
+				   iwl_sdio_irq_thread, flags | IRQF_NO_SUSPEND,
 				   DRV_NAME, trans);
 	if (ret)
 		return ret;
@@ -2135,15 +2137,22 @@ static int iwl_setup_oob_irq(struct iwl_trans *trans, int irq)
 static int iwlwifi_plat_probe(struct platform_device *pdev)
 {
 	struct iwl_trans *trans = iwl_sdio_plat_trans;
-	int wlan_irq, ret;
+	int wlan_irq, flags, ret;
+	struct resource *r;
 
-	wlan_irq = platform_get_irq_byname(pdev, "wlan_irq");
+	r = platform_get_resource_byname(pdev, IORESOURCE_IRQ, "wlan_irq");
+	if (!r)
+		return -ENXIO;
+
+	wlan_irq = r->start;
 	if (wlan_irq < 0)
 		return wlan_irq;
 
-	IWL_INFO(trans, "wlan_irq=%d\n", wlan_irq);
+	flags = r->flags & IRQF_TRIGGER_MASK;
 
-	ret = iwl_setup_oob_irq(trans, wlan_irq);
+	IWL_INFO(trans, "wlan_irq=%d, flags=0x%x\n", wlan_irq, flags);
+
+	ret = iwl_setup_oob_irq(trans, wlan_irq, flags);
 	if (ret) {
 		IWL_ERR(trans, "Failed setting oob irq\n");
 		return ret;
