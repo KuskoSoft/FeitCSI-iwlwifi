@@ -584,7 +584,7 @@ void iwl_sdio_isr(struct sdio_func *func)
 
 	/* Device has message to the host */
 	if (val & IWL_SDIO_INTR_D2H_GPR_MSG) {
-		IWL_ERR(trans, "Got D2H message, queuing work\n");
+		IWL_DEBUG_ISR(trans, "Got D2H message, queuing work\n");
 		schedule_work(&trans_sdio->d2h_work);
 	}
 
