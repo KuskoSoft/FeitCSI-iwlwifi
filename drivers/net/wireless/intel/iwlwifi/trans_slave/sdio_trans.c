@@ -434,30 +434,24 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	/* Wait for wake up event after the TA read buffer has been received */
 	sdio_release_host(func);
 	ret = wait_event_timeout(trans_sdio->wait_target_access,
-				 !test_bit(STATUS_TA_ACTIVE,
-					   &trans->status),
+				 !test_bit(STATUS_TA_ACTIVE, &trans->status),
 				 HOST_COMPLETE_TIMEOUT);
 	sdio_claim_host(func);
 	if (!ret) {
-		if (test_bit(STATUS_TA_ACTIVE, &trans->status)) {
-			IWL_ERR(trans,
-				"Target access failed after %dms.\n",
-				jiffies_to_msecs(HOST_COMPLETE_TIMEOUT));
+		IWL_ERR(trans, "Target access failed after %dms.\n",
+			jiffies_to_msecs(HOST_COMPLETE_TIMEOUT));
 
-			clear_bit(STATUS_TA_ACTIVE, &trans->status);
-			set_bit(STATUS_TRANS_DEAD, &trans->status);
-			trans_sdio->ta_read_buff = NULL;
-			return -ETIMEDOUT;
-		}
-	} else {
-		ret = 0; /* Clear the time left after waiting */
-
-		IWL_DEBUG_IO(trans,
-			     "### TA READ COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
-			     ta_read_cmd->address, ta_read_cmd->length,
-			     ta_read_cmd->hdr.seq_number,
-			     *((u32 *)trans_sdio->ta_read_buff));
+		clear_bit(STATUS_TA_ACTIVE, &trans->status);
+		set_bit(STATUS_TRANS_DEAD, &trans->status);
+		trans_sdio->ta_read_buff = NULL;
+		return -ETIMEDOUT;
 	}
+
+	IWL_DEBUG_IO(trans,
+		     "### TA READ COMMAND: addr 0x%x, length 0x%x, seq %d, val %d\n",
+		     ta_read_cmd->address, ta_read_cmd->length,
+		     ta_read_cmd->hdr.seq_number,
+		     *((u32 *)trans_sdio->ta_read_buff));
 
 	/*
 	 * Clear the buffer before next use.
@@ -465,7 +459,7 @@ static int iwl_sdio_ta_read(struct iwl_trans *trans,
 	 */
 	trans_sdio->ta_read_buff = NULL;
 	IWL_DEBUG_IO(trans, "Target access read has successfully finished\n");
-	return ret;
+	return 0;
 }
 
 /*
