@@ -292,11 +292,13 @@ static int iwl_sdio_ta_write8(struct iwl_trans *trans, u32 target_addr,
 }
 
 /*
- * Called from the interrupt handler when there is data ready after a
- * target access read command.
+ * Called from iwl_sdio_rx_work (queued by the sdio ISR) when there is
+ * data ready after a target access read command.
  * Wakes up the ta_read waitqueue that is waiting for this data.
  *
- * Since it's called from the ISR the host is already claimed.
+ * Should be called with claimed host in order to make sure the
+ * TA-related data is coherent (there are no actual sdio transactions
+ * here, though).
  */
 void iwl_sdio_handle_ta_read_ready(struct iwl_trans *trans,
 				   struct iwl_sdio_cmd_buffer *ta_buff)

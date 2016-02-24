@@ -244,6 +244,7 @@ void iwl_sdio_rx_work(struct work_struct *work)
 							 struct iwl_trans_sdio,
 							 rx_work);
 	struct iwl_trans *trans = trans_sdio->trans;
+	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
 	struct list_head local_list;
 	struct iwl_sdio_rx_mem_desc *rx_buff, *next;
 	void *page_addr;
@@ -261,7 +262,9 @@ void iwl_sdio_rx_work(struct work_struct *work)
 		switch (sdio_cmd_hdr->op_code & IWL_SDIO_OP_CODE_MSK) {
 		case IWL_SDIO_OP_CODE_READ:
 			WARN_ON(rx_buff->length != IWL_SDIO_BLOCK_SIZE);
+			sdio_claim_host(func);
 			iwl_sdio_handle_ta_read_ready(trans, page_addr);
+			sdio_release_host(func);
 			break;
 		case IWL_SDIO_OP_CODE_RX_DATA:
 			iwl_sdio_rx_handle_rb(trans, rx_buff);
