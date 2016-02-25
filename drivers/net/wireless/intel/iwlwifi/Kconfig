@@ -66,6 +66,8 @@ config IWLWIFI_OPMODE_MODULAR
 	bool
 	default y if IWLDVM=m
 	default y if IWLMVM=m
+	default y if IWLXVT=m
+	default y if IWLTEST=m
 
 comment "WARNING: iwlwifi is useless without IWLDVM or IWLMVM"
 	depends on IWLDVM=n && IWLMVM=n
