@@ -332,3 +332,8 @@ config MAC80211_LATENCY_MEASUREMENTS
 	  freed in mac80211.
 
 	  If unsure, say N.
+
+config IWL_TIMEOUT_FACTOR
+	int "Factor to multiply timeouts by"
+	range 1 100
+	default 1
