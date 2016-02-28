@@ -14,6 +14,7 @@
 #include <linux/printk.h>
 #include <linux/thermal.h>
 
+#if !defined(CONFIG_BTNS_PMIC)
 static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 				     unsigned long *temp)
 {
@@ -142,6 +143,7 @@ struct thermal_zone_device *backport_thermal_zone_device_register(
 						polling_delay);
 }
 EXPORT_SYMBOL_GPL(backport_thermal_zone_device_register);
+#endif /* CONFIG_BTNS_PMIC */
 
 static void seq_set_overflow(struct seq_file *m)
 {

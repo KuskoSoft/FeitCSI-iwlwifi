@@ -7,8 +7,7 @@
 #define thermal_notify_framework notify_thermal_framework
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) && !defined(CONFIG_BTNS_PMIC))
 /* Declare the < 4.3.0 struct so we can use it when calling the outer
  * kernel.
  */
@@ -108,6 +107,6 @@ struct thermal_zone_device *backport_thermal_zone_device_register(
 #define thermal_zone_device_register \
 	LINUX_BACKPORT(thermal_zone_device_register)
 
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) && !defined(CONFIG_BTNS_PMIC) */
 
 #endif /* __BACKPORT_LINUX_THERMAL_H */
