@@ -1317,6 +1317,7 @@ static void iwl_mvm_mac_stop(struct ieee80211_hw *hw)
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	cancel_delayed_work_sync(&mvm->tx_latency_watchdog_wk);
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
+	cancel_delayed_work_sync(&mvm->cs_tx_unblock_dwork);
 	iwl_mvm_free_fw_dump_desc(mvm);
 
 	mutex_lock(&mvm->mutex);
@@ -4011,6 +4012,13 @@ static int iwl_mvm_pre_channel_switch(struct ieee80211_hw *hw,
 			goto out_unlock;
 		}
 
+		/* we still didn't unblock tx. prevent new CS meanwhile */
+		if (rcu_dereference_protected(mvm->csa_tx_blocked_vif,
+					      lockdep_is_held(&mvm->mutex))) {
+			ret = -EBUSY;
+			goto out_unlock;
+		}
+
 		rcu_assign_pointer(mvm->csa_vif, vif);
 
 		if (WARN_ONCE(mvmvif->csa_countdown,
@@ -4018,6 +4026,8 @@ static int iwl_mvm_pre_channel_switch(struct ieee80211_hw *hw,
 			ret = -EBUSY;
 			goto out_unlock;
 		}
+
+		mvmvif->csa_target_freq = chsw->chandef.chan->center_freq;
 
 		break;
 	case NL80211_IFTYPE_STATION:
