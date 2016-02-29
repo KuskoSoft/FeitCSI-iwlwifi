@@ -3048,7 +3048,8 @@ static int hwsim_get_radio_nl(struct sk_buff *msg, struct genl_info *info)
 			goto out_err;
 		}
 
-		res = mac80211_hwsim_get_radio(skb, data, genl_info_snd_portid(info),
+		res = mac80211_hwsim_get_radio(skb, data,
+					       genl_info_snd_portid(info),
 					       info->snd_seq, NULL, 0);
 		if (res < 0) {
 			nlmsg_free(skb);
