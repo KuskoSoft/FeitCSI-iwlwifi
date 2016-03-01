@@ -842,6 +842,13 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
 	int i;
 
+	/* If d0i3 is supported, we have released the reference that
+	 * the transport started with, so we should take it back now
+	 * that we are leaving.
+	 */
+	if (iwl_mvm_is_d0i3_supported(mvm))
+		iwl_trans_ref(mvm->trans);
+
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	wake_lock_destroy(&mvm->recovery_wake_lock);
 #endif
