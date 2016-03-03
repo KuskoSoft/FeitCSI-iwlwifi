@@ -243,5 +243,13 @@ do {									\
 	dev_level_once(dev_dbg, dev, fmt, ##__VA_ARGS__)
 #endif /* dev_level_once */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)
+#define devm_kvasprintf LINUX_BACKPORT(devm_kvasprintf)
+extern char *devm_kvasprintf(struct device *dev, gfp_t gfp, const char *fmt,
+			     va_list ap);
+#define devm_kasprintf LINUX_BACKPORT(devm_kasprintf)
+extern char *devm_kasprintf(struct device *dev, gfp_t gfp,
+			    const char *fmt, ...);
+#endif /* < 3.17 */
 
 #endif /* __BACKPORT_DEVICE_H */

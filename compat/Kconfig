@@ -67,6 +67,7 @@ config BPAUTO_BUILD_CORDIC
 	tristate
 	depends on m
 	depends on !CORDIC
+	depends on KERNEL_3_1
 	default m if BPAUTO_CORDIC
 	default m if BPAUTO_USERSEL_BUILD_ALL
 	#module-name cordic
@@ -83,7 +84,7 @@ config BPAUTO_BUILD_DMA_SHARED_HELPERS
 	depends on HAS_DMA
 	# Build on other kernels kernels < 3.9 if HAVE_GENERIC_DMA_COHERENT is
 	# not set. Kernels >= 3.8 have this if HAS_DMA is set.
-	depends on (!HAVE_GENERIC_DMA_COHERENT || KERNEL_3_9)
+	depends on (!HAVE_GENERIC_DMA_COHERENT && KERNEL_3_8)
 	# Always build if on 3.3 - 3.5
 	default y if (KERNEL_3_4 || KERNEL_3_5 || KERNEL_3_6)
 	# build for testing

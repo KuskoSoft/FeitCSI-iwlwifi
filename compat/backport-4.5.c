@@ -9,9 +9,12 @@
  */
 
 #include <linux/leds.h>
+#include <linux/device.h>
 #include <linux/export.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
+#include <linux/phy.h>
+#include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <asm/uaccess.h>
@@ -92,3 +95,30 @@ void *memdup_user_nul(const void __user *src, size_t len)
 	return p;
 }
 EXPORT_SYMBOL_GPL(memdup_user_nul);
+
+void phy_attached_info(struct phy_device *phydev)
+{
+	phy_attached_print(phydev, NULL);
+}
+EXPORT_SYMBOL_GPL(phy_attached_info);
+
+#define ATTACHED_FMT "attached PHY driver [%s] (mii_bus:phy_addr=%s, irq=%d)"
+void phy_attached_print(struct phy_device *phydev, const char *fmt, ...)
+{
+	if (!fmt) {
+		dev_info(&phydev->dev, ATTACHED_FMT "\n",
+			 phydev->drv->name, phydev_name(phydev),
+			 phydev->irq);
+	} else {
+		va_list ap;
+
+		dev_info(&phydev->dev, ATTACHED_FMT,
+			 phydev->drv->name, phydev_name(phydev),
+			 phydev->irq);
+
+		va_start(ap, fmt);
+		vprintk(fmt, ap);
+		va_end(ap);
+	}
+}
+EXPORT_SYMBOL_GPL(phy_attached_print);

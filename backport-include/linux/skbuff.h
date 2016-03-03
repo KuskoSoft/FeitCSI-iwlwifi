@@ -300,4 +300,11 @@ int skb_ensure_writable(struct sk_buff *skb, int write_len);
 
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+static inline void skb_free_frag(void *data)
+{
+	put_page(virt_to_head_page(data));
+}
+#endif
+
 #endif /* __BACKPORT_SKBUFF_H */
