@@ -1868,6 +1868,10 @@ enum nl80211_commands {
  *	thus it must not specify the number of iterations, only the interval
  *	between scans. The scan plans are executed sequentially.
  *	Each scan plan is a nested attribute of &enum nl80211_sched_scan_plan.
+ * @NL80211_ATTR_PBSS: flag attribute. If set it means operate
+ *	in a PBSS. Specified in %NL80211_CMD_CONNECT to request
+ *	connecting to a PCP, and in %NL80211_CMD_START_AP to start
+ *	a PCP instead of AP. Relevant for DMG networks only.
  *
  * @NL80211_ATTR_MSRMENT_TYPE: Type of current measurement request/response.
  *	(values defined in &enum nl80211_msrment_type).
@@ -2285,6 +2289,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_MAX_SCAN_PLAN_ITERATIONS,
 	NL80211_ATTR_SCHED_SCAN_PLANS,
 
+	NL80211_ATTR_PBSS,
 	NL80211_ATTR_MSRMENT_TYPE,
 	NL80211_ATTR_MSRMENT_STATUS,
 
