@@ -410,10 +410,10 @@ struct iwl_trans_pcie {
 	bool cmd_hold_nic_awake;
 	bool ref_cmd_in_flight;
 
+#ifdef CPTCFG_IWLMVM_WAKELOCK
 	/* protect ref counter */
 	spinlock_t ref_lock;
-	u32 ref_count;
-#ifdef CPTCFG_IWLMVM_WAKELOCK
+	u32 wakelock_count;
 	struct wake_lock ref_wake_lock;
 	struct wake_lock timed_wake_lock;
 #endif
