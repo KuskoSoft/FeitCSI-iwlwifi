@@ -435,7 +435,7 @@ static void iwl_sdio_paging_handler(struct iwl_trans *trans)
 
 	size = le32_to_cpu(page_req.byte_cnt);
 
-	if (size > MAX_PAGING_IMAGE_SIZE) {
+	if (size > PAGING_BLOCK_SIZE) {
 		IWL_ERR(trans,
 			"Paging: Invalid upload/download size (req = %u, max = %lu)\n",
 			size, MAX_PAGING_IMAGE_SIZE);
