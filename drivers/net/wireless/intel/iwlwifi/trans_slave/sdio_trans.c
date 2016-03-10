@@ -1770,8 +1770,8 @@ static int iwl_sdio_rsa_race_bug_wa(struct iwl_trans *trans)
 	 */
 	val = iwl_sdio_read_prph_no_claim(trans, PREG_AUX_BUS_WPROT_0);
 	if (val & (BIT(1) | BIT(17))) {
-		IWL_INFO(trans,
-			 "can't access the RSA semaphore it is write protected\n");
+		IWL_DEBUG_INFO(trans,
+			       "can't access the RSA semaphore it is write protected\n");
 		return 0;
 	}
 
