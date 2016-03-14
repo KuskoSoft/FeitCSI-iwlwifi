@@ -5781,6 +5781,17 @@ wiphy_ext_feature_isset(struct wiphy *wiphy,
 }
 
 /**
+ * nl80211_send_chandef - adds attributes that describe a channel definition
+ * @msg: the message to which the attributes should be added
+ * @chandef: the channel definition for which attributes should be added
+ *
+ * This helper allows vendor commands to use the standard way to send channel
+ * definition to the userspace.
+ */
+int nl80211_send_chandef(struct sk_buff *msg,
+			 const struct cfg80211_chan_def *chandef);
+
+/**
  * struct cfg80211_nan_match_params - NAN match parameters
  * @type: the type of the function that triggered a match. If it is
  *	 %NL80211_NAN_FUNC_SUBSCRIBE it means that we replied to a subscriber.
