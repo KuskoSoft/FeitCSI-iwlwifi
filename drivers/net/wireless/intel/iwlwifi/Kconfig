@@ -129,17 +129,6 @@ config IWLWIFI_PCIE_RTPM
 
 	 If unsure, say N.
 
-config IWLWIFI_VHT_DEFAULT_DISABLE
-       bool "Disable VHT capabilities by default"
-       depends on IWLMVM
-       default false
-       help
-         Say Y here to disable VHT by default.
-         If enabled, the device will not use VHT by default, resulting
-         in lower throughput.
-
-	 If unsure, say N.
-
 menu "Debugging Options"
 
 config IWLWIFI_DEBUG
