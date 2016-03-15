@@ -2305,6 +2305,26 @@ void iwl_mvm_gscan_beacons_work(struct work_struct *work)
 	spin_unlock_bh(&mvm->gscan_beacons_lock);
 }
 
+static int iwl_mvm_vendor_send_chandef(struct sk_buff *msg,
+				       const struct cfg80211_chan_def *chandef)
+{
+	if (WARN_ON(!cfg80211_chandef_valid(chandef)))
+		return -EINVAL;
+
+	if (nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_WIPHY_FREQ,
+			chandef->chan->center_freq) ||
+	   nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_CHANNEL_WIDTH,
+		       chandef->width) ||
+	   nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_CENTER_FREQ1,
+		       chandef->center_freq1) ||
+	   (chandef->center_freq2 &&
+	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_CENTER_FREQ2,
+			chandef->center_freq2)))
+		return -ENOBUFS;
+
+	return 0;
+}
+
 void iwl_mvm_lqm_notif_iterator(void *_data, u8 *mac,
 				struct ieee80211_vif *vif)
 {
@@ -2353,7 +2373,7 @@ void iwl_mvm_lqm_notif_iterator(void *_data, u8 *mac,
 
 	if (nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_MEAS_STATUS,
 			status) ||
-	    nl80211_send_chandef(msg, &vif->bss_conf.chandef) ||
+	    iwl_mvm_vendor_send_chandef(msg, &vif->bss_conf.chandef) ||
 	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_RETRY_LIMIT,
 			le32_to_cpu(report->tx_frame_dropped)) ||
 	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_MEAS_TIME,
