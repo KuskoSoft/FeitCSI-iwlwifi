@@ -39,7 +39,7 @@ struct old_thermal_zone_device_ops {
 		       enum thermal_trip_type);
 };
 
-/* also add a way to call the old register function */
+/* also add a way to call the old register and unregister functions */
 static inline struct thermal_zone_device *old_thermal_zone_device_register(
 	const char *type, int trips, int mask, void *devdata,
 	struct old_thermal_zone_device_ops *_ops,
@@ -56,6 +56,12 @@ static inline struct thermal_zone_device *old_thermal_zone_device_register(
 	return thermal_zone_device_register(type, trips, mask, devdata,
 					    ops, tzp, passive_delay,
 					    polling_delay);
+}
+
+static inline
+void old_thermal_zone_device_unregister(struct thermal_zone_device *dev)
+{
+	thermal_zone_device_unregister(dev);
 }
 
 #undef thermal_zone_device_ops
@@ -106,6 +112,11 @@ struct thermal_zone_device *backport_thermal_zone_device_register(
 
 #define thermal_zone_device_register \
 	LINUX_BACKPORT(thermal_zone_device_register)
+
+#undef thermal_zone_device_unregister
+void backport_thermal_zone_device_unregister(struct thermal_zone_device *);
+#define thermal_zone_device_unregister			\
+	LINUX_BACKPORT(thermal_zone_device_unregister)
 
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) && !defined(CONFIG_BTNS_PMIC) */
 

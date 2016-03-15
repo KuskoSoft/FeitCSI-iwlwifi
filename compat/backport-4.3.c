@@ -143,6 +143,30 @@ struct thermal_zone_device *backport_thermal_zone_device_register(
 						polling_delay);
 }
 EXPORT_SYMBOL_GPL(backport_thermal_zone_device_register);
+
+void backport_thermal_zone_device_unregister(struct thermal_zone_device *dev)
+{
+	/* It's okay to cast here, because the backport is a superset
+	 * of the old struct.
+	 */
+	struct thermal_zone_device_ops *ops =
+		(struct thermal_zone_device_ops *)dev->ops;
+
+	/* restore the registrant's original ops to the right place */
+#define restore_ops(_op) ops->_op = ops->_##_op
+	restore_ops(get_temp);
+	restore_ops(get_trip_temp);
+	restore_ops(set_trip_temp);
+	restore_ops(get_trip_hyst);
+	restore_ops(set_trip_hyst);
+	restore_ops(get_crit_temp);
+	restore_ops(set_emul_temp);
+#undef restore_ops
+
+	old_thermal_zone_device_unregister(dev);
+}
+EXPORT_SYMBOL_GPL(backport_thermal_zone_device_unregister);
+
 #endif /* CONFIG_BTNS_PMIC */
 
 static void seq_set_overflow(struct seq_file *m)
