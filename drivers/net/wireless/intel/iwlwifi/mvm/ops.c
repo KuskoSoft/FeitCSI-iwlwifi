@@ -699,6 +699,7 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	INIT_LIST_HEAD(&mvm->gscan_beacons_list);
 	INIT_WORK(&mvm->gscan_beacons_work, iwl_mvm_gscan_beacons_work);
 	spin_lock_init(&mvm->gscan_beacons_lock);
+	mvm->rx_filters = IWL_MVM_VENDOR_RXFILTER_EINVAL;
 #endif
 
 	/*

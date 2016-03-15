@@ -1533,6 +1533,9 @@ void iwl_mvm_active_rx_filters(struct iwl_mvm *mvm)
 
 	lockdep_assert_held(&mvm->mutex);
 
+	if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL)
+		return;
+
 	for (i = 0; i < mvm->mcast_filter_cmd->count; i++) {
 		if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_MCAST4 &&
 		    memcmp(&mvm->mcast_filter_cmd->addr_list[i * ETH_ALEN],
@@ -1620,7 +1623,7 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 	    filter != IWL_MVM_VENDOR_RXFILTER_MCAST6)
 		return -EINVAL;
 
-	rx_filters = mvm->rx_filters;
+	rx_filters = mvm->rx_filters & ~IWL_MVM_VENDOR_RXFILTER_EINVAL;
 	switch (op) {
 	case IWL_MVM_VENDOR_RXFILTER_OP_DROP:
 		rx_filters &= ~filter;
@@ -1631,6 +1634,9 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 	default:
 		return -EINVAL;
 	}
+
+	/* If first time set - clear EINVAL value */
+	mvm->rx_filters &= ~IWL_MVM_VENDOR_RXFILTER_EINVAL;
 
 	if (rx_filters == mvm->rx_filters)
 		return 0;

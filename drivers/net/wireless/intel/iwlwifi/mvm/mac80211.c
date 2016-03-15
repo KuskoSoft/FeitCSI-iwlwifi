@@ -1718,7 +1718,8 @@ static void iwl_mvm_mc_iface_iterator(void *_data, u8 *mac,
 	int ret, len;
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-	cmd = mvm->mcast_active_filter_cmd;
+	if (!(mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL))
+		cmd = mvm->mcast_active_filter_cmd;
 #endif
 
 	/* if we don't have free ports, mcast frames will be dropped */
@@ -1970,7 +1971,8 @@ bool iwl_mvm_bcast_filter_build_cmd(struct iwl_mvm *mvm,
 		return false;
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-	if (mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_BCAST) {
+	if (!(mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL) &&
+	    mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_BCAST) {
 		cmd->disable = 1;
 		return true;
 	}
