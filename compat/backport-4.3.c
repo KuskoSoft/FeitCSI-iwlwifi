@@ -14,7 +14,7 @@
 #include <linux/printk.h>
 #include <linux/thermal.h>
 
-#if !defined(CONFIG_BTNS_PMIC)
+#ifndef CONFIG_BTNS_PMIC
 static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 				     unsigned long *temp)
 {
@@ -29,8 +29,8 @@ static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 	return ret;
 }
 
-static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev, int i,
-					  unsigned long *temp)
+static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev,
+					  int i, unsigned long *temp)
 {
 	struct backport_thermal_zone_device_ops *ops =
 		(struct backport_thermal_zone_device_ops *)dev->ops;
@@ -43,8 +43,8 @@ static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev, int i
 	return ret;
 }
 
-static int backport_thermal_set_trip_temp(struct thermal_zone_device *dev, int i,
-					  unsigned long temp)
+static int backport_thermal_set_trip_temp(struct thermal_zone_device *dev,
+					  int i, unsigned long temp)
 {
 	struct backport_thermal_zone_device_ops *ops =
 		(struct backport_thermal_zone_device_ops *)dev->ops;
@@ -52,8 +52,8 @@ static int backport_thermal_set_trip_temp(struct thermal_zone_device *dev, int i
 	return ops->_set_trip_temp(dev, i, (int)temp);
 }
 
-static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev, int i,
-					  unsigned long *temp)
+static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev,
+					  int i, unsigned long *temp)
 {
 	struct backport_thermal_zone_device_ops *ops =
 		(struct backport_thermal_zone_device_ops *)dev->ops;
@@ -66,8 +66,8 @@ static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev, int i
 	return ret;
 }
 
-static int backport_thermal_set_trip_hyst(struct thermal_zone_device *dev, int i,
-					  unsigned long temp)
+static int backport_thermal_set_trip_hyst(struct thermal_zone_device *dev,
+					  int i, unsigned long temp)
 {
 	struct backport_thermal_zone_device_ops *ops =
 		(struct backport_thermal_zone_device_ops *)dev->ops;
@@ -97,6 +97,90 @@ static int backport_thermal_set_emul_temp(struct thermal_zone_device *dev,
 
 	return ops->_set_emul_temp(dev, (int)temp);
 }
+#else /* !CONFIG_BTNS_PMIC */
+static int backport_thermal_get_temp(struct thermal_zone_device *dev,
+				     long *temp)
+{
+	struct backport_thermal_zone_device_ops *ops =
+		(struct backport_thermal_zone_device_ops *)dev->ops;
+	int _temp, ret;
+
+	ret = ops->_get_temp(dev, &_temp);
+	if (!ret)
+		*temp = (long)_temp;
+
+	return ret;
+}
+
+static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev,
+					  int i, long *temp)
+{
+	struct backport_thermal_zone_device_ops *ops =
+		(struct backport_thermal_zone_device_ops *)dev->ops;
+	int _temp, ret;
+
+	ret = ops->_get_trip_temp(dev, i,  &_temp);
+	if (!ret)
+		*temp = (long)_temp;
+
+	return ret;
+}
+
+static int backport_thermal_set_trip_temp(struct thermal_zone_device *dev,
+					  int i, long temp)
+{
+	struct backport_thermal_zone_device_ops *ops =
+		(struct backport_thermal_zone_device_ops *)dev->ops;
+
+	return ops->_set_trip_temp(dev, i, (int)temp);
+}
+
+static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev,
+					  int i, long *temp)
+{
+	struct backport_thermal_zone_device_ops *ops =
+		(struct backport_thermal_zone_device_ops *)dev->ops;
+	int _temp, ret;
+
+	ret = ops->_get_trip_hyst(dev, i, &_temp);
+	if (!ret)
+		*temp = (long)_temp;
+
+	return ret;
+}
+
+static int backport_thermal_set_trip_hyst(struct thermal_zone_device *dev,
+					  int i, long temp)
+{
+	struct backport_thermal_zone_device_ops *ops =
+		(struct backport_thermal_zone_device_ops *)dev->ops;
+
+	return ops->_set_trip_hyst(dev, i, (int)temp);
+}
+
+static int backport_thermal_get_crit_temp(struct thermal_zone_device *dev,
+					  long *temp)
+{
+	struct backport_thermal_zone_device_ops *ops =
+		(struct backport_thermal_zone_device_ops *)dev->ops;
+	int _temp, ret;
+
+	ret = ops->_get_crit_temp(dev, &_temp);
+	if (!ret)
+		*temp = (long)_temp;
+
+	return ret;
+}
+
+static int backport_thermal_set_emul_temp(struct thermal_zone_device *dev,
+					  unsigned long temp)
+{
+	struct backport_thermal_zone_device_ops *ops =
+		(struct backport_thermal_zone_device_ops *)dev->ops;
+
+	return ops->_set_emul_temp(dev, (int)temp);
+}
+#endif /* !CONFIG_BTNS_PMIC */
 
 struct thermal_zone_device *backport_thermal_zone_device_register(
 	const char *type, int trips, int mask, void *devdata,
@@ -166,8 +250,6 @@ void backport_thermal_zone_device_unregister(struct thermal_zone_device *dev)
 	old_thermal_zone_device_unregister(dev);
 }
 EXPORT_SYMBOL_GPL(backport_thermal_zone_device_unregister);
-
-#endif /* CONFIG_BTNS_PMIC */
 
 static void seq_set_overflow(struct seq_file *m)
 {
