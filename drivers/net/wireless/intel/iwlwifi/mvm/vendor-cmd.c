@@ -2278,6 +2278,10 @@ void iwl_mvm_rx_gscan_results_available(struct iwl_mvm *mvm,
 			goto out_free;
 
 		start_idx = i;
+		if (start_idx == num_cached_res &&
+		    nla_put_flag(msg, IWL_MVM_VENDOR_ATTR_LAST_MSG))
+			goto out_free;
+
 		cfg80211_vendor_event(msg, GFP_KERNEL);
 	}
 
