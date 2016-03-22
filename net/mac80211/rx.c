@@ -3629,6 +3629,12 @@ void ieee80211_check_fast_rx(struct sta_info *sta)
 		fastrx.icv_len = key->conf.icv_len;
 	}
 
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	if (sdata->vif.filter_grat_arp_unsol_na &&
+	    sdata->vif.bss_conf.arp_addr_cnt)
+		fastrx.drop_grat_arp_unsol_na = true;
+#endif
+
 	assign = true;
  clear_rcu:
 	rcu_read_unlock();
@@ -3814,6 +3820,12 @@ static bool ieee80211_invoke_fast_rx(struct ieee80211_rx_data *rx,
 	memcpy(skb_push(skb, sizeof(addrs)), &addrs, sizeof(addrs));
 
 	skb->dev = fast_rx->dev;
+
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	if (fast_rx->drop_grat_arp_unsol_na &&
+	    ieee80211_is_gratuitous_arp_unsolicited_na(skb))
+		goto drop;
+#endif
 
 	ieee80211_rx_stats(fast_rx->dev, skb->len);
 
