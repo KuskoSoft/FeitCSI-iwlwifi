@@ -2518,14 +2518,15 @@ void iwl_mvm_lqm_notif_iterator(void *_data, u8 *mac,
 {
 	struct iwl_link_qual_msrmnt_notif *report = _data;
 	struct iwl_mvm_vif *mvm_vif = iwl_mvm_vif_from_mac80211(vif);
-	u32 frequent_stations_air_time[LQM_NUMBER_OF_STATIONS_IN_REPORT];
-	u32 status, num_of_stations;
+	struct nlattr *res, *air_time;
 	struct sk_buff *msg;
-	struct nlattr *res;
+	u32 status, num_sta;
 	int i;
 
 	if (mvm_vif->id != le32_to_cpu(report->mac_id))
 		return;
+
+	mvm_vif->lqm_active = false;
 
 	msg = cfg80211_vendor_event_alloc(mvm_vif->mvm->hw->wiphy,
 					  ieee80211_vif_to_wdev(vif), 2048,
@@ -2534,12 +2535,14 @@ void iwl_mvm_lqm_notif_iterator(void *_data, u8 *mac,
 	if (!msg)
 		return;
 
+	if (iwl_mvm_vendor_send_chandef(msg, &vif->bss_conf.chandef))
+		goto nla_put_failure;
+
 	res = nla_nest_start(msg, IWL_MVM_VENDOR_ATTR_LQM_RESULT);
 	if (!res)
 		goto nla_put_failure;
 
 	status = le32_to_cpu(report->status);
-	mvm_vif->lqm_active = false;
 
 	switch (status) {
 	case LQM_STATUS_SUCCESS:
@@ -2554,28 +2557,31 @@ void iwl_mvm_lqm_notif_iterator(void *_data, u8 *mac,
 		break;
 	}
 
-	num_of_stations = le32_to_cpu(report->number_of_stations);
-	for (i = 0; i < num_of_stations; i++)
-		frequent_stations_air_time[i] =
-			le32_to_cpu(report->frequent_stations_air_time[i]);
-
 	if (nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_MEAS_STATUS,
 			status) ||
-	    iwl_mvm_vendor_send_chandef(msg, &vif->bss_conf.chandef) ||
 	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_RETRY_LIMIT,
 			le32_to_cpu(report->tx_frame_dropped)) ||
 	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_MEAS_TIME,
 			le32_to_cpu(report->time_in_measurement_window)) ||
 	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_OTHER_STA,
-			le32_to_cpu(report->total_air_time_other_stations)) ||
-	    nla_put_u32(msg, IWL_MVM_VENDOR_ATTR_LQM_NUM_OF_STATIONS,
-			num_of_stations) ||
-	    nla_put(msg, IWL_MVM_VENDOR_ATTR_LQM_ACTIVE_STA_AIR_TIME,
-		    sizeof(u32) * LQM_NUMBER_OF_STATIONS_IN_REPORT,
-		    frequent_stations_air_time))
+			le32_to_cpu(report->total_air_time_other_stations)))
 		goto nla_put_failure;
 
+	air_time = nla_nest_start(msg, IWL_MVM_VENDOR_ATTR_LQM_ACTIVE_STA_AIR_TIME);
+	if (!air_time)
+		goto nla_put_failure;
+
+	num_sta = le32_to_cpu(report->number_of_stations);
+	for (i = 0; i < num_sta; i++) {
+		u32 sta_air_time =
+			le32_to_cpu(report->frequent_stations_air_time[i]);
+
+		if (nla_put_u32(msg, i, sta_air_time))
+			goto nla_put_failure;
+	}
+	nla_nest_end(msg, air_time);
 	nla_nest_end(msg, res);
+
 	cfg80211_vendor_event(msg, GFP_ATOMIC);
 
 	return;
