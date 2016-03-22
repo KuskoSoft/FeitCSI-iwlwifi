@@ -1896,8 +1896,9 @@ enum nl80211_commands {
  *
  * @NL80211_ATTR_NAN_MASTER_PREF: the master preference to be used by
  *	&NL80211_CMD_START_NAN and optionally with
- *	&NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0, 1 or
- *	255.
+ *	&NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0.
+ *	Also, values 1 and 255 are reserved for certification purposes and
+ *	should not be used during a normal device operation.
  * @NL80211_ATTR_NAN_DUAL: NAN dual band operation config (see
  *	&enum nl80211_nan_dual_band_conf). This attribute is used with
  *	&NL80211_CMD_START_NAN and optionally with

@@ -10197,7 +10197,7 @@ static int nl80211_start_nan(struct sk_buff *skb, struct genl_info *info)
 
 	conf.master_pref =
 		nla_get_u8(info->attrs[NL80211_ATTR_NAN_MASTER_PREF]);
-	if (conf.master_pref <= 1 || conf.master_pref == 255)
+	if (!conf.master_pref)
 		return -EINVAL;
 
 	conf.dual = nla_get_u8(info->attrs[NL80211_ATTR_NAN_DUAL]);
@@ -10515,7 +10515,7 @@ static int nl80211_nan_change_config(struct sk_buff *skb,
 	if (info->attrs[NL80211_ATTR_NAN_MASTER_PREF]) {
 		conf.master_pref =
 			nla_get_u8(info->attrs[NL80211_ATTR_NAN_MASTER_PREF]);
-		if (conf.master_pref <= 1 || conf.master_pref == 255)
+		if (!conf.master_pref)
 			return -EINVAL;
 
 		changed |= CFG80211_NAN_CONF_CHANGED_PREF;
