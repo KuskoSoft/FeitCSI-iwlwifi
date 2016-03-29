@@ -133,7 +133,7 @@ config IWLMVM_TDLS_PEER_CACHE
 config IWLWIFI_PLATFORM_DATA
 	def_bool y
 	depends on IWLWIFI_PCIE
-	depends on X86_INTEL_SOFIA || GMIN_INTEL_MID
+	depends on X86_INTEL_SOFIA || GMIN_INTEL_MID || CONFIG_BXT_DEVIDLE
 	---help---
 	  This option enables support for platform data hooks.
 
