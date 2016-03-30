@@ -922,8 +922,6 @@ void iwl_slv_stop(struct iwl_trans *trans)
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	wake_lock_destroy(&trans_slv->slv_wake_lock);
-	wake_lock_destroy(&trans->ref_wake_lock);
-	wake_lock_destroy(&trans->timed_wake_lock);
 #endif
 
 	iwl_slv_free_queues(trans);
@@ -1007,12 +1005,6 @@ int iwl_slv_start(struct iwl_trans *trans)
 		       "iwlwifi_trans_slv_wakelock");
 	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
 		wake_lock(&trans_slv->slv_wake_lock);
-
-	spin_lock_init(&trans->ref_lock);
-	wake_lock_init(&trans->ref_wake_lock, WAKE_LOCK_SUSPEND,
-		       "iwlwifi_trans_ref_wakelock");
-	wake_lock_init(&trans->timed_wake_lock, WAKE_LOCK_SUSPEND,
-		       "iwlwifi_trans_timed_wakelock");
 #endif
 
 #ifdef CONFIG_PM_RUNTIME
@@ -1977,25 +1969,6 @@ void iwl_trans_slv_ref(struct iwl_trans *trans)
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	{
-		unsigned long flags;
-
-		spin_lock_irqsave(&trans->ref_lock, flags);
-		trans->wakelock_count++;
-
-		/* take ref wakelock on first reference */
-		if (trans->wakelock_count == 1 &&
-		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
-		    !trans->suspending)
-			wake_lock(&trans->ref_wake_lock);
-
-		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans->wakelock_count);
-
-		spin_unlock_irqrestore(&trans->ref_lock, flags);
-	}
-#endif
 	pm_runtime_get(trans_slv->d0i3_dev);
 #endif
 }
@@ -2006,35 +1979,7 @@ void iwl_trans_slv_unref(struct iwl_trans *trans)
 	struct iwl_trans_slv *trans_slv = IWL_TRANS_GET_SLV_TRANS(trans);
 	IWL_DEBUG_RPM(trans, "rpm counter: %d\n",
 		      atomic_read(&trans_slv->d0i3_dev->power.usage_count));
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	{
-		unsigned long flags;
 
-		spin_lock_irqsave(&trans->ref_lock, flags);
-
-		if (WARN_ON_ONCE(trans->wakelock_count == 0)) {
-			spin_unlock_irqrestore(&trans->ref_lock, flags);
-			return;
-		}
-		trans->wakelock_count--;
-
-		/* Release ref wake lock and take timed wake lock when
-		 * last reference is released.
-		 */
-		if (trans->wakelock_count == 0 &&
-		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
-		    !trans->suspending) {
-			wake_unlock(&trans->ref_wake_lock);
-			wake_lock_timeout(&trans->timed_wake_lock,
-				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
-		}
-
-		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans->wakelock_count);
-
-		spin_unlock_irqrestore(&trans->ref_lock, flags);
-	}
-#endif
 	pm_runtime_mark_last_busy(trans_slv->d0i3_dev);
 	pm_runtime_put_autosuspend(trans_slv->d0i3_dev);
 #endif

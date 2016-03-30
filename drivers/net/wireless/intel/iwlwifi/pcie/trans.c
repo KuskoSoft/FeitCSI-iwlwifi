@@ -1935,11 +1935,6 @@ void iwl_trans_pcie_free(struct iwl_trans *trans)
 		iwl_pcie_free_ict(trans);
 	}
 
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	wake_lock_destroy(&trans->ref_wake_lock);
-	wake_lock_destroy(&trans->timed_wake_lock);
-#endif
-
 	iwl_pcie_free_fw_monitor(trans);
 
 	for_each_possible_cpu(i) {
@@ -2281,25 +2276,6 @@ static void iwl_trans_pcie_ref(struct iwl_trans *trans)
 	if (iwlwifi_mod_params.d0i3_disable)
 		return;
 
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	{
-		unsigned long flags;
-
-		spin_lock_irqsave(&trans->ref_lock, flags);
-		trans->wakelock_count++;
-
-		/* take ref wakelock on first reference */
-		if (trans->wakelock_count == 1 &&
-		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
-		    !trans->suspending)
-			wake_lock(&trans->ref_wake_lock);
-
-		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans->wakelock_count);
-
-		spin_unlock_irqrestore(&trans->ref_lock, flags);
-	}
-#endif
 	pm_runtime_get(&trans_pcie->pci_dev->dev);
 
 #ifdef CONFIG_PM
@@ -2317,35 +2293,6 @@ static void iwl_trans_pcie_unref(struct iwl_trans *trans)
 	if (iwlwifi_mod_params.d0i3_disable)
 		return;
 
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	{
-		unsigned long flags;
-
-		spin_lock_irqsave(&trans->ref_lock, flags);
-
-		if (WARN_ON_ONCE(trans->wakelock_count == 0)) {
-			spin_unlock_irqrestore(&trans->ref_lock, flags);
-			return;
-		}
-		trans->wakelock_count--;
-
-		/* Release ref wake lock and take timed wake lock when
-		 * last reference is released.
-		 */
-		if (trans->wakelock_count == 0 &&
-		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
-		    !trans->suspending) {
-			wake_unlock(&trans->ref_wake_lock);
-			wake_lock_timeout(&trans->timed_wake_lock,
-				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
-		}
-
-		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans->wakelock_count);
-
-		spin_unlock_irqrestore(&trans->ref_lock, flags);
-	}
-#endif
 	pm_runtime_mark_last_busy(&trans_pcie->pci_dev->dev);
 	pm_runtime_put_autosuspend(&trans_pcie->pci_dev->dev);
 
@@ -3412,14 +3359,6 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 #else
 	trans->runtime_pm_mode = IWL_PLAT_PM_MODE_DISABLED;
 #endif /* CPTCFG_IWLWIFI_PCIE_RTPM */
-
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	spin_lock_init(&trans->ref_lock);
-	wake_lock_init(&trans->ref_wake_lock, WAKE_LOCK_SUSPEND,
-		       "iwlwifi_pcie_ref_wakelock");
-	wake_lock_init(&trans->timed_wake_lock, WAKE_LOCK_SUSPEND,
-		       "iwlwifi_pcie_timed_wakelock");
-#endif
 
 	return trans;
 
