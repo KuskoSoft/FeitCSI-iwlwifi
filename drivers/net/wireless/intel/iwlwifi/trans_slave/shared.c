@@ -1911,32 +1911,9 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 		else
 			IWL_WARN(trans, "Claim null rxb?\n");
 	} else {
-		/* this is probably just for debugging */
-		bool take_ref = pkt->hdr.cmd != DEBUG_LOG_MSG;
-
-		/*
-		 * when configuring beacon filtering during d0i3 entrance we
-		 * immediately get these commands, which cause wake up.
-		 * workaround it by ignoring them while going idle.
-		 */
-		if (test_bit(STATUS_TRANS_GOING_IDLE, &trans->status) &&
-		    (pkt->hdr.cmd == REPLY_RX_PHY_CMD ||
-		     pkt->hdr.cmd == REPLY_RX_MPDU_CMD ||
-		     pkt->hdr.cmd == STATISTICS_NOTIFICATION)) {
-			IWL_DEBUG_RPM(trans, "Skipping rx...\n");
-			take_ref = false;
-		}
-
-		if (IWL_D0I3_DEBUG & IWL_D0I3_DBG_IGNORE_RX)
-			take_ref = false;
-
-		if (take_ref)
-			iwl_trans_slv_ref(trans);
 		local_bh_disable();
 		iwl_op_mode_rx(trans->op_mode, napi, rxcb);
 		local_bh_enable();
-		if (take_ref)
-			iwl_trans_slv_unref(trans);
 	}
 
 	return 0;
