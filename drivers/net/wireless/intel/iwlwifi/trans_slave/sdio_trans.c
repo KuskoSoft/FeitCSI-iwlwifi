@@ -2084,8 +2084,8 @@ static irqreturn_t iwl_sdio_irq_handler(int irq, void *data)
 
 	IWL_DEBUG_ISR(trans, "IRQ handler\n");
 
-	iwl_trans_slv_ref(trans);
-	iwl_trans_slv_unref(trans);
+	iwl_trans_ref(trans);
+	iwl_trans_unref(trans);
 
 	pm_wakeup_event(trans->dev, 0);
 

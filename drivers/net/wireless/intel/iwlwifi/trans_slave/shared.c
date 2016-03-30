@@ -482,7 +482,7 @@ static bool iwl_slv_recalc_rpm_ref(struct iwl_trans *trans)
 				  &trans_slv->rpm_flags))
 		return false;
 
-	iwl_trans_slv_unref(trans);
+	iwl_trans_unref(trans);
 	return true;
 }
 
@@ -1448,7 +1448,7 @@ static int iwl_slv_tx_enqueue_hcmd(struct iwl_trans *trans,
 	if (!(cmd->flags & CMD_SEND_IN_IDLE) &&
 	    !__test_and_set_bit(IWL_SLV_RPM_FLAG_REF_TAKEN,
 				&trans_slv->rpm_flags))
-		iwl_trans_slv_ref(trans);
+		iwl_trans_ref(trans);
 
 	seq_num = txq->waiting_last_idx;
 	dev_cmd->hdr.sequence =
@@ -1652,7 +1652,7 @@ int iwl_trans_slv_tx_data_send(struct iwl_trans *trans, struct sk_buff *skb,
 	/* Take a reference if it's not already taken */
 	if (!__test_and_set_bit(IWL_SLV_RPM_FLAG_REF_TAKEN,
 				&trans_slv->rpm_flags))
-		iwl_trans_slv_ref(trans);
+		iwl_trans_ref(trans);
 
 	atomic_inc(&txq->waiting_count);
 	txq->waiting_last_idx++;
