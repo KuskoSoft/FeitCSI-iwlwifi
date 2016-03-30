@@ -513,7 +513,7 @@ static int iwl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	 * the RTPM initial reference.  So set the wakelock reference
 	 * count to 1 here, to acoount for that.
 	 */
-	trans_pcie->wakelock_count = 1;
+	iwl_trans->wakelock_count = 1;
 #endif
 
 	return 0;

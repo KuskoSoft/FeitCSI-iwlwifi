@@ -1158,7 +1158,7 @@ static void _iwl_trans_pcie_stop_device(struct iwl_trans *trans, bool low_power)
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 		/* release wake_lock while device is stopped */
 		if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
-			wake_unlock(&trans_pcie->ref_wake_lock);
+			wake_unlock(&trans->ref_wake_lock);
 #endif
 
 		/* Power-down device's busmaster DMA clocks */
@@ -1299,12 +1299,8 @@ static int iwl_trans_pcie_start_fw(struct iwl_trans *trans,
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	/* The ref wakelock is locked on init */
-	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF) {
-		struct iwl_trans_pcie *trans_pcie =
-			IWL_TRANS_GET_PCIE_TRANS(trans);
-
-		wake_lock(&trans_pcie->ref_wake_lock);
-	}
+	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
+		wake_lock(&trans->ref_wake_lock);
 #endif
 	/* make sure rfkill handshake bits are cleared */
 	iwl_write32(trans, CSR_UCODE_DRV_GP1_CLR, CSR_UCODE_SW_BIT_RFKILL);
@@ -1821,8 +1817,8 @@ void iwl_trans_pcie_free(struct iwl_trans *trans)
 	pci_disable_device(trans_pcie->pci_dev);
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
-	wake_lock_destroy(&trans_pcie->ref_wake_lock);
-	wake_lock_destroy(&trans_pcie->timed_wake_lock);
+	wake_lock_destroy(&trans->ref_wake_lock);
+	wake_lock_destroy(&trans->timed_wake_lock);
 #endif
 
 	iwl_pcie_free_fw_monitor(trans);
@@ -2165,19 +2161,19 @@ static void iwl_trans_pcie_ref(struct iwl_trans *trans)
 	{
 		unsigned long flags;
 
-		spin_lock_irqsave(&trans_pcie->ref_lock, flags);
-		trans_pcie->wakelock_count++;
+		spin_lock_irqsave(&trans->ref_lock, flags);
+		trans->wakelock_count++;
 
 		/* take ref wakelock on first reference */
-		if (trans_pcie->wakelock_count == 1 &&
+		if (trans->wakelock_count == 1 &&
 		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
 		    !trans->suspending)
-			wake_lock(&trans_pcie->ref_wake_lock);
+			wake_lock(&trans->ref_wake_lock);
 
 		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans_pcie->wakelock_count);
+			      trans->wakelock_count);
 
-		spin_unlock_irqrestore(&trans_pcie->ref_lock, flags);
+		spin_unlock_irqrestore(&trans->ref_lock, flags);
 	}
 #endif
 	pm_runtime_get(&trans_pcie->pci_dev->dev);
@@ -2201,29 +2197,29 @@ static void iwl_trans_pcie_unref(struct iwl_trans *trans)
 	{
 		unsigned long flags;
 
-		spin_lock_irqsave(&trans_pcie->ref_lock, flags);
+		spin_lock_irqsave(&trans->ref_lock, flags);
 
-		if (WARN_ON_ONCE(trans_pcie->wakelock_count == 0)) {
-			spin_unlock_irqrestore(&trans_pcie->ref_lock, flags);
+		if (WARN_ON_ONCE(trans->wakelock_count == 0)) {
+			spin_unlock_irqrestore(&trans->ref_lock, flags);
 			return;
 		}
-		trans_pcie->wakelock_count--;
+		trans->wakelock_count--;
 
 		/* Release ref wake lock and take timed wake lock when
 		 * last reference is released.
 		 */
-		if (trans_pcie->wakelock_count == 0 &&
+		if (trans->wakelock_count == 0 &&
 		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
 		    !trans->suspending) {
-			wake_unlock(&trans_pcie->ref_wake_lock);
-			wake_lock_timeout(&trans_pcie->timed_wake_lock,
+			wake_unlock(&trans->ref_wake_lock);
+			wake_lock_timeout(&trans->timed_wake_lock,
 				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
 		}
 
 		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans_pcie->wakelock_count);
+			      trans->wakelock_count);
 
-		spin_unlock_irqrestore(&trans_pcie->ref_lock, flags);
+		spin_unlock_irqrestore(&trans->ref_lock, flags);
 	}
 #endif
 	pm_runtime_mark_last_busy(&trans_pcie->pci_dev->dev);
@@ -3159,10 +3155,10 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 #endif /* CPTCFG_IWLWIFI_PCIE_RTPM */
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK
-	spin_lock_init(&trans_pcie->ref_lock);
-	wake_lock_init(&trans_pcie->ref_wake_lock, WAKE_LOCK_SUSPEND,
+	spin_lock_init(&trans->ref_lock);
+	wake_lock_init(&trans->ref_wake_lock, WAKE_LOCK_SUSPEND,
 		       "iwlwifi_pcie_ref_wakelock");
-	wake_lock_init(&trans_pcie->timed_wake_lock, WAKE_LOCK_SUSPEND,
+	wake_lock_init(&trans->timed_wake_lock, WAKE_LOCK_SUSPEND,
 		       "iwlwifi_pcie_timed_wakelock");
 #endif
 

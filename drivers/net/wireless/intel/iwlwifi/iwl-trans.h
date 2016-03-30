@@ -71,6 +71,9 @@
 #include <linux/mm.h> /* for page_address */
 #include <linux/lockdep.h>
 #include <linux/kernel.h>
+#ifdef CPTCFG_IWLMVM_WAKELOCK
+#include <linux/wakelock.h>
+#endif
 
 #include "iwl-debug.h"
 #include "iwl-config.h"
@@ -856,6 +859,13 @@ struct iwl_trans {
 	enum iwl_plat_pm_mode system_pm_mode;
 	enum iwl_plat_pm_mode runtime_pm_mode;
 	bool suspending;
+#ifdef CPTCFG_IWLMVM_WAKELOCK
+	/* protect ref counter */
+	spinlock_t ref_lock;
+	u32 wakelock_count;
+	struct wake_lock ref_wake_lock;
+	struct wake_lock timed_wake_lock;
+#endif
 
 	/* pointer to trans specific struct */
 	/*Ensure that this pointer will always be aligned to sizeof pointer */

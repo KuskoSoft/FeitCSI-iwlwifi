@@ -206,7 +206,6 @@ struct iwl_trans_slv {
 	unsigned long rpm_flags;
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	struct wake_lock slv_wake_lock;
-	struct wake_lock data_wake_lock;
 #endif
 
 	/* Ensure that this pointer will always be aligned to sizeof pointer */
