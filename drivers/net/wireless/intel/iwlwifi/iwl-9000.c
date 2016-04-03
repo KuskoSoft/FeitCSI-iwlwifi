@@ -75,10 +75,16 @@
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
 #define IWL9000_FW_PRE "fpga-iwlwifi-Pulsar1dot5-"
 #else
-#define  IWL9000_FW_PRE "iwlwifi-9000-"
+#define  IWL9000_FW_PRE "iwlwifi-9000-pu-a0-lc-a0-"
+#define  IWL9260_FW_PRE "iwlwifi-9260-th-a0-jf-a0-"
+#define  IWL9260LC_FW_PRE "iwlwifi-9260-th-a0-lc-a0-"
 #endif
 #define IWL9000_MODULE_FIRMWARE(api) \
 	IWL9000_FW_PRE "-" __stringify(api) ".ucode"
+#define IWL9260_MODULE_FIRMWARE(api) \
+	IWL9260_FW_PRE "-" __stringify(api) ".ucode"
+#define IWL9260LC_MODULE_FIRMWARE(api) \
+	IWL9260LC_FW_PRE "-" __stringify(api) ".ucode"
 
 #define NVM_HW_SECTION_NUM_FAMILY_9000		10
 
@@ -142,11 +148,30 @@ static const struct iwl_tt_params iwl9000_tt_params = {
 	.apmg_not_supported = true,					\
 	.mq_rx_supported = true,					\
 	.vht_mu_mimo_supported = true,					\
-	.mac_addr_from_csr = true
+	.mac_addr_from_csr = true,					\
+	.rf_id = true
 
 const struct iwl_cfg iwl9260_2ac_cfg = {
 		.name = "Intel(R) Dual Band Wireless AC 9260",
-		.fw_name_pre = IWL9000_FW_PRE,
+		.fw_name_pre = IWL9260_FW_PRE,
+		IWL_DEVICE_9000,
+		.ht_params = &iwl9000_ht_params,
+		.nvm_ver = IWL9000_NVM_VERSION,
+		.nvm_calib_ver = IWL9000_TX_POWER_VERSION,
+#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
+		/* No need to load INIT image on FPGA */
+		.no_power_up_nic_in_init = true,
+#endif
+		.max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
+};
+
+/*
+ * TODO the struct below is for internal testing only this should be
+ * removed by EO 2016~
+ */
+const struct iwl_cfg iwl9260lc_2ac_cfg = {
+		.name = "Intel(R) Dual Band Wireless AC 9260",
+		.fw_name_pre = IWL9260LC_FW_PRE,
 		IWL_DEVICE_9000,
 		.ht_params = &iwl9000_ht_params,
 		.nvm_ver = IWL9000_NVM_VERSION,
@@ -173,3 +198,5 @@ const struct iwl_cfg iwl5165_2ac_cfg = {
 };
 
 MODULE_FIRMWARE(IWL9000_MODULE_FIRMWARE(IWL9000_UCODE_API_MAX));
+MODULE_FIRMWARE(IWL9260_MODULE_FIRMWARE(IWL9000_UCODE_API_MAX));
+MODULE_FIRMWARE(IWL9260LC_MODULE_FIRMWARE(IWL9000_UCODE_API_MAX));
