@@ -76,9 +76,9 @@
 #define IWL9000_FW_PRE "fpga-iwlwifi-Pulsar1dot5-"
 #else
 #define  IWL9000_FW_PRE "iwlwifi-9000-pu-a0-lc-a0-"
+#endif
 #define  IWL9260_FW_PRE "iwlwifi-9260-th-a0-jf-a0-"
 #define  IWL9260LC_FW_PRE "iwlwifi-9260-th-a0-lc-a0-"
-#endif
 #define IWL9000_MODULE_FIRMWARE(api) \
 	IWL9000_FW_PRE "-" __stringify(api) ".ucode"
 #define IWL9260_MODULE_FIRMWARE(api) \
