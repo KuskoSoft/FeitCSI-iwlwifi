@@ -10367,6 +10367,9 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 		memcpy(func.followup_dest.addr,
 		       nla_data(tb[NL80211_NAN_FUNC_FOLLOW_UP_DEST]),
 		       sizeof(func.followup_dest.addr));
+		if (func.ttl)
+			return -EINVAL;
+
 		break;
 	default:
 		return -EINVAL;
