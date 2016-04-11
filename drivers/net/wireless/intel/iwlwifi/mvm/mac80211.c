@@ -1730,7 +1730,8 @@ static void iwl_mvm_mc_iface_iterator(void *_data, u8 *mac,
 	int ret, len;
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-	if (!(mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL))
+	if (!(mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL) &&
+	    mvm->mcast_active_filter_cmd)
 		cmd = mvm->mcast_active_filter_cmd;
 #endif
 

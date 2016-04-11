@@ -1601,6 +1601,7 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	enum iwl_mvm_vendor_rxfilter_flags filter, rx_filters, old_rx_filters;
 	enum iwl_mvm_vendor_rxfilter_op op;
+	bool first_set;
 	u32 mask;
 	int retval;
 
@@ -1635,10 +1636,12 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 		return -EINVAL;
 	}
 
+	first_set = mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL;
+
 	/* If first time set - clear EINVAL value */
 	mvm->rx_filters &= ~IWL_MVM_VENDOR_RXFILTER_EINVAL;
 
-	if (rx_filters == mvm->rx_filters)
+	if (rx_filters == mvm->rx_filters && !first_set)
 		return 0;
 
 	mutex_lock(&mvm->mutex);
@@ -1647,13 +1650,13 @@ static int iwl_mvm_vendor_rxfilter(struct wiphy *wiphy,
 	mvm->rx_filters = rx_filters;
 
 	mask = IWL_MVM_VENDOR_RXFILTER_MCAST4 | IWL_MVM_VENDOR_RXFILTER_MCAST6;
-	if ((old_rx_filters & mask) != (rx_filters & mask)) {
+	if ((old_rx_filters & mask) != (rx_filters & mask) || first_set) {
 		iwl_mvm_active_rx_filters(mvm);
 		iwl_mvm_recalc_multicast(mvm);
 	}
 
 	mask = IWL_MVM_VENDOR_RXFILTER_BCAST;
-	if ((old_rx_filters & mask) != (rx_filters & mask))
+	if ((old_rx_filters & mask) != (rx_filters & mask) || first_set)
 		iwl_mvm_configure_bcast_filter(mvm);
 
 	mutex_unlock(&mvm->mutex);
