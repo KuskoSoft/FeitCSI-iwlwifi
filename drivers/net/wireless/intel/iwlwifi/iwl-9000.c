@@ -194,6 +194,7 @@ const struct iwl_cfg iwl5165_2ac_cfg = {
 		.no_power_up_nic_in_init = true,
 #endif
 		.max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
+		.integrated = true,
 };
 
 MODULE_FIRMWARE(IWL9000_MODULE_FIRMWARE(IWL9000_UCODE_API_MAX));
