@@ -107,7 +107,7 @@ __cfg80211_wdev_from_attrs(struct net *netns, struct nlattr **attrs)
 		if (have_wdev_id && rdev->wiphy_idx != wiphy_idx)
 			continue;
 
-		list_for_each_entry(wdev, &rdev->wdev_list, list) {
+		list_for_each_entry(wdev, &rdev->wiphy.wdev_list, list) {
 			if (have_ifidx && wdev->netdev &&
 			    wdev->netdev->ifindex == ifidx) {
 				result = wdev;
@@ -153,7 +153,7 @@ __cfg80211_rdev_from_attrs(struct net *netns, struct nlattr **attrs)
 		tmp = cfg80211_rdev_by_wiphy_idx(wdev_id >> 32);
 		if (tmp) {
 			/* make sure wdev exists */
-			list_for_each_entry(wdev, &tmp->wdev_list, list) {
+			list_for_each_entry(wdev, &tmp->wiphy.wdev_list, list) {
 				if (wdev->identifier != (u32)wdev_id)
 					continue;
 				found = true;
@@ -583,7 +583,7 @@ static int nl80211_prepare_wdev_dump(struct sk_buff *skb,
 		*rdev = wiphy_to_rdev(wiphy);
 		*wdev = NULL;
 
-		list_for_each_entry(tmp, &(*rdev)->wdev_list, list) {
+		list_for_each_entry(tmp, &(*rdev)->wiphy.wdev_list, list) {
 			if (tmp->identifier == cb->args[1]) {
 				*wdev = tmp;
 				break;
@@ -2575,7 +2575,7 @@ static int nl80211_dump_interface(struct sk_buff *skb, struct netlink_callback *
 		}
 		if_idx = 0;
 
-		list_for_each_entry(wdev, &rdev->wdev_list, list) {
+		list_for_each_entry(wdev, &rdev->wiphy.wdev_list, list) {
 			if (if_idx < if_start) {
 				if_idx++;
 				continue;
@@ -2848,7 +2848,7 @@ static int nl80211_new_interface(struct sk_buff *skb, struct genl_info *info)
 		spin_lock_init(&wdev->mgmt_registrations_lock);
 
 		wdev->identifier = ++rdev->wdev_id;
-		list_add_rcu(&wdev->list, &rdev->wdev_list);
+		list_add_rcu(&wdev->list, &rdev->wiphy.wdev_list);
 		rdev->devlist_generation++;
 		break;
 	default:
@@ -3385,7 +3385,7 @@ static bool nl80211_get_ap_channel(struct cfg80211_registered_device *rdev,
 	struct wireless_dev *wdev;
 	bool ret = false;
 
-	list_for_each_entry(wdev, &rdev->wdev_list, list) {
+	list_for_each_entry(wdev, &rdev->wiphy.wdev_list, list) {
 		if (wdev->iftype != NL80211_IFTYPE_AP &&
 		    wdev->iftype != NL80211_IFTYPE_P2P_GO)
 			continue;
@@ -10969,7 +10969,7 @@ static int nl80211_prepare_vendor_dump(struct sk_buff *skb,
 		*wdev = NULL;
 
 		if (cb->args[1]) {
-			list_for_each_entry(tmp, &(*rdev)->wdev_list, list) {
+			list_for_each_entry(tmp, &wiphy->wdev_list, list) {
 				if (tmp->identifier == cb->args[1] - 1) {
 					*wdev = tmp;
 					break;
@@ -14435,7 +14435,7 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 		    sched_scan_req->owner_nlportid == netlink_notify_portid(notify))
 			schedule_scan_stop = true;
 
-		list_for_each_entry_rcu(wdev, &rdev->wdev_list, list) {
+		list_for_each_entry_rcu(wdev, &rdev->wiphy.wdev_list, list) {
 			cfg80211_mlme_unregister_socket(wdev,
 							netlink_notify_portid(notify));
 

@@ -158,7 +158,7 @@ int cfg80211_switch_netns(struct cfg80211_registered_device *rdev,
 	if (!(rdev->wiphy.flags & WIPHY_FLAG_NETNS_OK))
 		return -EOPNOTSUPP;
 
-	list_for_each_entry(wdev, &rdev->wdev_list, list) {
+	list_for_each_entry(wdev, &rdev->wiphy.wdev_list, list) {
 		if (!wdev->netdev)
 			continue;
 		wdev->netdev->features &= ~NETIF_F_NETNS_LOCAL;
@@ -172,7 +172,8 @@ int cfg80211_switch_netns(struct cfg80211_registered_device *rdev,
 		/* failed -- clean up to old netns */
 		net = wiphy_net(&rdev->wiphy);
 
-		list_for_each_entry_continue_reverse(wdev, &rdev->wdev_list,
+		list_for_each_entry_continue_reverse(wdev,
+						     &rdev->wiphy.wdev_list,
 						     list) {
 			if (!wdev->netdev)
 				continue;
@@ -248,7 +249,7 @@ void cfg80211_shutdown_all_interfaces(struct wiphy *wiphy)
 
 	ASSERT_RTNL();
 
-	list_for_each_entry(wdev, &rdev->wdev_list, list) {
+	list_for_each_entry(wdev, &rdev->wiphy.wdev_list, list) {
 		if (wdev->netdev) {
 			dev_close(wdev->netdev);
 			continue;
@@ -319,7 +320,8 @@ void cfg80211_destroy_ifaces(struct cfg80211_registered_device *rdev)
 		kfree(item);
 		spin_unlock_irq(&rdev->destroy_list_lock);
 
-		list_for_each_entry_safe(wdev, tmp, &rdev->wdev_list, list) {
+		list_for_each_entry_safe(wdev, tmp,
+					 &rdev->wiphy.wdev_list, list) {
 			if (nlportid == wdev->owner_nlportid)
 				rdev_del_virtual_intf(rdev, wdev);
 		}
@@ -469,7 +471,7 @@ use_default_name:
 		dev_set_name(&rdev->wiphy.dev, PHY_NAME "%d", rdev->wiphy_idx);
 	}
 
-	INIT_LIST_HEAD(&rdev->wdev_list);
+	INIT_LIST_HEAD(&rdev->wiphy.wdev_list);
 	INIT_LIST_HEAD(&rdev->beacon_registrations);
 	spin_lock_init(&rdev->beacon_registrations_lock);
 	spin_lock_init(&rdev->bss_lock);
@@ -874,7 +876,7 @@ void wiphy_unregister(struct wiphy *wiphy)
 
 	nl80211_notify_wiphy(rdev, NL80211_CMD_DEL_WIPHY);
 	rdev->wiphy.registered = false;
-	WARN_ON(!list_empty(&rdev->wdev_list));
+	WARN_ON(!list_empty(&rdev->wiphy.wdev_list));
 
 	/*
 	 * First remove the hardware from everywhere, this makes
@@ -1118,7 +1120,7 @@ static int cfg80211_netdev_notifier_call(struct notifier_block *nb,
 		spin_lock_init(&wdev->mgmt_registrations_lock);
 
 		wdev->identifier = ++rdev->wdev_id;
-		list_add_rcu(&wdev->list, &rdev->wdev_list);
+		list_add_rcu(&wdev->list, &rdev->wiphy.wdev_list);
 		rdev->devlist_generation++;
 		/* can only change netns with wiphy */
 		dev->features |= NETIF_F_NETNS_LOCAL;
