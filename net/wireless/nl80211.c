@@ -11505,6 +11505,8 @@ static int nl80211_parse_ftm_target(struct cfg80211_registered_device *rdev,
 			return -EINVAL;
 		target->burst_period =
 			nla_get_u16(tb[NL80211_FTM_TARGET_ATTR_BURST_PERIOD]);
+		if (!target->burst_period)
+			return -EINVAL;
 	}
 
 	target->samples_per_burst =
