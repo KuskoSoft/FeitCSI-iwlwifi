@@ -1916,14 +1916,14 @@ enum nl80211_commands {
  *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
  *
  * @NL80211_ATTR_NAN_MASTER_PREF: the master preference to be used by
- *	&NL80211_CMD_START_NAN and optionally with
- *	&NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0.
+ *	%NL80211_CMD_START_NAN and optionally with
+ *	%NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0.
  *	Also, values 1 and 255 are reserved for certification purposes and
  *	should not be used during a normal device operation.
  * @NL80211_ATTR_NAN_DUAL: NAN dual band operation config (see
  *	&enum nl80211_nan_dual_band_conf). This attribute is used with
- *	&NL80211_CMD_START_NAN and optionally with
- *	&NL80211_CMD_CHANGE_NAN_CONFIG.
+ *	%NL80211_CMD_START_NAN and optionally with
+ *	%NL80211_CMD_CHANGE_NAN_CONFIG.
  * @NL80211_ATTR_NAN_FUNC: a function that can be added to NAN. See
  *	&enum nl80211_nan_func_attributes for description of this nested
  *	attribute.
@@ -5465,8 +5465,8 @@ enum nl80211_nan_func_term_reason {
  * @NL80211_NAN_FUNC_CLOSE_RANGE: is this function limited for devices in a
  *	close range. The range itself (RSSI) is defined by the device.
  *	This is a flag.
- * @NL80211_NAN_FUNC_TTL: number of DWs this function should stay active. 0 is
- *	equivalent to no TTL at all. This is a u32.
+ * @NL80211_NAN_FUNC_TTL: strictly positive number of DWs this function should
+ *	stay active. If not present infinite TTL is assumed. This is a u32.
  * @NL80211_NAN_FUNC_SERVICE_INFO: array of bytes describing the service
  *	specific info. This is a binary attribute.
  * @NL80211_NAN_FUNC_SRF: Service Receive Filter. This is a nested attribute.
@@ -5503,16 +5503,14 @@ enum nl80211_nan_func_attributes {
 /**
  * enum nl80211_nan_srf_attributes - NAN Service Response filter attributes
  * @__NL80211_NAN_SRF_INVALID: invalid
- * @NL80211_NAN_SRF_INCLUDE: true if the include bit of the SRF set.
+ * @NL80211_NAN_SRF_INCLUDE: present if the include bit of the SRF set.
  *	This is a flag.
- * @NL80211_NAN_SRF_TYPE_BF: true if the SRF is a Bloom Filter SRF. If false
- *	the SRF will be &NL80211_ATTR_MAC_ADDRS. This is a flag.
- * @NL80211_NAN_SRF_BF: Bloom Filter. Relevant and mandatory if
- *	&NL80211_NAN_SRF_TYPE_BF is true. This attribute is binary.
- * @NL80211_NAN_SRF_BF_IDX: index of the Bloom Filter. Relevant and
- *	mandatory if &NL80211_NAN_SRF_TYPE_BF is true. This is a u8.
- * @NL80211_NAN_SRF_MAC_ADDRS: list of MAC addresses for the SRF. Relevant and
- *	mandatory if &NL80211_NAN_SRF_TYPE_BF is false. This is a nested
+ * @NL80211_NAN_SRF_BF: Bloom Filter. Present if and only if
+ *	&NL80211_NAN_SRF_MAC_ADDRS isn't present. This attribute is binary.
+ * @NL80211_NAN_SRF_BF_IDX: index of the Bloom Filter. Mandatory if
+ *	&NL80211_NAN_SRF_BF is present. This is a u8.
+ * @NL80211_NAN_SRF_MAC_ADDRS: list of MAC addresses for the SRF. Present if
+ *	and only if &NL80211_NAN_SRF_BF isn't present. This is a nested
  *	attribute. Each nested attribute is a MAC address.
  * @NUM_NL80211_NAN_SRF_ATTR: internal
  * @NL80211_NAN_SRF_ATTR_MAX: highest NAN SRF attribute
@@ -5520,7 +5518,6 @@ enum nl80211_nan_func_attributes {
 enum nl80211_nan_srf_attributes {
 	__NL80211_NAN_SRF_INVALID,
 	NL80211_NAN_SRF_INCLUDE,
-	NL80211_NAN_SRF_TYPE_BF,
 	NL80211_NAN_SRF_BF,
 	NL80211_NAN_SRF_BF_IDX,
 	NL80211_NAN_SRF_MAC_ADDRS,

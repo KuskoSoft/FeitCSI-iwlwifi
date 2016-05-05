@@ -2538,9 +2538,9 @@ struct cfg80211_ftm_responder_stats {
 };
 
 /**
- * struct cfg80211_nan_conf - nan configuration
+ * struct cfg80211_nan_conf - NAN configuration
  *
- * This struct defines nan configuration parameters
+ * This struct defines NAN configuration parameters
  *
  * @master_pref: master preference (2 -254)
  * @dual: dual band operation mode
@@ -2548,6 +2548,18 @@ struct cfg80211_ftm_responder_stats {
 struct cfg80211_nan_conf {
 	u8 master_pref;
 	enum nl80211_nan_dual_band_conf dual;
+};
+
+/**
+ * enum cfg80211_nan_conf_changes - indicates changed fields in NAN
+ * configuration
+ *
+ * @CFG80211_NAN_CONF_CHANGED_PREF: master preference
+ * @CFG80211_NAN_CONF_CHANGED_DUAL: dual band operation
+ */
+enum cfg80211_nan_conf_changes {
+	CFG80211_NAN_CONF_CHANGED_PREF = BIT(0),
+	CFG80211_NAN_CONF_CHANGED_DUAL = BIT(1),
 };
 
 /**
@@ -2588,7 +2600,7 @@ struct cfg80211_nan_func_filter {
  * @num_rx_filters: length of &rx_filters.
  * @num_tx_filters: length of &tx_filters.
  * @instance_id: driver allocated id of the function.
- * @cookie: user defined cookie (will be returned with notifications)
+ * @cookie: unique NAN function identifier.
  */
 struct cfg80211_nan_func {
 	enum nl80211_nan_function_type type;
@@ -2615,17 +2627,6 @@ struct cfg80211_nan_func {
 	u8 num_rx_filters;
 	u8 instance_id;
 	u64 cookie;
-};
-
-/**
- * enum cfg80211_nan_conf_changes - indicates changed fields in nan configuration
- *
- * @CFG80211_NAN_CONF_CHANGED_PREF: master preference
- * @CFG80211_NAN_CONF_CHANGED_DUAL: dual band operation
- */
-enum cfg80211_nan_conf_changes {
-	CFG80211_NAN_CONF_CHANGED_PREF = BIT(0),
-	CFG80211_NAN_CONF_CHANGED_DUAL = BIT(1),
 };
 
 /**
@@ -2921,11 +2922,11 @@ enum cfg80211_nan_conf_changes {
  * @start_ftm_responder: Start and configure FTM responder.
  * @start_nan: Start the NAN interface.
  * @stop_nan: Stop the NAN interface.
- * @add_nan_func: Add a nan function. Returns negative value on failure.
+ * @add_nan_func: Add a NAN function. Returns negative value on failure.
  *	The data in cfg80211_nan_func must not be referenced outside the
  *	scope of this call. The function assigns a unique instance_id in the
  *	provided @nan_func.
- * @rm_nan_func: Remove a nan function.
+ * @rm_nan_func: Remove a NAN function.
  * @nan_change_conf: changes NAN configuration. The changed parameters must
  *	be specified in @changes. All other parameters must be ignored.
  */

@@ -542,7 +542,6 @@ nl80211_nan_func_policy[NL80211_NAN_FUNC_ATTR_MAX + 1] = {
 static const struct nla_policy
 nl80211_nan_srf_policy[NL80211_NAN_SRF_ATTR_MAX + 1] = {
 	[NL80211_NAN_SRF_INCLUDE] = { .type = NLA_FLAG },
-	[NL80211_NAN_SRF_TYPE_BF] = { .type = NLA_FLAG },
 	[NL80211_NAN_SRF_BF] = { .type = NLA_BINARY,
 				 .len =  NL80211_NAN_FUNC_SRF_MAX_LEN },
 	[NL80211_NAN_SRF_BF_IDX] = { .type = NLA_U8 },
@@ -10430,10 +10429,10 @@ static int handle_nan_filter(struct nlattr *attr_filter,
 		i++;
 	}
 	if (tx) {
-		func->num_tx_filters = (u8)n_entries;
+		func->num_tx_filters = n_entries;
 		func->tx_filters = filter;
 	} else {
-		func->num_rx_filters = (u8)n_entries;
+		func->num_rx_filters = n_entries;
 		func->rx_filters = filter;
 	}
 
@@ -10549,8 +10548,8 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 		func.srf_include =
 			nla_get_flag(srf_tb[NL80211_NAN_SRF_INCLUDE]);
 
-		if (nla_get_flag(srf_tb[NL80211_NAN_SRF_TYPE_BF])) {
-			if (!srf_tb[NL80211_NAN_SRF_BF] ||
+		if (srf_tb[NL80211_NAN_SRF_BF]) {
+			if (srf_tb[NL80211_NAN_SRF_MAC_ADDRS] ||
 			    !srf_tb[NL80211_NAN_SRF_BF_IDX])
 				return -EINVAL;
 
