@@ -10440,7 +10440,8 @@ static int handle_nan_filter(struct nlattr *attr_filter,
 
 	i = 0;
 	nla_for_each_nested(attr, attr_filter, rem) {
-		filter[i].filter = nla_data(attr);
+		filter[i].filter = kmemdup(nla_data(attr), nla_len(attr),
+					   GFP_KERNEL);
 		filter[i].len = nla_len(attr);
 		i++;
 	}
@@ -10461,7 +10462,7 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
 	struct wireless_dev *wdev = info->user_ptr[1];
 	struct nlattr *tb[NUM_NL80211_NAN_FUNC_ATTR];
-	struct cfg80211_nan_func func = {};
+	struct cfg80211_nan_func *func;
 	struct sk_buff *msg = NULL;
 	void *hdr = NULL;
 	int err = 0;
@@ -10475,8 +10476,6 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 	if (!info->attrs[NL80211_ATTR_NAN_FUNC])
 		return -EINVAL;
 
-	func.cookie = wdev->wiphy->cookie_counter++;
-
 	if (wdev->owner_nlportid &&
 	    wdev->owner_nlportid != genl_info_snd_portid(info))
 		return -ENOTCONN;
@@ -10485,71 +10484,95 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 			nla_data(info->attrs[NL80211_ATTR_NAN_FUNC]),
 			nla_len(info->attrs[NL80211_ATTR_NAN_FUNC]),
 			nl80211_nan_func_policy);
-
 	if (err)
 		return err;
 
+	func = kzalloc(sizeof(*func), GFP_KERNEL);
+	if (!func)
+		return -ENOMEM;
+
+	func->cookie = wdev->wiphy->cookie_counter++;
+
 	if (!tb[NL80211_NAN_FUNC_TYPE] ||
-	    nla_get_u8(tb[NL80211_NAN_FUNC_TYPE]) > NL80211_NAN_FUNC_MAX_TYPE)
-		return -EINVAL;
+	    nla_get_u8(tb[NL80211_NAN_FUNC_TYPE]) > NL80211_NAN_FUNC_MAX_TYPE) {
+		err = -EINVAL;
+		goto out;
+	}
 
-	func.type = nla_get_u8(tb[NL80211_NAN_FUNC_TYPE]);
+	func->type = nla_get_u8(tb[NL80211_NAN_FUNC_TYPE]);
 
-	if (!tb[NL80211_NAN_FUNC_SERVICE_ID])
-		return -EINVAL;
+	if (!tb[NL80211_NAN_FUNC_SERVICE_ID]) {
+		err = -EINVAL;
+		goto out;
+	}
 
-	memcpy(func.service_id, nla_data(tb[NL80211_NAN_FUNC_SERVICE_ID]),
-	       sizeof(func.service_id));
+	memcpy(func->service_id, nla_data(tb[NL80211_NAN_FUNC_SERVICE_ID]),
+	       sizeof(func->service_id));
 
-	func.close_range =
+	func->close_range =
 		nla_get_flag(tb[NL80211_NAN_FUNC_CLOSE_RANGE]);
 
 	if (tb[NL80211_NAN_FUNC_SERVICE_INFO]) {
-		func.serv_spec_info_len =
+		func->serv_spec_info_len =
 			nla_len(tb[NL80211_NAN_FUNC_SERVICE_INFO]);
-		func.serv_spec_info =
-			nla_data(tb[NL80211_NAN_FUNC_SERVICE_INFO]);
+		func->serv_spec_info =
+			kmemdup(nla_data(tb[NL80211_NAN_FUNC_SERVICE_INFO]),
+				func->serv_spec_info_len,
+				GFP_KERNEL);
+		if (!func->serv_spec_info) {
+			err = -ENOMEM;
+			goto out;
+		}
 	}
 
 	if (tb[NL80211_NAN_FUNC_TTL])
-		func.ttl = nla_get_u32(tb[NL80211_NAN_FUNC_TTL]);
+		func->ttl = nla_get_u32(tb[NL80211_NAN_FUNC_TTL]);
 
-	switch (func.type) {
+	switch (func->type) {
 	case NL80211_NAN_FUNC_PUBLISH:
-		if (!tb[NL80211_NAN_FUNC_PUBLISH_TYPE])
-			return -EINVAL;
+		if (!tb[NL80211_NAN_FUNC_PUBLISH_TYPE]) {
+			err = -EINVAL;
+			goto out;
+		}
 
-		func.publish_type =
+		func->publish_type =
 			nla_get_u8(tb[NL80211_NAN_FUNC_PUBLISH_TYPE]);
-		func.publish_bcast =
+		func->publish_bcast =
 			nla_get_flag(tb[NL80211_NAN_FUNC_PUBLISH_BCAST]);
 
-		if ((!(func.publish_type & NL80211_NAN_SOLICITED_PUBLISH)) &&
-		    func.publish_bcast)
-			return -EINVAL;
+		if ((!(func->publish_type & NL80211_NAN_SOLICITED_PUBLISH)) &&
+		    func->publish_bcast) {
+			err = -EINVAL;
+			goto out;
+		}
 		break;
 	case NL80211_NAN_FUNC_SUBSCRIBE:
-		func.subscribe_active =
+		func->subscribe_active =
 			nla_get_flag(tb[NL80211_NAN_FUNC_SUBSCRIBE_ACTIVE]);
 		break;
 	case NL80211_NAN_FUNC_FOLLOW_UP:
 		if (!tb[NL80211_NAN_FUNC_FOLLOW_UP_ID] ||
-		    !tb[NL80211_NAN_FUNC_FOLLOW_UP_REQ_ID])
-			return -EINVAL;
+		    !tb[NL80211_NAN_FUNC_FOLLOW_UP_REQ_ID]) {
+			err = -EINVAL;
+			goto out;
+		}
 
-		func.followup_id =
+		func->followup_id =
 			nla_get_u8(tb[NL80211_NAN_FUNC_FOLLOW_UP_ID]);
-		func.followup_reqid =
+		func->followup_reqid =
 			nla_get_u8(tb[NL80211_NAN_FUNC_FOLLOW_UP_REQ_ID]);
-		memcpy(func.followup_dest.addr,
+		memcpy(func->followup_dest.addr,
 		       nla_data(tb[NL80211_NAN_FUNC_FOLLOW_UP_DEST]),
-		       sizeof(func.followup_dest.addr));
-		if (func.ttl)
-			return -EINVAL;
+		       sizeof(func->followup_dest.addr));
+		if (func->ttl) {
+			err = -EINVAL;
+			goto out;
+		}
 
 		break;
 	default:
-		return -EINVAL;
+		err = -EINVAL;
+		goto out;
 	}
 
 	if (tb[NL80211_NAN_FUNC_SRF]) {
@@ -10559,57 +10582,71 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 				nla_data(tb[NL80211_NAN_FUNC_SRF]),
 				nla_len(tb[NL80211_NAN_FUNC_SRF]), NULL);
 		if (err)
-			return err;
+			goto out;
 
-		func.srf_include =
+		func->srf_include =
 			nla_get_flag(srf_tb[NL80211_NAN_SRF_INCLUDE]);
 
 		if (srf_tb[NL80211_NAN_SRF_BF]) {
 			if (srf_tb[NL80211_NAN_SRF_MAC_ADDRS] ||
-			    !srf_tb[NL80211_NAN_SRF_BF_IDX])
-				return -EINVAL;
+			    !srf_tb[NL80211_NAN_SRF_BF_IDX]) {
+				err = -EINVAL;
+				goto out;
+			}
 
-			func.srf_bf_len =
+			func->srf_bf_len =
 				nla_len(srf_tb[NL80211_NAN_SRF_BF]);
-			func.srf_bf =
-				nla_data(srf_tb[NL80211_NAN_SRF_BF]);
-			func.srf_bf_idx =
+			func->srf_bf =
+				kmemdup(nla_data(srf_tb[NL80211_NAN_SRF_BF]),
+					func->srf_bf_len, GFP_KERNEL);
+			if (!func->srf_bf) {
+				err = -ENOMEM;
+				goto out;
+			}
+
+			func->srf_bf_idx =
 				nla_get_u8(srf_tb[NL80211_NAN_SRF_BF_IDX]);
 		} else {
 			struct nlattr *attr, *mac_attr =
 				srf_tb[NL80211_NAN_SRF_MAC_ADDRS];
 			int n_entries, rem, i = 0;
 
-			if (!mac_attr)
-				return -EINVAL;
+			if (!mac_attr) {
+				err = -EINVAL;
+				goto out;
+			}
 
 			n_entries = validate_acl_mac_addrs(mac_attr);
-			if (n_entries <= 0)
-				return -EINVAL;
+			if (n_entries <= 0) {
+				err = -EINVAL;
+				goto out;
+			}
 
-			func.srf_num_macs = n_entries;
-			func.srf_macs =
-				kzalloc(sizeof(*func.srf_macs) * n_entries,
+			func->srf_num_macs = n_entries;
+			func->srf_macs =
+				kzalloc(sizeof(*func->srf_macs) * n_entries,
 					GFP_KERNEL);
-			if (!func.srf_macs)
-				return -ENOMEM;
+			if (!func->srf_macs) {
+				err = -ENOMEM;
+				goto out;
+			}
 
 			nla_for_each_nested(attr, mac_attr, rem)
-				memcpy(func.srf_macs[i++].addr, nla_data(attr),
-				       sizeof(*func.srf_macs));
+				memcpy(func->srf_macs[i++].addr, nla_data(attr),
+				       sizeof(*func->srf_macs));
 		}
 	}
 
 	if (tb[NL80211_NAN_FUNC_TX_MATCH_FILTER]) {
 		err = handle_nan_filter(tb[NL80211_NAN_FUNC_TX_MATCH_FILTER],
-					&func, true);
+					func, true);
 		if (err)
 			goto out;
 	}
 
 	if (tb[NL80211_NAN_FUNC_RX_MATCH_FILTER]) {
 		err = handle_nan_filter(tb[NL80211_NAN_FUNC_RX_MATCH_FILTER],
-					&func, false);
+					func, false);
 		if (err)
 			goto out;
 	}
@@ -10624,25 +10661,22 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 			     NL80211_CMD_ADD_NAN_FUNCTION);
 	/* This can't really happen - we just allocated 4KB */
 	if (WARN_ON(!hdr)) {
-		err = -ENOBUFS;
+		err = -ENOMEM;
 		goto out;
 	}
 
-	err = rdev_add_nan_func(rdev, wdev, &func);
+	err = rdev_add_nan_func(rdev, wdev, func);
 out:
-	kfree(func.srf_macs);
-	kfree(func.rx_filters);
-	kfree(func.tx_filters);
-
 	if (err < 0) {
+		cfg80211_free_nan_func(func);
 		nlmsg_free(msg);
 		return err;
 	}
 
 	/* propagate the instance id and cookie to userspace  */
 	if (WARN_ON(nla_put_u8(msg, NL80211_ATTR_NAN_FUNC_INST_ID,
-			       func.instance_id) ||
-		    nla_put_u64(msg, NL80211_ATTR_COOKIE, func.cookie))) {
+			       func->instance_id) ||
+		    nla_put_u64(msg, NL80211_ATTR_COOKIE, func->cookie))) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}

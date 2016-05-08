@@ -2925,8 +2925,11 @@ struct cfg80211_nan_func {
  * @start_nan: Start the NAN interface.
  * @stop_nan: Stop the NAN interface.
  * @add_nan_func: Add a NAN function. Returns negative value on failure.
- *	The data in cfg80211_nan_func must not be referenced outside the
- *	scope of this call. The function assigns a unique instance_id in the
+ *	On success @nan_func ownership is transferred to the driver and
+ *	it may access it outside of the scope of this function. The driver
+ *	should free the @nan_func when no longer needed by calling
+ *	cfg80211_free_nan_func().
+ *	On success the driver should assign an instance_id in the
  *	provided @nan_func.
  * @rm_nan_func: Remove a NAN function.
  * @nan_change_conf: changes NAN configuration. The changed parameters must
@@ -5944,25 +5947,12 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 				  u64 cookie, gfp_t gfp);
 
 /**
- * cfg80211_free_nan_func_members - free nan function members
+ * cfg80211_free_nan_func - free NAN function
  * @f: NAN function that should be freed
  *
- * Frees all the allocated members of the given function, however
- * it doesn't frees the pointed memory. This function can be only called if @f
- * was cloned using cfg80211_clone_nan_func_members()
+ * Frees all the NAN function and all it's allocated members.
  */
-void cfg80211_free_nan_func_members(struct cfg80211_nan_func *f);
-
-/**
- * cfg80211_clone_nan_func_members - clone nan function
- * @f1: destination
- * @f2: source
- *
- * Clones @f2 to @f1. The function doesn't allocate @f1. Returns 0 on success.
- * To free @f1's members cfg80211_free_nan_func_members() should be used.
- */
-int cfg80211_clone_nan_func_members(struct cfg80211_nan_func *f1,
-				    const struct cfg80211_nan_func *f2);
+void cfg80211_free_nan_func(struct cfg80211_nan_func *f);
 
 /* ethtool helper */
 void cfg80211_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info);
