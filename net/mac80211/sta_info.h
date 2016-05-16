@@ -291,6 +291,8 @@ struct ieee80211_tx_consec_loss_stat {
  * @bins: each bin counts how many frames transmitted within a certain
  * latency range. when disabled it is NULL.
  * @bin_count: amount of bins.
+ * @max_ts: the kernel time stamp, in ms, of the tx packet with the
+ *	highest latency.
  */
 struct ieee80211_tx_latency_stat {
 	u32 max;
@@ -298,6 +300,7 @@ struct ieee80211_tx_latency_stat {
 	u32 counter;
 	u32 *bins;
 	u32 bin_count;
+	u32 max_ts;
 };
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 

@@ -477,7 +477,7 @@ sta_tx_latency_stat_header(struct ieee80211_tx_latency_bin_ranges *tx_latency,
 	u32 *bin_ranges = tx_latency->ranges;
 
 	pos += scnprintf(buf + pos, bufsz - pos,
-			  "Station\t\t\tTID\tMax\tAvg");
+			  "Station\t\t\tTID\tMax\tMax time\tAvg");
 	if (range_count) {
 		pos += scnprintf(buf + pos, bufsz - pos,
 				  "\t<=%d", bin_ranges[0]);
@@ -507,8 +507,8 @@ sta_tx_latency_stat_table(struct ieee80211_tx_latency_bin_ranges *tx_lat_range,
 	if (tx_lat->counter)
 		avg = tx_lat->sum / tx_lat->counter;
 
-	pos += scnprintf(buf + pos, bufsz - pos, "\t%d\t%d",
-			  tx_lat->max, avg);
+	pos += scnprintf(buf + pos, bufsz - pos, "\t%d\t%u\t%d",
+			  tx_lat->max, tx_lat->max_ts, avg);
 
 	if (tx_lat_range->n_ranges && tx_lat->bins)
 		for (j = 0; j < bin_count; j++)

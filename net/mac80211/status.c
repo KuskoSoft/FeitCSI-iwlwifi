@@ -633,8 +633,10 @@ tx_latency_msrmnt(struct ieee80211_tx_latency_bin_ranges *tx_latency,
 
 	tx_lat = &sta->tx_lat[tid];
 
-	if (tx_lat->max < msrmnt) /* update stats */
+	if (tx_lat->max < msrmnt) { /* update stats */
 		tx_lat->max = msrmnt;
+		tx_lat->max_ts = ktime_to_ms(ktime_get());
+	}
 	tx_lat->counter++;
 	tx_lat->sum += msrmnt;
 
