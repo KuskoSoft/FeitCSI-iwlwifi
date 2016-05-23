@@ -79,17 +79,6 @@ config BPAUTO_CORDIC
 config BPAUTO_MII
 	bool
 
-config BPAUTO_BUILD_DMA_SHARED_HELPERS
-	bool
-	depends on HAS_DMA
-	# Build on other kernels kernels < 3.9 if HAVE_GENERIC_DMA_COHERENT is
-	# not set. Kernels >= 3.8 have this if HAS_DMA is set.
-	depends on (!HAVE_GENERIC_DMA_COHERENT && KERNEL_3_8)
-	# Always build if on 3.3 - 3.5
-	default y if (KERNEL_3_4 || KERNEL_3_5 || KERNEL_3_6)
-	# build for testing
-	default y if BPAUTO_USERSEL_BUILD_ALL
-
 config BPAUTO_BUILD_LEDS
 	bool
 	depends on !NEW_LEDS || LEDS_CLASS=n || !LEDS_TRIGGERS
@@ -125,6 +114,17 @@ config BPAUTO_BUILD_CRYPTO_CCM
 	default n if CRYPTO_CCM
 	default y if BPAUTO_CRYPTO_CCM
 	#c-file crypto/ccm.c
+
+config BPAUTO_CRYPTO_SKCIPHER
+	tristate
+	depends on m
+	depends on KERNEL_4_3
+	default y if MAC802154
+	default y if LIB80211_CRYPT_WEP
+	default y if LIB80211_CRYPT_TKIP
+	default y if BT
+	#c-file crypto/skcipher.c
+	#module-name skcipher
 
 config BPAUTO_WANT_DEV_COREDUMP
 	bool

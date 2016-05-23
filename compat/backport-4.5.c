@@ -13,6 +13,7 @@
 #include <linux/export.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
+#include <linux/leds.h>
 #include <linux/phy.h>
 #include <linux/printk.h>
 #include <linux/slab.h>
@@ -122,3 +123,31 @@ void phy_attached_print(struct phy_device *phydev, const char *fmt, ...)
 	}
 }
 EXPORT_SYMBOL_GPL(phy_attached_print);
+
+static void devm_led_trigger_release(struct device *dev, void *res)
+{
+	led_trigger_unregister(*(struct led_trigger **)res);
+}
+
+int devm_led_trigger_register(struct device *dev,
+			      struct led_trigger *trig)
+{
+	struct led_trigger **dr;
+	int rc;
+
+	dr = devres_alloc(devm_led_trigger_release, sizeof(*dr),
+			  GFP_KERNEL);
+	if (!dr)
+		return -ENOMEM;
+
+	*dr = trig;
+
+	rc = led_trigger_register(trig);
+	if (rc)
+		devres_free(dr);
+	else
+		devres_add(dev, dr);
+
+	return rc;
+}
+EXPORT_SYMBOL_GPL(devm_led_trigger_register);

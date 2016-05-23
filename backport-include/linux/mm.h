@@ -20,11 +20,6 @@
 #define VM_DONTDUMP    VM_NODUMP
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
-#define vm_iomap_memory LINUX_BACKPORT(vm_iomap_memory)
-int vm_iomap_memory(struct vm_area_struct *vma, phys_addr_t start, unsigned long len);
-#endif
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)
 #define kvfree LINUX_BACKPORT(kvfree)
 void kvfree(const void *addr);

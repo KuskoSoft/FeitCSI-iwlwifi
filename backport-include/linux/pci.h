@@ -164,4 +164,24 @@ static inline int pci_enable_msix_range(struct pci_dev *dev,
 bool pci_device_is_present(struct pci_dev *pdev);
 #endif
 
+#ifdef CONFIG_PCI
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
+#define pci_enable_msix_exact LINUX_BACKPORT(pci_enable_msix_exact)
+#ifdef CONFIG_PCI_MSI
+static inline int pci_enable_msix_exact(struct pci_dev *dev,
+					struct msix_entry *entries, int nvec)
+{
+	int rc = pci_enable_msix_range(dev, entries, nvec, nvec);
+	if (rc < 0)
+		return rc;
+	return 0;
+}
+#else
+static inline int pci_enable_msix_exact(struct pci_dev *dev,
+		      struct msix_entry *entries, int nvec)
+{ return -ENOSYS; }
+#endif /* CONFIG_PCI_MSI */
+#endif
+#endif /* CONFIG_PCI */
+
 #endif /* _BACKPORT_LINUX_PCI_H */

@@ -357,61 +357,6 @@ bool hid_ignore(struct hid_device *hdev)
 EXPORT_SYMBOL_GPL(hid_ignore);
 
 /**
- * Backport this:
- * commit b4cbb197c7e7a68dbad0d491242e3ca67420c13e
- * Author: Linus Torvalds <torvalds@linux-foundation.org>
- * Date:   Tue Apr 16 13:45:37 2013 -0700
- *
- *     vm: add vm_iomap_memory() helper function
- */
-/**
- * vm_iomap_memory - remap memory to userspace
- * @vma: user vma to map to
- * @start: start of area
- * @len: size of area
- *
- * This is a simplified io_remap_pfn_range() for common driver use. The
- * driver just needs to give us the physical memory range to be mapped,
- * we'll figure out the rest from the vma information.
- *
- * NOTE! Some drivers might want to tweak vma->vm_page_prot first to get
- * whatever write-combining details or similar.
- */
-int vm_iomap_memory(struct vm_area_struct *vma, phys_addr_t start, unsigned long len)
-{
-	unsigned long vm_len, pfn, pages;
-
-	/* Check that the physical memory area passed in looks valid */
-	if (start + len < start)
-		return -EINVAL;
-	/*
-	 * You *really* shouldn't map things that aren't page-aligned,
-	 * but we've historically allowed it because IO memory might
-	 * just have smaller alignment.
-	 */
-	len += start & ~PAGE_MASK;
-	pfn = start >> PAGE_SHIFT;
-	pages = (len + ~PAGE_MASK) >> PAGE_SHIFT;
-	if (pfn + pages < pfn)
-		return -EINVAL;
-
-	/* We start the mapping 'vm_pgoff' pages into the area */
-	if (vma->vm_pgoff > pages)
-		return -EINVAL;
-	pfn += vma->vm_pgoff;
-	pages -= vma->vm_pgoff;
-
-	/* Can we fit all of the mapping? */
-	vm_len = vma->vm_end - vma->vm_start;
-	if (vm_len >> PAGE_SHIFT > pages)
-		return -EINVAL;
-
-	/* Ok, let it rip */
-	return io_remap_pfn_range(vma, vma->vm_start, pfn, vm_len, vma->vm_page_prot);
-}
-EXPORT_SYMBOL_GPL(vm_iomap_memory);
-
-/**
  *	prandom_bytes - get the requested number of pseudo-random bytes
  *	@buf: where to copy the pseudo-random bytes to
  *	@bytes: the requested number of bytes

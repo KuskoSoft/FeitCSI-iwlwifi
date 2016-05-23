@@ -25,4 +25,12 @@
 # define __UNIQUE_ID(prefix) __PASTE(__PASTE(__UNIQUE_ID_, prefix), __LINE__)
 #endif
 
+#ifndef barrier_data
+#ifdef __GNUC__
+#define barrier_data(ptr) __asm__ __volatile__("": :"r"(ptr) :"memory")
+#else /* __GNUC__ */
+# define barrier_data(ptr) barrier()
+#endif /* __GNUC__ */
+#endif
+
 #endif /* __BACKPORT_LINUX_COMPILER_H */

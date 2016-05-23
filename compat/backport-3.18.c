@@ -16,6 +16,7 @@
 #include <linux/errqueue.h>
 #include <linux/wait.h>
 #include <linux/of.h>
+#include <linux/string.h>
 
 /**
  * eth_get_headlen - determine the the length of header for an ethernet frame
@@ -286,3 +287,36 @@ int of_property_read_u64_array(const struct device_node *np,
 }
 EXPORT_SYMBOL_GPL(of_property_read_u64_array);
 #endif /* CONFIG_OF */
+
+#if !(LINUX_VERSION_CODE >= KERNEL_VERSION(3,17,3) || \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,24) && \
+      LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)) || \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(3,12,33) && \
+      LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)) || \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,60) && \
+      LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)) || \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,106) && \
+      LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)) || \
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,65) && \
+      LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)))
+/**
+ * memzero_explicit - Fill a region of memory (e.g. sensitive
+ *		      keying data) with 0s.
+ * @s: Pointer to the start of the area.
+ * @count: The size of the area.
+ *
+ * Note: usually using memset() is just fine (!), but in cases
+ * where clearing out _local_ data at the end of a scope is
+ * necessary, memzero_explicit() should be used instead in
+ * order to prevent the compiler from optimising away zeroing.
+ *
+ * memzero_explicit() doesn't need an arch-specific version as
+ * it just invokes the one of memset() implicitly.
+ */
+void memzero_explicit(void *s, size_t count)
+{
+	memset(s, 0, count);
+	barrier_data(s);
+}
+EXPORT_SYMBOL_GPL(memzero_explicit);
+#endif

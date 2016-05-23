@@ -58,4 +58,10 @@ extern int led_set_brightness_sync(struct led_classdev *led_cdev,
 				   enum led_brightness value);
 #endif /* < 4.5 && >= 3.19 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)
+#define devm_led_trigger_register LINUX_BACKPORT(devm_led_trigger_register)
+extern int devm_led_trigger_register(struct device *dev,
+				     struct led_trigger *trigger);
+#endif /* < 4.5 */
+
 #endif /* __BACKPORT_LINUX_LEDS_H */
