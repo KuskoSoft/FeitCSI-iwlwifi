@@ -4566,6 +4566,8 @@ void iwl_mvm_tx_latency_wk(struct work_struct *wk)
 
 	trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY);
 
+	tx_lat->event_time = ktime_to_ms(ktime_get());
+
 	gp2 = iwl_mvm_send_latency_marker_cmd(mvm, tx_lat->msrmnt,
 					      tx_lat->seq, tx_lat->tid);
 	/*

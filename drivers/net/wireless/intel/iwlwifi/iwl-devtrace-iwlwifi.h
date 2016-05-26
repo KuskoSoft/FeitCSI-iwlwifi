@@ -80,6 +80,7 @@ TRACE_EVENT(iwlwifi_dev_tx_latency_thrshld,
 		__field(u32, pkt_start)
 		__field(u32, pkt_end)
 		__field(u16, tid)
+		__field(u32, event_time)
 		__field(u16, seq)
 		__field(u32, gp2)
 		__field(int, max)
@@ -90,14 +91,16 @@ TRACE_EVENT(iwlwifi_dev_tx_latency_thrshld,
 		__entry->pkt_start = tx_lat->pkt_start;
 		__entry->pkt_end = tx_lat->pkt_end;
 		__entry->tid = tx_lat->tid;
+		__entry->event_time = tx_lat->event_time;
 		__entry->seq = tx_lat->seq;
 		__entry->gp2 = gp2;
 		__entry->max = max;
 	),
-	TP_printk("Tx Latency Metadata: %u, %u, %u, %u, %u, %s, %u",
+	TP_printk("Tx Latency Metadata: %u, %u, %u, %u, %u, %s, %u, %u",
 		  __entry->seq, __entry->pkt_start, __entry->pkt_end,
 		  __entry->msrmnt, __entry->tid,
-		  __entry->max ? "True" : "False", __entry->gp2)
+		  __entry->max ? "True" : "False",
+		  __entry->gp2, __entry->event_time)
 );
 #endif /*CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
