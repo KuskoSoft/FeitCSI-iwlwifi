@@ -453,6 +453,7 @@ enum ieee80211_tx_latency_rec_mode {
  * @pkt_end: end time of triggering pkt
  * @msrmnt: the tx latency of the pkt
  * @tid: tid of the pkt
+ * @event_time: the kernel time, in ms, in which the latency event occurred
  */
 struct ieee80211_tx_latency_event {
 	u16 mode;
@@ -462,6 +463,7 @@ struct ieee80211_tx_latency_event {
 	u32 pkt_end;
 	u32 msrmnt;
 	u16 tid;
+	u32 event_time;
 };
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
