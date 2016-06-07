@@ -1929,12 +1929,8 @@ enum nl80211_commands {
  * @NL80211_ATTR_NAN_FUNC: a function that can be added to NAN. See
  *	&enum nl80211_nan_func_attributes for description of this nested
  *	attribute.
- * @NL80211_ATTR_NAN_FUNC_INST_ID: the instance id of a %NL80211_ATTR_NAN_FUNC.
- *	Its type is u8 and it cannot be 0.
  * @NL80211_ATTR_NAN_MATCH: used to report a match. This is a nested attribute.
  *	See &enum nl80211_nan_match_attributes.
- * @NL80211_ATTR_NAN_FUNC_TERM_REASON: NAN function termination reason.
- *	See &enum nl80211_nan_func_term_reason.
  *
  * @NL80211_ATTR_MU_MIMO_GROUP_DATA: array of 24 bytes that defines a MU-MIMO
  *	groupID for monitor mode.
@@ -2368,9 +2364,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_NAN_MASTER_PREF,
 	NL80211_ATTR_NAN_DUAL,
 	NL80211_ATTR_NAN_FUNC,
-	NL80211_ATTR_NAN_FUNC_INST_ID,
 	NL80211_ATTR_NAN_MATCH,
-	NL80211_ATTR_NAN_FUNC_TERM_REASON,
 
 	NL80211_ATTR_FTM_RESPONDER_STATS,
 
@@ -5490,6 +5484,11 @@ enum nl80211_nan_func_term_reason {
  *	attribute. It is a list of binary values.
  * @NL80211_NAN_FUNC_TX_MATCH_FILTER: Transmit Matching filter. This is a
  *	nested attribute. It is a list of binary values.
+ * @NL80211_NAN_FUNC_INSTANCE_ID: The instance ID of the function.
+ *	Its type is u8 and it cannot be 0.
+ * @NL80211_NAN_FUNC_TERM_REASON: NAN function termination reason.
+ *	See &enum nl80211_nan_func_term_reason.
+ *
  * @NUM_NL80211_NAN_FUNC_ATTR: internal
  * @NL80211_NAN_FUNC_ATTR_MAX: highest NAN function attribute
  */
@@ -5509,6 +5508,8 @@ enum nl80211_nan_func_attributes {
 	NL80211_NAN_FUNC_SRF,
 	NL80211_NAN_FUNC_RX_MATCH_FILTER,
 	NL80211_NAN_FUNC_TX_MATCH_FILTER,
+	NL80211_NAN_FUNC_INSTANCE_ID,
+	NL80211_NAN_FUNC_TERM_REASON,
 
 	/* keep last */
 	NUM_NL80211_NAN_FUNC_ATTR,
@@ -5545,27 +5546,20 @@ enum nl80211_nan_srf_attributes {
 /**
  * enum nl80211_nan_match_attributes - NAN match attributes
  * @__NL80211_NAN_MATCH_INVALID: invalid
- * @NL80211_NAN_MATCH_FUNC_TYPE: &enum nl80211_nan_function_type (u8). This is
- *	the type of the function which had a match.
- * @NL80211_NAN_MATCH_INSTANCE_ID: The instance ID of the local function that
- *	had a match. This is a u8.
- * @NL80211_NAN_MATCH_PEER_INSTANCE_ID: The instance ID of the peer's function
- *	that caused the match. This is a u8.
- * @NL80211_NAN_MATCH_MAC: The MAC address of the peer. This attribute is
- *	binary.
- * @NL80211_NAN_MATCH_SERVICE_INFO: array of bytes describing the peer's
- *	service specific info. This is a binary attribute.
+ * @NL80211_NAN_MATCH_FUNC_LOCAL: the local function that had the
+ *	match. This is a nested attribute.
+ *	See &enum nl80211_nan_func_attributes.
+ * @NL80211_NAN_MATCH_FUNC_PEER: the peer function
+ *	that caused the match. This is a nested attribute.
+ *	See &enum nl80211_nan_func_attributes.
  *
  * @NUM_NL80211_NAN_MATCH_ATTR: internal
  * @NL80211_NAN_MATCH_ATTR_MAX: highest NAN match attribute
  */
 enum nl80211_nan_match_attributes {
 	__NL80211_NAN_MATCH_INVALID,
-	NL80211_NAN_MATCH_FUNC_TYPE,
-	NL80211_NAN_MATCH_INSTANCE_ID,
-	NL80211_NAN_MATCH_PEER_INSTANCE_ID,
-	NL80211_NAN_MATCH_MAC,
-	NL80211_NAN_MATCH_SERVICE_INFO,
+	NL80211_NAN_MATCH_FUNC_LOCAL,
+	NL80211_NAN_MATCH_FUNC_PEER,
 
 	/* keep last */
 	NUM_NL80211_NAN_MATCH_ATTR,

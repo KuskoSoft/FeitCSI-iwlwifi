@@ -418,7 +418,6 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_NAN_MASTER_PREF] = { .type = NLA_U8 },
 	[NL80211_ATTR_NAN_DUAL] = { .type = NLA_U8 },
 	[NL80211_ATTR_NAN_FUNC] = { .type = NLA_NESTED },
-	[NL80211_ATTR_NAN_FUNC_INST_ID] = { .type = NLA_U8 },
 	[NL80211_ATTR_STA_SUPPORT_P2P_PS] = { .type = NLA_U8 },
 	[NL80211_ATTR_MU_MIMO_GROUP_DATA] = {
 		.len = VHT_MUMIMO_GROUPS_DATA_LEN
@@ -536,6 +535,8 @@ nl80211_nan_func_policy[NL80211_NAN_FUNC_ATTR_MAX + 1] = {
 	[NL80211_NAN_FUNC_SRF] = { .type = NLA_NESTED },
 	[NL80211_NAN_FUNC_RX_MATCH_FILTER] = { .type = NLA_NESTED },
 	[NL80211_NAN_FUNC_TX_MATCH_FILTER] = { .type = NLA_NESTED },
+	[NL80211_NAN_FUNC_INSTANCE_ID] = { .type = NLA_U8},
+	[NL80211_NAN_FUNC_TERM_REASON] = { .type = NLA_U8},
 };
 
 /* policy for Service Response Filter attributes */
@@ -10461,7 +10462,7 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 {
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
 	struct wireless_dev *wdev = info->user_ptr[1];
-	struct nlattr *tb[NUM_NL80211_NAN_FUNC_ATTR];
+	struct nlattr *tb[NUM_NL80211_NAN_FUNC_ATTR], *func_attr;
 	struct cfg80211_nan_func *func;
 	struct sk_buff *msg = NULL;
 	void *hdr = NULL;
@@ -10674,15 +10675,24 @@ out:
 	}
 
 	/* propagate the instance id and cookie to userspace  */
-	if (WARN_ON(nla_put_u8(msg, NL80211_ATTR_NAN_FUNC_INST_ID,
-			       func->instance_id) ||
-		    nla_put_u64(msg, NL80211_ATTR_COOKIE, func->cookie))) {
-		nlmsg_free(msg);
-		return -ENOBUFS;
-	}
+	if (nla_put_u64(msg, NL80211_ATTR_COOKIE, func->cookie))
+		goto nla_put_failure;
 
+	func_attr = nla_nest_start(msg, NL80211_ATTR_NAN_FUNC);
+	if (!func_attr)
+		goto nla_put_failure;
+
+	if (nla_put_u8(msg, NL80211_NAN_FUNC_INSTANCE_ID,
+		       func->instance_id))
+		goto nla_put_failure;
+
+	nla_nest_end(msg, func_attr);
 	genlmsg_end(msg, hdr);
 	return genlmsg_reply(msg, info);
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
 }
 
 static int nl80211_nan_rm_func(struct sk_buff *skb,
@@ -10754,7 +10764,7 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 {
 	struct wiphy *wiphy = wdev->wiphy;
 	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
-	struct nlattr *match_attr;
+	struct nlattr *match_attr, *local_func_attr, *peer_func_attr;
 	struct sk_buff *msg;
 	void *hdr;
 
@@ -10777,25 +10787,37 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	    nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
 		goto nla_put_failure;
 
-	if (nla_put_u64(msg, NL80211_ATTR_COOKIE, match->cookie))
+	if (nla_put_u64(msg, NL80211_ATTR_COOKIE, match->cookie) ||
+	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, match->addr))
 		goto nla_put_failure;
 
 	match_attr = nla_nest_start(msg, NL80211_ATTR_NAN_MATCH);
 	if (!match_attr)
 		goto nla_put_failure;
 
-	if (nla_put_u8(msg, NL80211_NAN_MATCH_FUNC_TYPE, match->type) ||
-	    nla_put_u8(msg, NL80211_NAN_MATCH_INSTANCE_ID, match->inst_id) ||
-	    nla_put_u8(msg, NL80211_NAN_MATCH_PEER_INSTANCE_ID,
-		       match->peer_inst_id) ||
-	    nla_put(msg, NL80211_NAN_MATCH_MAC, ETH_ALEN, match->addr))
+	local_func_attr = nla_nest_start(msg, NL80211_NAN_MATCH_FUNC_LOCAL);
+	if (!local_func_attr)
+		goto nla_put_failure;
+
+	if (nla_put_u8(msg, NL80211_NAN_FUNC_INSTANCE_ID, match->inst_id))
+		goto nla_put_failure;
+
+	nla_nest_end(msg, local_func_attr);
+
+	peer_func_attr = nla_nest_start(msg, NL80211_NAN_MATCH_FUNC_PEER);
+	if (!peer_func_attr)
+		goto nla_put_failure;
+
+	if (nla_put_u8(msg, NL80211_NAN_FUNC_TYPE, match->type) ||
+	    nla_put_u8(msg, NL80211_NAN_FUNC_INSTANCE_ID, match->peer_inst_id))
 		goto nla_put_failure;
 
 	if (match->info && match->info_len &&
-	    nla_put(msg, NL80211_NAN_MATCH_SERVICE_INFO, match->info_len,
+	    nla_put(msg, NL80211_NAN_FUNC_SERVICE_INFO, match->info_len,
 		    match->info))
 		goto nla_put_failure;
 
+	nla_nest_end(msg, peer_func_attr);
 	nla_nest_end(msg, match_attr);
 	genlmsg_end(msg, hdr);
 
@@ -10809,7 +10831,6 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	return;
 
 nla_put_failure:
-	genlmsg_cancel(msg, hdr);
 	nlmsg_free(msg);
 }
 EXPORT_SYMBOL(cfg80211_nan_match);
@@ -10822,6 +10843,7 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 	struct wiphy *wiphy = wdev->wiphy;
 	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
 	struct sk_buff *msg;
+	struct nlattr *func_attr;
 	void *hdr;
 
 	if (WARN_ON(!inst_id))
@@ -10843,11 +10865,18 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 	    nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
 		goto nla_put_failure;
 
-	if (nla_put_u8(msg, NL80211_ATTR_NAN_FUNC_INST_ID, inst_id) ||
-	    nla_put_u8(msg, NL80211_ATTR_NAN_FUNC_TERM_REASON, reason) ||
-	    nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie))
+	if (nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie))
 		goto nla_put_failure;
 
+	func_attr = nla_nest_start(msg, NL80211_ATTR_NAN_FUNC);
+	if (!func_attr)
+		goto nla_put_failure;
+
+	if (nla_put_u8(msg, NL80211_NAN_FUNC_INSTANCE_ID, inst_id) ||
+	    nla_put_u8(msg, NL80211_NAN_FUNC_TERM_REASON, reason))
+		goto nla_put_failure;
+
+	nla_nest_end(msg, func_attr);
 	genlmsg_end(msg, hdr);
 
 	if (!wdev->owner_nlportid)
