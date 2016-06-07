@@ -319,8 +319,8 @@ iwl_mvm_fm_2g_coex(struct iui_fm_wlan_mitigation *mit)
 		return ret;
 
 	/* fw does not support the 2g coex cmd */
-	if (fw_has_capa(&g_mvm->fw->ucode_capa,
-			IWL_UCODE_TLV_CAPA_2G_COEX_SUPPORT))
+	if (!fw_has_capa(&g_mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_2G_COEX_SUPPORT))
 		goto sofia_xmm;
 
 	/* No need to change 2g coex state */
