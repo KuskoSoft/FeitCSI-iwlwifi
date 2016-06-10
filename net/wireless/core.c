@@ -876,6 +876,7 @@ void wiphy_unregister(struct wiphy *wiphy)
 
 	nl80211_notify_wiphy(rdev, NL80211_CMD_DEL_WIPHY);
 	rdev->wiphy.registered = false;
+
 	WARN_ON(!list_empty(&rdev->wiphy.wdev_list));
 
 	/*
