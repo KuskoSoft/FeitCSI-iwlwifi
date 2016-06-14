@@ -2933,7 +2933,8 @@ struct cfg80211_nan_func {
  *	provided @nan_func.
  * @rm_nan_func: Remove a NAN function.
  * @nan_change_conf: changes NAN configuration. The changed parameters must
- *	be specified in @changes. All other parameters must be ignored.
+ *	be specified in @changes (using &enum cfg80211_nan_conf_changes);
+ *	All other parameters must be ignored.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -5905,7 +5906,7 @@ wiphy_ext_feature_isset(struct wiphy *wiphy,
  * @addr: the MAC address of the peer
  * @info_len: the length of the &info
  * @info: the Service Specific Info from the peer (if any)
- * @cookie: user defined cookie of the corresponding function
+ * @cookie: unique identifier of the corresponding function
  */
 struct cfg80211_nan_match_params {
 	enum nl80211_nan_function_type type;
@@ -5936,7 +5937,7 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
  * @wdev: the wireless device reporting the match
  * @inst_id: the local instance id
  * @reason: termination reason (one of the NL80211_NAN_FUNC_TERM_REASON_*)
- * @cookie: user defined cookie
+ * @cookie: unique NAN function identifier
  * @gfp: allocation flags
  *
  * This function reports that the a NAN function is terminated.
