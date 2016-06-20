@@ -3,7 +3,7 @@
  *
  * Copyright 2006-2010		Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
- * Copyright 2015	Intel Deutschland GmbH
+ * Copyright 2015-2016	Intel Deutschland GmbH
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -948,25 +948,8 @@ EXPORT_SYMBOL(wiphy_rfkill_set_hw_state);
 void cfg80211_unregister_wdev(struct wireless_dev *wdev)
 {
 	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wdev->wiphy);
-	struct cfg80211_active_msrment *msrment, *tmp;
-	LIST_HEAD(msrments_list);
 
 	ASSERT_RTNL();
-
-	spin_lock_bh(&rdev->msrments_lock);
-	list_for_each_entry_safe(msrment, tmp, &rdev->msrments_list, list) {
-		if (msrment->wdev != wdev)
-			continue;
-		list_del(&msrment->list);
-		list_add(&msrment->list, &msrments_list);
-	}
-	spin_unlock_bh(&rdev->msrments_lock);
-
-	list_for_each_entry_safe(msrment, tmp, &msrments_list, list) {
-		rdev_abort_msrment(rdev, wdev, msrment->cookie);
-		list_del(&msrment->list);
-		kfree(msrment);
-	}
 
 	if (WARN_ON(wdev->netdev))
 		return;
@@ -1003,6 +986,28 @@ void cfg80211_update_iface_num(struct cfg80211_registered_device *rdev,
 		rdev->num_running_monitor_ifaces += num;
 }
 
+static void cfg80211_abort_all_msrments(struct cfg80211_registered_device *rdev,
+					struct wireless_dev *wdev)
+{
+	struct cfg80211_active_msrment *msrment, *tmp;
+	LIST_HEAD(msrments_list);
+
+	spin_lock_bh(&rdev->msrments_lock);
+	list_for_each_entry_safe(msrment, tmp, &rdev->msrments_list, list) {
+		if (msrment->wdev != wdev)
+			continue;
+		list_del(&msrment->list);
+		list_add(&msrment->list, &msrments_list);
+	}
+	spin_unlock_bh(&rdev->msrments_lock);
+
+	list_for_each_entry_safe(msrment, tmp, &msrments_list, list) {
+		rdev_abort_msrment(rdev, wdev, msrment->cookie);
+		list_del(&msrment->list);
+		kfree(msrment);
+	}
+}
+
 void __cfg80211_leave(struct cfg80211_registered_device *rdev,
 		      struct wireless_dev *wdev)
 {
@@ -1011,6 +1016,8 @@ void __cfg80211_leave(struct cfg80211_registered_device *rdev,
 
 	ASSERT_RTNL();
 	ASSERT_WDEV_LOCK(wdev);
+
+	cfg80211_abort_all_msrments(rdev, wdev);
 
 	switch (wdev->iftype) {
 	case NL80211_IFTYPE_ADHOC:
