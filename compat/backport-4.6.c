@@ -12,13 +12,6 @@
 #include <linux/uaccess.h>
 #include <linux/export.h>
 
-#include <linux/errno.h>
-#include <linux/jiffies.h>
-#include <linux/skbuff.h>
-#include <linux/string.h>
-#include <linux/types.h>
-#include <net/netlink.h>
-
 /**
  * kstrtobool - convert common user inputs into boolean values
  * @s: input string
@@ -82,73 +75,3 @@ int kstrtobool_from_user(const char __user *s, size_t count, bool *res)
 	return kstrtobool(buf, res);
 }
 EXPORT_SYMBOL_GPL(kstrtobool_from_user);
-
-/**
- * __nla_reserve_64bit - reserve room for attribute on the skb and align it
- * @skb: socket buffer to reserve room on
- * @attrtype: attribute type
- * @attrlen: length of attribute payload
- * @padattr: attribute type for the padding
- *
- * Adds a netlink attribute header to a socket buffer and reserves
- * room for the payload but does not copy it. It also ensure that this
- * attribute will have a 64-bit aligned nla_data() area.
- *
- * The caller is responsible to ensure that the skb provides enough
- * tailroom for the attribute header and payload.
- */
-struct nlattr *__nla_reserve_64bit(struct sk_buff *skb, int attrtype,
-				   int attrlen, int padattr)
-{
-	if (nla_need_padding_for_64bit(skb))
-		nla_align_64bit(skb, padattr);
-
-	return __nla_reserve(skb, attrtype, attrlen);
-}
-
-/**
- * __nla_put_64bit - Add a netlink attribute to a socket buffer and align it
- * @skb: socket buffer to add attribute to
- * @attrtype: attribute type
- * @attrlen: length of attribute payload
- * @data: head of attribute payload
- *
- * The caller is responsible to ensure that the skb provides enough
- * tailroom for the attribute header and payload.
- */
-void __nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
-		     const void *data, int padattr)
-{
-	struct nlattr *nla;
-
-	nla = __nla_reserve_64bit(skb, attrtype, attrlen, padattr);
-	memcpy(nla_data(nla), data, attrlen);
-}
-EXPORT_SYMBOL(__nla_put_64bit);
-
-/**
- * nla_put_64bit - Add a netlink attribute to a socket buffer and align it
- * @skb: socket buffer to add attribute to
- * @attrtype: attribute type
- * @attrlen: length of attribute payload
- * @data: head of attribute payload
- *
- * Returns -EMSGSIZE if the tailroom of the skb is insufficient to store
- * the attribute header and payload.
- */
-int nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
-		  const void *data, int padattr)
-{
-	size_t len;
-
-	if (nla_need_padding_for_64bit(skb))
-		len = nla_total_size_64bit(attrlen);
-	else
-		len = nla_total_size(attrlen);
-	if (unlikely(skb_tailroom(skb) < len))
-		return -EMSGSIZE;
-
-	__nla_put_64bit(skb, attrtype, attrlen, data, padattr);
-	return 0;
-}
-EXPORT_SYMBOL(nla_put_64bit);

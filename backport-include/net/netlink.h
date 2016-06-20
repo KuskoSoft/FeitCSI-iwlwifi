@@ -190,16 +190,6 @@ static inline __le64 nla_get_le64(const struct nlattr *nla)
 #endif /* < 4.4 */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)
-
-int nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
-		  const void *data, int padattr);
-
-static inline int nla_put_u64_64bit(struct sk_buff *skb, int attrtype,
-				    u64 value, int padattr)
-{
-	return nla_put_64bit(skb, attrtype, sizeof(u64), &value, padattr);
-}
-
 /**
  * nla_need_padding_for_64bit - test 64-bit alignment of the next attribute
  * @skb: socket buffer the message is stored in
@@ -207,20 +197,20 @@ static inline int nla_put_u64_64bit(struct sk_buff *skb, int attrtype,
  * Return true if padding is needed to align the next attribute (nla_data()) to
  * a 64-bit aligned area.
  */
+#define nla_need_padding_for_64bit LINUX_BACKPORT(nla_need_padding_for_64bit)
 static inline bool nla_need_padding_for_64bit(struct sk_buff *skb)
 {
 #ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
-	/* The nlattr header is 4 bytes in size, that's why we test
-	 * if the skb->data _is_ aligned.  A NOP attribute, plus
-	 * nlattr header for next attribute, will make nla_data()
-	 * 8-byte aligned.
-	 */
-	if (IS_ALIGNED((unsigned long)skb_tail_pointer(skb), 8))
-		return true;
+       /* The nlattr header is 4 bytes in size, that's why we test
+        * if the skb->data _is_ aligned.  A NOP attribute, plus
+        * nlattr header for next attribute, will make nla_data()
+        * 8-byte aligned.
+        */
+       if (IS_ALIGNED((unsigned long)skb_tail_pointer(skb), 8))
+               return true;
 #endif
-	return false;
+       return false;
 }
-
 /**
  * nla_align_64bit - 64-bit align the nla_data() of next attribute
  * @skb: socket buffer the message is stored in
@@ -229,32 +219,57 @@ static inline bool nla_need_padding_for_64bit(struct sk_buff *skb)
  * Conditionally emit a padding netlink attribute in order to make
  * the next attribute we emit have a 64-bit aligned nla_data() area.
  * This will only be done in architectures which do not have
- * CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS defined.
+ * HAVE_EFFICIENT_UNALIGNED_ACCESS defined.
  *
  * Returns zero on success or a negative error code.
  */
+#define nla_align_64bit LINUX_BACKPORT(nla_align_64bit)
 static inline int nla_align_64bit(struct sk_buff *skb, int padattr)
 {
-	if (nla_need_padding_for_64bit(skb) &&
-	    !nla_reserve(skb, padattr, 0))
-		return -EMSGSIZE;
-
-	return 0;
+       if (nla_need_padding_for_64bit(skb) &&
+            !nla_reserve(skb, padattr, 0))
+                return -EMSGSIZE;
+       return 0;
 }
 
 /**
  * nla_total_size_64bit - total length of attribute including padding
  * @payload: length of payload
  */
+#define nla_total_size_64bit LINUX_BACKPORT(nla_total_size_64bit)
 static inline int nla_total_size_64bit(int payload)
 {
-	return NLA_ALIGN(nla_attr_size(payload))
-#ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
-		+ NLA_ALIGN(nla_attr_size(0))
+       return NLA_ALIGN(nla_attr_size(payload))
+#ifndef HAVE_EFFICIENT_UNALIGNED_ACCESS
+               + NLA_ALIGN(nla_attr_size(0))
 #endif
-		;
+               ;
 }
-
+#define __nla_reserve_64bit LINUX_BACKPORT(__nla_reserve_64bit)
+struct nlattr *__nla_reserve_64bit(struct sk_buff *skb, int attrtype,
+				   int attrlen, int padattr);
+#define nla_reserve_64bit LINUX_BACKPORT(nla_reserve_64bit)
+struct nlattr *nla_reserve_64bit(struct sk_buff *skb, int attrtype,
+				 int attrlen, int padattr);
+#define __nla_put_64bit LINUX_BACKPORT(__nla_put_64bit)
+void __nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
+		     const void *data, int padattr);
+#define nla_put_64bit LINUX_BACKPORT(nla_put_64bit)
+int nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
+		  const void *data, int padattr);
+/**
+ * nla_put_u64_64bit - Add a u64 netlink attribute to a skb and align it
+ * @skb: socket buffer to add attribute to
+ * @attrtype: attribute type
+ * @value: numeric value
+ * @padattr: attribute type for the padding
+ */
+#define nla_put_u64_64bit LINUX_BACKPORT(nla_put_u64_64bit)
+static inline int nla_put_u64_64bit(struct sk_buff *skb, int attrtype,
+                                    u64 value, int padattr)
+{
+        return nla_put_64bit(skb, attrtype, sizeof(u64), &value, padattr);
+}
 #endif /* < 4.7 */
 
 #endif /* __BACKPORT_NET_NETLINK_H */
