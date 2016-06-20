@@ -2758,7 +2758,8 @@ struct cfg80211_nan_func {
  *	new connect() call initiated roaming cases, the result of roaming is
  *	indicated with a call to cfg80211_roamed() or cfg80211_roamed_bss().
  *	(invoked with the wireless_dev mutex held)
- * @disconnect: Disconnect from the BSS/ESS.
+ * @disconnect: Disconnect from the BSS/ESS. Once done, call
+ *	cfg80211_disconnected().
  *	(invoked with the wireless_dev mutex held)
  *
  * @join_ibss: Join the specified IBSS (or create if necessary). Once done, call
