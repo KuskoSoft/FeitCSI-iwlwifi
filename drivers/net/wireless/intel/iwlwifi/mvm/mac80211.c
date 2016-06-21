@@ -4514,14 +4514,21 @@ void iwl_mvm_tx_latency_watchdog_wk(struct work_struct *wk)
 		return;
 
 	if (tx_lat->mode == IEEE80211_TX_LATENCY_EXT_BUF) {
-		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max,
+		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max->msrmnt,
+						     max->pkt_start,
+						     max->pkt_end,
+						     max->tid, max->event_time,
+						     max->seq,
 						     mvm->max_tx_latency_gp2,
 						     1);
 		return;
 	}
 
 	trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY);
-	trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max,
+	trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, max->msrmnt,
+					     max->pkt_start, max->pkt_end,
+					     max->tid, max->event_time,
+					     max->seq,
 					     mvm->max_tx_latency_gp2, 1);
 	iwl_mvm_fw_dbg_collect_trig(mvm, trig,
 				    "Tx Latency threshold was crossed");
@@ -4601,11 +4608,20 @@ void iwl_mvm_tx_latency_wk(struct work_struct *wk)
 		return;
 
 	if (tx_lat->mode == IEEE80211_TX_LATENCY_EXT_BUF) {
-		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, tx_lat, gp2, 0);
+		trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, tx_lat->msrmnt,
+						     tx_lat->pkt_start,
+						     tx_lat->pkt_end,
+						     tx_lat->tid,
+						     tx_lat->event_time,
+						     tx_lat->seq, gp2, 0);
 		return;
 	}
 
-	trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, tx_lat, gp2, 0);
+	trace_iwlwifi_dev_tx_latency_thrshld(mvm->dev, tx_lat->msrmnt,
+					     tx_lat->pkt_start,
+					     tx_lat->pkt_end,
+					     tx_lat->tid, tx_lat->event_time,
+					     tx_lat->seq, gp2, 0);
 	if (first_pkt)
 		iwl_mvm_fw_dbg_collect_trig(mvm, trig,
 					    "Tx Latency threshold was crossed");
