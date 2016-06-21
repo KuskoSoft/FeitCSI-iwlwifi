@@ -423,6 +423,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 		.len = VHT_MUMIMO_GROUPS_DATA_LEN
 	},
 	[NL80211_ATTR_MU_MIMO_FOLLOW_MAC_ADDR] = { .len = ETH_ALEN },
+	[NL80211_ATTR_PSK] = { .len = WLAN_PSK_LEN },
 };
 
 /* policy for the key attributes */
@@ -7502,6 +7503,13 @@ static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 			return -EINVAL;
 
 		memcpy(settings->akm_suites, data, len);
+	}
+
+	if (info->attrs[NL80211_ATTR_PSK]) {
+		if (!wiphy_ext_feature_isset(&rdev->wiphy,
+					     NL80211_EXT_FEATURE_4WAY_HANDSHAKE_OFFLOAD_STA))
+			return -EINVAL;
+		settings->psk = nla_data(info->attrs[NL80211_ATTR_PSK]);
 	}
 
 	return 0;

@@ -1967,6 +1967,9 @@ enum nl80211_commands {
  *	mandatory. If this flag is not set, the duration is the maximum duration
  *	and the actual measurement duration may be shorter.
  *
+ * @NL80211_ATTR_PSK: PSK for offloaded 4-Way Handshake. Relevant only
+ *	with %NL80211_CMD_CONNECT (for WPA/WPA2-PSK networks).
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2375,6 +2378,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_SCAN_START_TIME_TSF_BSSID,
 	NL80211_ATTR_MEASUREMENT_DURATION,
 	NL80211_ATTR_MEASUREMENT_DURATION_MANDATORY,
+
+	NL80211_ATTR_PSK,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -4668,6 +4673,9 @@ enum nl80211_feature_flags {
  *	(if available).
  * @NL80211_EXT_FEATURE_SET_SCAN_DWELL: This driver supports configuration of
  *	channel dwell time.
+ * @NL80211_EXT_FEATURE_4WAY_HANDSHAKE_OFFLOAD_STA: Device supports
+ *	doing 4-way handshake in station mode (PSK is passed as part
+ *	of the connect command).
  *
  * @NUM_NL80211_EXT_FEATURES: number of extended features.
  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
@@ -4679,6 +4687,7 @@ enum nl80211_ext_feature_index {
 	NL80211_EXT_FEATURE_SCAN_START_TIME,
 	NL80211_EXT_FEATURE_BSS_PARENT_TSF,
 	NL80211_EXT_FEATURE_SET_SCAN_DWELL,
+	NL80211_EXT_FEATURE_4WAY_HANDSHAKE_OFFLOAD_STA,
 
 	/* add new features before the definition below */
 	NUM_NL80211_EXT_FEATURES,

@@ -610,6 +610,7 @@ struct survey_info {
  *	allowed through even on unauthorized ports
  * @control_port_no_encrypt: TRUE to prevent encryption of control port
  *	protocol frames.
+ * @psk: PSK (for devices supporting 4Way-handshake offload)
  */
 struct cfg80211_crypto_settings {
 	u32 wpa_versions;
@@ -621,6 +622,7 @@ struct cfg80211_crypto_settings {
 	bool control_port;
 	__be16 control_port_ethertype;
 	bool control_port_no_encrypt;
+	const u8 *psk;
 };
 
 /**
