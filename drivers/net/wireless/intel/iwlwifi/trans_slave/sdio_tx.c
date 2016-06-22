@@ -311,7 +311,7 @@ void iwl_sdio_tx_start(struct iwl_trans *trans, u32 scd_base_addr)
 	 */
 	for (i = 0; i < IWL_SDIO_CB_QUEUES_NUM; i++) {
 		data = i << 6;
-		iwl_write_direct32(trans, FH_MEM_CBBC_QUEUE(i), data);
+		iwl_write_direct32(trans, FH_MEM_CBBC_QUEUE(trans, i), data);
 	}
 
 	/* enable command queue */
