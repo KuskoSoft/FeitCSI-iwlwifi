@@ -189,7 +189,6 @@ struct iwl_sdio_page_req {
  *	we get the ALIVE from the uCode
  */
 struct iwl_trans_sdio {
-	struct iwl_drv *drv;
 	struct sdio_func *func;
 	struct iwl_trans *trans;
 

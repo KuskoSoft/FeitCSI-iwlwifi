@@ -161,7 +161,6 @@ static int iwl_sdio_probe(struct sdio_func *func,
 			  const struct sdio_device_id *id)
 {
 	const struct iwl_cfg *cfg = (struct iwl_cfg *)(id->driver_data);
-	struct iwl_trans_sdio *trans_sdio;
 	struct iwl_trans *trans;
 	int ret;
 
@@ -169,8 +168,6 @@ static int iwl_sdio_probe(struct sdio_func *func,
 	trans = iwl_trans_sdio_alloc(func, id, cfg);
 	if (IS_ERR(trans))
 		return PTR_ERR(trans);
-
-	trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
 	/* Set the generic transport as the private data of the
 	 * the sdio function */
@@ -181,9 +178,9 @@ static int iwl_sdio_probe(struct sdio_func *func,
 	if (ret)
 		goto out_free_trans;
 
-	trans_sdio->drv = iwl_drv_start(trans, cfg);
-	if (IS_ERR(trans_sdio->drv)) {
-		ret = PTR_ERR(trans_sdio->drv);
+	trans->drv = iwl_drv_start(trans, cfg);
+	if (IS_ERR(trans->drv)) {
+		ret = PTR_ERR(trans->drv);
 		goto out_free_trans;
 	}
 
@@ -196,7 +193,7 @@ static int iwl_sdio_probe(struct sdio_func *func,
 	return 0;
 
 out_free_drv:
-	iwl_drv_stop(trans_sdio->drv);
+	iwl_drv_stop(trans->drv);
 out_free_trans:
 	iwl_trans_sdio_free(trans);
 	sdio_set_drvdata(func, NULL);
@@ -214,10 +211,9 @@ out_free_trans:
 static void iwl_sdio_remove(struct sdio_func *func)
 {
 	struct iwl_trans *trans = sdio_get_drvdata(func);
-	struct iwl_trans_sdio *trans_sdio = IWL_TRANS_GET_SDIO_TRANS(trans);
 
 	/* Stop driver and the FW request callback */
-	iwl_drv_stop(trans_sdio->drv);
+	iwl_drv_stop(trans->drv);
 
 	/* Clear data in SDIO bus driver */
 	sdio_set_drvdata(func, NULL);
