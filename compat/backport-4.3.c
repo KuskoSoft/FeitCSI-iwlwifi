@@ -9,20 +9,27 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/version.h>
 #include <linux/seq_file.h>
 #include <linux/export.h>
 #include <linux/printk.h>
 #include <linux/thermal.h>
+#include <linux/slab.h>
+
+struct backport_thermal_ops_wrapper {
+	old_thermal_zone_device_ops_t ops;
+	struct thermal_zone_device_ops *driver_ops;
+};
 
 #ifndef CONFIG_BTNS_PMIC
 static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 				     unsigned long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_temp(dev, &_temp);
+	ret = wrapper->driver_ops->get_temp(dev, &_temp);
 	if (!ret)
 		*temp = (unsigned long)_temp;
 
@@ -32,11 +39,11 @@ static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev,
 					  int i, unsigned long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_trip_temp(dev, i,  &_temp);
+	ret = wrapper->driver_ops->get_trip_temp(dev, i,  &_temp);
 	if (!ret)
 		*temp = (unsigned long)_temp;
 
@@ -46,20 +53,20 @@ static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev,
 static int backport_thermal_set_trip_temp(struct thermal_zone_device *dev,
 					  int i, unsigned long temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 
-	return ops->_set_trip_temp(dev, i, (int)temp);
+	return wrapper->driver_ops->set_trip_temp(dev, i, (int)temp);
 }
 
 static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev,
 					  int i, unsigned long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_trip_hyst(dev, i, &_temp);
+	ret = wrapper->driver_ops->get_trip_hyst(dev, i, &_temp);
 	if (!ret)
 		*temp = (unsigned long)_temp;
 
@@ -69,43 +76,45 @@ static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev,
 static int backport_thermal_set_trip_hyst(struct thermal_zone_device *dev,
 					  int i, unsigned long temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 
-	return ops->_set_trip_hyst(dev, i, (int)temp);
+	return wrapper->driver_ops->set_trip_hyst(dev, i, (int)temp);
 }
 
 static int backport_thermal_get_crit_temp(struct thermal_zone_device *dev,
 					  unsigned long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_crit_temp(dev, &_temp);
+	ret = wrapper->driver_ops->get_crit_temp(dev, &_temp);
 	if (!ret)
 		*temp = (unsigned long)_temp;
 
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)
 static int backport_thermal_set_emul_temp(struct thermal_zone_device *dev,
 					  unsigned long temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 
-	return ops->_set_emul_temp(dev, (int)temp);
+	return wrapper->driver_ops->set_emul_temp(dev, (int)temp);
 }
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0) */
 #else /* !CONFIG_BTNS_PMIC */
 static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 				     long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_temp(dev, &_temp);
+	ret = wrapper->driver_ops->get_temp(dev, &_temp);
 	if (!ret)
 		*temp = (long)_temp;
 
@@ -115,11 +124,11 @@ static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev,
 					  int i, long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_trip_temp(dev, i,  &_temp);
+	ret = wrapper->driver_ops->get_trip_temp(dev, i,  &_temp);
 	if (!ret)
 		*temp = (long)_temp;
 
@@ -129,20 +138,20 @@ static int backport_thermal_get_trip_temp(struct thermal_zone_device *dev,
 static int backport_thermal_set_trip_temp(struct thermal_zone_device *dev,
 					  int i, long temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 
-	return ops->_set_trip_temp(dev, i, (int)temp);
+	return wrapper->driver_ops->set_trip_temp(dev, i, (int)temp);
 }
 
 static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev,
 					  int i, long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_trip_hyst(dev, i, &_temp);
+	ret = wrapper->driver_ops->get_trip_hyst(dev, i, &_temp);
 	if (!ret)
 		*temp = (long)_temp;
 
@@ -152,20 +161,20 @@ static int backport_thermal_get_trip_hyst(struct thermal_zone_device *dev,
 static int backport_thermal_set_trip_hyst(struct thermal_zone_device *dev,
 					  int i, long temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 
-	return ops->_set_trip_hyst(dev, i, (int)temp);
+	return wrapper->driver_ops->set_trip_hyst(dev, i, (int)temp);
 }
 
 static int backport_thermal_get_crit_temp(struct thermal_zone_device *dev,
 					  long *temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 	int _temp, ret;
 
-	ret = ops->_get_crit_temp(dev, &_temp);
+	ret = wrapper->driver_ops->get_crit_temp(dev, &_temp);
 	if (!ret)
 		*temp = (long)_temp;
 
@@ -175,35 +184,43 @@ static int backport_thermal_get_crit_temp(struct thermal_zone_device *dev,
 static int backport_thermal_set_emul_temp(struct thermal_zone_device *dev,
 					  unsigned long temp)
 {
-	struct backport_thermal_zone_device_ops *ops =
-		(struct backport_thermal_zone_device_ops *)dev->ops;
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 
-	return ops->_set_emul_temp(dev, (int)temp);
+	return wrapper->driver_ops->set_emul_temp(dev, (int)temp);
 }
 #endif /* !CONFIG_BTNS_PMIC */
 
 struct thermal_zone_device *backport_thermal_zone_device_register(
 	const char *type, int trips, int mask, void *devdata,
-	struct backport_thermal_zone_device_ops *ops,
+	struct thermal_zone_device_ops *ops,
 	const struct thermal_zone_params *tzp,
 	int passive_delay, int polling_delay)
 {
-	/* It's okay to cast here, because the backport is a superset
-	 * of the old struct.
-	 */
-	struct old_thermal_zone_device_ops *_ops =
-		(struct old_thermal_zone_device_ops *)ops;
+	struct backport_thermal_ops_wrapper *wrapper = kzalloc(sizeof(*wrapper), GFP_KERNEL);
+	struct thermal_zone_device *ret;
 
-	/* store the registrant's ops for the backport ops to use */
-#define copy_ops(_op) ops->_##_op = ops->_op
-	copy_ops(get_temp);
-	copy_ops(get_trip_temp);
-	copy_ops(set_trip_temp);
-	copy_ops(get_trip_hyst);
-	copy_ops(set_trip_hyst);
-	copy_ops(get_crit_temp);
-	copy_ops(set_emul_temp);
-#undef copy_ops
+	if (!wrapper)
+		return NULL;
+
+	wrapper->driver_ops = ops;
+
+#define copy(_op)		\
+	wrapper->ops._op = ops->_op
+
+	copy(bind);
+	copy(unbind);
+	copy(get_mode);
+	copy(set_mode);
+	copy(get_trip_type);
+	copy(get_trend);
+	copy(notify);
+#ifdef CONFIG_BTNS_PMIC
+	copy(get_slope);
+	copy(set_slope);
+	copy(get_intercept);
+	copy(set_intercept);
+#endif
 
 	/* Assign the backport ops to the old struct to get the
 	 * correct types.  But only assign if the registrant defined
@@ -211,7 +228,7 @@ struct thermal_zone_device *backport_thermal_zone_device_register(
 	 */
 #define assign_ops(_op)		\
 	if (ops->_op)		\
-		_ops->_op = backport_thermal_##_op
+		wrapper->ops._op = backport_thermal_##_op
 
 	assign_ops(get_temp);
 	assign_ops(get_trip_temp);
@@ -219,35 +236,27 @@ struct thermal_zone_device *backport_thermal_zone_device_register(
 	assign_ops(get_trip_hyst);
 	assign_ops(set_trip_hyst);
 	assign_ops(get_crit_temp);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)
 	assign_ops(set_emul_temp);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0) */
 #undef assign_ops
 
-	return old_thermal_zone_device_register(type, trips, mask, devdata,
-						_ops, tzp, passive_delay,
-						polling_delay);
+	ret = old_thermal_zone_device_register(type, trips, mask, devdata,
+					       &wrapper->ops, tzp, passive_delay,
+					       polling_delay);
+	if (!ret)
+		kfree(wrapper);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(backport_thermal_zone_device_register);
 
 void backport_thermal_zone_device_unregister(struct thermal_zone_device *dev)
 {
-	/* It's okay to cast here, because the backport is a superset
-	 * of the old struct.
-	 */
-	struct thermal_zone_device_ops *ops =
-		(struct thermal_zone_device_ops *)dev->ops;
-
-	/* restore the registrant's original ops to the right place */
-#define restore_ops(_op) ops->_op = ops->_##_op
-	restore_ops(get_temp);
-	restore_ops(get_trip_temp);
-	restore_ops(set_trip_temp);
-	restore_ops(get_trip_hyst);
-	restore_ops(set_trip_hyst);
-	restore_ops(get_crit_temp);
-	restore_ops(set_emul_temp);
-#undef restore_ops
+	struct backport_thermal_ops_wrapper *wrapper =
+		container_of(dev->ops, struct backport_thermal_ops_wrapper, ops);
 
 	old_thermal_zone_device_unregister(dev);
+	kfree(wrapper);
 }
 EXPORT_SYMBOL_GPL(backport_thermal_zone_device_unregister);
 
