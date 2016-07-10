@@ -3618,8 +3618,10 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	params.pbss = nla_get_flag(info->attrs[NL80211_ATTR_PBSS]);
-	if (params.pbss && !rdev->wiphy.bands[NL80211_BAND_60GHZ])
+	if (params.pbss && !rdev->wiphy.bands[NL80211_BAND_60GHZ]) {
+		kfree(params.acl);
 		return -EOPNOTSUPP;
+	}
 
 	wdev_lock(wdev);
 	err = rdev_start_ap(rdev, dev, &params);
