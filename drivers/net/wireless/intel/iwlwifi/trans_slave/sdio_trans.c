@@ -1509,7 +1509,6 @@ static void iwl_trans_sdio_configure(struct iwl_trans *trans,
 	trans_slv->config.queue_size = IWL_SDIO_CB_QUEUE_SIZE;
 	trans_slv->config.tb_size = IWL_SDIO_TB_SIZE;
 	trans_slv->config.max_data_desc_count = IWL_SDIO_MAX_TBS_NUM + 5;
-	trans_slv->config.hcmd_headroom = 0;
 	trans_slv->config.policy_trigger = iwl_sdio_tx_policy_trigger;
 	trans_slv->config.clean_dtu = iwl_sdio_tx_clean_dtu;
 	trans_slv->config.free_dtu_mem = iwl_sdio_tx_free_dtu_mem;
@@ -2824,7 +2823,7 @@ struct iwl_trans *iwl_trans_sdio_alloc(struct sdio_func *func,
 	/* Alloc general + SDIO specific transport */
 	trans = iwl_trans_alloc(sizeof(struct iwl_trans_slv) +
 				sizeof(struct iwl_trans_sdio),
-				&func->dev, cfg, &trans_ops_sdio, 0);
+				&func->dev, cfg, &trans_ops_sdio);
 	if (!trans)
 		return ERR_PTR(-ENOMEM);
 

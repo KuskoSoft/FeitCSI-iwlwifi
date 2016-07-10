@@ -393,11 +393,9 @@ static int iwl_slv_tx_alloc_caches(struct iwl_trans_slv *trans_slv)
 {
 	int hcmd_entry_size;
 
-	/* cmd_entry has a bus specific field which contains the
-	 * dev_cmd and also headroom, if needed by bus */
+	/* cmd_entry has a bus specific field which contains the dev_cmd  */
 	hcmd_entry_size = sizeof(struct iwl_slv_tx_cmd_entry) +
-			  sizeof(struct iwl_device_cmd) +
-			  trans_slv->config.hcmd_headroom;
+			  sizeof(struct iwl_device_cmd);
 
 	trans_slv->cmd_entry_pool =
 		kmem_cache_create("iwl_slv_cmd_entry",

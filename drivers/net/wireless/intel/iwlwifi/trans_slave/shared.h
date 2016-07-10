@@ -122,7 +122,6 @@ struct slv_config {
 	int queue_size;
 	int tb_size;
 	int max_data_desc_count;
-	int hcmd_headroom;
 	void (*policy_trigger)(struct work_struct *);
 	void (*clean_dtu)(struct iwl_trans *, void *);
 	void (*free_dtu_mem)(struct iwl_trans *, void **);
@@ -290,8 +289,6 @@ struct iwl_slv_txq_entry {
  * @txq_entry:		common data
  * @hcmd_meta:		meta data for a host command
  * @cmd_specific:	holds the device_command and other bus specific data.
- *	This implementation is for the sake of IDI, where we need to have
- *	headroom just before the device command. See iwl_cmd_entry_get_dev_cmd.
  */
 struct iwl_slv_tx_cmd_entry {
 	struct iwl_slv_txq_entry txq_entry;
@@ -303,8 +300,7 @@ static inline struct iwl_device_cmd *
 iwl_cmd_entry_get_dev_cmd(struct iwl_trans_slv *trans_slv,
 			  struct iwl_slv_tx_cmd_entry *cmd)
 {
-	return (struct iwl_device_cmd *)
-		(cmd->cmd_specific + trans_slv->config.hcmd_headroom);
+	return (struct iwl_device_cmd *)(cmd->cmd_specific);
 }
 
 /**
