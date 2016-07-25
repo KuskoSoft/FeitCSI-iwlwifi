@@ -601,6 +601,9 @@ static int iwl_vendor_tdls_peer_cache_add(struct wiphy *wiphy,
 	if (err)
 		return err;
 
+	if (!vif)
+		return -ENODEV;
+
 	if (vif->type != NL80211_IFTYPE_STATION ||
 	    !tb[IWL_MVM_VENDOR_ATTR_ADDR])
 		return -EINVAL;
@@ -1742,6 +1745,9 @@ static int iwl_mvm_vendor_link_quality_measurements(struct wiphy *wiphy,
 	u32 timeout;
 	int retval;
 
+	if (!vif)
+		return -ENODEV;
+
 	if (vif->type != NL80211_IFTYPE_STATION || vif->p2p ||
 	    !vif->bss_conf.assoc)
 		return -EINVAL;
@@ -1756,6 +1762,9 @@ static int iwl_mvm_vendor_link_quality_measurements(struct wiphy *wiphy,
 
 	duration = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_LQM_DURATION]);
 	timeout = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_LQM_TIMEOUT]);
+
+	if (!mvm_vif)
+		return -ENODEV;
 
 	mutex_lock(&mvm_vif->mvm->mutex);
 	retval = iwl_mvm_send_lqm_cmd(vif, LQM_CMD_OPERATION_START_MEASUREMENT,
