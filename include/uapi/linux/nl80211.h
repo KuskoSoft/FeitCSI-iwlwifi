@@ -5145,6 +5145,7 @@ enum nl80211_ftm_initiator_capa {
  *	frames. Bitfield, as specified in @enum nl80211_ftm_bw. Request will be
  *	refused if the supplied bitfield isn't supported in
  *	%NL80211_FTM_CAPA_BW. (u8)
+ * @NL80211_FTM_TARGET_ATTR_PAD: used for padding, ignore
  * @__NL80211_FTM_TARGET_ATTR_AFTER_LAST: internal
  * @NL80211_FTM_TARGET_ATTR_MAX: highest FTM target attribute
  */
@@ -5167,6 +5168,7 @@ enum nl80211_ftm_target {
 	NL80211_FTM_TARGET_ATTR_COOKIE,
 	NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE,
 	NL80211_FTM_TARGET_ATTR_FTM_BW,
+	NL80211_FTM_TARGET_ATTR_PAD,
 
 	/* keep last */
 	__NL80211_FTM_TARGET_ATTR_AFTER_LAST,
@@ -5310,6 +5312,7 @@ enum nl80211_ftm_response_status {
  * @NL80211_FTM_RESP_ENTRY_ATTR_CIVIC: the CIVIC data buffer of the target. Will
  *	be provided only if available and %NL80211_FTM_TARGET_QUERY_CIVIC was
  *	set in the request.
+ * @NL80211_FTM_RESP_ENTRY_ATTR_PAD: used for padding, ignore
  */
 enum nl80211_ftm_response_entry {
 	__NL80211_FTM_RESP_ENTRY_ATTR_INVALID,
@@ -5337,6 +5340,7 @@ enum nl80211_ftm_response_entry {
 	NL80211_FTM_RESP_ENTRY_ATTR_DISTANCE_SPREAD,
 	NL80211_FTM_RESP_ENTRY_ATTR_LCI,
 	NL80211_FTM_RESP_ENTRY_ATTR_CIVIC,
+	NL80211_FTM_RESP_ENTRY_ATTR_PAD,
 
 	/* keep last */
 	__NL80211_FTM_RESP_ENTRY_ATTR_AFTER_LAST,
@@ -5368,6 +5372,7 @@ enum nl80211_ftm_response_entry {
  *	FTM slot (u32)
  * @NL80211_FTM_STATS_OUT_OF_WINDOW_TRIGGERS_NUM: number of FTM triggers out of
  *	scheduled window (u32)
+ * @NL80211_FTM_STATS_PAD: used for padding, ignore
  * @__NL80211_TXQ_ATTR_AFTER_LAST: Internal
  * @NL80211_FTM_STATS_MAX: highest possible FTM responder stats attribute
  */
@@ -5382,6 +5387,7 @@ enum nl80211_ftm_responder_stats {
 	NL80211_FTM_STATS_UNKNOWN_TRIGGERS_NUM,
 	NL80211_FTM_STATS_RESCHEDULE_REQUESTS_NUM,
 	NL80211_FTM_STATS_OUT_OF_WINDOW_TRIGGERS_NUM,
+	NL80211_FTM_STATS_PAD,
 
 	/* keep last */
 	__NL80211_FTM_STATS_AFTER_LAST,

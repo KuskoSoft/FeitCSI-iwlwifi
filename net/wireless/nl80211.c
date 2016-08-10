@@ -7086,7 +7086,8 @@ static int nl80211_send_bss(struct sk_buff *msg, struct netlink_callback *cb,
 		goto nla_put_failure;
 
 	if (intbss->parent_tsf &&
-	    (nla_put_u64(msg, NL80211_BSS_PARENT_TSF, intbss->parent_tsf) ||
+	    (nla_put_u64_64bit(msg, NL80211_BSS_PARENT_TSF, intbss->parent_tsf,
+			       NL80211_BSS_PAD) ||
 	     nla_put(msg, NL80211_BSS_PARENT_BSSID, ETH_ALEN,
 		     intbss->parent_bssid)))
 		goto nla_put_failure;
@@ -10685,7 +10686,8 @@ out:
 	}
 
 	/* propagate the instance id and cookie to userspace  */
-	if (nla_put_u64(msg, NL80211_ATTR_COOKIE, func->cookie))
+	if (nla_put_u64_64bit(msg, NL80211_ATTR_COOKIE, func->cookie,
+			      NL80211_ATTR_PAD))
 		goto nla_put_failure;
 
 	func_attr = nla_nest_start(msg, NL80211_ATTR_NAN_FUNC);
@@ -10794,10 +10796,12 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	if (nla_put_u32(msg, NL80211_ATTR_WIPHY, rdev->wiphy_idx) ||
 	    (wdev->netdev && nla_put_u32(msg, NL80211_ATTR_IFINDEX,
 					 wdev->netdev->ifindex)) ||
-	    nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
+	    nla_put_u64_64bit(msg, NL80211_ATTR_WDEV, wdev_id(wdev),
+			      NL80211_ATTR_PAD))
 		goto nla_put_failure;
 
-	if (nla_put_u64(msg, NL80211_ATTR_COOKIE, match->cookie) ||
+	if (nla_put_u64_64bit(msg, NL80211_ATTR_COOKIE, match->cookie,
+			      NL80211_ATTR_PAD) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, match->addr))
 		goto nla_put_failure;
 
@@ -10872,10 +10876,12 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 	if (nla_put_u32(msg, NL80211_ATTR_WIPHY, rdev->wiphy_idx) ||
 	    (wdev->netdev && nla_put_u32(msg, NL80211_ATTR_IFINDEX,
 					 wdev->netdev->ifindex)) ||
-	    nla_put_u64(msg, NL80211_ATTR_WDEV, wdev_id(wdev)))
+	    nla_put_u64_64bit(msg, NL80211_ATTR_WDEV, wdev_id(wdev),
+			      NL80211_ATTR_PAD))
 		goto nla_put_failure;
 
-	if (nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie))
+	if (nla_put_u64_64bit(msg, NL80211_ATTR_COOKIE, cookie,
+			      NL80211_ATTR_PAD))
 		goto nla_put_failure;
 
 	func_attr = nla_nest_start(msg, NL80211_ATTR_NAN_FUNC);
@@ -11801,7 +11807,8 @@ static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
 
 	hdr = nl80211hdr_put(msg, genl_info_snd_portid(info), info->snd_seq, 0,
 			     NL80211_CMD_MSRMENT_REQUEST);
-	if (!hdr || nla_put_u64(msg, NL80211_ATTR_COOKIE, cookie)) {
+	if (!hdr || nla_put_u64_64bit(msg, NL80211_ATTR_COOKIE, cookie,
+				      NL80211_ATTR_PAD)) {
 		err = -ENOBUFS;
 		goto free_msg;
 	}
@@ -11897,10 +11904,15 @@ static int nl80211_get_ftm_responder(struct sk_buff *skb,
 	if (!ftm_stats_attr)
 		goto nla_put_failure;
 
-#define SET_FTM(field, flag, type) \
-	if ((ftm_stats.filled & BIT(NL80211_FTM_STATS_ ## flag)) && \
-	    nla_put_ ## type(msg, NL80211_FTM_STATS_ ## flag, \
-			     ftm_stats.field)) \
+#define SET_FTM(field, flag, type)					\
+	if ((ftm_stats.filled & BIT(NL80211_FTM_STATS_ ## flag)) &&	\
+	    nla_put_ ## type(msg, NL80211_FTM_STATS_ ## flag,		\
+			     ftm_stats.field))				\
+		goto nla_put_failure
+#define SET_FTM_U64(field, flag)					\
+	if ((ftm_stats.filled & BIT(NL80211_FTM_STATS_ ## flag)) &&	\
+	    nla_put_u64_64bit(msg, NL80211_FTM_STATS_ ## flag,		\
+			      ftm_stats.field, NL80211_FTM_STATS_PAD))	\
 		goto nla_put_failure
 
 	SET_FTM(success_num, SUCCESS_NUM, u32);
@@ -11908,7 +11920,7 @@ static int nl80211_get_ftm_responder(struct sk_buff *skb,
 	SET_FTM(failed_num, FAILED_NUM, u32);
 	SET_FTM(asap_num, ASAP_NUM, u32);
 	SET_FTM(non_asap_num, NON_ASAP_NUM, u32);
-	SET_FTM(total_duration_ms, TOTAL_DURATION_MSEC, u64);
+	SET_FTM_U64(total_duration_ms, TOTAL_DURATION_MSEC);
 	SET_FTM(unknown_triggers_num, UNKNOWN_TRIGGERS_NUM, u32);
 	SET_FTM(reschedule_requests_num, RESCHEDULE_REQUESTS_NUM, u32);
 	SET_FTM(out_of_window_triggers_num, OUT_OF_WINDOW_TRIGGERS_NUM, u32);
@@ -12885,8 +12897,8 @@ static int nl80211_add_scan_req(struct sk_buff *msg,
 		goto nla_put_failure;
 
 	if (req->info.scan_start_tsf &&
-	    (nla_put_u64(msg, NL80211_ATTR_SCAN_START_TIME_TSF,
-			 req->info.scan_start_tsf) ||
+	    (nla_put_u64_64bit(msg, NL80211_ATTR_SCAN_START_TIME_TSF,
+			       req->info.scan_start_tsf, NL80211_ATTR_PAD) ||
 	     nla_put(msg, NL80211_ATTR_SCAN_START_TIME_TSF_BSSID, ETH_ALEN,
 		     req->info.tsf_bssid)))
 		goto nla_put_failure;
@@ -14772,7 +14784,8 @@ static int nl80211_put_ftm_resp_target(struct sk_buff *msg,
 	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_RETRIES, target->retries) ||
 	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_BURST_DURATION,
 		       target->burst_duration) ||
-	    nla_put_u64(msg, NL80211_FTM_TARGET_ATTR_COOKIE, target->cookie) ||
+	    nla_put_u64_64bit(msg, NL80211_FTM_TARGET_ATTR_COOKIE,
+			      target->cookie, NL80211_FTM_TARGET_ATTR_PAD) ||
 	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_FTM_PREAMBLE,
 		       target->ftm_preamble) ||
 	    nla_put_u8(msg, NL80211_FTM_TARGET_ATTR_FTM_BW,
@@ -14809,17 +14822,22 @@ static int nl80211_put_ftm_result(struct sk_buff *msg,
 #define FTM_RES_FILLED(attr) \
 	(ftm->filled & BIT(NL80211_FTM_RESP_ENTRY_ATTR_##attr))
 
-#define PUT_FTM_RES(field, attr, type) \
-	(FTM_RES_FILLED(attr) && \
-	 nla_put_##type(msg, NL80211_FTM_RESP_ENTRY_ATTR_##attr, ftm->field))
+#define PUT_FTM_RES(field, attr, type)					\
+	(FTM_RES_FILLED(attr) &&					\
+	 nla_put_##type(msg, NL80211_FTM_RESP_ENTRY_ATTR_##attr,	\
+			ftm->field))
+#define PUT_FTM_RES_U64(field, attr)					\
+	(FTM_RES_FILLED(attr) &&					\
+	 nla_put_u64_64bit(msg, NL80211_FTM_RESP_ENTRY_ATTR_##attr,	\
+			   ftm->field, NL80211_FTM_RESP_ENTRY_ATTR_PAD))
 
 	if (nla_put_u8(msg, NL80211_FTM_RESP_ENTRY_ATTR_STATUS, ftm->status) ||
 	    (ftm->complete &&
 	     nla_put_flag(msg, NL80211_FTM_RESP_ENTRY_ATTR_COMPLETE)) ||
 	    nl80211_put_ftm_resp_target(msg, ftm->target) ||
 	    nla_put_s64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
-	    PUT_FTM_RES(host_time, HOST_TIME, u64) ||
-	    PUT_FTM_RES(tsf, TSF, u64) ||
+	    PUT_FTM_RES_U64(host_time, HOST_TIME) ||
+	    PUT_FTM_RES_U64(tsf, TSF) ||
 	    PUT_FTM_RES(burst_index, BURST_INDEX, u8) ||
 	    PUT_FTM_RES(measurement_num, MSRMNT_NUM, u32) ||
 	    PUT_FTM_RES(success_num, SUCCESS_NUM, u32) ||
@@ -14829,11 +14847,11 @@ static int nl80211_put_ftm_result(struct sk_buff *msg,
 	    PUT_FTM_RES(negotiated_burst_num, NEG_BURST_NUM, u32) ||
 	    PUT_FTM_RES(rssi, RSSI, s8) ||
 	    PUT_FTM_RES(rssi_spread, RSSI_SPREAD, u8) ||
-	    PUT_FTM_RES(rtt_variance, RTT_VAR, u64) ||
-	    PUT_FTM_RES(rtt_spread, RTT_SPREAD, u64) ||
-	    PUT_FTM_RES(distance, DISTANCE, s64) ||
-	    PUT_FTM_RES(distance_variance, DISTANCE_VAR, u64) ||
-	    PUT_FTM_RES(distance_spread, DISTANCE_SPREAD, u64) ||
+	    PUT_FTM_RES_U64(rtt_variance, RTT_VAR) ||
+	    PUT_FTM_RES_U64(rtt_spread, RTT_SPREAD) ||
+	    PUT_FTM_RES_U64(distance, DISTANCE) ||
+	    PUT_FTM_RES_U64(distance_variance, DISTANCE_VAR) ||
+	    PUT_FTM_RES_U64(distance_spread, DISTANCE_SPREAD) ||
 	    (FTM_RES_FILLED(TX_RATE_INFO) &&
 	     !nl80211_put_sta_rate(msg, &ftm->tx_rate_info,
 				   NL80211_FTM_RESP_ENTRY_ATTR_TX_RATE_INFO)) ||
@@ -14869,7 +14887,8 @@ nl80211_alloc_measurement_response(struct wiphy *wiphy,
 		goto nla_put_failure;
 
 	if (nla_put_u32(msg, NL80211_ATTR_WIPHY, rdev->wiphy_idx) ||
-	    nla_put_u64(msg, NL80211_ATTR_COOKIE, response->cookie) ||
+	    nla_put_u64_64bit(msg, NL80211_ATTR_COOKIE, response->cookie,
+			      NL80211_ATTR_PAD) ||
 	    nla_put_u32(msg, NL80211_ATTR_MSRMENT_TYPE, response->type) ||
 	    nla_put_u8(msg, NL80211_ATTR_MSRMENT_STATUS, response->status))
 		goto nla_put_failure;
