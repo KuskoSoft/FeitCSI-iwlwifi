@@ -192,7 +192,6 @@ struct iwl_trans_slv {
 	u8 n_no_reclaim_cmds;
 	u8 no_reclaim_cmds[MAX_NO_RECLAIM_CMDS];
 
-	bool wide_cmd_header;
 	bool bc_table_dword;
 	bool suspending;
 
