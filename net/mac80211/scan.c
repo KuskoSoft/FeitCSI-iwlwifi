@@ -94,8 +94,8 @@ ieee80211_bss_info_update(struct ieee80211_local *local,
 		bss_meta.parent_tsf =
 			ieee80211_calculate_rx_timestamp(local, rx_status,
 							 len + FCS_LEN, 24);
-		memcpy(bss_meta.parent_bssid, scan_sdata->vif.bss_conf.bssid,
-		       ETH_ALEN);
+		ether_addr_copy(bss_meta.parent_bssid,
+				scan_sdata->vif.bss_conf.bssid);
 	}
 	rcu_read_unlock();
 

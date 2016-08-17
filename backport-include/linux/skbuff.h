@@ -305,6 +305,14 @@ static inline void skb_free_frag(void *data)
 {
 	put_page(virt_to_head_page(data));
 }
+
+/* iwlwifi doesn't need this function, so it's safe to just return 0 */
+static inline
+__u32 skb_get_hash_perturb(const struct sk_buff *skb, u32 perturb)
+{
+	return 0;
+}
+
 #endif
 
 #endif /* __BACKPORT_SKBUFF_H */

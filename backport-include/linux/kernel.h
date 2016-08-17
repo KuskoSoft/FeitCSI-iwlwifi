@@ -196,6 +196,13 @@ int __must_check kstrtobool_from_user(const char __user *s, size_t count, bool *
 
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
+static inline u32 reciprocal_scale(u32 val, u32 ep_ro)
+{
+	return (u32)(((u64) val * ep_ro) >> 32);
+}
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) */
+
 #endif /* __BACKPORT_KERNEL_H */
 
 /*

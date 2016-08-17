@@ -494,7 +494,12 @@
  *	This attribute is ignored if driver does not support roam scan.
  *	It is also sent as an event, with the BSSID and response IEs when the
  *	connection is established or failed to be established. This can be
- *	determined by the STATUS_CODE attribute.
+ *	determined by the %NL80211_ATTR_STATUS_CODE attribute (0 = success,
+ *	non-zero = failure). If %NL80211_ATTR_TIMED_OUT is included in the
+ *	event, the connection attempt failed due to not being able to initiate
+ *	authentication/association or not receiving a response from the AP.
+ *	Non-zero %NL80211_ATTR_STATUS_CODE value is indicated in that case as
+ *	well to remain backwards compatible.
  * @NL80211_CMD_ROAM: request that the card roam (currently not implemented),
  *	sent as an event when the card/driver roamed by itself.
  * @NL80211_CMD_DISCONNECT: drop a given connection; also used to notify
@@ -1896,41 +1901,10 @@ enum nl80211_commands {
  *
  * @NL80211_ATTR_PAD: attribute used for padding for 64-bit alignment
  *
- * @NL80211_ATTR_MSRMENT_TYPE: Type of current measurement request/response.
- *	(values defined in &enum nl80211_msrment_type).
- * @NL80211_ATTR_MSRMENT_STATUS: Status of current measurement response.
- *	(values defined in &enum nl80211_msrment_status)
- * @NL80211_ATTR_MSRMENT_FTM_REQUEST: Container for data of an FTM measurement
- *	request (nested. see &enum nl80211_ftm_request)
- * @NL80211_ATTR_MSRMENT_FTM_RESPONSE: An AP with which a measurement was
- *	attempted (nested. see &enum nl80211_ftm_response_entry)
- *	An FTM response consists of series of such messages, where the last
- *	message is marked with the @NL80211_ATTR_LAST_MSG flag.
- * @NL80211_ATTR_MSRMENT_FTM_CAPA: FTM initiator capabilities. see
- *	&enum nl80211_ftm_initiator_capa. Not in use in case FTM is not
- *	supported. nested.
- * @NL80211_ATTR_LAST_MSG: Indicates that this message is the last one in the
- *	series of messages. (flag)
- *
- * @NL80211_ATTR_LCI: The content of measurement report IE (Section 8.4.2.21 in
- *	spec) with type 8 - LCI (Section 8.4.2.21.10)
- * @NL80211_ATTR_CIVIC: The content of measurement Report IE (Section 8.4.2.21
- *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
- *
- * @NL80211_ATTR_NAN_MASTER_PREF: the master preference to be used by
- *	%NL80211_CMD_START_NAN and optionally with
- *	%NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0.
- *	Also, values 1 and 255 are reserved for certification purposes and
- *	should not be used during a normal device operation.
- * @NL80211_ATTR_NAN_DUAL: NAN dual band operation config (see
- *	&enum nl80211_nan_dual_band_conf). This attribute is used with
- *	%NL80211_CMD_START_NAN and optionally with
- *	%NL80211_CMD_CHANGE_NAN_CONFIG.
- * @NL80211_ATTR_NAN_FUNC: a function that can be added to NAN. See
- *	&enum nl80211_nan_func_attributes for description of this nested
- *	attribute.
- * @NL80211_ATTR_NAN_MATCH: used to report a match. This is a nested attribute.
- *	See &enum nl80211_nan_match_attributes.
+ * @NL80211_ATTR_IFTYPE_EXT_CAPA: Nested attribute of the following attributes:
+ *	%NL80211_ATTR_IFTYPE, %NL80211_ATTR_EXT_CAPA,
+ *	%NL80211_ATTR_EXT_CAPA_MASK, to specify the extended capabilities per
+ *	interface type.
  *
  * @NL80211_ATTR_MU_MIMO_GROUP_DATA: array of 24 bytes that defines a MU-MIMO
  *	groupID for monitor mode.
@@ -1966,6 +1940,45 @@ enum nl80211_commands {
  *	that the duration specified with %NL80211_ATTR_MEASUREMENT_DURATION is
  *	mandatory. If this flag is not set, the duration is the maximum duration
  *	and the actual measurement duration may be shorter.
+ *
+ * @NL80211_ATTR_MESH_PEER_AID: Association ID for the mesh peer (u16). This is
+ *	used to pull the stored data for mesh peer in power save state.
+ *
+ * @NL80211_ATTR_MSRMENT_TYPE: Type of current measurement request/response.
+ *	(values defined in &enum nl80211_msrment_type).
+ * @NL80211_ATTR_MSRMENT_STATUS: Status of current measurement response.
+ *	(values defined in &enum nl80211_msrment_status)
+ * @NL80211_ATTR_MSRMENT_FTM_REQUEST: Container for data of an FTM measurement
+ *	request (nested. see &enum nl80211_ftm_request)
+ * @NL80211_ATTR_MSRMENT_FTM_RESPONSE: An AP with which a measurement was
+ *	attempted (nested. see &enum nl80211_ftm_response_entry)
+ *	An FTM response consists of series of such messages, where the last
+ *	message is marked with the @NL80211_ATTR_LAST_MSG flag.
+ * @NL80211_ATTR_MSRMENT_FTM_CAPA: FTM initiator capabilities. see
+ *	&enum nl80211_ftm_initiator_capa. Not in use in case FTM is not
+ *	supported. nested.
+ * @NL80211_ATTR_LAST_MSG: Indicates that this message is the last one in the
+ *	series of messages. (flag)
+ *
+ * @NL80211_ATTR_LCI: The content of measurement report IE (Section 8.4.2.21 in
+ *	spec) with type 8 - LCI (Section 8.4.2.21.10)
+ * @NL80211_ATTR_CIVIC: The content of measurement Report IE (Section 8.4.2.21
+ *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
+ *
+ * @NL80211_ATTR_NAN_MASTER_PREF: the master preference to be used by
+ *	%NL80211_CMD_START_NAN and optionally with
+ *	%NL80211_CMD_CHANGE_NAN_CONFIG. Its type is u8 and it can't be 0.
+ *	Also, values 1 and 255 are reserved for certification purposes and
+ *	should not be used during a normal device operation.
+ * @NL80211_ATTR_NAN_DUAL: NAN dual band operation config (see
+ *	&enum nl80211_nan_dual_band_conf). This attribute is used with
+ *	%NL80211_CMD_START_NAN and optionally with
+ *	%NL80211_CMD_CHANGE_NAN_CONFIG.
+ * @NL80211_ATTR_NAN_FUNC: a function that can be added to NAN. See
+ *	&enum nl80211_nan_func_attributes for description of this nested
+ *	attribute.
+ * @NL80211_ATTR_NAN_MATCH: used to report a match. This is a nested attribute.
+ *	See &enum nl80211_nan_match_attributes.
  *
  * @NL80211_ATTR_PSK: PSK for offloaded 4-Way Handshake. Relevant only
  *	with %NL80211_CMD_CONNECT (for WPA/WPA2-PSK networks).
@@ -2351,6 +2364,10 @@ enum nl80211_attrs {
 	NL80211_ATTR_STA_SUPPORT_P2P_PS,
 
 	NL80211_ATTR_PAD,
+
+	NL80211_ATTR_IFTYPE_EXT_CAPA,
+
+	NL80211_ATTR_MESH_PEER_AID,
 
 	NL80211_ATTR_MSRMENT_TYPE,
 	NL80211_ATTR_MSRMENT_STATUS,

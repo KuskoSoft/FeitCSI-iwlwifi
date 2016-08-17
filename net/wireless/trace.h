@@ -2952,9 +2952,9 @@ TRACE_EVENT(cfg80211_inform_bss_frame,
 		__entry->parent_tsf = data->parent_tsf;
 		MAC_ASSIGN(parent_bssid, data->parent_bssid);
 	),
-	TP_printk(WIPHY_PR_FMT ", " CHAN_PR_FMT "(scan_width: %d) signal: %d, tsb:%llu,"
-		  " detect_tsf:%llu, tsf_bssid: " MAC_PR_FMT,
-		  WIPHY_PR_ARG, CHAN_PR_ARG, __entry->scan_width,
+	TP_printk(WIPHY_PR_FMT ", " CHAN_PR_FMT
+		  "(scan_width: %d) signal: %d, tsb:%llu, detect_tsf:%llu, tsf_bssid: "
+		  MAC_PR_FMT, WIPHY_PR_ARG, CHAN_PR_ARG, __entry->scan_width,
 		  __entry->signal, (unsigned long long)__entry->ts_boottime,
 		  (unsigned long long)__entry->parent_tsf,
 		  MAC_PR_ARG(parent_bssid))
