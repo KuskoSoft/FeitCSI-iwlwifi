@@ -68,9 +68,7 @@
 
 #include <linux/errno.h>
 
-#if defined(CONFIG_IUI_FM) && defined(CPTCFG_IWLWIFI_IDI) /* Use FM h file */
-#include_next <linux/fm/iui_fm.h>
-#elif defined(CONFIG_IUI_FM)  /* Use platform h file - NOT XMM6312/SOFIA-3G */
+#if defined(CONFIG_IUI_FM)  /* Use platform h file - NOT XMM6312/SOFIA-3G */
 #include <linux/fm/iui_fm_lte.h>
 #else /* Platform doesn't have FM - use test h file */
 #include "iui_fm_test.h"
@@ -105,10 +103,7 @@ int32_t iwl_mvm_fm_register_callback(bool dbg_mode,
 							 mitigation_cb);
 #endif /* CPTCFG_IWLWIFI_FRQ_MGR_TEST */
 
-#if defined(CONFIG_IUI_FM) && defined(CPTCFG_IWLWIFI_IDI) /* Platform has FM */
-	/* Calling the FM  notify function - test mode was not requested */
-	return iui_fm_register_mitigation_callback(macro_id, mitigation_cb);
-#elif defined(CONFIG_IUI_FM) /* Not XMM6321/Sofa-3G  - Platform has a FM */
+#if defined(CONFIG_IUI_FM) /* Not XMM6321/Sofa-3G  - Platform has a FM */
 	return iui_fm_register_mitigation_callback_lte(macro_id,
 						       mitigation_cb);
 #else
@@ -137,10 +132,7 @@ int32_t iwl_mvm_fm_notify_frequency(bool dbg_mode,
 							notification);
 #endif /* CPTCFG_IWLWIFI_FRQ_MGR_TEST */
 
-#if defined(CONFIG_IUI_FM) && defined(CPTCFG_IWLWIFI_IDI) /* Platform has FM */
-	/* Calling the FM  notify function - test mode was not requested */
-	return iui_fm_notify_frequency(macro_id, notification);
-#elif defined(CONFIG_IUI_FM) /* Not XMM6312/Sofia-3G - Platform has a FM */
+#if defined(CONFIG_IUI_FM) /* Not XMM6312/Sofia-3G - Platform has a FM */
 	return iui_fm_notify_frequency_lte(macro_id, notification);
 #else
 	return -EPERM; /* fm_debug_mode was not set */

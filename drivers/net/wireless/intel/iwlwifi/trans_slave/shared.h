@@ -89,7 +89,7 @@
 
 /**
  * struct iwl_slv_al_pool_mgr - represents a pool of items
- * @pool_size:	the size of the pool. Must be <= IWL_IDI_POOL_MGR_MAX_SIZE
+ * @pool_size:	the size of the pool.
  * @used:	bitmap of free/used elements. Set bit means the elem is used.
  * @free_count:	number of free items in the pool. Useful for debugging.
  * @order:	the order of the element's size. Element size is 2^order

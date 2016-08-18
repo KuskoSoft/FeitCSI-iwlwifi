@@ -70,7 +70,6 @@
 #include <linux/types.h>
 #include "iwl-trans.h"
 
-struct iwl_idi_trans_tx;
 struct iwl_trans;
 
 bool iwl_sdio_policy_check_alloc(struct iwl_trans_slv *trans_slv,

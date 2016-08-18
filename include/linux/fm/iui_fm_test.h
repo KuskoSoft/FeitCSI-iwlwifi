@@ -48,7 +48,7 @@ extern "C" {
  * @IUI_FM_MACRO_ID_PMU_CP:   PMU Charge Pump Macro
  * @IUI_FM_MACRO_ID_MS_CP:    MS Charge Pump Macro
  * @IUI_FM_MACRO_ID_DCDC:     DC to DC Converter Macro
- * @IUI_FM_MACRO_ID_IDI:      Inter-Die Interface Macro
+ * @IUI_FM_MACRO_ID_RESERVED: not in use
  * @IUI_FM_MACRO_ID_WLAN:     Wireless LAN Macro
  * @IUI_FM_MACRO_ID_FMR:      FM Radio Macro
  * @IUI_FM_MACRO_ID_BT:       Bluetooth Macro
@@ -66,7 +66,7 @@ enum iui_fm_macro_id {
 	IUI_FM_MACRO_ID_PMU_CP = 2,
 	IUI_FM_MACRO_ID_MS_CP = 3,
 	IUI_FM_MACRO_ID_DCDC = 4,
-	IUI_FM_MACRO_ID_IDI = 5,
+	IUI_FM_MACRO_ID_RESERVED = 5,
 	IUI_FM_MACRO_ID_WLAN = 6,
 	IUI_FM_MACRO_ID_FMR = 7,
 	IUI_FM_MACRO_ID_BT = 8,
@@ -514,7 +514,6 @@ enum iui_fm_freq_notification_type {
  *               IUI_FM_MACRO_ID_PMU_CP
  *               IUI_FM_MACRO_ID_MS_CP
  *               IUI_FM_MACRO_ID_DCDC
- *               IUI_FM_MACRO_ID_IDI
  * @wlan_info  Pointer to WLAN Macro Information structure (type ==
  *             IUI_FM_FREQ_NOTIFICATION_TYPE_WLAN).
  * @fmr_info   Pointer to FM Radio Operating Parameters structure (type ==
@@ -584,7 +583,6 @@ enum iui_fm_mitigation_type {
  *                     IUI_FM_MACRO_ID_PMU_CP
  *                     IUI_FM_MACRO_ID_MS_CP
  *                     IUI_FM_MACRO_ID_DCDC
- *                     IUI_FM_MACRO_ID_IDI
  * @wlan_mitigation  Pointer to requested WLAN operating parameters structure
  *                   (type == IUI_FM_MITIGATION_TYPE_WLAN).
  * @fmr_inj_side     Requested FM Radio injection side (type ==

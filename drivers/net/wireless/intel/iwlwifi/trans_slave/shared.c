@@ -1046,14 +1046,8 @@ int iwl_slv_register_drivers(void)
 	if (ret)
 		goto unregister_class;
 
-	ret = iwl_idi_register_driver();
-	if (ret)
-		goto unregister_sdio;
-
 	return 0;
 
-unregister_sdio:
-	iwl_sdio_unregister_driver();
 unregister_class:
 #ifdef CONFIG_PM_RUNTIME
 	class_unregister(&iwl_slv_rpm_class);
@@ -1064,7 +1058,6 @@ unregister_class:
 void iwl_slv_unregister_drivers(void)
 {
 	iwl_sdio_unregister_driver();
-	iwl_idi_unregister_driver();
 #ifdef CONFIG_PM_RUNTIME
 	class_unregister(&iwl_slv_rpm_class);
 #endif
