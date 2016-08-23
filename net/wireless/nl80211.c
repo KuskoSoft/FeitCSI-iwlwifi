@@ -15063,7 +15063,7 @@ void cfg80211_measurement_response(struct wiphy *wiphy,
 
 	spin_lock_bh(&rdev->msrments_lock);
 	list_for_each_entry(tmp, &rdev->msrments_list, list) {
-		if (tmp->cookie == tmp->cookie) {
+		if (tmp->cookie == response->cookie) {
 			msrment = tmp;
 			list_del(&tmp->list);
 			break;
