@@ -14925,7 +14925,8 @@ static int nl80211_put_ftm_result(struct sk_buff *msg,
 	    (ftm->complete &&
 	     nla_put_flag(msg, NL80211_FTM_RESP_ENTRY_ATTR_COMPLETE)) ||
 	    nl80211_put_ftm_resp_target(msg, ftm->target) ||
-	    nla_put_s64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt) ||
+	    nla_put_s64(msg, NL80211_FTM_RESP_ENTRY_ATTR_RTT, ftm->rtt,
+			NL80211_FTM_RESP_ENTRY_ATTR_PAD) ||
 	    PUT_FTM_RES_U64(host_time, HOST_TIME) ||
 	    PUT_FTM_RES_U64(tsf, TSF) ||
 	    PUT_FTM_RES(burst_index, BURST_INDEX, u8) ||

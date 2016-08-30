@@ -42,18 +42,6 @@ static inline int nla_put_s32(struct sk_buff *skb, int attrtype, s32 value)
 }
 
 /**
- * nla_put_s64 - Add a s64 netlink attribute to a socket buffer
- * @skb: socket buffer to add attribute to
- * @attrtype: attribute type
- * @value: numeric value
- */
-#define nla_put_s64 LINUX_BACKPORT(nla_put_s64)
-static inline int nla_put_s64(struct sk_buff *skb, int attrtype, s64 value)
-{
-	return nla_put(skb, attrtype, sizeof(s64), &value);
-}
-
-/**
  * nla_get_s32 - return payload of s32 attribute
  * @nla: s32 netlink attribute
  */
@@ -272,6 +260,20 @@ static inline int nla_put_u64_64bit(struct sk_buff *skb, int attrtype,
 }
 
 #define nla_put_u64 DONT_USE_nla_put_u64
+
+/**
+ * nla_put_s64 - Add a s64 netlink attribute to a socket buffer and align it
+ * @skb: socket buffer to add attribute to
+ * @attrtype: attribute type
+ * @value: numeric value
+ * @padattr: attribute type for the padding
+ */
+#define nla_put_s64 LINUX_BACKPORT(nla_put_s64)
+static inline int nla_put_s64(struct sk_buff *skb, int attrtype, s64 value,
+			      int padattr)
+{
+	return nla_put_64bit(skb, attrtype, sizeof(s64), &value, padattr);
+}
 #endif /* < 4.7 */
 
 #endif /* __BACKPORT_NET_NETLINK_H */
