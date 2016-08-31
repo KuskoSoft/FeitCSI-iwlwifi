@@ -884,49 +884,43 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 				 "working without external nvm file\n");
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (mvm->trans->dbg_cfg.fpga_bu_mode)
-#endif
-	if (WARN(cfg->no_power_up_nic_in_init && !mvm->nvm_file_name,
-		 "not allowing power-up and not having nvm_file\n"))
-		goto out_free;
-
-	/*
-	 * Even if nvm exists in the nvm_file driver should read again the nvm
-	 * from the nic because there might be entries that exist in the OTP
-	 * and not in the file.
-	 * for nics with no_power_up_nic_in_init: rely completley on nvm_file
-	 */
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
 	if (mvm->trans->dbg_cfg.fpga_bu_mode) {
-#endif
-	if (cfg->no_power_up_nic_in_init && mvm->nvm_file_name) {
+		if (WARN(!mvm->nvm_file_name,
+			 "not allowing power-up and not having nvm_file\n"))
+			goto out_free;
+
+		/*
+		 * Even if nvm exists in the nvm_file driver should read again
+		 * the nvm from the nic because there might be entries that
+		 * exist in the OTP and not in the file.
+		 * For fpga_bu_mode with nvm rely completley on nvm_file,
+		 * since we don't allow power up.
+		 */
 		err = iwl_nvm_init(mvm, false);
 		if (err)
 			goto out_free;
+	} else {
+#endif
+	err = iwl_trans_start_hw(mvm->trans);
+	if (err)
+		goto out_free;
+
+	mutex_lock(&mvm->mutex);
+	iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
+	err = iwl_run_init_mvm_ucode(mvm, true);
+	if (!err || !iwlmvm_mod_params.init_dbg)
+		iwl_mvm_stop_device(mvm);
+	iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
+	mutex_unlock(&mvm->mutex);
+	/* returns 0 if successful, 1 if success but in rfkill */
+	if (err < 0 && !iwlmvm_mod_params.init_dbg) {
+		IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
+		goto out_free;
+	}
+
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	/* this is really the wrong brace to ifdef, but with two of them
-	 * right after another it doesn't actually matter.
-	 */
 	}
 #endif
-	} else {
-		err = iwl_trans_start_hw(mvm->trans);
-		if (err)
-			goto out_free;
-
-		mutex_lock(&mvm->mutex);
-		iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
-		err = iwl_run_init_mvm_ucode(mvm, true);
-		if (!err || !iwlmvm_mod_params.init_dbg)
-			iwl_mvm_stop_device(mvm);
-		iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
-		mutex_unlock(&mvm->mutex);
-		/* returns 0 if successful, 1 if success but in rfkill */
-		if (err < 0 && !iwlmvm_mod_params.init_dbg) {
-			IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
-			goto out_free;
-		}
-	}
 
 	scan_size = iwl_mvm_scan_size(mvm);
 
@@ -981,13 +975,10 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (!(mvm->trans->dbg_cfg.fpga_bu_mode &&
-	      cfg->no_power_up_nic_in_init) || !mvm->nvm_file_name)
-		iwl_trans_op_mode_leave(trans);
-#else
-	if (!cfg->no_power_up_nic_in_init || !mvm->nvm_file_name)
-		iwl_trans_op_mode_leave(trans);
+	if (!mvm->trans->dbg_cfg.fpga_bu_mode || !mvm->nvm_file_name)
 #endif
+	iwl_trans_op_mode_leave(trans);
+
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 	wake_lock_destroy(&mvm->recovery_wake_lock);
 #endif

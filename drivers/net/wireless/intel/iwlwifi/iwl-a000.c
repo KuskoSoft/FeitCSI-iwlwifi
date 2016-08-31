@@ -125,10 +125,6 @@ const struct iwl_cfg iwla000_2ac_cfg = {
 		.ht_params = &iwl_a000_ht_params,
 		.nvm_ver = IWL_A000_NVM_VERSION,
 		.nvm_calib_ver = IWL_A000_TX_POWER_VERSION,
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-		/* No need to load INIT image on FPGA */
-		.no_power_up_nic_in_init = true,
-#endif
 		.max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
 };
 
