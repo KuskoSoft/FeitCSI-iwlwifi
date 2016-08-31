@@ -245,12 +245,11 @@ void iwl_sdio_rx_work(struct work_struct *work)
 							 rx_work);
 	struct iwl_trans *trans = trans_sdio->trans;
 	struct sdio_func *func = IWL_TRANS_SDIO_GET_FUNC(trans);
-	struct list_head local_list;
+	LIST_HEAD(local_list);
 	struct iwl_sdio_rx_mem_desc *rx_buff, *next;
 	void *page_addr;
 	struct iwl_sdio_cmd_header *sdio_cmd_hdr;
 
-	INIT_LIST_HEAD(&local_list);
 	mutex_lock(&trans_sdio->rx_buff_mtx);
 	list_splice_init(&trans_sdio->rx_mem_buff_list, &local_list);
 	mutex_unlock(&trans_sdio->rx_buff_mtx);
