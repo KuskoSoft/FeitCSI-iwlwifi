@@ -557,6 +557,14 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 	return true;
 }
 
+static bool iwl_wait_init_complete(struct iwl_notif_wait_data *notif_wait,
+				   struct iwl_rx_packet *pkt, void *data)
+{
+	WARN_ON(pkt->hdr.cmd != INIT_COMPLETE_NOTIF);
+
+	return true;
+}
+
 static bool iwl_wait_phy_db_entry(struct iwl_notif_wait_data *notif_wait,
 				  struct iwl_rx_packet *pkt, void *data)
 {
@@ -572,6 +580,48 @@ static bool iwl_wait_phy_db_entry(struct iwl_notif_wait_data *notif_wait,
 	return false;
 }
 
+static int iwl_mvm_init_paging(struct iwl_mvm *mvm)
+{
+	const struct fw_img *fw = &mvm->fw->img[mvm->cur_ucode];
+	int ret;
+
+	/*
+	 * Configure and operate fw paging mechanism.
+	 * The driver configures the paging flow only once.
+	 * The CPU2 paging image is included in the IWL_UCODE_INIT image.
+	 */
+	if (!fw->paging_mem_size)
+		return 0;
+
+	/*
+	 * When dma is not enabled, the driver needs to copy / write
+	 * the downloaded / uploaded page to / from the smem.
+	 * This gets the location of the place were the pages are
+	 * stored.
+	 */
+	if (!is_device_dma_capable(mvm->trans->dev)) {
+		ret = iwl_trans_get_paging_item(mvm);
+		if (ret) {
+			IWL_ERR(mvm, "failed to get FW paging item\n");
+			return ret;
+		}
+	}
+
+	ret = iwl_save_fw_paging(mvm, fw);
+	if (ret) {
+		IWL_ERR(mvm, "failed to save the FW paging image\n");
+		return ret;
+	}
+
+	ret = iwl_send_paging_cmd(mvm, fw);
+	if (ret) {
+		IWL_ERR(mvm, "failed to send the paging cmd\n");
+		iwl_free_fw_paging(mvm);
+		return ret;
+	}
+
+	return 0;
+}
 static int iwl_mvm_load_ucode_wait_alive(struct iwl_mvm *mvm,
 					 enum iwl_ucode_type ucode_type)
 {
@@ -662,40 +712,6 @@ static int iwl_mvm_load_ucode_wait_alive(struct iwl_mvm *mvm,
 	}
 
 	iwl_trans_fw_alive(mvm->trans, alive_data.scd_base_addr);
-
-	/*
-	 * configure and operate fw paging mechanism.
-	 * driver configures the paging flow only once, CPU2 paging image
-	 * included in the IWL_UCODE_INIT image.
-	 */
-	if (fw->paging_mem_size) {
-		/*
-		 * When dma is not enabled, the driver needs to copy / write
-		 * the downloaded / uploaded page to / from the smem.
-		 * This gets the location of the place were the pages are
-		 * stored.
-		 */
-		if (!is_device_dma_capable(mvm->trans->dev)) {
-			ret = iwl_trans_get_paging_item(mvm);
-			if (ret) {
-				IWL_ERR(mvm, "failed to get FW paging item\n");
-				return ret;
-			}
-		}
-
-		ret = iwl_save_fw_paging(mvm, fw);
-		if (ret) {
-			IWL_ERR(mvm, "failed to save the FW paging image\n");
-			return ret;
-		}
-
-		ret = iwl_send_paging_cmd(mvm, fw);
-		if (ret) {
-			IWL_ERR(mvm, "failed to send the paging cmd\n");
-			iwl_free_fw_paging(mvm);
-			return ret;
-		}
-	}
 
 	/*
 	 * Note: all the queues are enabled as part of the interface
@@ -934,6 +950,75 @@ out:
 		mvm->nvm_data->bands[0].bitrates->hw_value = 10;
 	}
 
+	return ret;
+}
+
+int iwl_run_unified_mvm_ucode(struct iwl_mvm *mvm, bool read_nvm)
+{
+	struct iwl_notification_wait init_wait;
+	struct iwl_nvm_access_complete_cmd nvm_complete = {};
+	static const u16 init_complete[] = {
+		INIT_COMPLETE_NOTIF,
+	};
+	int ret;
+
+	lockdep_assert_held(&mvm->mutex);
+
+	iwl_init_notification_wait(&mvm->notif_wait,
+				   &init_wait,
+				   init_complete,
+				   ARRAY_SIZE(init_complete),
+				   iwl_wait_init_complete,
+				   NULL);
+
+	/* Will also start the device */
+	ret = iwl_mvm_load_ucode_wait_alive(mvm, IWL_UCODE_REGULAR);
+	if (ret) {
+		IWL_ERR(mvm, "Failed to start RT ucode: %d\n", ret);
+		goto error;
+	}
+
+	/* TODO: remove when integrating context info */
+	ret = iwl_mvm_init_paging(mvm);
+	if (ret) {
+		IWL_ERR(mvm, "Failed to init paging: %d\n",
+			ret);
+		goto error;
+	}
+
+	/* Read the NVM only at driver load time, no need to do this twice */
+	if (read_nvm) {
+		/* Read nvm */
+		ret = iwl_nvm_init(mvm, true);
+		if (ret) {
+			IWL_ERR(mvm, "Failed to read NVM: %d\n", ret);
+			goto error;
+		}
+	}
+
+	/* In case we read the NVM from external file, load it to the NIC */
+	if (mvm->nvm_file_name)
+		iwl_mvm_load_nvm_to_nic(mvm);
+
+	ret = iwl_nvm_check_version(mvm->nvm_data, mvm->trans);
+	if (WARN_ON(ret))
+		goto error;
+
+	ret = iwl_mvm_send_cmd_pdu(mvm, WIDE_ID(REGULATORY_AND_NVM_GROUP,
+						NVM_ACCESS_COMPLETE), 0,
+				   sizeof(nvm_complete), &nvm_complete);
+	if (ret) {
+		IWL_ERR(mvm, "Failed to run complete NVM access: %d\n",
+			ret);
+		goto error;
+	}
+
+	/* We wait for the INIT complete notification */
+	return iwl_wait_notification(&mvm->notif_wait, &init_wait,
+				     MVM_UCODE_ALIVE_TIMEOUT);
+
+error:
+	iwl_remove_notification(&mvm->notif_wait, &init_wait);
 	return ret;
 }
 
@@ -1197,23 +1282,13 @@ static int iwl_mvm_sar_init(struct iwl_mvm *mvm)
 	return ret;
 }
 
-int iwl_mvm_up(struct iwl_mvm *mvm)
+static int iwl_mvm_load_rt_fw(struct iwl_mvm *mvm)
 {
-	int ret, i;
-	struct ieee80211_channel *chan;
-	struct cfg80211_chan_def chandef;
+	int ret;
 
-	lockdep_assert_held(&mvm->mutex);
+	if (iwl_mvm_has_new_tx_api(mvm))
+		return iwl_run_unified_mvm_ucode(mvm, false);
 
-	ret = iwl_trans_start_hw(mvm->trans);
-	if (ret)
-		return ret;
-
-	/*
-	 * If we haven't completed the run of the init ucode during
-	 * module loading, load init ucode now
-	 * (for example, if we were in RFKILL)
-	 */
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
 	if (!mvm->trans->dbg_cfg.fpga_bu_mode) {
 #endif
@@ -1227,7 +1302,7 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 		/* this can't happen */
 		if (WARN_ON(ret > 0))
 			ret = -ERFKILL;
-		goto error;
+		return ret;
 	}
 
 	/*
@@ -1238,7 +1313,7 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	_iwl_trans_stop_device(mvm->trans, false);
 	ret = _iwl_trans_start_hw(mvm->trans, false);
 	if (ret)
-		goto error;
+		return ret;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
 	} else if (iwlmvm_mod_params.init_dbg) {
@@ -1247,6 +1322,25 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 #endif
 
 	ret = iwl_mvm_load_ucode_wait_alive(mvm, IWL_UCODE_REGULAR);
+	if (ret)
+		return ret;
+
+	return iwl_mvm_init_paging(mvm);
+}
+
+int iwl_mvm_up(struct iwl_mvm *mvm)
+{
+	int ret, i;
+	struct ieee80211_channel *chan;
+	struct cfg80211_chan_def chandef;
+
+	lockdep_assert_held(&mvm->mutex);
+
+	ret = iwl_trans_start_hw(mvm->trans);
+	if (ret)
+		return ret;
+
+	ret = iwl_mvm_load_rt_fw(mvm);
 	if (ret) {
 		IWL_ERR(mvm, "Failed to start RT ucode: %d\n", ret);
 		goto error;
@@ -1315,13 +1409,15 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 #ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
 	if (!mvm->trans->dbg_cfg.fpga_bu_mode) {
 #endif
-	ret = iwl_send_phy_db_data(mvm->phy_db);
-	if (ret)
-		goto error;
+	if (!iwl_mvm_has_new_tx_api(mvm)) {
+		ret = iwl_send_phy_db_data(mvm->phy_db);
+		if (ret)
+			goto error;
 
-	ret = iwl_send_phy_cfg_cmd(mvm);
-	if (ret)
-		goto error;
+		ret = iwl_send_phy_cfg_cmd(mvm);
+		if (ret)
+			goto error;
+	}
 
 	if (fw_has_capa(&mvm->fw->ucode_capa,
 			IWL_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT)) {
