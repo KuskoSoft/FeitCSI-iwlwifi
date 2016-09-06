@@ -424,7 +424,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_LAST_MSG] = { .type = NLA_FLAG },
 	[NL80211_ATTR_LCI] = { .type = NLA_BINARY },
 	[NL80211_ATTR_CIVIC] = { .type = NLA_BINARY },
-	[NL80211_ATTR_PSK] = { .len = WLAN_PSK_LEN },
+	[NL80211_ATTR_PMK] = { .len = WLAN_PMK_LEN },
 };
 
 /* policy for the key attributes */
@@ -7956,11 +7956,11 @@ static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 		memcpy(settings->akm_suites, data, len);
 	}
 
-	if (info->attrs[NL80211_ATTR_PSK]) {
+	if (info->attrs[NL80211_ATTR_PMK]) {
 		if (!wiphy_ext_feature_isset(&rdev->wiphy,
 					     NL80211_EXT_FEATURE_4WAY_HANDSHAKE_OFFLOAD_STA))
 			return -EINVAL;
-		settings->psk = nla_data(info->attrs[NL80211_ATTR_PSK]);
+		settings->psk = nla_data(info->attrs[NL80211_ATTR_PMK]);
 	}
 
 	return 0;
@@ -8864,6 +8864,14 @@ static int nl80211_setdel_pmksa(struct sk_buff *skb, struct genl_info *info)
 
 	pmksa.pmkid = nla_data(info->attrs[NL80211_ATTR_PMKID]);
 	pmksa.bssid = nla_data(info->attrs[NL80211_ATTR_MAC]);
+	if (info->attrs[NL80211_ATTR_PMK]) {
+		pmksa.pmk = nla_data(info->attrs[NL80211_ATTR_PMK]);
+		pmksa.pmk_len = nla_len(info->attrs[NL80211_ATTR_PMK]);
+		if (pmksa.pmk_len != WLAN_PMK_LEN &&
+		    pmksa.pmk_len != WLAN_PMK_LEN_SUITE_B_192 &&
+		    pmksa.pmk_len != WLAN_PMK_LEN_EAP_LEAP)
+			return -EINVAL;
+	}
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
 	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)

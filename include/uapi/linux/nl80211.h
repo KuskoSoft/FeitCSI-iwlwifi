@@ -371,7 +371,8 @@
  *	NL80211_CMD_GET_SURVEY and on the "scan" multicast group)
  *
  * @NL80211_CMD_SET_PMKSA: Add a PMKSA cache entry, using %NL80211_ATTR_MAC
- *	(for the BSSID) and %NL80211_ATTR_PMKID.
+ *	(for the BSSID) and %NL80211_ATTR_PMKID. Optionally, %NL80211_ATTR_PMK
+ *	can be used to specify the PMK.
  * @NL80211_CMD_DEL_PMKSA: Delete a PMKSA cache entry, using %NL80211_ATTR_MAC
  *	(for the BSSID) and %NL80211_ATTR_PMKID.
  * @NL80211_CMD_FLUSH_PMKSA: Flush all PMKSA cache entries.
@@ -1985,8 +1986,10 @@ enum nl80211_commands {
  * @NL80211_ATTR_CIVIC: The content of measurement Report IE (Section 8.4.2.21
  *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
  *
- * @NL80211_ATTR_PSK: PSK for offloaded 4-Way Handshake. Relevant only
- *	with %NL80211_CMD_CONNECT (for WPA/WPA2-PSK networks).
+ * @NL80211_ATTR_PMK: PMK for offloaded 4-Way Handshake. Relevant with
+ *	%NL80211_CMD_CONNECT (for WPA/WPA2-PSK networks) when PSK is used, or
+ *	with %NL80211_CMD_SET_PMKSA when 802.1X authentication is used and for
+ *	PMKSA caching.
  *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
@@ -2401,7 +2404,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_LCI,
 	NL80211_ATTR_CIVIC,
 
-	NL80211_ATTR_PSK,
+	NL80211_ATTR_PMK,
 
 	/* add attributes here, update the policy in nl80211.c */
 
