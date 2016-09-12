@@ -1260,7 +1260,10 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 #ifdef CPTCFG_IWLMVM_WAKELOCK
 		wake_lock(&mvm->recovery_wake_lock);
 #endif
-		ieee80211_restart_hw(mvm->hw);
+		if (mvm->restart_fw > 0) {
+			mvm->restart_fw--;
+			ieee80211_restart_hw(mvm->hw);
+		}
 		iwl_mvm_free_nd(mvm);
 	}
  out_noreset:
