@@ -944,6 +944,11 @@ nl80211_parse_connkeys(struct cfg80211_registered_device *rdev,
 			*no_ht = true;
 	}
 
+	if (result->def < 0) {
+		err = -EINVAL;
+		goto error;
+	}
+
 	return result;
  error:
 	kfree(result);
