@@ -10,8 +10,8 @@
 #define rhashtable_insert_rehash LINUX_BACKPORT(rhashtable_insert_rehash)
 #undef rhashtable_insert_slow
 #define rhashtable_insert_slow LINUX_BACKPORT(rhashtable_insert_slow)
-#undef rhashtable_walk_init
-#define rhashtable_walk_init LINUX_BACKPORT(rhashtable_walk_init)
+#undef rhashtable_walk_enter
+#define rhashtable_walk_enter LINUX_BACKPORT(rhashtable_walk_enter)
 #undef rhashtable_walk_exit
 #define rhashtable_walk_exit LINUX_BACKPORT(rhashtable_walk_exit)
 #undef rhashtable_walk_start

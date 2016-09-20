@@ -2628,10 +2628,35 @@ static int nl80211_dump_interface(struct sk_buff *skb, struct netlink_callback *
 	int if_idx = 0;
 	int wp_start = cb->args[0];
 	int if_start = cb->args[1];
+	int filter_wiphy = -1;
 	struct cfg80211_registered_device *rdev;
 	struct wireless_dev *wdev;
 
 	rtnl_lock();
+	if (!cb->args[2]) {
+		struct nl80211_dump_wiphy_state state = {
+			.filter_wiphy = -1,
+		};
+		int ret;
+
+		ret = nl80211_dump_wiphy_parse(skb, cb, &state);
+		if (ret)
+			return ret;
+
+		filter_wiphy = state.filter_wiphy;
+
+		/*
+		 * if filtering, set cb->args[2] to +1 since 0 is the default
+		 * value needed to determine that parsing is necessary.
+		 */
+		if (filter_wiphy >= 0)
+			cb->args[2] = filter_wiphy + 1;
+		else
+			cb->args[2] = -1;
+	} else if (cb->args[2] > 0) {
+		filter_wiphy = cb->args[2] - 1;
+	}
+
 	list_for_each_entry(rdev, &cfg80211_rdev_list, list) {
 		if (!net_eq(wiphy_net(&rdev->wiphy), sock_net(skb->sk)))
 			continue;
@@ -2639,6 +2664,10 @@ static int nl80211_dump_interface(struct sk_buff *skb, struct netlink_callback *
 			wp_idx++;
 			continue;
 		}
+
+		if (filter_wiphy >= 0 && filter_wiphy != rdev->wiphy_idx)
+			continue;
+
 		if_idx = 0;
 
 		list_for_each_entry(wdev, &rdev->wiphy.wdev_list, list) {
@@ -7083,7 +7112,7 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 
 		params.n_counter_offsets_presp = len / sizeof(u16);
 		if (rdev->wiphy.max_num_csa_counters &&
-		    (params.n_counter_offsets_beacon >
+		    (params.n_counter_offsets_presp >
 		     rdev->wiphy.max_num_csa_counters))
 			return -EINVAL;
 
@@ -8100,6 +8129,8 @@ __cfg80211_alloc_vendor_skb(struct cfg80211_registered_device *rdev,
 	}
 
 	data = nla_nest_start(skb, attr);
+	if (!data)
+		goto nla_put_failure;
 
 	((void **)skb->cb)[0] = rdev;
 	((void **)skb->cb)[1] = hdr;
@@ -9536,18 +9567,27 @@ static int nl80211_send_wowlan_nd(struct sk_buff *msg,
 	if (!freqs)
 		return -ENOBUFS;
 
-	for (i = 0; i < req->n_channels; i++)
-		nla_put_u32(msg, i, req->channels[i]->center_freq);
+	for (i = 0; i < req->n_channels; i++) {
+		if (nla_put_u32(msg, i, req->channels[i]->center_freq))
+			return -ENOBUFS;
+	}
 
 	nla_nest_end(msg, freqs);
 
 	if (req->n_match_sets) {
 		matches = nla_nest_start(msg, NL80211_ATTR_SCHED_SCAN_MATCH);
+		if (!matches)
+			return -ENOBUFS;
+
 		for (i = 0; i < req->n_match_sets; i++) {
 			match = nla_nest_start(msg, i);
-			nla_put(msg, NL80211_SCHED_SCAN_MATCH_ATTR_SSID,
-				req->match_sets[i].ssid.ssid_len,
-				req->match_sets[i].ssid.ssid);
+			if (!match)
+				return -ENOBUFS;
+
+			if (nla_put(msg, NL80211_SCHED_SCAN_MATCH_ATTR_SSID,
+				    req->match_sets[i].ssid.ssid_len,
+				    req->match_sets[i].ssid.ssid))
+				return -ENOBUFS;
 			nla_nest_end(msg, match);
 		}
 		nla_nest_end(msg, matches);
@@ -9559,6 +9599,9 @@ static int nl80211_send_wowlan_nd(struct sk_buff *msg,
 
 	for (i = 0; i < req->n_scan_plans; i++) {
 		scan_plan = nla_nest_start(msg, i + 1);
+		if (!scan_plan)
+			return -ENOBUFS;
+
 		if (!scan_plan ||
 		    nla_put_u32(msg, NL80211_SCHED_SCAN_PLAN_INTERVAL,
 				req->scan_plans[i].interval) ||

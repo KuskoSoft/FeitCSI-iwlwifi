@@ -1008,9 +1008,8 @@ int cfg80211_change_iface(struct cfg80211_registered_device *rdev,
 	if (otype == NL80211_IFTYPE_AP_VLAN)
 		return -EOPNOTSUPP;
 
-	/* cannot change into P2P device or NAN */
-	if (ntype == NL80211_IFTYPE_P2P_DEVICE ||
-	    ntype == NL80211_IFTYPE_NAN)
+	/* cannot change into P2P device or NAN types */
+	if (ntype == NL80211_IFTYPE_P2P_DEVICE)
 		return -EOPNOTSUPP;
 
 	if (!rdev->ops->change_virtual_intf ||
