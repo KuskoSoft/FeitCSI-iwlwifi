@@ -273,7 +273,7 @@ ieee80211_find_nan_func_by_cookie(struct ieee80211_sub_if_data *sdata,
 	return NULL;
 }
 
-static void ieee80211_rm_nan_func(struct wiphy *wiphy,
+static void ieee80211_del_nan_func(struct wiphy *wiphy,
 				  struct wireless_dev *wdev, u64 cookie)
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_WDEV_TO_SUB_IF(wdev);
@@ -293,7 +293,7 @@ static void ieee80211_rm_nan_func(struct wiphy *wiphy,
 	spin_unlock_bh(&sdata->u.nan.func_lock);
 
 	if (instance_id)
-		drv_rm_nan_func(sdata->local, sdata, instance_id);
+		drv_del_nan_func(sdata->local, sdata, instance_id);
 }
 
 static int ieee80211_set_noack_map(struct wiphy *wiphy,
@@ -3753,5 +3753,5 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.stop_nan = ieee80211_stop_nan,
 	.nan_change_conf = ieee80211_nan_change_conf,
 	.add_nan_func = ieee80211_add_nan_func,
-	.rm_nan_func = ieee80211_rm_nan_func,
+	.del_nan_func = ieee80211_del_nan_func,
 };

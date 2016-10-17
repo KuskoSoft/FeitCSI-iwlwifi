@@ -1950,7 +1950,6 @@ DEFINE_EVENT(wiphy_wdev_evt, rdev_stop_nan,
 	TP_ARGS(wiphy, wdev)
 );
 
-/* TODO: record more fields */
 TRACE_EVENT(rdev_add_nan_func,
 	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev,
 		 const struct cfg80211_nan_func *func),
@@ -1972,7 +1971,7 @@ TRACE_EVENT(rdev_add_nan_func,
 		  __entry->cookie)
 );
 
-TRACE_EVENT(rdev_rm_nan_func,
+TRACE_EVENT(rdev_del_nan_func,
 	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev,
 		 u64 cookie),
 	TP_ARGS(wiphy, wdev, cookie),

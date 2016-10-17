@@ -6,8 +6,6 @@
 #define lockdep_rht_mutex_is_held LINUX_BACKPORT(lockdep_rht_mutex_is_held)
 #undef lockdep_rht_bucket_is_held
 #define lockdep_rht_bucket_is_held LINUX_BACKPORT(lockdep_rht_bucket_is_held)
-#undef rhashtable_insert_rehash
-#define rhashtable_insert_rehash LINUX_BACKPORT(rhashtable_insert_rehash)
 #undef rhashtable_insert_slow
 #define rhashtable_insert_slow LINUX_BACKPORT(rhashtable_insert_slow)
 #undef rhashtable_walk_enter
@@ -22,6 +20,8 @@
 #define rhashtable_walk_stop LINUX_BACKPORT(rhashtable_walk_stop)
 #undef rhashtable_init
 #define rhashtable_init LINUX_BACKPORT(rhashtable_init)
+#undef rhltable_init
+#define rhltable_init LINUX_BACKPORT(rhltable_init)
 #undef rhashtable_free_and_destroy
 #define rhashtable_free_and_destroy LINUX_BACKPORT(rhashtable_free_and_destroy)
 #undef rhashtable_destroy

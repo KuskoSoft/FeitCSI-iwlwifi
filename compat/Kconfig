@@ -139,8 +139,8 @@ config BPAUTO_BUILD_WANT_DEV_COREDUMP
 
 config BPAUTO_RHASHTABLE
 	bool
-	# current API of rhashtable was introduced in version 4.1
-	depends on KERNEL_4_1
+	# current API of rhashtable was introduced in version 4.9
+	depends on KERNEL_4_9
 	# not very nice - but better than always having it
 	default y if BACKPORTED_MAC80211
 	#h-file linux/rhashtable.h

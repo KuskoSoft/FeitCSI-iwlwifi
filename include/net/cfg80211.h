@@ -685,6 +685,18 @@ struct cfg80211_acl_data {
 	struct mac_address mac_addrs[];
 };
 
+/*
+ * cfg80211_bitrate_mask - masks for bitrate control
+ */
+struct cfg80211_bitrate_mask {
+	struct {
+		u32 legacy;
+		u8 ht_mcs[IEEE80211_HT_MCS_MASK_LEN];
+		u16 vht_mcs[NL80211_VHT_NSS_MAX];
+		enum nl80211_txrate_gi gi;
+	} control[NUM_NL80211_BANDS];
+};
+
 /**
  * struct cfg80211_ap_settings - AP configuration
  *
@@ -709,6 +721,7 @@ struct cfg80211_acl_data {
  *	MAC address based access control
  * @pbss: If set, start as a PCP instead of AP. Relevant for DMG
  *	networks.
+ * @beacon_rate: bitrate to be used for beacons
  */
 struct cfg80211_ap_settings {
 	struct cfg80211_chan_def chandef;
@@ -728,6 +741,7 @@ struct cfg80211_ap_settings {
 	bool p2p_opp_ps;
 	const struct cfg80211_acl_data *acl;
 	bool pbss;
+	struct cfg80211_bitrate_mask beacon_rate;
 };
 
 /**
@@ -1360,6 +1374,7 @@ struct mesh_config {
  * @beacon_interval: beacon interval to use
  * @mcast_rate: multicat rate for Mesh Node [6Mbps is the default for 802.11a]
  * @basic_rates: basic rates to use when creating the mesh
+ * @beacon_rate: bitrate to be used for beacons
  *
  * These parameters are fixed when the mesh is created.
  */
@@ -1380,6 +1395,7 @@ struct mesh_setup {
 	u16 beacon_interval;
 	int mcast_rate[NUM_NL80211_BANDS];
 	u32 basic_rates;
+	struct cfg80211_bitrate_mask beacon_rate;
 };
 
 /**
@@ -2019,17 +2035,6 @@ enum wiphy_params_flags {
 	WIPHY_PARAM_DYN_ACK		= 1 << 5,
 };
 
-/*
- * cfg80211_bitrate_mask - masks for bitrate control
- */
-struct cfg80211_bitrate_mask {
-	struct {
-		u32 legacy;
-		u8 ht_mcs[IEEE80211_HT_MCS_MASK_LEN];
-		u16 vht_mcs[NL80211_VHT_NSS_MAX];
-		enum nl80211_txrate_gi gi;
-	} control[NUM_NL80211_BANDS];
-};
 /**
  * struct cfg80211_pmksa - PMK Security Association
  *
@@ -2564,12 +2569,12 @@ struct cfg80211_ftm_responder_stats {
  *
  * This struct defines NAN configuration parameters
  *
- * @master_pref: master preference (2 -254)
- * @dual: dual band operation mode
+ * @master_pref: master preference (1 - 255)
+ * @dual: dual band operation mode, see &enum nl80211_nan_dual_band_conf
  */
 struct cfg80211_nan_conf {
 	u8 master_pref;
-	enum nl80211_nan_dual_band_conf dual;
+	u8 dual;
 };
 
 /**
@@ -2957,7 +2962,7 @@ struct cfg80211_nan_func {
  *	cfg80211_free_nan_func().
  *	On success the driver should assign an instance_id in the
  *	provided @nan_func.
- * @rm_nan_func: Remove a NAN function.
+ * @del_nan_func: Delete a NAN function.
  * @nan_change_conf: changes NAN configuration. The changed parameters must
  *	be specified in @changes (using &enum cfg80211_nan_conf_changes);
  *	All other parameters must be ignored.
@@ -3243,7 +3248,7 @@ struct cfg80211_ops {
 	void	(*stop_nan)(struct wiphy *wiphy, struct wireless_dev *wdev);
 	int	(*add_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
 				struct cfg80211_nan_func *nan_func);
-	void	(*rm_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
+	void	(*del_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
 			       u64 cookie);
 	int	(*nan_change_conf)(struct wiphy *wiphy,
 				   struct wireless_dev *wdev,
@@ -3295,9 +3300,9 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_SUPPORTS_5_10_MHZ: Device supports 5 MHz and 10 MHz channels.
  * @WIPHY_FLAG_HAS_CHANNEL_SWITCH: Device supports channel switch in
  *	beaconing mode (AP, IBSS, Mesh, ...).
- * @WIPHY_FLAG_HAS_FTM_RESPONDER: Device supports FTM responder
  * @WIPHY_FLAG_HAS_STATIC_WEP: The device supports static WEP key installation
  *	before connection.
+ * @WIPHY_FLAG_HAS_FTM_RESPONDER: Device supports FTM responder
  */
 enum wiphy_flags {
 	/* use hole at 0 */
@@ -3323,8 +3328,8 @@ enum wiphy_flags {
 	WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL	= BIT(21),
 	WIPHY_FLAG_SUPPORTS_5_10_MHZ		= BIT(22),
 	WIPHY_FLAG_HAS_CHANNEL_SWITCH		= BIT(23),
-	WIPHY_FLAG_HAS_FTM_RESPONDER		= BIT(24),
-	WIPHY_FLAG_HAS_STATIC_WEP		= BIT(25),
+	WIPHY_FLAG_HAS_STATIC_WEP		= BIT(24),
+	WIPHY_FLAG_HAS_FTM_RESPONDER		= BIT(25),
 };
 
 /**
@@ -3732,10 +3737,10 @@ struct wiphy_iftype_ext_capab {
  * @bss_select_support: bitmask indicating the BSS selection criteria supported
  *	by the driver in the .connect() callback. The bit position maps to the
  *	attribute indices defined in &enum nl80211_bss_select_attr.
- * @ftm_initiator_capa: FTM initiator capabilities. If NULL, ftm initiator is
- *	not supported.
  *
  * @cookie_counter: unique generic cookie counter, used to identify objects.
+ * @ftm_initiator_capa: FTM initiator capabilities. If NULL, ftm initiator is
+ *	not supported.
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -3868,9 +3873,9 @@ struct wiphy {
 
 	u32 bss_select_support;
 
-	const struct wiphy_ftm_initiator_capa *ftm_initiator_capa;
-
 	u64 cookie_counter;
+
+	const struct wiphy_ftm_initiator_capa *ftm_initiator_capa;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };
@@ -6005,6 +6010,14 @@ wiphy_ext_feature_isset(struct wiphy *wiphy,
 }
 
 /**
+ * cfg80211_free_nan_func - free NAN function
+ * @f: NAN function that should be freed
+ *
+ * Frees all the NAN function and all it's allocated members.
+ */
+void cfg80211_free_nan_func(struct cfg80211_nan_func *f);
+
+/**
  * struct cfg80211_nan_match_params - NAN match parameters
  * @type: the type of the function that triggered a match. If it is
  *	 %NL80211_NAN_FUNC_SUBSCRIBE it means that we replied to a subscriber.
@@ -6056,14 +6069,6 @@ void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
 				  u8 inst_id,
 				  enum nl80211_nan_func_term_reason reason,
 				  u64 cookie, gfp_t gfp);
-
-/**
- * cfg80211_free_nan_func - free NAN function
- * @f: NAN function that should be freed
- *
- * Frees all the NAN function and all it's allocated members.
- */
-void cfg80211_free_nan_func(struct cfg80211_nan_func *f);
 
 /* ethtool helper */
 void cfg80211_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info);

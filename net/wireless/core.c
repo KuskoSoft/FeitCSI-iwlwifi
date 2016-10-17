@@ -643,7 +643,7 @@ int wiphy_register(struct wiphy *wiphy)
 
 	if (WARN_ON((wiphy->interface_modes & BIT(NL80211_IFTYPE_NAN)) &&
 		    (!rdev->ops->start_nan || !rdev->ops->stop_nan ||
-		     !rdev->ops->add_nan_func || !rdev->ops->rm_nan_func)))
+		     !rdev->ops->add_nan_func || !rdev->ops->del_nan_func)))
 		return -EINVAL;
 
 	/*

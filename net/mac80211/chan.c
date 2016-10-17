@@ -985,8 +985,8 @@ ieee80211_vif_chanctx_reservation_complete(struct ieee80211_sub_if_data *sdata)
 	case NL80211_IFTYPE_P2P_CLIENT:
 	case NL80211_IFTYPE_P2P_GO:
 	case NL80211_IFTYPE_P2P_DEVICE:
-	case NUM_NL80211_IFTYPES:
 	case NL80211_IFTYPE_NAN:
+	case NUM_NL80211_IFTYPES:
 		WARN_ON(1);
 		break;
 	}
