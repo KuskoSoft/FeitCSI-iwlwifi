@@ -111,3 +111,62 @@ int nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
 }
 EXPORT_SYMBOL_GPL(nla_put_64bit);
 
+#if defined(CPTCFG_BPAUTO_WANT_DEV_COREDUMP) && !defined(CPTCFG_BPAUTO_BUILD_WANT_DEV_COREDUMP)
+#include <linux/devcoredump.h>
+
+static void devcd_free_sgtable(void *data)
+{
+	struct scatterlist *table = data;
+	int i;
+	struct page *page;
+	struct scatterlist *iter;
+	struct scatterlist *delete_iter;
+
+	/* free pages */
+	iter = table;
+	for_each_sg(table, iter, sg_nents(table), i) {
+		page = sg_page(iter);
+		if (page)
+			__free_page(page);
+	}
+
+	/* then free all chained tables */
+	iter = table;
+	delete_iter = table;	/* always points on a head of a table */
+	while (!sg_is_last(iter)) {
+		iter++;
+		if (sg_is_chain(iter)) {
+			iter = sg_chain_ptr(iter);
+			kfree(delete_iter);
+			delete_iter = iter;
+		}
+	}
+
+	/* free the last table */
+	kfree(delete_iter);
+}
+
+static ssize_t devcd_read_from_sgtable(char *buffer, loff_t offset,
+				       size_t buf_len, void *data,
+				       size_t data_len)
+{
+	struct scatterlist *table = data;
+
+	if (offset > data_len)
+		return -EINVAL;
+
+	if (offset + buf_len > data_len)
+		buf_len = data_len - offset;
+	return sg_pcopy_to_buffer(table, sg_nents(table), buffer, buf_len,
+				  offset);
+}
+
+void dev_coredumpsg(struct device *dev, struct scatterlist *table,
+		    size_t datalen, gfp_t gfp)
+{
+	dev_coredumpm(dev, THIS_MODULE, table, datalen, gfp,
+		      devcd_read_from_sgtable,
+		      devcd_free_sgtable);
+}
+EXPORT_SYMBOL_GPL(dev_coredumpsg);
+#endif /* CPTCFG_BPAUTO_WANT_DEV_COREDUMP && !CPTCFG_BPAUTO_BUILD_WANT_DEV_COREDUMP */
