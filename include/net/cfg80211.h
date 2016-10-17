@@ -5,7 +5,7 @@
  *
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014 Intel Mobile Communications GmbH
- * Copyright 2015-2016	Intel Deutschland GmbH
+ * Copyright 2015-2017	Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2671,11 +2671,13 @@ struct cfg80211_ftm_responder_stats {
  * This struct defines NAN configuration parameters
  *
  * @master_pref: master preference (1 - 255)
- * @dual: dual band operation mode, see &enum nl80211_nan_dual_band_conf
+ * @bands: operating bands, a bitmap of &enum nl80211_band values.
+ *	For instance, for NL80211_BAND_2GHZ, bit 0 would be set
+ *	(i.e. BIT(NL80211_BAND_2GHZ)).
  */
 struct cfg80211_nan_conf {
 	u8 master_pref;
-	u8 dual;
+	u8 bands;
 };
 
 /**
@@ -2683,11 +2685,11 @@ struct cfg80211_nan_conf {
  * configuration
  *
  * @CFG80211_NAN_CONF_CHANGED_PREF: master preference
- * @CFG80211_NAN_CONF_CHANGED_DUAL: dual band operation
+ * @CFG80211_NAN_CONF_CHANGED_BANDS: operating bands
  */
 enum cfg80211_nan_conf_changes {
 	CFG80211_NAN_CONF_CHANGED_PREF = BIT(0),
-	CFG80211_NAN_CONF_CHANGED_DUAL = BIT(1),
+	CFG80211_NAN_CONF_CHANGED_BANDS = BIT(1),
 };
 
 /**
@@ -3899,6 +3901,10 @@ struct wiphy_iftype_ext_capab {
  * @cookie_counter: unique generic cookie counter, used to identify objects.
  * @ftm_initiator_capa: FTM initiator capabilities. If NULL, ftm initiator is
  *	not supported.
+ * @nan_supported_bands: bands supported by the device in NAN mode, a
+ *	bitmap of &enum nl80211_band values.  For instance, for
+ *	NL80211_BAND_2GHZ, bit 0 would be set
+ *	(i.e. BIT(NL80211_BAND_2GHZ)).
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -4034,6 +4040,8 @@ struct wiphy {
 	u64 cookie_counter;
 
 	const struct wiphy_ftm_initiator_capa *ftm_initiator_capa;
+
+	u8 nan_supported_bands;
 
 	char priv[0] __aligned(NETDEV_ALIGN);
 };
