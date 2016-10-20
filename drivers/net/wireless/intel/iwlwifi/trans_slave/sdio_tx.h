@@ -173,16 +173,14 @@ struct iwl_sdio_fh_desc {
 /**
  * struct iwl_sdio_tx_dtu_hdr - the header for DTU
  * @hdr:	sdio command header
- * @dma_desc:	destination address and length of ADMA descriptors sequence.
- *		On 8000 HW family from B-step this field is 8 bytes, taking 4
- *		additional bytes from the reserved field
+ * @dma_desc:	destination address and length of ADMA descriptors sequence
  * @reserved:
  * @adma_list:	ADMA descriptors, one for each destination in DTU
  */
 struct iwl_sdio_tx_dtu_hdr {
 	struct iwl_sdio_cmd_header hdr;
-	__le32 dma_desc;
-	u8 reserved[8];
+	__le64 dma_desc;
+	u8 reserved[4];
 	struct iwl_sdio_adma_desc adma_list[0];
 } __packed;
 

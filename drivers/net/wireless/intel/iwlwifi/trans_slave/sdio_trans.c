@@ -1550,7 +1550,7 @@ static int iwl_sdio_load_fw_chunk(struct iwl_trans *trans,
 	dtu_hdr->hdr.seq_number = iwl_sdio_get_cmd_seq(trans_sdio, true);
 	dtu_hdr->hdr.signature = cpu_to_le16(IWL_SDIO_CMD_HEADER_SIGNATURE);
 
-	*((__le64 *)&dtu_hdr->dma_desc) = cpu_to_le64(
+	dtu_hdr->dma_desc = cpu_to_le64(
 		    ((u64)FDL_DMA_DESC_ADDRESS <<
 		     IWL_SDIO_DMA_DESC_ADDR_SHIFT) |
 		    ((FDL_NUM_OF_DMA_DESC *

@@ -632,7 +632,7 @@ static void iwl_sdio_config_adma(struct iwl_trans *trans,
 		trans_sdio->sf_mem_addresses->adma_dsc_mem_base;
 	int i;
 
-	*((__le64 *)&(dtu_hdr->dma_desc)) =
+	dtu_hdr->dma_desc =
 		cpu_to_le64(((u64)adma_dsc_mem_base <<
 			    IWL_SDIO_DMA_DESC_ADDR_SHIFT) |
 			    ((dtu_info->adma_desc_num *
@@ -957,7 +957,7 @@ int iwl_sdio_flush_dtus(struct iwl_trans *trans)
 		dtu_hdr->hdr.seq_number = iwl_sdio_get_cmd_seq(trans_sdio, true);
 		dtu_hdr->hdr.signature = cpu_to_le16(IWL_SDIO_CMD_HEADER_SIGNATURE);
 		memset(dtu_hdr->reserved, 0, sizeof(dtu_hdr->reserved));
-		*((__le64 *)&(dtu_hdr->dma_desc)) =
+		dtu_hdr->dma_desc =
 			cpu_to_le64(((u64)adma_dsc_mem_base <<
 				    IWL_SDIO_DMA_DESC_ADDR_SHIFT) |
 				    (sizeof(*dma_desc) <<
