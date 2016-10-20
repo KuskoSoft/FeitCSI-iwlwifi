@@ -12095,6 +12095,7 @@ static int nl80211_msrment_request(struct sk_buff *skb, struct genl_info *info)
 	spin_lock_bh(&rdev->msrments_lock);
 	list_add_tail(&msrment->list, &rdev->msrments_list);
 	spin_unlock_bh(&rdev->msrments_lock);
+	nl80211_msrment_request_free(&request);
 
 	return genlmsg_reply(msg, info);
 
