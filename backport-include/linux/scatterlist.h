@@ -87,6 +87,15 @@ size_t sg_pcopy_to_buffer(struct scatterlist *sgl, unsigned int nents,
 	return sg_copy_buffer(sgl, nents, buf, buflen, skip, true);
 }
 
+#define sg_pcopy_from_buffer LINUX_BACKPORT(sg_pcopy_from_buffer)
+
+static inline
+size_t sg_pcopy_from_buffer(struct scatterlist *sgl, unsigned int nents,
+			    void *buf, size_t buflen, off_t skip)
+{
+	return sg_copy_buffer(sgl, nents, buf, buflen, skip, false);
+}
+
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0) */
 
 #endif /* __BACKPORT_SCATTERLIST_H */
