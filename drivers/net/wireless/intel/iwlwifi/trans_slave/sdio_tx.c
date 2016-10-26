@@ -348,8 +348,8 @@ void iwl_sdio_tx_stop(struct iwl_trans *trans)
 	for (i = 0; i < FH_TCSR_CHNL_NUM; i++) {
 		iwl_write_direct32(trans, FH_TCSR_CHNL_TX_CONFIG_REG(i), 0);
 		ret = iwl_poll_direct_bit(trans, FH_TSSR_TX_STATUS_REG,
-				  FH_TSSR_TX_STATUS_REG_MSK_CHNL_IDLE(i),
-				  1000);
+				FH_TSSR_TX_STATUS_REG_MSK_CHNL_IDLE(i),
+				1000);
 		if (ret < 0)
 			IWL_ERR(trans,
 				"Failing on timeout while stopping DMA channel %d [0x%08x]\n",
@@ -452,8 +452,6 @@ void iwl_sdio_tx_free_dtu_mem(struct iwl_trans *trans, void **data)
 
 	kmem_cache_free(trans_sdio->dtu_cfg_pool, dtu_info);
 	*data = NULL;
-
-	return;
 }
 
 void iwl_sdio_tx_clean_dtu(struct iwl_trans *trans, void *data)
@@ -494,8 +492,6 @@ void iwl_sdio_tx_clean_dtu(struct iwl_trans *trans, void *data)
 exit:
 	spin_unlock_bh(&trans_sdio->slv_tx.mem_rsrc_lock);
 	iwl_sdio_tx_free_dtu_mem(trans, &data);
-
-	return;
 }
 
 static int
@@ -611,7 +607,6 @@ static int iwl_sdio_alloc_dtu_mem(struct iwl_trans *trans,
 
 	/* PTFD, TFD, TB */
 	return iwl_sdio_tx_get_resources(trans, txq_id, txq_entry);
-
 }
 
 /* set ADMA descriptors defining the destination of the data stream */
