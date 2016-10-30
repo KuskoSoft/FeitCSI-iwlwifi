@@ -8601,6 +8601,12 @@ static int nl80211_testmode_dump(struct sk_buff *skb,
 		 * so we need to offset by 1.
 		 */
 		phy_idx = cb->args[0] - 1;
+
+		rdev = cfg80211_rdev_by_wiphy_idx(phy_idx);
+		if (!rdev) {
+			err = -ENOENT;
+			goto out_err;
+		}
 	} else {
 		err = nlmsg_parse(cb->nlh, GENL_HDRLEN + nl80211_fam.hdrsize,
 				  nl80211_fam.attrbuf, nl80211_fam.maxattr,
@@ -8615,7 +8621,6 @@ static int nl80211_testmode_dump(struct sk_buff *skb,
 			goto out_err;
 		}
 		phy_idx = rdev->wiphy_idx;
-		rdev = NULL;
 
 		if (nl80211_fam.attrbuf[NL80211_ATTR_TESTDATA])
 			cb->args[1] =
@@ -8625,12 +8630,6 @@ static int nl80211_testmode_dump(struct sk_buff *skb,
 	if (cb->args[1]) {
 		data = nla_data((void *)cb->args[1]);
 		data_len = nla_len((void *)cb->args[1]);
-	}
-
-	rdev = cfg80211_rdev_by_wiphy_idx(phy_idx);
-	if (!rdev) {
-		err = -ENOENT;
-		goto out_err;
 	}
 
 	if (!rdev->ops->testmode_dump) {
