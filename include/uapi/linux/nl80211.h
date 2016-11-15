@@ -895,6 +895,13 @@
  * @NL80211_CMD_START_FTM_RESPONDER: Start FTM responder and set its parameters.
  *	This is supported only on AP interface. FTM responder cannot be stopped
  *	without removing the interface.
+ * @NL80211_CMD_SET_PMK: For offloaded 4-Way handshake, set the PMK or PMK-R0
+ *	for the given authenticator address (specified with &NL80211_ATTR_MAC).
+ *	When &NL80211_ATTR_PMKR0_NAME is set, &NL80211_ATTR_PMK specifies the
+ *	PMK-R0, otherwise it specifies the PMK.
+ * @NL80211_CMD_DEL_PMK: For offloaded 4-Way handshake, delete the previously
+ *	configured PMK for the authenticator address identified by
+ *	&NL80211_ATTR_MAC.
  *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
@@ -1096,6 +1103,9 @@ enum nl80211_commands {
 
 	NL80211_CMD_START_FTM_RESPONDER,
 	NL80211_CMD_GET_FTM_RESPONDER_STATS,
+
+	NL80211_CMD_SET_PMK,
+	NL80211_CMD_DEL_PMK,
 
 	/* add new commands above here */
 
@@ -1990,8 +2000,10 @@ enum nl80211_commands {
  *
  * @NL80211_ATTR_PMK: PMK for offloaded 4-Way Handshake. Relevant with
  *	%NL80211_CMD_CONNECT (for WPA/WPA2-PSK networks) when PSK is used, or
- *	with %NL80211_CMD_SET_PMKSA when 802.1X authentication is used and for
- *	PMKSA caching.
+ *	with %NL80211_CMD_SET_PMK when 802.1X authentication is used.
+ *	When &NL80211_ATTR_PMKR0_NAME is specified, this attribute specifies
+ *	the PMK-R0.
+ * @NL80211_ATTR_PMKR0_NAME: PMK-R0 Name for offloaded FT.
  *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
@@ -2407,6 +2419,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_CIVIC,
 
 	NL80211_ATTR_PMK,
+	NL80211_ATTR_PMKR0_NAME,
 
 	/* add attributes here, update the policy in nl80211.c */
 
