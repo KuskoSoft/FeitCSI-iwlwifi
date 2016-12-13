@@ -178,7 +178,7 @@ static int iwl_sdio_probe(struct sdio_func *func,
 	if (ret)
 		goto out_free_trans;
 
-	trans->drv = iwl_drv_start(trans, cfg);
+	trans->drv = iwl_drv_start(trans);
 	if (IS_ERR(trans->drv)) {
 		ret = PTR_ERR(trans->drv);
 		goto out_free_trans;
