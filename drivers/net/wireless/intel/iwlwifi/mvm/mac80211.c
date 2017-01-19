@@ -4646,7 +4646,8 @@ void iwl_mvm_tx_latency_watchdog_wk(struct work_struct *wk)
 					     max->seq,
 					     mvm->max_tx_latency_gp2, 1);
 	iwl_mvm_fw_dbg_collect_trig(mvm, trig,
-				    "Tx Latency threshold was crossed");
+				    "Tx Latency threshold was crossed, seq: 0x%x, msrmnt: %d.",
+				    max->seq, max->msrmnt);
 }
 
 /*
@@ -4739,7 +4740,8 @@ void iwl_mvm_tx_latency_wk(struct work_struct *wk)
 					     tx_lat->seq, gp2, 0);
 	if (first_pkt)
 		iwl_mvm_fw_dbg_collect_trig(mvm, trig,
-					    "Tx Latency threshold was crossed");
+					    "Tx Latency threshold was crossed, seq: 0x%x, msrmnt: %d.",
+					    tx_lat->seq, tx_lat->msrmnt);
 }
 
 static void
