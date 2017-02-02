@@ -280,9 +280,6 @@ struct iwl_dbg_cfg {
 #ifdef CPTCFG_IWLWIFI_DISALLOW_OLDER_FW
 	IWL_DBG_CFG_NODEF(bool, load_old_fw)
 #endif /* CPTCFG_IWLWIFI_DISALLOW_OLDER_FW */
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	IWL_DBG_CFG_NODEF(bool, fpga_bu_mode)
-#endif /* CPTCFG_IWLWIFI_SUPPORT_FPGA_BU */
 #undef IWL_DBG_CFG
 #undef IWL_DBG_CFG_STR
 #undef IWL_DBG_CFG_NODEF

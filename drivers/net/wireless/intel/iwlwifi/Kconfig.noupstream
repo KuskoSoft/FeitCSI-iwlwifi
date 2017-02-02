@@ -17,18 +17,6 @@ config IWLXVT
 	  Say Y if you have the user space application and want
 	  to execute debug and testing flows on the HW.
 
-config IWLWIFI_SUPPORT_FPGA_BU
-	bool "enable chip BU without RF"
-	depends on IWLMVM
-	select IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-	help
-	  This option allows the driver to work without RF.
-	  Enable this options if you work with FPGA or if you
-	  want to work without Phy calibration phase.
-
-	  If unsure say N,
-	  Say Y if you have this code and want jump over the ucode init sequence.
-
 config IWLWIFI_NUM_CHANNELS
 	int "number of supported concurrent channels"
 	range 1 2

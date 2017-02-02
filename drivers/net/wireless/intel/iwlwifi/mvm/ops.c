@@ -915,24 +915,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		IWL_DEBUG_EEPROM(mvm->trans->dev,
 				 "working without external nvm file\n");
 
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (mvm->trans->dbg_cfg.fpga_bu_mode) {
-		if (WARN(!mvm->nvm_file_name,
-			 "not allowing power-up and not having nvm_file\n"))
-			goto out_free;
-
-		/*
-		 * Even if nvm exists in the nvm_file driver should read again
-		 * the nvm from the nic because there might be entries that
-		 * exist in the OTP and not in the file.
-		 * For fpga_bu_mode with nvm rely completley on nvm_file,
-		 * since we don't allow power up.
-		 */
-		err = iwl_nvm_init(mvm, false);
-		if (err)
-			goto out_free;
-	} else {
-#endif
 	err = iwl_trans_start_hw(mvm->trans);
 	if (err)
 		goto out_free;
@@ -949,10 +931,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
 		goto out_free;
 	}
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	}
-#endif
 
 	scan_size = iwl_mvm_scan_size(mvm);
 
@@ -1008,9 +986,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 #endif
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (!mvm->trans->dbg_cfg.fpga_bu_mode || !mvm->nvm_file_name)
-#endif
 	iwl_trans_op_mode_leave(trans);
 
 #ifdef CPTCFG_IWLMVM_WAKELOCK

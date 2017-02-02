@@ -960,9 +960,6 @@ int iwl_run_init_mvm_ucode(struct iwl_mvm *mvm, bool read_nvm)
 		}
 	}
 
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (!mvm->trans->dbg_cfg.fpga_bu_mode)
-#endif
 	/* In case we read the NVM from external file, load it to the NIC */
 	if (mvm->nvm_file_name)
 		iwl_mvm_load_nvm_to_nic(mvm);
@@ -983,11 +980,6 @@ int iwl_run_init_mvm_ucode(struct iwl_mvm *mvm, bool read_nvm)
 	}
 
 	mvm->calibrating = true;
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (mvm->trans->dbg_cfg.fpga_bu_mode)
-		goto error;
-#endif
 
 	/* Send TX valid antennas before triggering calibrations */
 	ret = iwl_send_tx_ant_cfg(mvm, iwl_mvm_get_valid_tx_ant(mvm));
@@ -1553,9 +1545,6 @@ static int iwl_mvm_load_rt_fw(struct iwl_mvm *mvm)
 	if (iwl_mvm_has_new_tx_api(mvm))
 		return iwl_run_unified_mvm_ucode(mvm, false);
 
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (!mvm->trans->dbg_cfg.fpga_bu_mode) {
-#endif
 	ret = iwl_run_init_mvm_ucode(mvm, false);
 
 	if (iwlmvm_mod_params.init_dbg)
@@ -1578,12 +1567,6 @@ static int iwl_mvm_load_rt_fw(struct iwl_mvm *mvm)
 	ret = _iwl_trans_start_hw(mvm->trans, false);
 	if (ret)
 		return ret;
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	} else if (iwlmvm_mod_params.init_dbg) {
-		return;
-	}
-#endif
 
 	ret = iwl_mvm_load_ucode_wait_alive(mvm, IWL_UCODE_REGULAR);
 	if (ret)
@@ -1670,9 +1653,6 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 		goto error;
 
 	/* Send phy db control command and then phy db calibration*/
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	if (!mvm->trans->dbg_cfg.fpga_bu_mode) {
-#endif
 	if (!iwl_mvm_has_new_tx_api(mvm)) {
 		ret = iwl_send_phy_db_data(mvm->phy_db);
 		if (ret)
@@ -1689,10 +1669,6 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 		if (ret)
 			goto error;
 	}
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_FPGA_BU
-	}
-#endif
 
 	/* Init RSS configuration */
 	/* TODO - remove a000 disablement when we have RXQ config API */
