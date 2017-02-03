@@ -154,4 +154,24 @@ backport_genlmsg_multicast_allns(struct genl_family *family,
 #endif /* < 4.4 */
 #endif /* < 3.13 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+/**
+ * genl_family_attrbuf - return family's attrbuf
+ * @family: the family
+ *
+ * Return the family's attrbuf, while validating that it's
+ * actually valid to access it.
+ *
+ * You cannot use this function with a family that has parallel_ops
+ * and you can only use it within (pre/post) doit/dumpit callbacks.
+ */
+#define genl_family_attrbuf LINUX_BACKPORT(genl_family_attrbuf)
+static inline struct nlattr **genl_family_attrbuf(struct genl_family *family)
+{
+	WARN_ON(family->parallel_ops);
+
+	return family->attrbuf;
+}
+#endif
+
 #endif /* __BACKPORT_NET_GENETLINK_H */

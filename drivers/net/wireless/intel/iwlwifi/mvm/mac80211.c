@@ -1693,7 +1693,7 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_NAN) {
 		struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
 		/* cfg80211 should stop NAN before interface removal */
-		if (wdev && WARN_ON(wdev->nan_started))
+		if (wdev && WARN_ON(wdev_running(wdev)))
 			iwl_mvm_stop_nan(hw, vif);
 
 		return;

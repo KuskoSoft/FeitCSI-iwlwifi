@@ -276,4 +276,17 @@ static inline int nla_put_s64(struct sk_buff *skb, int attrtype, s64 value,
 }
 #endif /* < 4.7 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+/**
+ * nla_memdup - duplicate attribute memory (kmemdup)
+ * @src: netlink attribute to duplicate from
+ * @gfp: GFP mask
+ */
+#define nla_memdump LINUX_BACKPORT(nla_memdup)
+static inline void *nla_memdup(const struct nlattr *src, gfp_t gfp)
+{
+	return kmemdup(nla_data(src), nla_len(src), gfp);
+}
+#endif /* < 4.9 */
+
 #endif /* __BACKPORT_NET_NETLINK_H */
