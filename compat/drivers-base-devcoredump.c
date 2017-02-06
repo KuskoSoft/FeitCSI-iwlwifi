@@ -175,10 +175,10 @@ static struct attribute *devcd_class_attrs[] = {
 	&class_attr_disabled.attr,
 	NULL,
 };
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
 ATTRIBUTE_GROUPS(devcd_class);
 #else
-#define BP_ATTR_GRP_STRUCT device_attribute
+#define BP_ATTR_GRP_STRUCT class_attribute
 ATTRIBUTE_GROUPS_BACKPORT(devcd_class);
 #endif
 
@@ -187,16 +187,12 @@ static struct class devcd_class = {
 	.owner		= THIS_MODULE,
 	.dev_release	= devcd_dev_release,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 	.dev_groups	= devcd_dev_groups,
-#else
-	.dev_attrs = devcd_class_dev_attrs,
 #endif
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
- 	.class_attrs	= devcd_class_attrs,
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
 	.class_groups	= devcd_class_groups,
+#else
+	.class_attrs = devcd_class_dev_attrs,
 #endif
 };
 
@@ -256,14 +252,6 @@ static void devcd_free_sgtable(void *data)
 {
 	_devcd_free_sgtable(data);
 }
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)
-size_t sg_pcopy_to_buffer(struct scatterlist *sgl, unsigned int nents,
-			  void *buf, size_t buflen, off_t skip)
-{
-	return 0;
-}
-#endif
 
 /**
  * devcd_read_from_table - copy data from sg_table to a given buffer

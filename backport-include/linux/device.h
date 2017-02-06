@@ -136,6 +136,15 @@ struct device_attribute dev_attr_ ## _name = __ATTR_RW(_name)
 #endif
 #endif
 
+#ifndef CLASS_ATTR_RW
+#define CLASS_ATTR_RW(_name) \
+	struct class_attribute class_attr_##_name = __ATTR_RW(_name)
+#endif
+#ifndef CLASS_ATTR_RO
+#define CLASS_ATTR_RO(_name) \
+	struct class_attribute class_attr_##_name = __ATTR_RO(_name)
+#endif
+
 #define ATTRIBUTE_GROUPS_BACKPORT(_name) \
 static struct BP_ATTR_GRP_STRUCT _name##_dev_attrs[ARRAY_SIZE(_name##_attrs)];\
 static void init_##_name##_attrs(void)				\
