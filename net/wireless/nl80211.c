@@ -12537,6 +12537,11 @@ static int nl80211_pre_doit(__genl_const struct genl_ops *ops,
 	struct net_device *dev;
 	bool rtnl = ops->internal_flags & NL80211_FLAG_NEED_RTNL;
 
+#ifdef CPTCFG_REJECT_NONUPSTREAM_NL80211
+	if (info->genlhdr->cmd >= __NL80211_CMD_NONUPSTREAM_START)
+		return -EOPNOTSUPP;
+#endif
+
 	if (rtnl)
 		rtnl_lock();
 

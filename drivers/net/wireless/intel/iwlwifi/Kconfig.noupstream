@@ -186,3 +186,9 @@ config IWLWIFI_DISABLE_FW_DUMP
 	help
 	  Say Y to disable fw debug data dump when the ucode was not
 	  configured, and the MVM_COLLECT_FW_ERR_DUMP flag wasn't enabled.
+
+config REJECT_NONUPSTREAM_NL80211
+	bool "reject non-upstreamed nl80211 commands"
+	depends on CFG80211
+	help
+	  Say Y to disable non-upstream commands.
