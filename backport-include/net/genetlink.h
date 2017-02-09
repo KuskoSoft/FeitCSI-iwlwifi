@@ -172,6 +172,10 @@ static inline struct nlattr **genl_family_attrbuf(struct genl_family *family)
 
 	return family->attrbuf;
 }
+
+#define __genl_ro_after_init
+#else
+#define __genl_ro_after_init __ro_after_init
 #endif
 
 #endif /* __BACKPORT_NET_GENETLINK_H */

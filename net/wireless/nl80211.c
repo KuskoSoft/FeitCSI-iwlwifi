@@ -13432,7 +13432,7 @@ static __genl_const struct genl_ops nl80211_ops[] = {
 	},
 };
 
-static struct genl_family nl80211_fam __ro_after_init = {
+static struct genl_family nl80211_fam __genl_ro_after_init = {
 	.name = NL80211_GENL_NAME,	/* have users key off the name instead */
 	.hdrsize = 0,			/* no private header */
 	.version = 1,			/* no particular meaning now */

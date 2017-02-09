@@ -3250,7 +3250,7 @@ static __genl_const struct genl_ops hwsim_ops[] = {
 	},
 };
 
-static struct genl_family hwsim_genl_family __ro_after_init = {
+static struct genl_family hwsim_genl_family __genl_ro_after_init = {
 	.name = "MAC80211_HWSIM",
 	.version = 1,
 	.maxattr = HWSIM_ATTR_MAX,
