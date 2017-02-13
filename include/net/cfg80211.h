@@ -3490,22 +3490,6 @@ struct ieee80211_iface_limit {
 
 /**
  * struct ieee80211_iface_combination - possible interface combination
- * @limits: limits for the given interface types
- * @n_limits: number of limitations
- * @num_different_channels: can use up to this many different channels
- * @max_interfaces: maximum number of interfaces in total allowed in this
- *	group
- * @beacon_int_infra_match: In this combination, the beacon intervals
- *	between infrastructure and AP types must match. This is required
- *	only in special cases.
- * @radar_detect_widths: bitmap of channel widths supported for radar detection
- * @radar_detect_regions: bitmap of regions supported for radar detection
- * @beacon_int_min_gcd: This interface combination supports different
- *	beacon intervals.
- *	= 0 - all beacon intervals for different interface must be same.
- *	> 0 - any beacon interval for the interface part of this combination AND
- *	      *GCD* of all beacon intervals from beaconing interfaces of this
- *	      combination must be greater or equal to this value.
  *
  * With this structure the driver can describe which interface
  * combinations it supports concurrently.
@@ -3564,13 +3548,60 @@ struct ieee80211_iface_limit {
  *
  */
 struct ieee80211_iface_combination {
+	/**
+	 * @limits:
+	 * limits for the given interface types
+	 */
 	const struct ieee80211_iface_limit *limits;
+
+	/**
+	 * @num_different_channels:
+	 * can use up to this many different channels
+	 */
 	u32 num_different_channels;
+
+	/**
+	 * @max_interfaces:
+	 * maximum number of interfaces in total allowed in this group
+	 */
 	u16 max_interfaces;
+
+	/**
+	 * @n_limits:
+	 * number of limitations
+	 */
 	u8 n_limits;
+
+	/**
+	 * @beacon_int_infra_match:
+	 * In this combination, the beacon intervals between infrastructure
+	 * and AP types must match. This is required only in special cases.
+	 */
 	bool beacon_int_infra_match;
+
+	/**
+	 * @radar_detect_widths:
+	 * bitmap of channel widths supported for radar detection
+	 */
 	u8 radar_detect_widths;
+
+	/**
+	 * @radar_detect_regions:
+	 * bitmap of regions supported for radar detection
+	 */
 	u8 radar_detect_regions;
+
+	/**
+	 * @beacon_int_min_gcd:
+	 * This interface combination supports different beacon intervals.
+	 *
+	 * = 0
+	 *   all beacon intervals for different interface must be same.
+	 * > 0
+	 *   any beacon interval for the interface part of this combination AND
+	 *   GCD of all beacon intervals from beaconing interfaces of this
+	 *   combination must be greater or equal to this value.
+	 */
 	u32 beacon_int_min_gcd;
 };
 
@@ -5706,6 +5737,7 @@ void cfg80211_mgmt_tx_status(struct wireless_dev *wdev, u64 cookie,
  * cfg80211_cqm_rssi_notify - connection quality monitoring rssi event
  * @dev: network device
  * @rssi_event: the triggered RSSI event
+ * @rssi_level: new RSSI level value or 0 if not available
  * @gfp: context flags
  *
  * This function is called when a configured connection quality monitoring
@@ -5713,7 +5745,7 @@ void cfg80211_mgmt_tx_status(struct wireless_dev *wdev, u64 cookie,
  */
 void cfg80211_cqm_rssi_notify(struct net_device *dev,
 			      enum nl80211_cqm_rssi_threshold_event rssi_event,
-			      gfp_t gfp);
+			      s32 rssi_level, gfp_t gfp);
 
 /**
  * cfg80211_cqm_pktloss_notify - notify userspace about packetloss to peer
