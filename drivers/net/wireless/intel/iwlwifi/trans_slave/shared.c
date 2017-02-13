@@ -1661,11 +1661,11 @@ int iwl_trans_slv_tx_data_send(struct iwl_trans *trans, struct sk_buff *skb,
 
 	/* FIXME: compute AC for agg */
 	if (!ieee80211_has_morefrags(hdr->frame_control) &&
-	    (atomic_read(&txq->waiting_count) > IWL_SLV_TX_Q_HIGH_THLD))
-		if (!test_and_set_bit(txq_id, trans_slv->queue_stopped_map)) {
-			iwl_op_mode_queue_full(trans->op_mode, txq_id);
-			IWL_DEBUG_TX(trans, "stop %d\n", txq_id);
-		}
+	    (atomic_read(&txq->waiting_count) > IWL_SLV_TX_Q_HIGH_THLD) &&
+	    !test_and_set_bit(txq_id, trans_slv->queue_stopped_map)) {
+		iwl_op_mode_queue_full(trans->op_mode, txq_id);
+		IWL_DEBUG_TX(trans, "stop %d\n", txq_id);
+	}
 
 	spin_unlock_bh(&trans_slv->txq_lock);
 
