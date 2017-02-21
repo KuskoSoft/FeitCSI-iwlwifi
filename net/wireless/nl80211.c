@@ -9063,14 +9063,6 @@ static int nl80211_setdel_pmksa(struct sk_buff *skb, struct genl_info *info)
 
 	pmksa.pmkid = nla_data(info->attrs[NL80211_ATTR_PMKID]);
 	pmksa.bssid = nla_data(info->attrs[NL80211_ATTR_MAC]);
-	if (info->attrs[NL80211_ATTR_PMK]) {
-		pmksa.pmk = nla_data(info->attrs[NL80211_ATTR_PMK]);
-		pmksa.pmk_len = nla_len(info->attrs[NL80211_ATTR_PMK]);
-		if (pmksa.pmk_len != WLAN_PMK_LEN &&
-		    pmksa.pmk_len != WLAN_PMK_LEN_SUITE_B_192 &&
-		    pmksa.pmk_len != WLAN_PMK_LEN_EAP_LEAP)
-			return -EINVAL;
-	}
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_STATION &&
 	    dev->ieee80211_ptr->iftype != NL80211_IFTYPE_P2P_CLIENT)

@@ -2139,15 +2139,11 @@ enum wiphy_params_flags {
  * caching.
  *
  * @bssid: The AP's BSSID.
- * @pmkid: The PMK identifier.
- * @pmk: The PMK material itself.
- * @pmk_len: The PMK length in bytes.
+ * @pmkid: The PMK material itself.
  */
 struct cfg80211_pmksa {
 	const u8 *bssid;
 	const u8 *pmkid;
-	const u8 *pmk;
-	u8 pmk_len;
 };
 
 /**
