@@ -12175,6 +12175,9 @@ static int nl80211_parse_ftm_request(struct cfg80211_registered_device *rdev,
 	const struct wiphy_ftm_initiator_capa *capa =
 		rdev->wiphy.ftm_initiator_capa;
 
+	if (!capa)
+		return -ENOTSUPP;
+
 	err = nla_parse_nested(tb, NL80211_FTM_REQ_ATTR_MAX, ftm_attr,
 			       nl80211_ftm_request_policy);
 	if (err)
