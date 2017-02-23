@@ -162,3 +162,6 @@ help: defconfig-help
 else
 include $(BACKPORT_DIR)/Makefile.kernel
 endif
+
+htmldocs:
+	@make srctree=$(shell pwd) src=Documentation obj=Documentation -f Documentation/Makefile.sphinx htmldocs
