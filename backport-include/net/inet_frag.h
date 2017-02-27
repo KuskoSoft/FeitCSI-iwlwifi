@@ -3,7 +3,7 @@
 #include_next <net/inet_frag.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0)
 /* Memory Tracking Functions. */
 #define frag_mem_limit LINUX_BACKPORT(frag_mem_limit)
 static inline int frag_mem_limit(struct netns_frags *nf)
@@ -26,10 +26,10 @@ static inline int sum_frag_mem_limit(struct netns_frags *nf)
 #define inet_frag_maybe_warn_overflow LINUX_BACKPORT(inet_frag_maybe_warn_overflow)
 void inet_frag_maybe_warn_overflow(struct inet_frag_queue *q,
 				   const char *prefix);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,9,0) */
 
 /* the type of the paramater changed with kernel 4.3 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0)
 #define sub_frag_mem_limit LINUX_BACKPORT(sub_frag_mem_limit)
 static inline void sub_frag_mem_limit(struct netns_frags *nf, int i)
 {
@@ -41,7 +41,7 @@ static inline void add_frag_mem_limit(struct netns_frags *nf, int i)
 {
 	atomic_add(i, &nf->mem);
 }
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+#elif LINUX_VERSION_IS_LESS(4,3,0)
 #define sub_frag_mem_limit LINUX_BACKPORT(sub_frag_mem_limit)
 static inline void sub_frag_mem_limit(struct netns_frags *nf, int i)
 {
@@ -53,10 +53,10 @@ static inline void add_frag_mem_limit(struct netns_frags *nf, int i)
 {
 	__percpu_counter_add(&nf->mem, i, frag_percpu_counter_batch);
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0) */
+#endif /* LINUX_VERSION_IS_LESS(4,3,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) && \
-    LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(4,4,0) && \
+    LINUX_VERSION_IS_GEQ(3,9,0)
 #define inet_frags_uninit_net LINUX_BACKPORT(inet_frags_uninit_net)
 static inline void inet_frags_uninit_net(struct netns_frags *nf)
 {
@@ -64,7 +64,7 @@ static inline void inet_frags_uninit_net(struct netns_frags *nf)
 }
 #endif /* < 4.4 && >= 3.9 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_IS_LESS(4,4,0)
 static inline int backport_inet_frags_init_net(struct netns_frags *nf)
 {
 	inet_frags_init_net(nf);

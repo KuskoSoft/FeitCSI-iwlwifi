@@ -2,7 +2,7 @@
 #define __BACKPORT_RCULIST_H
 #include_next <linux/rculist.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0)
 #include <backport/magic.h>
 #define hlist_for_each_entry_rcu4(tpos, pos, head, member)		\
 	for (pos = rcu_dereference_raw(hlist_first_rcu(head));		\

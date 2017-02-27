@@ -20,7 +20,7 @@
 #include <linux/string.h>
 #include <asm/uaccess.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0)
+#if LINUX_VERSION_IS_GEQ(3,19,0)
 int led_set_brightness_sync(struct led_classdev *led_cdev,
 			    enum led_brightness value)
 {
@@ -40,7 +40,7 @@ int led_set_brightness_sync(struct led_classdev *led_cdev,
 EXPORT_SYMBOL_GPL(led_set_brightness_sync);
 #endif /* >= 3.19 */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_IS_GEQ(3,2,0)
 /**
  * no_seek_end_llseek - llseek implementation for fixed-sized devices
  * @file:	file structure to seek on
@@ -52,7 +52,7 @@ loff_t no_seek_end_llseek(struct file *file, loff_t offset, int whence)
 {
 	switch (whence) {
 	case SEEK_SET: case SEEK_CUR:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
+#if LINUX_VERSION_IS_GEQ(3,6,0)
 		return generic_file_llseek_size(file, offset, whence,
 						~0ULL, 0);
 #else

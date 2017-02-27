@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2016 Hauke Mehrtens <hauke-5/S+JYg5SzeELgA04lAiVw@public.gmane.org>
+ * Copyright(c) 2016 Hauke Mehrtens <hauke@hauke-m.de>
  *
  * Backport functionality introduced in Linux 4.7.
  *
@@ -8,10 +8,15 @@
  * published by the Free Software Foundation.
  */
 
- #include <linux/skbuff.h>
- #include <net/netlink.h>
+#include <linux/export.h>
+#include <linux/list.h>
+#include <linux/rcupdate.h>
+#include <linux/slab.h>
+#include <linux/spinlock.h>
+#include <linux/skbuff.h>
+#include <net/netlink.h>
 
- /**
+/**
  * __nla_reserve_64bit - reserve room for attribute on the skb and align it
  * @skb: socket buffer to reserve room on
  * @attrtype: attribute type
@@ -34,7 +39,7 @@ struct nlattr *__nla_reserve_64bit(struct sk_buff *skb, int attrtype,
 }
 EXPORT_SYMBOL_GPL(__nla_reserve_64bit);
 
- /**
+/**
  * nla_reserve_64bit - reserve room for attribute on the skb and align it
  * @skb: socket buffer to reserve room on
  * @attrtype: attribute type
@@ -63,7 +68,7 @@ struct nlattr *nla_reserve_64bit(struct sk_buff *skb, int attrtype, int attrlen,
 }
 EXPORT_SYMBOL_GPL(nla_reserve_64bit);
 
- /**
+/**
  * __nla_put_64bit - Add a netlink attribute to a socket buffer and align it
  * @skb: socket buffer to add attribute to
  * @attrtype: attribute type
@@ -83,7 +88,7 @@ void __nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
 }
 EXPORT_SYMBOL_GPL(__nla_put_64bit);
 
- /**
+/**
  * nla_put_64bit - Add a netlink attribute to a socket buffer and align it
  * @skb: socket buffer to add attribute to
  * @attrtype: attribute type
@@ -111,8 +116,10 @@ int nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
 }
 EXPORT_SYMBOL_GPL(nla_put_64bit);
 
-#if defined(CPTCFG_BPAUTO_WANT_DEV_COREDUMP) && !defined(CPTCFG_BPAUTO_BUILD_WANT_DEV_COREDUMP)
+/* below 3.18 we copied the entire devcoredump */
+#if LINUX_VERSION_IS_GEQ(3,18,0)
 #include <linux/devcoredump.h>
+#include <linux/scatterlist.h>
 
 static void devcd_free_sgtable(void *data)
 {
@@ -165,8 +172,7 @@ void dev_coredumpsg(struct device *dev, struct scatterlist *table,
 		    size_t datalen, gfp_t gfp)
 {
 	dev_coredumpm(dev, THIS_MODULE, table, datalen, gfp,
-		      devcd_read_from_sgtable,
-		      devcd_free_sgtable);
+		      devcd_read_from_sgtable, devcd_free_sgtable);
 }
 EXPORT_SYMBOL_GPL(dev_coredumpsg);
-#endif /* CPTCFG_BPAUTO_WANT_DEV_COREDUMP && !CPTCFG_BPAUTO_BUILD_WANT_DEV_COREDUMP */
+#endif /* >= 3.18.0 */

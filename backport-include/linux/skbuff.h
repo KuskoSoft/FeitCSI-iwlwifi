@@ -4,14 +4,14 @@
 #include <linux/version.h>
 #include <generated/utsrelease.h>
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)) && \
+#if LINUX_VERSION_IS_LESS(3,4,0) && \
       (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6,4)) && \
-      !(defined(CONFIG_SUSE_KERNEL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)))
+      !(defined(CONFIG_SUSE_KERNEL) && LINUX_VERSION_IS_GEQ(3,0,0))
 #define skb_add_rx_frag(skb, i, page, off, size, truesize) \
 	skb_add_rx_frag(skb, i, page, off, size)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#if LINUX_VERSION_IS_LESS(3,3,0)
 #define __pskb_copy LINUX_BACKPORT(__pskb_copy)
 extern struct sk_buff *__pskb_copy(struct sk_buff *skb,
 				   int headroom, gfp_t gfp_mask);
@@ -24,12 +24,12 @@ static inline void skb_complete_wifi_ack(struct sk_buff *skb, bool acked)
 
 /* define to 0 so checks for it are always false */
 #define SKBTX_WIFI_STATUS 0
-#elif LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#elif LINUX_VERSION_IS_LESS(3,18,0)
 #define skb_complete_wifi_ack LINUX_BACKPORT(skb_complete_wifi_ack)
 void skb_complete_wifi_ack(struct sk_buff *skb, bool acked);
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_IS_LESS(3,2,0)
 #include <linux/dma-mapping.h>
 
 /* mask skb_frag_page as RHEL6 backports this */
@@ -57,7 +57,7 @@ static inline dma_addr_t skb_frag_dma_map(struct device *dev,
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
+#if LINUX_VERSION_IS_LESS(3,1,0)
 /* mask __netdev_alloc_skb_ip_align as RHEL6 backports this */
 #define __netdev_alloc_skb_ip_align(a,b,c) compat__netdev_alloc_skb_ip_align(a,b,c)
 static inline struct sk_buff *__netdev_alloc_skb_ip_align(struct net_device *dev,
@@ -76,7 +76,7 @@ static inline struct sk_buff *__netdev_alloc_skb_ip_align(struct net_device *dev
 	for (iter = skb_shinfo(skb)->frag_list; iter; iter = iter->next)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_IS_LESS(3,2,0)
 #define skb_frag_size_sub LINUX_BACKPORT(skb_frag_size_sub)
 static inline void skb_frag_size_sub(skb_frag_t *frag, int delta)
 {
@@ -95,18 +95,18 @@ static inline void *skb_frag_address(const skb_frag_t *frag)
 {
 	return page_address(skb_frag_page(frag)) + frag->page_offset;
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,2,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0)
 #ifndef NETDEV_FRAG_PAGE_MAX_ORDER
 #define NETDEV_FRAG_PAGE_MAX_ORDER get_order(32768)
 #endif
 #ifndef NETDEV_FRAG_PAGE_MAX_SIZE
 #define NETDEV_FRAG_PAGE_MAX_SIZE  (PAGE_SIZE << NETDEV_FRAG_PAGE_MAX_ORDER)
 #endif
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,9,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0)
 #define skb_unclone LINUX_BACKPORT(skb_unclone)
 static inline int skb_unclone(struct sk_buff *skb, gfp_t pri)
 {
@@ -117,7 +117,7 @@ static inline int skb_unclone(struct sk_buff *skb, gfp_t pri)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_IS_LESS(3,2,0)
 
 #define skb_frag_address_safe LINUX_BACKPORT(skb_frag_address_safe)
 /**
@@ -135,9 +135,9 @@ static inline void *skb_frag_address_safe(const skb_frag_t *frag)
 
 	return ptr + frag->page_offset;
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,2,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) && \
+#if LINUX_VERSION_IS_LESS(3,14,0) && \
     RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0) && \
     !(LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
 /*
@@ -176,16 +176,16 @@ enum pkt_hash_types {
 static inline void
 skb_set_hash(struct sk_buff *skb, __u32 hash, enum pkt_hash_types type)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0) /* 4031ae6edb */
+#if LINUX_VERSION_IS_GEQ(3,2,0) /* 4031ae6edb */
 	skb->l4_rxhash = (type == PKT_HASH_TYPE_L4);
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0) /* bdeab99191 */
+#if LINUX_VERSION_IS_GEQ(3,4,0) /* bdeab99191 */
 	skb->rxhash = hash;
 #endif
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,14,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
+#if LINUX_VERSION_IS_LESS(3,16,0)
 #define __pskb_copy_fclone LINUX_BACKPORT(__pskb_copy_fclone)
 static inline struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb,
 						 int headroom, gfp_t gfp_mask,
@@ -195,12 +195,12 @@ static inline struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb,
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#if LINUX_VERSION_IS_LESS(3,18,0)
 #define skb_clone_sk LINUX_BACKPORT(skb_clone_sk)
 struct sk_buff *skb_clone_sk(struct sk_buff *skb);
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#if LINUX_VERSION_IS_LESS(3,19,0)
 /**
  * __dev_alloc_pages - allocate page for network Rx
  * @gfp_mask: allocation priority. Set __GFP_NOMEMALLOC if not for network Rx
@@ -223,7 +223,7 @@ static inline struct page *__dev_alloc_pages(gfp_t gfp_mask,
 	 *     code in gfp_to_alloc_flags that should be enforcing this.
 	 */
 	gfp_mask |= __GFP_COLD | __GFP_COMP;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
+#if LINUX_VERSION_IS_GEQ(3,6,0)
 	gfp_mask |= __GFP_MEMALLOC;
 #endif
 
@@ -255,9 +255,9 @@ static inline struct page *dev_alloc_page(void)
 {
 	return __dev_alloc_page(GFP_ATOMIC);
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,19,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#if LINUX_VERSION_IS_LESS(3,19,0)
 #define skb_copy_datagram_msg LINUX_BACKPORT(skb_copy_datagram_msg)
 static inline int skb_copy_datagram_msg(const struct sk_buff *from, int offset,
 					struct msghdr *msg, int size)
@@ -298,9 +298,9 @@ static inline int skb_put_padto(struct sk_buff *skb, unsigned int len)
 #define skb_ensure_writable LINUX_BACKPORT(skb_ensure_writable)
 int skb_ensure_writable(struct sk_buff *skb, int write_len);
 
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,19,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+#if LINUX_VERSION_IS_LESS(4,2,0)
 static inline void skb_free_frag(void *data)
 {
 	put_page(virt_to_head_page(data));

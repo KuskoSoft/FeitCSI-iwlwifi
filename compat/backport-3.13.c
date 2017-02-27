@@ -17,7 +17,7 @@
 #include <linux/device.h>
 #include <linux/hwmon.h>
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0))
+#if LINUX_VERSION_IS_GEQ(3,5,0)
 #ifdef CONFIG_REGULATOR
 #include <linux/module.h>
 #include <linux/regulator/driver.h>
@@ -90,7 +90,7 @@ void devm_regulator_unregister(struct device *dev, struct regulator_dev *rdev)
 }
 EXPORT_SYMBOL_GPL(devm_regulator_unregister);
 #endif /* CONFIG_REGULATOR */
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)) */
+#endif /* LINUX_VERSION_IS_GEQ(3,5,0) */
 
 /************* generic netlink backport *****************/
 #if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
@@ -111,10 +111,10 @@ int __backport_genl_register_family(struct genl_family *family)
 	__copy(netnsok);
 	__copy(pre_doit);
 	__copy(post_doit);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_IS_GEQ(3,10,0)
 	__copy(parallel_ops);
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+#if LINUX_VERSION_IS_GEQ(3,11,0)
 	__copy(module);
 #endif
 #undef __copy

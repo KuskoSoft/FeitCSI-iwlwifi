@@ -3,7 +3,7 @@
 #include_next <linux/poll.h>
 #include <linux/version.h>
 
-#if  LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
+#if  LINUX_VERSION_IS_LESS(3,4,0)
 #define poll_does_not_wait LINUX_BACKPORT(poll_does_not_wait)
 static inline bool poll_does_not_wait(const poll_table *p)
 {

@@ -131,6 +131,7 @@ config BPAUTO_WANT_DEV_COREDUMP
 
 config BPAUTO_BUILD_WANT_DEV_COREDUMP
 	bool
+	depends on KERNEL_3_18
 	default n if DEV_COREDUMP
 	default n if DISABLE_DEV_COREDUMP
 	default y if BPAUTO_WANT_DEV_COREDUMP
@@ -140,6 +141,7 @@ config BPAUTO_BUILD_WANT_DEV_COREDUMP
 config BPAUTO_RHASHTABLE
 	bool
 	# current API of rhashtable was introduced in version 4.9
+	# (the one including rhltable)
 	depends on KERNEL_4_9
 	# not very nice - but better than always having it
 	default y if BACKPORTED_MAC80211

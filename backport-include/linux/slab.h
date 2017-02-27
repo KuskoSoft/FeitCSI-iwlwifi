@@ -3,7 +3,7 @@
 #include_next <linux/slab.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
+#if LINUX_VERSION_IS_LESS(3,4,0)
 /* This backports:
  *
  * commit a8203725dfded5c1f79dca3368a4a273e24b59bb

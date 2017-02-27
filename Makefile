@@ -37,7 +37,7 @@ mrproper:
 	@rm -f backport-include/backport/autoconf.h
 
 .DEFAULT:
-	@set -e ; test -f .local-symbols || (						\
+	@set -e ; test -f local-symbols || (						\
 	echo "/--------------"								;\
 	echo "| You shouldn't run make in the backports tree, but only in"		;\
 	echo "| the generated output. This here is only the skeleton code"		;\
@@ -63,7 +63,7 @@ mrproper:
 	@set -e ; if [ "$$(cat .kernel_config_md5 2>/dev/null)" != "$(CONFIG_MD5)" ]	;\
 	then 										\
 		echo -n "Generating local configuration database from kernel ..."	;\
-		grep -v -f .local-symbols $(KERNEL_CONFIG) | grep = | (			\
+		grep -v -f local-symbols $(KERNEL_CONFIG) | grep = | (			\
 			while read l ; do						\
 				if [ "$${l:0:7}" != "CONFIG_" ] ; then			\
 					continue					;\

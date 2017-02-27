@@ -5,7 +5,7 @@
 #include_next <linux/idr.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
+#if LINUX_VERSION_IS_LESS(3,1,0)
 #define ida_simple_get LINUX_BACKPORT(ida_simple_get)
 int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
 		   gfp_t gfp_mask);
@@ -14,11 +14,11 @@ int ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
 void ida_simple_remove(struct ida *ida, unsigned int id);
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0)
 #include <linux/errno.h>
 /**
  * backport of idr idr_alloc() usage
- * 
+ *
  * This backports a patch series send by Tejun Heo:
  * https://lkml.org/lkml/2013/2/2/159
  */
@@ -54,6 +54,11 @@ static inline void idr_preload(gfp_t gfp_mask)
 static inline void idr_preload_end(void)
 {
 }
+#endif
+
+#ifndef idr_for_each_entry
+#define idr_for_each_entry(idp, entry, id)			\
+	for (id = 0; ((entry) = idr_get_next(idp, &(id))) != NULL; ++id)
 #endif
 
 #endif /* __BACKPORT_IDR_H */

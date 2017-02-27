@@ -3,7 +3,7 @@
 #include_next <crypto/skcipher.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_IS_LESS(4,3,0)
 /**
  *	struct skcipher_request - Symmetric key cipher request
  *	@cryptlen: Number of bytes to encrypt or decrypt
@@ -441,7 +441,7 @@ static inline void skcipher_request_set_crypt(
 }
 #endif /* < 4.3 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0)
+#if LINUX_VERSION_IS_LESS(4,6,0)
 #define skcipher_request_zero LINUX_BACKPORT(skcipher_request_zero)
 static inline void skcipher_request_zero(struct skcipher_request *req)
 {

@@ -13,4 +13,9 @@
 				 lockdep_rtnl_is_held())
 #endif
 
+#if LINUX_VERSION_IS_LESS(3,19,0)
+#define ndo_dflt_fdb_add(ndm, tb, dev, addr, vid, flags) \
+	ndo_dflt_fdb_add(ndm, tb, dev, addr, flags)
+#endif
+
 #endif /* __BACKPORT_LINUX_RTNETLINK_H */

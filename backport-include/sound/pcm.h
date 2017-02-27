@@ -3,7 +3,7 @@
 #include_next <sound/pcm.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#if LINUX_VERSION_IS_LESS(3,19,0)
 /**
  * snd_pcm_stop_xrun - stop the running streams as XRUN
  * @substream: the PCM substream instance
@@ -24,6 +24,6 @@ static inline int snd_pcm_stop_xrun(struct snd_pcm_substream *substream)
 	snd_pcm_stream_unlock_irqrestore(substream, flags);
 	return ret;
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,19,0) */
 
 #endif /* __BACKPORT_SOUND_PCM_H */

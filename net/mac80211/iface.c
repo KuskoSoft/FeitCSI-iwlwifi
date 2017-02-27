@@ -1115,17 +1115,20 @@ static void ieee80211_uninit(struct net_device *dev)
 	ieee80211_teardown_sdata(IEEE80211_DEV_TO_SUB_IF(dev));
 }
 
+#if LINUX_VERSION_IS_GEQ(3,14,0) || \
+    (LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
 static u16 ieee80211_netdev_select_queue(struct net_device *dev,
-					 struct sk_buff *skb
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
-,
-					 void *accel_priv
+					 struct sk_buff *skb,
+					 void *accel_priv,
+					 select_queue_fallback_t fallback)
+#elif LINUX_VERSION_IS_GEQ(3,13,0)
+static u16 ieee80211_netdev_select_queue(struct net_device *dev,
+					 struct sk_buff *skb,
+					 void *accel_priv)
+#else
+static u16 ieee80211_netdev_select_queue(struct net_device *dev,
+					 struct sk_buff *skb)
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0) || (LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
-,
-					 select_queue_fallback_t fallback
-#endif
-)
 {
 	return ieee80211_select_queue(IEEE80211_DEV_TO_SUB_IF(dev), skb);
 }
@@ -1156,7 +1159,7 @@ ieee80211_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
 		stats->tx_bytes   += tx_bytes;
 	}
 }
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_LESS(4,11,0)
 static struct rtnl_link_stats64 *
 bp_ieee80211_get_stats64(struct net_device *dev,
 			 struct rtnl_link_stats64 *stats){
@@ -1165,7 +1168,7 @@ bp_ieee80211_get_stats64(struct net_device *dev,
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_LESS(4,10,0)
 static int __change_mtu(struct net_device *ndev, int new_mtu){
 	if (new_mtu < 256 || new_mtu > IEEE80211_MAX_DATA_LEN)
 		return -EINVAL;
@@ -1175,7 +1178,7 @@ static int __change_mtu(struct net_device *ndev, int new_mtu){
 #endif
 
 static const struct net_device_ops ieee80211_dataif_ops = {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_LESS(4,10,0)
 	.ndo_change_mtu = __change_mtu,
 #endif
 	.ndo_open		= ieee80211_open,
@@ -1185,24 +1188,27 @@ static const struct net_device_ops ieee80211_dataif_ops = {
 	.ndo_set_rx_mode	= ieee80211_set_multicast_list,
 	.ndo_set_mac_address 	= ieee80211_change_mac,
 	.ndo_select_queue	= ieee80211_netdev_select_queue,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_GEQ(4,11,0)
 	.ndo_get_stats64	= ieee80211_get_stats64,
 #else
 	.ndo_get_stats64 = bp_ieee80211_get_stats64,
 #endif
 };
 
+#if LINUX_VERSION_IS_GEQ(3,14,0) || \
+    (LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
 static u16 ieee80211_monitor_select_queue(struct net_device *dev,
-					  struct sk_buff *skb
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
-,
-					  void *accel_priv
+					  struct sk_buff *skb,
+					  void *accel_priv,
+					  select_queue_fallback_t fallback)
+#elif LINUX_VERSION_IS_GEQ(3,13,0)
+static u16 ieee80211_monitor_select_queue(struct net_device *dev,
+					  struct sk_buff *skb,
+					  void *accel_priv)
+#else
+static u16 ieee80211_monitor_select_queue(struct net_device *dev,
+					  struct sk_buff *skb)
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0) || (LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
-,
-					  select_queue_fallback_t fallback
-#endif
-)
 {
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
 	struct ieee80211_local *local = sdata->local;
@@ -1222,7 +1228,7 @@ static u16 ieee80211_monitor_select_queue(struct net_device *dev,
 }
 
 static const struct net_device_ops ieee80211_monitorif_ops = {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_LESS(4,10,0)
 	.ndo_change_mtu = __change_mtu,
 #endif
 	.ndo_open		= ieee80211_open,
@@ -1232,7 +1238,7 @@ static const struct net_device_ops ieee80211_monitorif_ops = {
 	.ndo_set_rx_mode	= ieee80211_set_multicast_list,
 	.ndo_set_mac_address 	= ieee80211_change_mac,
 	.ndo_select_queue	= ieee80211_monitor_select_queue,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_GEQ(4,11,0)
 	.ndo_get_stats64	= ieee80211_get_stats64,
 #else
 	.ndo_get_stats64 = bp_ieee80211_get_stats64,
@@ -1256,7 +1262,7 @@ static void ieee80211_if_setup(struct net_device *dev)
 static void ieee80211_if_setup_no_queue(struct net_device *dev)
 {
 	ieee80211_if_setup(dev);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_IS_GEQ(4,3,0)
 	dev->priv_flags |= IFF_NO_QUEUE;
 #else
 	dev->tx_queue_len = 0;
@@ -1943,8 +1949,10 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 		netdev_set_default_ethtool_ops(ndev, &ieee80211_ethtool_ops);
 
 		/* MTU range: 256 - 2304 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_GEQ(4,10,0)
 		ndev->min_mtu = 256;
+#endif
+#if LINUX_VERSION_IS_GEQ(4,10,0)
 		ndev->max_mtu = IEEE80211_MAX_DATA_LEN;
 #endif
 

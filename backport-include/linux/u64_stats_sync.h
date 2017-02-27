@@ -3,7 +3,7 @@
 
 #include <linux/version.h>
 #include <generated/utsrelease.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
+#if LINUX_VERSION_IS_GEQ(3,6,0)
 #include_next <linux/u64_stats_sync.h>
 #else
 
@@ -112,9 +112,9 @@ static inline bool u64_stats_fetch_retry(const struct u64_stats_sync *syncp,
 #endif
 }
 
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)) */
+#endif /* LINUX_VERSION_IS_GEQ(3,6,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0) && \
+#if LINUX_VERSION_IS_LESS(3,15,0) && \
     !(LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
 static inline unsigned int u64_stats_fetch_begin_irq(const struct u64_stats_sync *syncp)
 {
@@ -141,14 +141,14 @@ static inline bool u64_stats_fetch_retry_irq(const struct u64_stats_sync *syncp,
 #endif
 }
 
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3,15,0)) */
+#endif /* LINUX_VERSION_IS_GEQ(3,15,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#if LINUX_VERSION_IS_LESS(3,13,0)
 #if BITS_PER_LONG == 32 && defined(CONFIG_SMP)
 # define u64_stats_init(syncp)	seqcount_init(syncp.seq)
 #else
 # define u64_stats_init(syncp)	do { } while (0)
 #endif
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,13,0) */
 
 #endif /* __BACKPORT_LINUX_U64_STATS_SYNC_H */

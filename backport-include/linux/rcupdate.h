@@ -2,7 +2,7 @@
 #define __BACKPORT_LINUX_RCUPDATE_H
 #include_next <linux/rcupdate.h>
 
-/* 
+/*
  * This adds a nested function everywhere kfree_rcu() was called. This
  * function frees the memory and is given as a function to call_rcu().
  * The rcu callback could happen every time also after the module was

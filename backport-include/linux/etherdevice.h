@@ -8,7 +8,7 @@
  */
 #include <asm/unaligned.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
+#if LINUX_VERSION_IS_LESS(3,4,0)
 #define eth_hw_addr_random LINUX_BACKPORT(eth_hw_addr_random)
 static inline void eth_hw_addr_random(struct net_device *dev)
 {
@@ -17,7 +17,7 @@ static inline void eth_hw_addr_random(struct net_device *dev)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
+#if LINUX_VERSION_IS_LESS(3,6,0)
 #include <linux/random.h>
 /**
  * eth_broadcast_addr - Assign broadcast address
@@ -45,17 +45,17 @@ static inline void eth_random_addr(u8 *addr)
 	addr[0] &= 0xfe;        /* clear multicast bit */
 	addr[0] |= 0x02;        /* set local assignment bit (IEEE802) */
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,6,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#if LINUX_VERSION_IS_LESS(3,7,0)
 
 /* This backports:
  *
  * commit 6d57e9078e880a3dd232d579f42ac437a8f1ef7b
  * Author: Duan Jiong <djduanjiong@gmail.com>
  * Date:   Sat Sep 8 16:32:28 2012 +0000
- * 
- *     etherdevice: introduce help function eth_zero_addr() 
+ *
+ *     etherdevice: introduce help function eth_zero_addr()
  */
 #define eth_zero_addr LINUX_BACKPORT(eth_zero_addr)
 static inline void eth_zero_addr(u8 *addr)
@@ -64,7 +64,7 @@ static inline void eth_zero_addr(u8 *addr)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_IS_LESS(3,5,0)
 #define ether_addr_equal LINUX_BACKPORT(ether_addr_equal)
 static inline bool ether_addr_equal(const u8 *addr1, const u8 *addr2)
 {
@@ -72,7 +72,7 @@ static inline bool ether_addr_equal(const u8 *addr1, const u8 *addr2)
 }
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0)
 #define eth_prepare_mac_addr_change LINUX_BACKPORT(eth_prepare_mac_addr_change)
 extern int eth_prepare_mac_addr_change(struct net_device *dev, void *p);
 
@@ -80,7 +80,7 @@ extern int eth_prepare_mac_addr_change(struct net_device *dev, void *p);
 extern void eth_commit_mac_addr_change(struct net_device *dev, void *p);
 #endif /* < 3.9 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,12,0)
+#if LINUX_VERSION_IS_LESS(3,12,0)
 /**
  * eth_hw_addr_inherit - Copy dev_addr from another net_device
  * @dst: pointer to net_device to copy dev_addr to
@@ -95,9 +95,9 @@ static inline void eth_hw_addr_inherit(struct net_device *dst,
 	dst->addr_assign_type = src->addr_assign_type;
 	memcpy(dst->dev_addr, src->dev_addr, ETH_ALEN);
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,13,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_IS_LESS(3,5,0)
 /**
  * ether_addr_equal_64bits - Compare two Ethernet addresses
  * @addr1: Pointer to an array of 8 bytes
@@ -127,9 +127,9 @@ static inline bool ether_addr_equal_64bits(const u8 addr1[6+2],
 	return ether_addr_equal(addr1, addr2);
 #endif
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,5,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
+#if LINUX_VERSION_IS_LESS(3,14,0)
 /**
  * ether_addr_equal_unaligned - Compare two not u16 aligned Ethernet addresses
  * @addr1: Pointer to a six-byte array containing the Ethernet address
@@ -171,14 +171,14 @@ static inline void ether_addr_copy(u8 *dst, const u8 *src)
 	a[2] = b[2];
 #endif
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,14,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+#if LINUX_VERSION_IS_LESS(3,18,0)
 #define eth_get_headlen LINUX_BACKPORT(eth_get_headlen)
 int eth_get_headlen(unsigned char *data, unsigned int max_len);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,18,0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+#if LINUX_VERSION_IS_LESS(3,19,0)
 #define eth_skb_pad LINUX_BACKPORT(eth_skb_pad)
 /**
  * eth_skb_pad - Pad buffer to mininum number of octets for Ethernet frame
@@ -191,6 +191,6 @@ static inline int eth_skb_pad(struct sk_buff *skb)
 {
 	return skb_put_padto(skb, ETH_ZLEN);
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,19,0) */
 
 #endif /* _BACKPORT_LINUX_ETHERDEVICE_H */

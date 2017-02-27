@@ -3,7 +3,7 @@
 #include_next <linux/mii.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#if LINUX_VERSION_IS_LESS(3,3,0)
 #include <linux/ethtool.h>
 
 #define ethtool_adv_to_mii_adv_t LINUX_BACKPORT(ethtool_adv_to_mii_adv_t)

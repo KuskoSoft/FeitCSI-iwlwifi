@@ -21,7 +21,7 @@
 #include <linux/slab.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+#if LINUX_VERSION_IS_LESS(3,13,0)
 /* consider properly backporting this? */
 static int crypto_memneq(const void *a, const void *b, size_t size)
 {

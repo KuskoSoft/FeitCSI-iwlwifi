@@ -2,7 +2,7 @@
 #define _BACKPORT_SOUND_CORE_H
 #include_next <sound/core.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)
+#if LINUX_VERSION_IS_LESS(3,15,0)
 #define snd_card_new LINUX_BACKPORT(snd_card_new)
 static inline
 int snd_card_new(struct device *parent, int idx, const char *xid,

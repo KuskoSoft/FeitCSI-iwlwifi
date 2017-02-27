@@ -4,7 +4,7 @@
 #include <linux/version.h>
 #include <linux/in6.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#if LINUX_VERSION_IS_LESS(3,7,0)
 /**
  * nla_put_s8 - Add a s8 netlink attribute to a socket buffer
  * @skb: socket buffer to add attribute to
@@ -86,7 +86,7 @@ static inline s64 nla_get_s64(const struct nlattr *nla)
 }
 #endif /* < 3.7.0 */
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0))
+#if LINUX_VERSION_IS_LESS(3,5,0)
 /*
  * This backports:
  * commit 569a8fc38367dfafd87454f27ac646c8e6b54bca
@@ -115,7 +115,7 @@ static inline int nla_put_be64(struct sk_buff *skb, int attrtype, __be64 value)
 }
 #endif /* < 3.5 */
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
+#if LINUX_VERSION_IS_LESS(3,7,0)
 #define NLA_S8 (NLA_BINARY + 1)
 #define NLA_S16 (NLA_BINARY + 2)
 #define NLA_S32 (NLA_BINARY + 3)
@@ -126,7 +126,7 @@ static inline int nla_put_be64(struct sk_buff *skb, int attrtype, __be64 value)
 #define NLA_TYPE_MAX (__NLA_TYPE_MAX - 1)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
+#if LINUX_VERSION_IS_LESS(4,1,0)
 #define nla_put_in_addr LINUX_BACKPORT(nla_put_in_addr)
 static inline int nla_put_in_addr(struct sk_buff *skb, int attrtype,
 				  __be32 addr)
@@ -155,7 +155,7 @@ static inline struct in6_addr nla_get_in6_addr(const struct nlattr *nla)
 }
 #endif /* < 4.1 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_IS_LESS(4,4,0)
 /**
  * nla_get_le32 - return payload of __le32 attribute
  * @nla: __le32 netlink attribute
@@ -177,7 +177,7 @@ static inline __le64 nla_get_le64(const struct nlattr *nla)
 }
 #endif /* < 4.4 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)
+#if LINUX_VERSION_IS_LESS(4,7,0)
 /**
  * nla_need_padding_for_64bit - test 64-bit alignment of the next attribute
  * @skb: socket buffer the message is stored in
@@ -276,7 +276,7 @@ static inline int nla_put_s64(struct sk_buff *skb, int attrtype, s64 value,
 }
 #endif /* < 4.7 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_LESS(4,10,0)
 /**
  * nla_memdup - duplicate attribute memory (kmemdup)
  * @src: netlink attribute to duplicate from

@@ -3,7 +3,7 @@
 #include_next <linux/freezer.h>
 
 #ifdef CONFIG_FREEZER
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0)
+#if LINUX_VERSION_IS_LESS(3,11,0)
 /*
  * Like schedule_hrtimeout_range(), but should not block the freezer.  Do not
  * call this with locks held.
@@ -18,7 +18,7 @@ static inline int freezable_schedule_hrtimeout_range(ktime_t *expires,
 	freezer_count();
 	return __retval;
 }
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,11,0) */
 
 #else /* !CONFIG_FREEZER */
 

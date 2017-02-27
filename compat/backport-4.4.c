@@ -20,7 +20,7 @@
 #include <asm/unaligned.h>
 
 #ifdef CONFIG_DEBUG_FS
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+#if LINUX_VERSION_IS_LESS(4,3,0)
 static ssize_t debugfs_read_file_bool(struct file *file, char __user *user_buf,
 				      size_t count, loff_t *ppos)
 {

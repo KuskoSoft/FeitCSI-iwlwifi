@@ -61,7 +61,7 @@ extern void backport_dependency_symbol(void);
 	void cleanup_module(void) __attribute__((alias("__exit_compat")));
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#if LINUX_VERSION_IS_LESS(3,3,0)
 #undef param_check_bool
 #define param_check_bool(name, p) __param_check(name, p, bool)
 #endif

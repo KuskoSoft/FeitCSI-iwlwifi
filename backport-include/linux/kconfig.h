@@ -1,11 +1,10 @@
 #ifndef __BACKPORT_LINUX_KCONFIG_H
 #define __BACKPORT_LINUX_KCONFIG_H
 #include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
+#if LINUX_VERSION_IS_GEQ(3,1,0)
 #include_next <linux/kconfig.h>
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
 #ifndef __ARG_PLACEHOLDER_1
 #define __ARG_PLACEHOLDER_1 0,
 #define config_enabled(cfg) _config_enabled(cfg)
@@ -22,6 +21,13 @@
         (config_enabled(option) || config_enabled(option##_MODULE))
 #endif
 
+/*
+ * Since 4.9 config_enabled has been removed in favor of __is_defined.
+ */
+#ifndef config_enabled
+#define config_enabled(cfg)	__is_defined(cfg)
+#endif
+
 #undef IS_BUILTIN
 #define IS_BUILTIN(option) config_enabled(option)
 
@@ -36,5 +42,4 @@
 		 (config_enabled(option##_MODULE) && config_enabled(MODULE)))
 #endif
 
-#endif
 #endif

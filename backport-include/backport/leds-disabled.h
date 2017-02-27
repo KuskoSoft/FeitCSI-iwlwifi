@@ -12,6 +12,7 @@
 #include <linux/list.h>
 #include <linux/spinlock.h>
 #include <linux/rwsem.h>
+#include <linux/mutex.h>
 #include <linux/workqueue.h>
 
 #define led_classdev LINUX_BACKPORT(led_classdev)

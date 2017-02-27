@@ -746,7 +746,11 @@ void ieee80211_amsdu_to_8023s(struct sk_buff *skb, struct sk_buff_head *list,
 	u8 *payload;
 	int offset = 0, remaining;
 	struct ethhdr eth;
+#if LINUX_VERSION_IS_LESS(3,5,0)
+	bool reuse_frag = 0;
+#else
 	bool reuse_frag = skb->head_frag && !skb_has_frag_list(skb);
+#endif
 	bool reuse_skb = false;
 	bool last = false;
 

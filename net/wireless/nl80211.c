@@ -2020,7 +2020,7 @@ static int nl80211_dump_wiphy(struct sk_buff *skb, struct netlink_callback *cb)
 						 cb->nlh->nlmsg_seq,
 						 NLM_F_MULTI, state);
 			if (ret < 0) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0)
+#if LINUX_VERSION_IS_GEQ(3,1,0)
 				/*
 				 * If sending the wiphy data didn't fit (ENOBUFS
 				 * or EMSGSIZE returned), this SKB is still
@@ -7735,7 +7735,7 @@ static int nl80211_dump_scan(struct sk_buff *skb, struct netlink_callback *cb)
 	spin_lock_bh(&rdev->bss_lock);
 	cfg80211_bss_expire(rdev);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,1,0))
+#if LINUX_VERSION_IS_GEQ(3,1,0)
 	cb->seq = rdev->bss_generation;
 #endif
 

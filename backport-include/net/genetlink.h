@@ -4,7 +4,7 @@
 #include <linux/version.h>
 
 /* this is for patches we apply */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+#if LINUX_VERSION_IS_LESS(3,7,0)
 #define genl_info_snd_portid(__genl_info) (__genl_info->snd_pid)
 #else
 #define genl_info_snd_portid(__genl_info) (__genl_info->snd_portid)
@@ -14,11 +14,11 @@
 #define GENLMSG_DEFAULT_SIZE (NLMSG_DEFAULT_SIZE - GENL_HDRLEN)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
+#if LINUX_VERSION_IS_LESS(3,1,0)
 #define genl_dump_check_consistent(cb, user_hdr, family)
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
+#if LINUX_VERSION_IS_LESS(3,13,0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
 static inline int __real_genl_register_family(struct genl_family *family)
 {
 	return genl_register_family(family);
@@ -86,7 +86,7 @@ _genl_register_family_with_ops_grps(struct genl_family *family,
 #define genl_unregister_family backport_genl_unregister_family
 int genl_unregister_family(struct genl_family *family);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
+#if LINUX_VERSION_IS_LESS(3,3,0)
 extern void genl_notify(struct sk_buff *skb, struct net *net, u32 pid,
 			u32 group, struct nlmsghdr *nlh, gfp_t flags);
 #endif
@@ -146,7 +146,7 @@ backport_genlmsg_multicast_allns(struct genl_family *family,
 #define __genl_const
 #else /* < 3.13 */
 #define __genl_const const
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_IS_LESS(4,4,0)
 #define genl_notify(_fam, _skb, _info, _group, _flags)			\
 	genl_notify(_fam, _skb, genl_info_net(_info),			\
 		    genl_info_snd_portid(_info),			\
@@ -154,7 +154,7 @@ backport_genlmsg_multicast_allns(struct genl_family *family,
 #endif /* < 4.4 */
 #endif /* < 3.13 */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+#if LINUX_VERSION_IS_LESS(4,10,0)
 /**
  * genl_family_attrbuf - return family's attrbuf
  * @family: the family

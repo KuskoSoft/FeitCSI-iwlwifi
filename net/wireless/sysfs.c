@@ -73,7 +73,7 @@ static struct attribute *ieee80211_attrs[] = {
 	&dev_attr_name.attr,
 	NULL,
 };
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+#if LINUX_VERSION_IS_GEQ(3,11,0)
 ATTRIBUTE_GROUPS(ieee80211);
 #else
 #define BP_ATTR_GRP_STRUCT device_attribute
@@ -166,7 +166,7 @@ struct class ieee80211_class = {
 	.name = "ieee80211",
 	.owner = THIS_MODULE,
 	.dev_release = wiphy_dev_release,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+#if LINUX_VERSION_IS_GEQ(3,11,0)
 	.dev_groups = ieee80211_groups,
 #else
 	.dev_attrs = ieee80211_dev_attrs,

@@ -2,7 +2,11 @@
 #define __BACKPORT_SCATTERLIST_H
 #include_next <linux/scatterlist.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0)
+#if LINUX_VERSION_IS_LESS(3,7,0)
+int sg_nents(struct scatterlist *sg);
+#endif
+
+#if LINUX_VERSION_IS_LESS(3, 9, 0)
 
 /*
  * sg page iterator
@@ -72,9 +76,9 @@ void backport_sg_miter_stop(struct sg_mapping_iter *miter);
 	for (__sg_page_iter_start((piter), (sglist), (nents), (pgoffset)); \
 	     __sg_page_iter_next(piter);)
 
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0) */
+#endif /* LINUX_VERSION_IS_LESS(3, 9, 0) */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0)
+#if LINUX_VERSION_IS_LESS(3, 11, 0)
 size_t sg_copy_buffer(struct scatterlist *sgl, unsigned int nents, void *buf,
 		      size_t buflen, off_t skip, bool to_buffer);
 
@@ -96,6 +100,6 @@ size_t sg_pcopy_from_buffer(struct scatterlist *sgl, unsigned int nents,
 	return sg_copy_buffer(sgl, nents, buf, buflen, skip, false);
 }
 
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0) */
+#endif /* LINUX_VERSION_IS_LESS(3, 11, 0) */
 
 #endif /* __BACKPORT_SCATTERLIST_H */

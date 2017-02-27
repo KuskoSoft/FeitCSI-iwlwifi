@@ -16,6 +16,7 @@
 #include <linux/thermal.h>
 #include <linux/slab.h>
 
+#if LINUX_VERSION_IS_GEQ(3,8,0)
 struct backport_thermal_ops_wrapper {
 	old_thermal_zone_device_ops_t ops;
 	struct thermal_zone_device_ops *driver_ops;
@@ -96,7 +97,7 @@ static int backport_thermal_get_crit_temp(struct thermal_zone_device *dev,
 	return ret;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)
+#if LINUX_VERSION_IS_GEQ(3, 19, 0)
 static int backport_thermal_set_emul_temp(struct thermal_zone_device *dev,
 					  unsigned long temp)
 {
@@ -105,7 +106,7 @@ static int backport_thermal_set_emul_temp(struct thermal_zone_device *dev,
 
 	return wrapper->driver_ops->set_emul_temp(dev, (int)temp);
 }
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0) */
+#endif /* LINUX_VERSION_IS_GEQ(3, 19, 0) */
 #else /* !CONFIG_BTNS_PMIC */
 static int backport_thermal_get_temp(struct thermal_zone_device *dev,
 				     long *temp)
@@ -236,9 +237,9 @@ struct thermal_zone_device *backport_thermal_zone_device_register(
 	assign_ops(get_trip_hyst);
 	assign_ops(set_trip_hyst);
 	assign_ops(get_crit_temp);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)
+#if LINUX_VERSION_IS_GEQ(3, 19, 0)
 	assign_ops(set_emul_temp);
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0) */
+#endif /* LINUX_VERSION_IS_GEQ(3, 19, 0) */
 #undef assign_ops
 
 	ret = old_thermal_zone_device_register(type, trips, mask, devdata,
@@ -259,6 +260,8 @@ void backport_thermal_zone_device_unregister(struct thermal_zone_device *dev)
 	kfree(wrapper);
 }
 EXPORT_SYMBOL_GPL(backport_thermal_zone_device_unregister);
+
+#endif /* >= 3.8.0 */
 
 static void seq_set_overflow(struct seq_file *m)
 {
@@ -305,3 +308,29 @@ void seq_hex_dump(struct seq_file *m, const char *prefix_str, int prefix_type,
 	}
 }
 EXPORT_SYMBOL_GPL(seq_hex_dump);
+
+ssize_t strscpy(char *dest, const char *src, size_t count)
+{
+	long res = 0;
+
+	if (count == 0)
+		return -E2BIG;
+
+	while (count) {
+		char c;
+
+		c = src[res];
+		dest[res] = c;
+		if (!c)
+			return res;
+		res++;
+		count--;
+	}
+
+	/* Hit buffer length without finding a NUL; force NUL-termination. */
+	if (res)
+		dest[res-1] = '\0';
+
+	return -E2BIG;
+}
+EXPORT_SYMBOL_GPL(strscpy);

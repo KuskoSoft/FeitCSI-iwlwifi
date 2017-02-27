@@ -37,6 +37,7 @@ NOSTDINC_FLAGS := \
 	$(CFLAGS)
 endif
 
+subdir-ccflags-y += $(call cc-option, -fno-pie) $(call cc-option, -no-pie)
 
 obj-y += compat/
 

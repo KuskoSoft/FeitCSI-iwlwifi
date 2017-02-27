@@ -1,5 +1,5 @@
 #include <linux/module.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
+#if LINUX_VERSION_IS_LESS(3,1,0)
 #include <linux/interrupt.h>
 #endif
 
