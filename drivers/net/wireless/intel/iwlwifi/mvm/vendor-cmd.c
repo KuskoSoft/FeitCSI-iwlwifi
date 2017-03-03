@@ -68,7 +68,7 @@
 #include <net/mac80211.h>
 #include <net/netlink.h>
 #include "mvm.h"
-#include "vendor-cmd.h"
+#include "iwl-vendor-cmd.h"
 #include "fw-dbg.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
