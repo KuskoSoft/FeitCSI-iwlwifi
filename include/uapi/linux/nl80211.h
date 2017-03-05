@@ -502,6 +502,12 @@
  *	well to remain backwards compatible.
  * @NL80211_CMD_ROAM: request that the card roam (currently not implemented),
  *	sent as an event when the card/driver roamed by itself.
+ *	When used as an event, and the driver roamed in a network that requires
+ *	802.1X authentication, %NL80211_ATTR_CONNECTION_AUTHORIZED should be set
+ *	if the 802.1X authentication was done by the driver or if roaming was
+ *	done using Fast Transition protocol (in which case 802.1X authentication
+ *	is not needed). If %NL80211_ATTR_CONNECTION_AUTHORIZED is not set,
+ *	user space is responsible for the 802.1X authentication.
  * @NL80211_CMD_DISCONNECT: drop a given connection; also used to notify
  *	userspace that a connection was dropped by the AP or due to other
  *	reasons, for this the %NL80211_ATTR_DISCONNECTED_BY_AP and
@@ -2080,6 +2086,12 @@ enum nl80211_commands {
  *	the PMK-R0.
  * @NL80211_ATTR_PMKR0_NAME: PMK-R0 Name for offloaded FT.
  *
+ * @NL80211_ATTR_CONNECTION_AUTHORIZED: A flag attribute used with
+ *	%NL80211_CMD_ROAM to indicate that 802.1X authentication was done by the
+ *	driver or is not needed (because roaming used the Fast Transition
+ *	protocol). Only valid for roaming in networks that require 802.1X
+ *	authentication.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2507,6 +2519,8 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_PMK,
 	NL80211_ATTR_PMKR0_NAME,
+
+	NL80211_ATTR_CONNECTION_AUTHORIZED,
 
 	/* add attributes here, update the policy in nl80211.c */
 
