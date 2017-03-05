@@ -2785,7 +2785,7 @@ static const struct iwl_trans_ops trans_ops_sdio = {
 	.tx = iwl_trans_slv_tx_data_send,
 	.txq_enable = iwl_trans_sdio_txq_enable,
 	.txq_disable = iwl_trans_sdio_txq_disable,
-	.wait_tx_queue_empty = iwl_trans_slv_wait_txq_empty,
+	.wait_tx_queues_empty = iwl_trans_slv_wait_txq_empty,
 
 	/* NIC Access */
 	.grab_nic_access = iwl_trans_sdio_grab_nic_access,
