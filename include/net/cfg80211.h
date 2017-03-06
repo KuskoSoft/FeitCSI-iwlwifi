@@ -284,6 +284,40 @@ struct ieee80211_sta_vht_cap {
 	struct ieee80211_vht_mcs_info vht_mcs;
 };
 
+#define IEEE80211_HE_PPE_THRES_MAX_LEN		25
+
+/**
+ * struct ieee80211_sta_he_cap - STA's HE capabilities
+ *
+ * This structure describes most essential parameters needed
+ * to describe 802.11ax HE capabilities for a STA.
+ *
+ * @has_he: true iff HE data is valid.
+ * @he_cap_elem: Fixed portion of the HE capabilities element.
+ * @he_mcs_nss_supp: The supported NSS/MCS combinations.
+ * @ppe_thres: Holds the PPE Thresholds data.
+ */
+struct ieee80211_sta_he_cap {
+	bool has_he;
+	struct ieee80211_he_cap_elem he_cap_elem;
+	struct ieee80211_he_mcs_nss_supp he_mcs_nss_supp;
+	u8 ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN];
+};
+
+/**
+ * struct ieee80211_sband_iftype_data
+ *
+ * This structure encapsulates sband data that is relevant for the interface
+ * types defined in %types
+ *
+ * @types: interface types (bits)
+ * @he_cap: holds the HE capabilities
+ */
+struct ieee80211_sband_iftype_data {
+	u16 types;
+	struct ieee80211_sta_he_cap he_cap;
+};
+
 /**
  * struct ieee80211_supported_band - frequency band definition
  *
@@ -300,6 +334,8 @@ struct ieee80211_sta_vht_cap {
  * @n_bitrates: Number of bitrates in @bitrates
  * @ht_cap: HT capabilities in this band
  * @vht_cap: VHT capabilities in this band
+ * @n_iftype_data: number of iftype data entries
+ * @iftype_data: interface type data entries
  */
 struct ieee80211_supported_band {
 	struct ieee80211_channel *channels;
@@ -309,6 +345,8 @@ struct ieee80211_supported_band {
 	int n_bitrates;
 	struct ieee80211_sta_ht_cap ht_cap;
 	struct ieee80211_sta_vht_cap vht_cap;
+	u16 n_iftype_data;
+	const struct ieee80211_sband_iftype_data *iftype_data;
 };
 
 /**
