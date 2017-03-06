@@ -1871,7 +1871,7 @@ int iwl_slv_rx_handle_dispatch(struct iwl_trans *trans,
 	trace_iwlwifi_dev_rx_data(trans->dev, trans, pkt, len);
 
 	reclaim = !(pkt->hdr.sequence & SEQ_RX_FRAME);
-	if (reclaim) {
+	if (reclaim && !pkt->hdr.group_id) {
 		int i;
 
 		for (i = 0; i < trans_slv->n_no_reclaim_cmds; i++) {
