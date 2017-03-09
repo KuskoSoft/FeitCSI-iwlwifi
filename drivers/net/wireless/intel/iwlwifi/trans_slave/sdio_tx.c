@@ -222,10 +222,8 @@ void iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
 				      SCD_CONTEXT_QUEUE_OFFSET(txq_id), 0);
 		iwl_trans_write_mem32(trans, trans_sdio->scd_base_addr +
 			SCD_CONTEXT_QUEUE_OFFSET(txq_id) + sizeof(u32),
-			((frame_limit << SCD_QUEUE_CTX_REG2_WIN_SIZE_POS) &
-				SCD_QUEUE_CTX_REG2_WIN_SIZE_MSK) |
-			((frame_limit << SCD_QUEUE_CTX_REG2_FRAME_LIMIT_POS) &
-				SCD_QUEUE_CTX_REG2_FRAME_LIMIT_MSK));
+			SCD_QUEUE_CTX_REG2_VAL(WIN_SIZE, frame_limit) |
+			SCD_QUEUE_CTX_REG2_VAL(FRAME_LIMIT, frame_limit));
 
 		/*
 		 * Set up Status area in SRAM, map to Tx DMA/FIFO,
