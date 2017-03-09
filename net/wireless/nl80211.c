@@ -1212,6 +1212,34 @@ static int nl80211_send_coalesce(struct sk_buff *msg,
 	return 0;
 }
 
+static int
+nl80211_send_ift_data(struct sk_buff *msg,
+		      const struct ieee80211_sband_iftype_data *iftdata)
+{
+	const struct ieee80211_sta_he_cap *he_cap = &iftdata->he_cap;
+
+	if (nl80211_put_iftypes(msg, NL80211_BAND_IFT_ATTR_IFTYPES,
+				iftdata->types))
+		return -ENOBUFS;
+
+	if (he_cap->has_he) {
+		if (nla_put(msg, NL80211_BAND_IFT_ATTR_HE_CAP_MAC,
+			    sizeof(he_cap->he_cap_elem.mac_cap_info),
+			    he_cap->he_cap_elem.mac_cap_info) ||
+		    nla_put(msg, NL80211_BAND_IFT_ATTR_HE_CAP_PHY,
+			    sizeof(he_cap->he_cap_elem.phy_cap_info),
+			    he_cap->he_cap_elem.phy_cap_info) ||
+		    nla_put(msg, NL80211_BAND_IFT_ATTR_HE_CAP_MCS_SET,
+			    sizeof(he_cap->he_mcs_nss_supp),
+			    &he_cap->he_mcs_nss_supp) ||
+		    nla_put(msg, NL80211_BAND_IFT_ATTR_HE_CAP_PPE,
+			    sizeof(he_cap->ppe_thres), he_cap->ppe_thres))
+			return -ENOBUFS;
+	}
+
+	return 0;
+}
+
 static int nl80211_send_band_rateinfo(struct sk_buff *msg,
 				      struct ieee80211_supported_band *sband)
 {
@@ -1240,6 +1268,32 @@ static int nl80211_send_band_rateinfo(struct sk_buff *msg,
 	     nla_put_u32(msg, NL80211_BAND_ATTR_VHT_CAPA,
 			 sband->vht_cap.cap)))
 		return -ENOBUFS;
+
+	if (sband->n_iftype_data) {
+		struct nlattr *nl_iftype_data =
+			nla_nest_start(msg, NL80211_BAND_ATTR_IFTYPE_DATA);
+		int err;
+
+		if (!nl_iftype_data)
+			return -ENOBUFS;
+
+		for (i = 0; i < sband->n_iftype_data; i++) {
+			struct nlattr *iftdata;
+
+			iftdata = nla_nest_start(msg, i + 1);
+			if (!iftdata)
+				return -ENOBUFS;
+
+			err = nl80211_send_ift_data(msg,
+						    &sband->iftype_data[i]);
+			if (err)
+				return err;
+
+			nla_nest_end(msg, iftdata);
+		}
+
+		nla_nest_end(msg, nl_iftype_data);
+	}
 
 	/* add bitrates */
 	nl_rates = nla_nest_start(msg, NL80211_BAND_ATTR_RATES);
