@@ -2,6 +2,7 @@
  * mac80211_hwsim - software simulator of 802.11 radio(s) for mac80211
  * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2011, Javier Lopez <jlopex@gmail.com>
+ * Copyright (c) 2016 - 2017 Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2453,6 +2454,116 @@ out_err:
 	nlmsg_free(mcast_skb);
 }
 
+static const struct ieee80211_sband_iftype_data he_capa_2ghz = {
+	/* TODO: should we support other types, e.g., P2P?*/
+	.types = BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_AP),
+	.he_cap = {
+		.has_he = true,
+		.he_cap_elem = {
+			.mac_cap_info[0] =
+				IEEE80211_HE_MAC_CAP1_HTC_HE |
+				IEEE80211_HE_MAC_CAP1_DYNAMIC_FRAG_NOT_SUPP |
+				IEEE80211_HE_MAC_CAP1_MAX_NUM_FRAG_MSDU_1,
+			.mac_cap_info[1] =
+				IEEE80211_HE_MAC_CAP2_TF_MAC_PAD_DUR_0US |
+				IEEE80211_HE_MAC_CAP2_MULTI_TID_AGG_QOS_1,
+			.mac_cap_info[2] =
+				IEEE80211_HE_MAC_CAP3_UL_MU_RESP_SCHED |
+				IEEE80211_HE_MAC_CAP3_A_BSR |
+				IEEE80211_HE_MAC_CAP3_MU_CASCADE |
+				IEEE80211_HE_MAC_CAP3_ACK_EN_MULTI_TID_ADD,
+			.mac_cap_info[3] =
+				IEEE80211_HE_MAC_CAP4_GRP_ADDR_MULTI_STA_BA_DL_MU |
+				IEEE80211_HE_MAC_CAP4_OMI_A_CONTROL |
+				IEEE80211_HE_MAC_CAP4_MAX_A_AMPDU_LEN_EXP_VHT_2,
+			.mac_cap_info[4] = 0,
+			.phy_cap_info[0] =
+				IEEE80211_HE_PHY_CAP1_DUAL_BAND |
+				IEEE80211_HE_PHY_CAP1_CHANNEL_WIDTH_SET_40MHZ_IN_2G,
+			.phy_cap_info[1] =
+				IEEE80211_HE_PHY_CAP2_PREAMBLE_PUNC_RX_MASK |
+				IEEE80211_HE_PHY_CAP2_DEVICE_CLASS_A |
+				IEEE80211_HE_PHY_CAP2_LDPC_CODING_IN_PAYLOAD,
+			.phy_cap_info[2] =
+				IEEE80211_HE_PHY_CAP3_STBC_TX |
+				IEEE80211_HE_PHY_CAP3_STBC_RX |
+				IEEE80211_HE_PHY_CAP3_UL_MU_MASK,
+
+			/* Leave all the other PHY capability bytes unset, as
+			 * DCM, beam forming, RU and PPE threshold information
+			 * are not supported
+			 */
+		},
+		.he_mcs_nss_supp = {
+			.mcs_hdr = cpu_to_le16(0x7 |
+					       (HIGHEST_MCS_SUPPORTED_MCS11 <<
+						IEEE80211_TX_RX_MCS_NSS_SUPP_HIGHEST_MCS_POS)),
+		},
+	},
+};
+
+static const struct ieee80211_sband_iftype_data he_capa_5ghz = {
+	/* TODO: should we support other types, e.g., P2P?*/
+	.types = BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_AP),
+	.he_cap = {
+		.has_he = true,
+		.he_cap_elem = {
+			.mac_cap_info[0] =
+				IEEE80211_HE_MAC_CAP1_HTC_HE |
+				IEEE80211_HE_MAC_CAP1_DYNAMIC_FRAG_NOT_SUPP |
+				IEEE80211_HE_MAC_CAP1_MAX_NUM_FRAG_MSDU_1,
+			.mac_cap_info[1] =
+				IEEE80211_HE_MAC_CAP2_TF_MAC_PAD_DUR_0US |
+				IEEE80211_HE_MAC_CAP2_MULTI_TID_AGG_QOS_1,
+			.mac_cap_info[2] =
+				IEEE80211_HE_MAC_CAP3_UL_MU_RESP_SCHED |
+				IEEE80211_HE_MAC_CAP3_A_BSR |
+				IEEE80211_HE_MAC_CAP3_MU_CASCADE |
+				IEEE80211_HE_MAC_CAP3_ACK_EN_MULTI_TID_ADD,
+			.mac_cap_info[3] =
+				IEEE80211_HE_MAC_CAP4_GRP_ADDR_MULTI_STA_BA_DL_MU |
+				IEEE80211_HE_MAC_CAP4_OMI_A_CONTROL |
+				IEEE80211_HE_MAC_CAP4_MAX_A_AMPDU_LEN_EXP_VHT_2,
+			.phy_cap_info[0] =
+				IEEE80211_HE_PHY_CAP1_DUAL_BAND |
+				IEEE80211_HE_PHY_CAP1_CHANNEL_WIDTH_SET_160MHZ_IN_5G |
+				IEEE80211_HE_PHY_CAP1_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G,
+			.phy_cap_info[1] =
+				IEEE80211_HE_PHY_CAP2_PREAMBLE_PUNC_RX_MASK |
+				IEEE80211_HE_PHY_CAP2_DEVICE_CLASS_A |
+				IEEE80211_HE_PHY_CAP2_LDPC_CODING_IN_PAYLOAD,
+			.phy_cap_info[2] =
+				IEEE80211_HE_PHY_CAP3_STBC_TX |
+				IEEE80211_HE_PHY_CAP3_STBC_RX |
+				IEEE80211_HE_PHY_CAP3_UL_MU_MASK,
+
+			/* Leave all the other PHY capability bytes unset, as
+			 * DCM, beam forming, RU and PPE threshold information
+			 * are not supported
+			 */
+		},
+		.he_mcs_nss_supp = {
+			.mcs_hdr = cpu_to_le16(0x7 |
+					       (HIGHEST_MCS_SUPPORTED_MCS11 <<
+						IEEE80211_TX_RX_MCS_NSS_SUPP_HIGHEST_MCS_POS)),
+		},
+	},
+};
+
+static void mac80211_hswim_he_capab(struct ieee80211_supported_band *sband)
+{
+	if (sband->band == NL80211_BAND_2GHZ)
+		sband->iftype_data =
+			(struct ieee80211_sband_iftype_data *)&he_capa_2ghz;
+	else if (sband->band == NL80211_BAND_5GHZ)
+		sband->iftype_data =
+			(struct ieee80211_sband_iftype_data *)&he_capa_5ghz;
+	else
+		return;
+
+	sband->n_iftype_data = 1;
+}
+
 static int mac80211_hwsim_new_radio(struct genl_info *info,
 				    struct hwsim_new_radio_params *param)
 {
@@ -2658,6 +2769,8 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 		sband->ht_cap.mcs.rx_mask[0] = 0xff;
 		sband->ht_cap.mcs.rx_mask[1] = 0xff;
 		sband->ht_cap.mcs.tx_params = IEEE80211_HT_MCS_TX_DEFINED;
+
+		mac80211_hswim_he_capab(sband);
 
 		hw->wiphy->bands[band] = sband;
 	}
