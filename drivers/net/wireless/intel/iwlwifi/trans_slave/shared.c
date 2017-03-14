@@ -797,9 +797,9 @@ void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
 
 	IWL_SLV_TXQ_GET_ENTRY(txq_entry, data_entry);
 
-	ts_1 = data_entry->skb->tstamp.tv64 >> 32;
+	ts_1 = ktime_to_ns(data_entry->skb->tstamp) >> 32;
 	diff = temp - ts_1;
-	data_entry->skb->tstamp.tv64 += diff << 16;
+	ktime_to_ns(data_entry->skb->tstamp) += diff << 16;
 }
 #endif
 
