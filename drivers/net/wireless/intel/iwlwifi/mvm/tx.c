@@ -1300,10 +1300,10 @@ static void iwl_mvm_hwrate_to_tx_status(u32 rate_n_flags,
 static void iwl_mvm_tx_lat_add_ts_ack(struct sk_buff *skb)
 {
 	s64 temp = ktime_to_ms(ktime_get());
-	s64 ts_1 = skb->tstamp.tv64 >> 32;
+	s64 ts_1 = ktime_to_ns(skb->tstamp) >> 32;
 	s64 diff = temp - ts_1;
 
-	skb->tstamp.tv64 += diff;
+	ktime_to_ns(skb->tstamp) += diff;
 }
 #endif
 
