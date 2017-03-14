@@ -1931,10 +1931,10 @@ int iwl_trans_pcie_send_hcmd(struct iwl_trans *trans, struct iwl_host_cmd *cmd)
 static void iwl_trans_pci_tx_lat_add_ts_write(struct sk_buff *skb)
 {
 	s64 temp = ktime_to_ms(ktime_get());
-	s64 ts_1 = skb->tstamp.tv64 >> 32;
+	s64 ts_1 = ktime_to_ns(skb->tstamp) >> 32;
 	s64 diff = temp - ts_1;
 
-	skb->tstamp.tv64 += diff << 16;
+	ktime_to_ns(skb->tstamp) += diff << 16;
 }
 #endif
 
