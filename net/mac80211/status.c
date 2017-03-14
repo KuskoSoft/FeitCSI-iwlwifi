@@ -709,8 +709,8 @@ static u32 ieee80211_calc_tx_latency(struct ieee80211_local *local,
 	ts[IEEE80211_TX_LAT_DEL] = ktime_to_ms(ktime_get());
 
 	/* extract previous time stamps */
-	ts[IEEE80211_TX_LAT_ENTER] = skb_arv.tv64 >> 32;
-	tmp = skb_arv.tv64 & 0xFFFFFFFF;
+	ts[IEEE80211_TX_LAT_ENTER] = ktime_to_ns(skb_arv) >> 32;
+	tmp = ktime_to_ns(skb_arv) & 0xFFFFFFFF;
 	ts[IEEE80211_TX_LAT_WRITE] = (tmp >> 16) + ts[IEEE80211_TX_LAT_ENTER];
 	ts[IEEE80211_TX_LAT_ACK] = (tmp & 0xFFFF) + ts[IEEE80211_TX_LAT_ENTER];
 

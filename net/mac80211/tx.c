@@ -2275,7 +2275,7 @@ static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
 	if (!tx_latency && !tx_consec && !tx_thrshld)
 		return;
 	temp = ktime_to_ms(ktime_get());
-	skb->tstamp.tv64 = temp << 32;
+	ktime_to_ns(skb->tstamp) = temp << 32;
 }
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
