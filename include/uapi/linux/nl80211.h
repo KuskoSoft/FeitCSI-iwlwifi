@@ -2160,6 +2160,9 @@ enum nl80211_commands {
  *	driver or is not needed (because roaming used the Fast Transition
  *	protocol). Only valid for roaming in networks that require 802.1X
  *	authentication.
+ * @NL80211_ATTR_HE_CAPABILITY: HE Capability information element (from
+ *	association request when used with NL80211_CMD_NEW_STATION). Can be set
+ *	only if &NL80211_STA_FLAG_WME is set.
  *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
@@ -2598,6 +2601,8 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_CONNECTION_AUTHORIZED,
 
+	NL80211_ATTR_HE_CAPABILITY,
+
 	/* add attributes here, update the policy in nl80211.c */
 
 	__NL80211_ATTR_AFTER_LAST,
@@ -2645,7 +2650,8 @@ enum nl80211_attrs {
 #define NL80211_TKIP_DATA_OFFSET_RX_MIC_KEY	24
 #define NL80211_HT_CAPABILITY_LEN		26
 #define NL80211_VHT_CAPABILITY_LEN		12
-
+#define NL80211_HE_MIN_CAPABILITY_LEN           16
+#define NL80211_HE_MAX_CAPABILITY_LEN           51
 #define NL80211_MAX_NR_CIPHER_SUITES		5
 #define NL80211_MAX_NR_AKM_SUITES		2
 

@@ -976,6 +976,8 @@ enum station_parameters_apply_mask {
  * @opmode_notif: operating mode field from Operating Mode Notification
  * @opmode_notif_used: information if operating mode field is used
  * @support_p2p_ps: information if station supports P2P PS mechanism
+ * @he_capa: HE capabilities of station
+ * @he_capa_len: the length of the HE capabilities
  */
 struct station_parameters {
 	const u8 *supported_rates;
@@ -1003,6 +1005,8 @@ struct station_parameters {
 	u8 opmode_notif;
 	bool opmode_notif_used;
 	int support_p2p_ps;
+	const struct ieee80211_he_cap_elem *he_capa;
+	u8 he_capa_len;
 };
 
 /**

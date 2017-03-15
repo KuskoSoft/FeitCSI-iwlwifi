@@ -427,6 +427,8 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_LAST_MSG] = { .type = NLA_FLAG },
 	[NL80211_ATTR_LCI] = { .type = NLA_BINARY },
 	[NL80211_ATTR_CIVIC] = { .type = NLA_BINARY },
+	[NL80211_ATTR_HE_CAPABILITY] = { .type = NLA_BINARY,
+					 .len = NL80211_HE_MAX_CAPABILITY_LEN },
 };
 
 /* policy for the key attributes */
@@ -4691,7 +4693,8 @@ int cfg80211_check_station_change(struct wiphy *wiphy,
 			return -EINVAL;
 		if (params->supported_rates)
 			return -EINVAL;
-		if (params->ext_capab || params->ht_capa || params->vht_capa)
+		if (params->ext_capab || params->ht_capa || params->vht_capa ||
+		    params->he_capa)
 			return -EINVAL;
 	}
 
@@ -5124,6 +5127,17 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 		params.vht_capa =
 			nla_data(info->attrs[NL80211_ATTR_VHT_CAPABILITY]);
 
+	if (info->attrs[NL80211_ATTR_HE_CAPABILITY]) {
+		params.he_capa =
+			nla_data(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
+		params.he_capa_len =
+			nla_len(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
+
+		/* max len is validated in nla policy */
+		if (params.he_capa_len < NL80211_HE_MIN_CAPABILITY_LEN)
+			return -EINVAL;
+	}
+
 	if (info->attrs[NL80211_ATTR_OPMODE_NOTIF]) {
 		params.opmode_notif_used = true;
 		params.opmode_notif =
@@ -5156,6 +5170,10 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 	if (!(params.sta_flags_set & BIT(NL80211_STA_FLAG_WME))) {
 		params.ht_capa = NULL;
 		params.vht_capa = NULL;
+
+		/* HE requires WME */
+		if (params.he_capa_len)
+			return -EINVAL;
 	}
 
 	/* When you run into this, adjust the code below for the new flag */
