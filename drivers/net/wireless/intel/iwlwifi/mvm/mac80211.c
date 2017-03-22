@@ -4738,8 +4738,8 @@ void iwl_mvm_tx_latency_wk(struct work_struct *wk)
 		else if (tx_lat->mode == IEEE80211_TX_LATENCY_INT_BUF)
 			delay = msecs_to_jiffies(round_end);
 		if (delay)
-			queue_delayed_work(system_wq,
-					   &mvm->tx_latency_watchdog_wk, delay);
+			schedule_delayed_work(&mvm->tx_latency_watchdog_wk,
+					      delay);
 	}
 
 	/*
