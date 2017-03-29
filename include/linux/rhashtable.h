@@ -26,5 +26,9 @@
 #define rhashtable_free_and_destroy LINUX_BACKPORT(rhashtable_free_and_destroy)
 #undef rhashtable_destroy
 #define rhashtable_destroy LINUX_BACKPORT(rhashtable_destroy)
+#undef rht_bucket_nested
+#define rht_bucket_nested LINUX_BACKPORT(rht_bucket_nested)
+#undef rht_bucket_nested_insert
+#define rht_bucket_nested_insert LINUX_BACKPORT(rht_bucket_nested_insert)
 #include <linux/backport-rhashtable.h>
 #endif /* CPTCFG_BPAUTO_RHASHTABLE */

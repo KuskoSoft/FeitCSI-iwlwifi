@@ -61,4 +61,14 @@ static inline void idr_preload_end(void)
 	for (id = 0; ((entry) = idr_get_next(idp, &(id))) != NULL; ++id)
 #endif
 
+#if LINUX_VERSION_IS_LESS(4, 11, 0)
+static inline void *backport_idr_remove(struct idr *idr, int id)
+{
+	void *item = idr_find(idr, id);
+	idr_remove(idr, id);
+	return item;
+}
+#define idr_remove	backport_idr_remove
+#endif
+
 #endif /* __BACKPORT_IDR_H */
