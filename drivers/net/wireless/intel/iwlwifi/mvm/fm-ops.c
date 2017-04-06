@@ -402,17 +402,21 @@ static int iwl_mvm_fm_send_dcdc_cmd(u32 div0, u32 div1, u32 flags)
 
 	if (ret) {
 		IWL_ERR(g_mvm, "FM: Failed to send dcdc cmd (ret = %d)\n", ret);
-		goto out;
+		return ret;
 	}
 
 	pkt = cmd.resp_pkt;
+	if (!pkt) {
+		IWL_ERR(g_mvm, "FM: Error DCDC cmd response is NULL\n");
+		return -EIO;
+	}
 	resp = (void *)pkt->data;
 
 	/* update the current dcdc values */
 	g_dcdc_div0 = resp->dc2dc_freq_tune0;
 	g_dcdc_div1 = resp->dc2dc_freq_tune1;
 
-out:
+	iwl_free_resp(&cmd);
 	return ret;
 }
 

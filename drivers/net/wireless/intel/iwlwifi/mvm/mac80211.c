@@ -4595,6 +4595,7 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 	pkt = cmd.resp_pkt;
 	gp2 = *(__le32 *)pkt->data;
 
+	iwl_free_resp(&cmd);
 ret:
 	kfree(marker);
 	return le32_to_cpu(gp2);
