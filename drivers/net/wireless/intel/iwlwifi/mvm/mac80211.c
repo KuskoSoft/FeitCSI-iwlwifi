@@ -4580,10 +4580,6 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 	}
 
 	pkt = cmd.resp_pkt;
-	if (!pkt) {
-		IWL_ERR(mvm, "Error in MARKER cmd - response is NULL\n");
-		goto ret;
-	}
 	gp2 = *(__le32 *)pkt->data;
 
 ret:

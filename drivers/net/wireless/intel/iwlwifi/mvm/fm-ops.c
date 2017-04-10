@@ -406,11 +406,6 @@ static int iwl_mvm_fm_send_dcdc_cmd(u32 div0, u32 div1, u32 flags)
 	}
 
 	pkt = cmd.resp_pkt;
-	if (!pkt) {
-		IWL_ERR(g_mvm, "FM: Error DCDC cmd response is NULL\n");
-		ret = -EINVAL;
-		goto out;
-	}
 	resp = (void *)pkt->data;
 
 	/* update the current dcdc values */
