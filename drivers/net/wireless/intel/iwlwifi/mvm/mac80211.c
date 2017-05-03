@@ -4564,7 +4564,7 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 					   u16 seq, u16 tid)
 {
 	struct timespec ts;
-	int res;
+	int ret;
 	__le32 gp2 = 0;
 	struct iwl_mvm_marker *marker;
 	struct iwl_rx_packet *pkt;
@@ -4602,21 +4602,21 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 		(seq & 0x0fff));
 
 	mutex_lock(&mvm->mutex);
-	res = iwl_mvm_send_cmd(mvm, &cmd);
+	ret = iwl_mvm_send_cmd(mvm, &cmd);
 	mutex_unlock(&mvm->mutex);
-	if (res) {
-		IWL_ERR(mvm, "Couldn't send MARKER_CMD: %d\n", res);
-		res = -1;
-		goto ret;
+	if (ret) {
+		IWL_ERR(mvm, "Couldn't send MARKER_CMD: %d\n", ret);
+		goto out;
 	}
 
 	pkt = cmd.resp_pkt;
 	gp2 = *(__le32 *)pkt->data;
 
 	iwl_free_resp(&cmd);
-ret:
+	ret = le32_to_cpu(gp2);
+out:
 	kfree(marker);
-	return le32_to_cpu(gp2);
+	return ret;
 }
 
 /*
