@@ -156,7 +156,7 @@ void iwl_trans_sdio_txq_disable(struct iwl_trans *trans, int txq_id,
 	IWL_DEBUG_TX_QUEUES(trans, "Deactivate queue %d finished\n", txq_id);
 }
 
-void iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
+bool iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
 			       const struct iwl_trans_txq_scd_cfg *cfg,
 			       unsigned int wdg_timeout)
 {
@@ -255,6 +255,8 @@ void iwl_trans_sdio_txq_enable(struct iwl_trans *trans, int txq_id, u16 ssn,
 		IWL_SDIO_SRAM_TABLE_EMPTY_PTFD_CELL;
 	trans_sdio->txq[txq_id].bye_count0 = 0;
 	trans_sdio->txq[txq_id].bye_count1 = 0;
+
+	return false;
 }
 
 static void iwl_sdio_scd_reset(struct iwl_trans *trans, u32 scd_base_addr)
