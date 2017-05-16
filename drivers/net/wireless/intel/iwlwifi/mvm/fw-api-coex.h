@@ -7,6 +7,7 @@
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2017        Intel Deutschland GmbH
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -33,6 +34,7 @@
  *
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
+ * Copyright(c) 2017        Intel Deutschland GmbH
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -132,10 +134,10 @@ struct iwl_bt_coex_reduced_txp_update_cmd {
 
 /**
  * struct iwl_bt_coex_ci_cmd - bt coex channel inhibition command
- * @bt_primary_ci:
- * @primary_ch_phy_id:
- * @bt_secondary_ci:
- * @secondary_ch_phy_id:
+ * @bt_primary_ci: primary channel inhibition bitmap
+ * @primary_ch_phy_id: primary channel PHY ID
+ * @bt_secondary_ci: secondary channel inhibition bitmap
+ * @secondary_ch_phy_id: secondary channel PHY ID
  *
  * Used for BT_COEX_CI command
  */
@@ -238,6 +240,7 @@ enum iwl_bt_ci_compliance {
  * @secondary_ch_lut: LUT used for secondary channel &enum iwl_bt_coex_lut_type
  * @bt_activity_grading: the activity of BT &enum iwl_bt_activity_grading
  * @ttc_rrc_status: is TTC or RRC enabled - one bit per PHY
+ * @reserved: reserved
  */
 struct iwl_bt_coex_profile_notif {
 	__le32 mbox_msg[4];
@@ -273,11 +276,11 @@ struct iwl_config_2g_coex_cmd {
  * @lte_state: lte modem state
  * @lte_band: lte operating band
  * @lte_chan: lte operating channel
- * @lte_frame_structure:
- * @tx_safe_freq_min:
- * @tx_safe_freq_max:
- * @rx_safe_freq_min:
- * @rx_safe_freq_max:
+ * @lte_frame_structure: ?
+ * @tx_safe_freq_min: ?
+ * @tx_safe_freq_max: ?
+ * @rx_safe_freq_min: ?
+ * @rx_safe_freq_max: ?
  * @max_tx_power: wifi static max tx output power per channel
  *
  * Used for LTE_COEX_CONFIG_CMD command
@@ -310,8 +313,8 @@ struct iwl_lte_coex_static_params_cmd {
 /**
  * struct iwl_lte_coex_wifi_reported_channel_cmd - LTE Coex reported channels
  * configuration command
- * @channel:
- * @bandwidth:
+ * @channel: channel number (1-14)
+ * @bandwidth: bandwidth (0-3)
  *
  * Used for LTE_COEX_WIFI_REPORTED_CHANNEL_CMD command
  */
@@ -364,7 +367,7 @@ struct iwl_lte_coex_fine_tuning_params_cmd {
 
 /**
  * struct iwl_lte_coex_statistic_ntfy - LTE Coex statistics notification
- * @statistic_placeholder:
+ * @statistic_placeholder: placeholder
  */
 struct iwl_lte_coex_statistic_ntfy {
 	__le32 statistic_placeholder;
