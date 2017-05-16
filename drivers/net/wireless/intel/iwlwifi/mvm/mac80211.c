@@ -4584,8 +4584,8 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 	cmd.data[0] = marker;
 	cmd.len[0] = cmd_size;
 
-	marker->dwLen = 0x8;
-	marker->markerId = MARKER_ID_TX_FRAME_LATENCY;
+	marker->dw_len = 0x8;
+	marker->marker_id = MARKER_ID_TX_FRAME_LATENCY;
 	marker->timestamp = cpu_to_le64(ts.tv_sec * 1000 +
 					ts.tv_nsec / 1000000);
 	/* metadata[0]-frame latency */
