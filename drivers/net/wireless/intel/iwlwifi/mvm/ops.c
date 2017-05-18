@@ -945,7 +945,11 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	if (err)
 		goto out_unregister;
 
-	memset(&mvm->rx_stats, 0, sizeof(struct mvm_statistics_rx));
+	if (!iwl_mvm_has_new_rx_stats_api(mvm))
+		memset(&mvm->rx_stats_v3, 0,
+		       sizeof(struct mvm_statistics_rx_v3));
+	else
+		memset(&mvm->rx_stats, 0, sizeof(struct mvm_statistics_rx));
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
 	err = iwl_mvm_fm_register(mvm);
