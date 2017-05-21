@@ -2664,6 +2664,7 @@ enum nl80211_attrs {
 #define NL80211_HE_MAX_CAPABILITY_LEN           51
 #define NL80211_MAX_NR_CIPHER_SUITES		5
 #define NL80211_MAX_NR_AKM_SUITES		2
+#define NL80211_MAX_NR_NAN_SEC_CTX_IDS		5
 
 #define NL80211_MIN_REMAIN_ON_CHANNEL_TIME	10
 
@@ -5425,6 +5426,50 @@ enum nl80211_nan_func_term_reason {
 #define NL80211_NAN_FUNC_SRF_MAX_LEN 0xff
 
 /**
+ * enum nl80211_nan_sec_ctx_type - NAN security context identifier type
+ * @NL80211_NAN_SEC_CTX_TYPE_PMKID: a 16 octet PMKID identifying the PMK used
+ *	for setting up the secure data path.
+ */
+enum nl80211_nan_sec_ctx_type {
+	NL80211_NAN_SEC_CTX_TYPE_PMKID,
+};
+
+/**
+ * enum nl80211_nan_cs_ids - NAN cipher suite identifiers
+ *
+ * Defines cipher suite identifiers for NAN security association
+ *
+ * @NL80211_NAN_CS_ID_SK_CCM_128: uses CCMP-128 for frame encryption, SHA-256
+ *	for the hash function used in PRF, and HMAC-SHA-256 for KDF.
+ * @NL80211_NAN_CS_ID_SK_GCM_256: uses GCMP-256 for frames encryption, SHA-384
+ *	for the hash function used in PRF, and HMAC-SHA-384 for KDF.
+ */
+enum nl80211_nan_cs_ids {
+	NL80211_NAN_CS_ID_SK_CCM_128 = 1 << 0,
+	NL80211_NAN_CS_ID_SK_GCM_256 = 1 << 1,
+};
+
+/**
+ * enum nl80211_nan_sec_ctx_id - NAN security context identifier
+ * @_NL80211_NAN_SEC_CTX_INVALID: invalid
+ * @NL80211_NAN_SEC_CTX_ID_TYPE: the type of the identifier as specified in
+ *	&enum nl80211_nan_sec_ctx_type.
+ * @NL80211_NAN_SEC_CTX_ID_DATA: the security context identifier data.
+ *
+ * @NUM_NL80211_NAN_SEC_CTX: internal
+ * @NL80211_NAN_SEC_CTX_MAX: highest NAN security context attribute
+ */
+enum nl80211_nan_sec_ctx_id {
+	_NL80211_NAN_SEC_CTX_INVALID,
+	NL80211_NAN_SEC_CTX_ID_TYPE,
+	NL80211_NAN_SEC_CTX_ID_DATA,
+
+	/* keep last */
+	NUM_NL80211_NAN_SEC_CTX,
+	NL80211_NAN_SEC_CTX_MAX = NUM_NL80211_NAN_SEC_CTX - 1
+};
+
+/**
  * enum nl80211_nan_func_attributes - NAN function attributes
  * @__NL80211_NAN_FUNC_INVALID: invalid
  * @NL80211_NAN_FUNC_TYPE: &enum nl80211_nan_function_type (u8).
@@ -5462,6 +5507,15 @@ enum nl80211_nan_func_term_reason {
  *	Its type is u8 and it cannot be 0.
  * @NL80211_NAN_FUNC_TERM_REASON: NAN function termination reason.
  *	See &enum nl80211_nan_func_term_reason.
+ * @NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES: relevant if the function's type is
+ *	publish. This is a bitmap specifying the cipher suites identifiers of
+ *	the cipher suites supported by the service. See &enum nl80211_nan_cs_ids
+ *	(u32).
+ * @NL80211_NAN_FUNC_SECURITY_CTX_IDS: relevant if the function's type is
+ *	publish and %NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES is set. This is a
+ *	set of security context identifiers that may be used to set up a secured
+ *	data path for the service, each one is a nested attribute,
+ *	see &enum nl80211_nan_sec_ctx_id.
  *
  * @NUM_NL80211_NAN_FUNC_ATTR: internal
  * @NL80211_NAN_FUNC_ATTR_MAX: highest NAN function attribute
@@ -5484,6 +5538,8 @@ enum nl80211_nan_func_attributes {
 	NL80211_NAN_FUNC_TX_MATCH_FILTER,
 	NL80211_NAN_FUNC_INSTANCE_ID,
 	NL80211_NAN_FUNC_TERM_REASON,
+	NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES,
+	NL80211_NAN_FUNC_SECURITY_CTX_IDS,
 
 	/* keep last */
 	NUM_NL80211_NAN_FUNC_ATTR,

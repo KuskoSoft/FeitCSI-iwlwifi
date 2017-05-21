@@ -2859,6 +2859,34 @@ struct cfg80211_nan_func_filter {
 };
 
 /**
+ * struct cfg80211_nan_sec_ctx_id - NAN security context ID
+ *
+ * @type: the type of the security context ID as specified by
+ *	&enum nl80211_nan_sec_ctx_type.
+ * @len: the length of the @data field in bytes.
+ * @data: the security context ID data.
+ */
+struct cfg80211_nan_sec_ctx_id {
+	enum nl80211_nan_sec_ctx_type type;
+	u8 len;
+	const u8 *data;
+};
+
+/**
+ * struct cfg80211_nan_sec - NAN security configuration
+ *
+ * @cipher_suite_ids: cipher suites IDs supported by the service. A bitmap of
+ *	&enum nl80211_nan_cs_ids.
+ * @n_ctx_ids: number of security context IDs in @ctx_ids array.
+ * @ctx_ids: an array of security context IDs.
+ */
+struct cfg80211_nan_sec {
+	u32 cipher_suite_ids;
+	u8 n_ctx_ids;
+	struct cfg80211_nan_sec_ctx_id *ctx_ids;
+};
+
+/**
  * struct cfg80211_nan_func - a NAN function
  *
  * @type: &enum nl80211_nan_function_type
@@ -2886,6 +2914,7 @@ struct cfg80211_nan_func_filter {
  * @num_tx_filters: length of &tx_filters.
  * @instance_id: driver allocated id of the function.
  * @cookie: unique NAN function identifier.
+ * @sec: security configuration for the service.
  */
 struct cfg80211_nan_func {
 	enum nl80211_nan_function_type type;
@@ -2912,6 +2941,7 @@ struct cfg80211_nan_func {
 	u8 num_rx_filters;
 	u8 instance_id;
 	u64 cookie;
+	struct cfg80211_nan_sec sec;
 };
 
 /**
