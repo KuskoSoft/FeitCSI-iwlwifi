@@ -6585,6 +6585,12 @@ void cfg80211_free_nan_func(struct cfg80211_nan_func *f);
  * @info_len: the length of the &info
  * @info: the Service Specific Info from the peer (if any)
  * @cookie: unique identifier of the corresponding function
+ * @sec: security configuration for the service. Only valid if @type is
+ *	%NL80211_NAN_FUNC_PUBLISH.
+ * @device_attrs: device related attributes from the service discovery frame.
+ *	(e.g. Device capability attribute, NAN availability attribute and NDC
+ *	attribute).
+ * @device_attrs_len: length of @device_attrs field in bytes.
  */
 struct cfg80211_nan_match_params {
 	enum nl80211_nan_function_type type;
@@ -6594,6 +6600,9 @@ struct cfg80211_nan_match_params {
 	u8 info_len;
 	const u8 *info;
 	u64 cookie;
+	struct cfg80211_nan_sec sec;
+	const u8 *device_attrs;
+	u32 device_attrs_len;
 };
 
 /**

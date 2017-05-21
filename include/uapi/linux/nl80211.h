@@ -5582,6 +5582,9 @@ enum nl80211_nan_srf_attributes {
  * @NL80211_NAN_MATCH_FUNC_PEER: the peer function
  *	that caused the match. This is a nested attribute.
  *	See &enum nl80211_nan_func_attributes.
+ * @NL80211_NAN_MATCH_DEVICE_ATTRS: attributes from the service discovery frame
+ *	with information about the peer device (e.g. device capabilities,
+ *	availability attribute etc).
  *
  * @NUM_NL80211_NAN_MATCH_ATTR: internal
  * @NL80211_NAN_MATCH_ATTR_MAX: highest NAN match attribute
@@ -5590,6 +5593,7 @@ enum nl80211_nan_match_attributes {
 	__NL80211_NAN_MATCH_INVALID,
 	NL80211_NAN_MATCH_FUNC_LOCAL,
 	NL80211_NAN_MATCH_FUNC_PEER,
+	NL80211_NAN_MATCH_DEVICE_ATTRS,
 
 	/* keep last */
 	NUM_NL80211_NAN_MATCH_ATTR,

@@ -11762,6 +11762,43 @@ static int nl80211_nan_change_config(struct sk_buff *skb,
 	return rdev_nan_change_conf(rdev, wdev, &conf, changed);
 }
 
+static int nl80211_nan_put_security(struct sk_buff *msg,
+				    struct cfg80211_nan_sec *sec)
+{
+	struct nlattr *ctx_ids, *ctx_id;
+	u8 i;
+
+	if (!sec->cipher_suite_ids)
+		return 0;
+
+	if (nla_put_u32(msg, NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES,
+			sec->cipher_suite_ids))
+		return -ENOBUFS;
+
+	if (!sec->n_ctx_ids)
+		return 0;
+
+	ctx_ids = nla_nest_start(msg, NL80211_NAN_FUNC_SECURITY_CTX_IDS);
+	if (!ctx_ids)
+		return -ENOBUFS;
+
+	for (i = 0; i < sec->n_ctx_ids; i++) {
+		struct cfg80211_nan_sec_ctx_id *id = &sec->ctx_ids[i];
+
+		ctx_id = nla_nest_start(msg, i + 1);
+		if (!ctx_id ||
+		    nla_put_u32(msg, NL80211_NAN_SEC_CTX_ID_TYPE, id->type) ||
+		    nla_put(msg, NL80211_NAN_SEC_CTX_ID_DATA, id->len,
+			    id->data))
+			return -ENOBUFS;
+
+		nla_nest_end(msg, ctx_id);
+	}
+
+	nla_nest_end(msg, ctx_ids);
+	return 0;
+}
+
 void cfg80211_nan_match(struct wireless_dev *wdev,
 			struct cfg80211_nan_match_params *match, gfp_t gfp)
 {
@@ -11770,11 +11807,24 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	struct nlattr *match_attr, *local_func_attr, *peer_func_attr;
 	struct sk_buff *msg;
 	void *hdr;
+	u32 size = 200;
+	u8 i;
 
 	if (WARN_ON(!match->inst_id || !match->peer_inst_id || !match->addr))
 		return;
 
-	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, gfp);
+	/*
+	 * Add room for security context IDs. Each security context ID will
+	 * require a nested attribute with type and data.
+	 */
+	for (i = 0; i < match->sec.n_ctx_ids; i++)
+		size += NLA_HDRLEN + NLA_HDRLEN + NLA_ALIGN(sizeof(u32)) +
+			NLA_HDRLEN + NLA_ALIGN(match->sec.ctx_ids[i].len);
+
+	size += NLA_HDRLEN + NLA_ALIGN(match->device_attrs_len) +
+		NLA_HDRLEN + NLA_ALIGN(match->info_len);
+
+	msg = nlmsg_new(size, gfp);
 	if (!msg)
 		return;
 
@@ -11800,6 +11850,12 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	if (!match_attr)
 		goto nla_put_failure;
 
+	if (match->type == NL80211_NAN_FUNC_PUBLISH &&
+	    match->device_attrs_len && match->device_attrs &&
+	    nla_put(msg, NL80211_NAN_MATCH_DEVICE_ATTRS,
+		    match->device_attrs_len, match->device_attrs))
+		goto nla_put_failure;
+
 	local_func_attr = nla_nest_start(msg, NL80211_NAN_MATCH_FUNC_LOCAL);
 	if (!local_func_attr)
 		goto nla_put_failure;
@@ -11820,6 +11876,10 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	if (match->info && match->info_len &&
 	    nla_put(msg, NL80211_NAN_FUNC_SERVICE_INFO, match->info_len,
 		    match->info))
+		goto nla_put_failure;
+
+	if (match->type == NL80211_NAN_FUNC_PUBLISH &&
+	    nl80211_nan_put_security(msg, &match->sec))
 		goto nla_put_failure;
 
 	nla_nest_end(msg, peer_func_attr);
