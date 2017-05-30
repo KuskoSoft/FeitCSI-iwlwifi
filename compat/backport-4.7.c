@@ -116,8 +116,12 @@ int nla_put_64bit(struct sk_buff *skb, int attrtype, int attrlen,
 }
 EXPORT_SYMBOL_GPL(nla_put_64bit);
 
-/* below 3.18 we copied the entire devcoredump */
-#if LINUX_VERSION_IS_GEQ(3,18,0)
+/*
+ * Below 3.18 or if the kernel has devcoredump disabled, we copied the
+ * entire devcoredump, so no need to define these functions.
+ */
+#if LINUX_VERSION_IS_GEQ(3,18,0) && \
+	!defined(CPTCFG_BPAUTO_BUILD_WANT_DEV_COREDUMP)
 #include <linux/devcoredump.h>
 #include <linux/scatterlist.h>
 
