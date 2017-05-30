@@ -762,7 +762,7 @@ static struct device *iwl_slv_rpm_add_device(struct iwl_trans *trans)
 
 	pm_runtime_set_active(&rpm_dev->dev);
 	pm_runtime_set_autosuspend_delay(&rpm_dev->dev,
-					 iwlwifi_mod_params.d0i3_entry_delay);
+					 iwlwifi_mod_params.d0i3_timeout);
 	pm_runtime_use_autosuspend(&rpm_dev->dev);
 	pm_runtime_enable(&rpm_dev->dev);
 
@@ -1931,7 +1931,7 @@ static ssize_t iwl_dbgfs_d0i3_timeout_read(struct file *file,
 	char buf[256];
 
 	pos += scnprintf(buf, sizeof(buf), "%d\n",
-			 iwlwifi_mod_params.d0i3_entry_delay);
+			 iwlwifi_mod_params.d0i3_timeout);
 
 	return simple_read_from_buffer(user_buf, count, ppos, buf, pos);
 }
@@ -1950,7 +1950,7 @@ static ssize_t iwl_dbgfs_d0i3_timeout_write(struct file *file,
 	if (ret < 0)
 		return -EINVAL;
 
-	iwlwifi_mod_params.d0i3_entry_delay = value;
+	iwlwifi_mod_params.d0i3_timeout = value;
 	pm_runtime_set_autosuspend_delay(trans_slv->d0i3_dev, value);
 	return count;
 }
