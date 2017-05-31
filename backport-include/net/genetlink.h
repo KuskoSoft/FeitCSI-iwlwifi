@@ -3,6 +3,30 @@
 #include_next <net/genetlink.h>
 #include <linux/version.h>
 
+#if LINUX_VERSION_IS_LESS(4,12,0)
+#define GENL_SET_ERR_MSG(info, msg) do { } while (0)
+
+static inline int genl_err_attr(struct genl_info *info, int err,
+				struct nlattr *attr)
+{
+#if LINUX_VERSION_IS_GEQ(4,12,0)
+	info->extack->bad_attr = attr;
+#endif
+
+	return err;
+}
+#endif
+
+/* this is for patches we apply */
+static inline struct netlink_ext_ack *genl_info_extack(struct genl_info *info)
+{
+#if LINUX_VERSION_IS_GEQ(4,12,0)
+	return info->extack;
+#else
+	return NULL;
+#endif
+}
+
 /* this is for patches we apply */
 #if LINUX_VERSION_IS_LESS(3,7,0)
 #define genl_info_snd_portid(__genl_info) (__genl_info->snd_pid)

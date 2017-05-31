@@ -4,6 +4,75 @@
 #include <linux/version.h>
 #include <linux/in6.h>
 
+#if LINUX_VERSION_IS_LESS(4,12,0)
+#include <backport/magic.h>
+
+static inline int nla_validate5(const struct nlattr *head,
+				int len, int maxtype,
+				const struct nla_policy *policy,
+				struct netlink_ext_ack *extack)
+{
+	return nla_validate(head, len, maxtype, policy);
+}
+#define nla_validate4 nla_validate
+#define nla_validate(...) \
+	macro_dispatcher(nla_validate, __VA_ARGS__)(__VA_ARGS__)
+
+static inline int nla_parse6(struct nlattr **tb, int maxtype,
+			     const struct nlattr *head,
+			     int len, const struct nla_policy *policy,
+			     struct netlink_ext_ack *extack)
+{
+	return nla_parse(tb, maxtype, head, len, policy);
+}
+#define nla_parse5(...) nla_parse(__VA_ARGS__)
+#define nla_parse(...) \
+	macro_dispatcher(nla_parse, __VA_ARGS__)(__VA_ARGS__)
+
+static inline int nlmsg_parse6(const struct nlmsghdr *nlh, int hdrlen,
+			       struct nlattr *tb[], int maxtype,
+			       const struct nla_policy *policy,
+			       struct netlink_ext_ack *extack)
+{
+	return nlmsg_parse(nlh, hdrlen, tb, maxtype, policy);
+}
+#define nlmsg_parse5 nlmsg_parse
+#define nlmsg_parse(...) \
+	macro_dispatcher(nlmsg_parse, __VA_ARGS__)(__VA_ARGS__)
+
+static inline int nlmsg_validate5(const struct nlmsghdr *nlh,
+				  int hdrlen, int maxtype,
+				  const struct nla_policy *policy,
+				  struct netlink_ext_ack *extack)
+{
+	return nlmsg_validate(nlh, hdrlen, maxtype, policy);
+}
+#define nlmsg_validate4 nlmsg_validate
+#define nlmsg_validate(...) \
+	macro_dispatcher(nlmsg_validate, __VA_ARGS__)(__VA_ARGS__)
+
+static inline int nla_parse_nested5(struct nlattr *tb[], int maxtype,
+				    const struct nlattr *nla,
+				    const struct nla_policy *policy,
+				    struct netlink_ext_ack *extack)
+{
+	return nla_parse_nested(tb, maxtype, nla, policy);
+}
+#define nla_parse_nested4 nla_parse_nested
+#define nla_parse_nested(...) \
+	macro_dispatcher(nla_parse_nested, __VA_ARGS__)(__VA_ARGS__)
+
+static inline int nla_validate_nested4(const struct nlattr *start, int maxtype,
+				       const struct nla_policy *policy,
+				       struct netlink_ext_ack *extack)
+{
+	return nla_validate_nested(start, maxtype, policy);
+}
+#define nla_validate_nested3 nla_validate_nested
+#define nla_validate_nested(...) \
+	macro_dispatcher(nla_validate_nested, __VA_ARGS__)(__VA_ARGS__)
+#endif /* LINUX_VERSION_IS_LESS(4,12,0) */
+
 #if LINUX_VERSION_IS_LESS(3,7,0)
 /**
  * nla_put_s8 - Add a s8 netlink attribute to a socket buffer

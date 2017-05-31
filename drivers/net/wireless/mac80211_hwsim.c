@@ -391,7 +391,7 @@ static int mac80211_hwsim_vendor_cmd_test(struct wiphy *wiphy,
 	u32 val;
 
 	err = nla_parse(tb, QCA_WLAN_VENDOR_ATTR_MAX, data, data_len,
-			hwsim_vendor_test_policy);
+			hwsim_vendor_test_policy, NULL);
 	if (err)
 		return err;
 	if (!tb[QCA_WLAN_VENDOR_ATTR_TEST])
@@ -1202,7 +1202,13 @@ static bool mac80211_hwsim_tx_frame_no_nl(struct ieee80211_hw *hw,
 			rx_status.encoding = RX_ENC_HT;
 	}
 	if (info->control.rates[0].flags & IEEE80211_TX_RC_40_MHZ_WIDTH)
-		rx_status.enc_flags |= RX_ENC_FLAG_40MHZ;
+		rx_status.bw = RATE_INFO_BW_40;
+	else if (info->control.rates[0].flags & IEEE80211_TX_RC_80_MHZ_WIDTH)
+		rx_status.bw = RATE_INFO_BW_80;
+	else if (info->control.rates[0].flags & IEEE80211_TX_RC_160_MHZ_WIDTH)
+		rx_status.bw = RATE_INFO_BW_160;
+	else
+		rx_status.bw = RATE_INFO_BW_20;
 	if (info->control.rates[0].flags & IEEE80211_TX_RC_SHORT_GI)
 		rx_status.enc_flags |= RX_ENC_FLAG_SHORT_GI;
 	/* TODO: simulate real signal strength (and optional packet loss) */
@@ -1892,7 +1898,7 @@ static int mac80211_hwsim_testmode_cmd(struct ieee80211_hw *hw,
 	int err, ps;
 
 	err = nla_parse(tb, HWSIM_TM_ATTR_MAX, data, len,
-			hwsim_testmode_policy);
+			hwsim_testmode_policy, NULL);
 	if (err)
 		return err;
 

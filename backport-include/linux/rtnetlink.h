@@ -18,4 +18,12 @@
 	ndo_dflt_fdb_add(ndm, tb, dev, addr, flags)
 #endif
 
+#if LINUX_VERSION_IS_LESS(3,13,0) &&		\
+	!defined(CONFIG_PROVE_LOCKING)
+static inline bool lockdep_rtnl_is_held(void)
+{
+	return true;
+}
+#endif
+
 #endif /* __BACKPORT_LINUX_RTNETLINK_H */
