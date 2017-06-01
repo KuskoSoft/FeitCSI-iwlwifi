@@ -23,6 +23,16 @@ config IWLWIFI_NUM_CHANNELS
 	default 2
 	depends on IWLMVM
 
+config IWLMVM_AX_SOFTAP_TESTMODE
+	bool "enable 11ax softap testmode debugfs configuration files"
+	depends on IWLMVM
+	depends on MAC80211_DEBUGFS
+	default y
+	help
+	  Enable 11ax softap testmode debugfs entries that can be used to
+	  enable/disable test modes for trigger frame sending to an 11ax
+	  testmode client.
+
 config IWLWIFI_THERMAL_DEBUGFS
 	bool "enable thermal debug write and read support"
 	depends on IWLWIFI_DEBUGFS
