@@ -83,10 +83,10 @@
 #include "iwl-fh.h"
 #include "iwl-agn-hw.h"
 #include "iwl-debug.h"
-#include "iwl-fw-error-dump.h"
+#include "fw/error-dump.h"
 #include "iwl-prph.h"
 #include "iwl-constants.h"
-#include "iwl-fw.h"
+#include "fw/img.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "iwl-dnt-cfg.h"
 #endif
