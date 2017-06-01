@@ -69,7 +69,6 @@
 #include <net/netlink.h>
 #include "mvm.h"
 #include "iwl-vendor-cmd.h"
-#include "fw-dbg.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 #include "lte-coex.h"
@@ -1000,8 +999,8 @@ static int iwl_mvm_vendor_dbg_collect(struct wiphy *wiphy,
 	trigger_desc = nla_data(tb[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER]);
 	len = nla_len(tb[IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER]);
 
-	iwl_mvm_fw_dbg_collect(mvm, FW_DBG_TRIGGER_USER_EXTENDED, trigger_desc,
-			       len, NULL);
+	iwl_fw_dbg_collect(&mvm->fwrt, FW_DBG_TRIGGER_USER_EXTENDED,
+			   trigger_desc, len, NULL);
 
 	return 0;
 }
