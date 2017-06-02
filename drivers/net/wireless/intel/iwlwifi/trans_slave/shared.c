@@ -71,8 +71,7 @@
 #include "shared.h"
 #include "iwl-op-mode.h"
 #include "iwl-constants.h"
-/* FIXME: need to abstract out TX command (once we know what it looks like) */
-#include "mvm/fw-api.h"
+#include "fw/api/tx.h"
 
 /* FIXME: change values to be unique for each bus? */
 #define IWL_SLV_TX_Q_HIGH_THLD 320

@@ -75,8 +75,7 @@
 #include "iwl-csr.h"
 #include "iwl-io.h"
 #include "iwl-scd.h"
-
-#include "mvm/fw-api-tx.h"
+#include "fw/api/tx.h"
 
 /* align to DW to the lower address */
 #define ALIGN_DW_LOW(x) ((x) & (~3))

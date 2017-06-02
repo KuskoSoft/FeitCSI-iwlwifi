@@ -18,11 +18,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110,
- * USA
- *
  * The full GNU General Public License is included in this distribution
  * in the file called COPYING.
  *
@@ -64,8 +59,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __fw_api_bt_coex_h__
-#define __fw_api_bt_coex_h__
+#ifndef __iwl_fw_api_coex_h__
+#define __iwl_fw_api_coex_h__
 
 #include <linux/types.h>
 #include <linux/bitops.h>
@@ -374,4 +369,4 @@ struct iwl_lte_coex_statistic_ntfy {
 } __packed; /* LTE_COEX_STATISTIC_NTFY_API_S_VER_1 */
 #endif /* CPTCFG_IWLWIFI_LTE_COEX */
 
-#endif /* __fw_api_bt_coex_h__ */
+#endif /* __iwl_fw_api_coex_h__ */
