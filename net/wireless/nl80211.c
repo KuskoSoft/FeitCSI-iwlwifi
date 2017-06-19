@@ -11545,6 +11545,32 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 		err = nl80211_nan_set_security(rdev, tb, &func->sec);
 		if (err)
 			goto out;
+
+		if (tb[NL80211_NAN_FUNC_FSD]) {
+			func->fsd_required = 1;
+			func->fsd_method =
+				nla_get_u32(tb[NL80211_NAN_FUNC_FSD]);
+			if (func->fsd_method > NL80211_NAN_FSD_GAS)
+				return -EINVAL;
+		}
+
+		if (tb[NL80211_NAN_FUNC_NDP_TYPE]) {
+			func->ndp_required = 1;
+			func->ndp_type =
+				nla_get_u32(tb[NL80211_NAN_FUNC_NDP_TYPE]);
+			if (func->ndp_type >
+			    NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY)
+				return -EINVAL;
+		}
+
+		if (tb[NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS])
+			func->range_limit_ingress =
+				nla_get_u16(tb[NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS]);
+
+		if (tb[NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS])
+			func->range_limit_ingress =
+				nla_get_u16(tb[NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS]);
+
 		break;
 	case NL80211_NAN_FUNC_SUBSCRIBE:
 		func->subscribe_active =
@@ -11878,9 +11904,29 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 		    match->info))
 		goto nla_put_failure;
 
-	if (match->type == NL80211_NAN_FUNC_PUBLISH &&
-	    nl80211_nan_put_security(msg, &match->sec))
-		goto nla_put_failure;
+	if (match->type == NL80211_NAN_FUNC_PUBLISH) {
+		if (nl80211_nan_put_security(msg, &match->sec))
+			goto nla_put_failure;
+
+		if (match->fsd_required &&
+		    nla_put_u32(msg, NL80211_NAN_FUNC_FSD, match->fsd_method))
+			goto nla_put_failure;
+
+		if (match->ndp_required &&
+		    nla_put_u32(msg, NL80211_NAN_FUNC_NDP_TYPE,
+				match->ndp_type))
+			goto nla_put_failure;
+
+		if (match->range_limit_ingress &&
+		    nla_put_u16(msg, NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS,
+				match->range_limit_ingress))
+			goto nla_put_failure;
+
+		if (match->range_limit_egress &&
+		    nla_put_u16(msg, NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS,
+				match->range_limit_egress))
+			goto nla_put_failure;
+	}
 
 	nla_nest_end(msg, peer_func_attr);
 	nla_nest_end(msg, match_attr);

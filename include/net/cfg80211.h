@@ -2915,6 +2915,21 @@ struct cfg80211_nan_sec {
  * @instance_id: driver allocated id of the function.
  * @cookie: unique NAN function identifier.
  * @sec: security configuration for the service.
+ * @ndp_required: 1 if NAN data path is required for the service, 0 otherwise.
+ *	The NDP type is specified by @ndp_type.
+ * @ndp_type: the type of NDP required for the service as specified by
+ *	&enum nl80211_nan_ndp_type. Only valid if @ndp_required is 1, ignored
+ *	otherwise.
+ * @fsd_required: 1 if further service discovery is required for the service, 0
+ *	otherwise. The further service discovery method is specified by
+ *	@fsd_method.
+ * @fsd_method: the further service discovery method to be used for the service
+ *	as specified by &enum nl80211_nan_fsd. Only valid if @fsd_required is
+ *	set, ignored otherwise.
+ * @range_limit_ingress: the ingress range limit for the service in centimeters.
+ *	Zero if no range limit is set.
+ * @range_limit_egress: the egress range limit for the service in centimeters.
+ *	Zero if no range limit is set.
  */
 struct cfg80211_nan_func {
 	enum nl80211_nan_function_type type;
@@ -2928,7 +2943,7 @@ struct cfg80211_nan_func {
 	struct mac_address followup_dest;
 	u32 ttl;
 	const u8 *serv_spec_info;
-	u8 serv_spec_info_len;
+	u16 serv_spec_info_len;
 	bool srf_include;
 	const u8 *srf_bf;
 	u8 srf_bf_len;
@@ -2942,6 +2957,12 @@ struct cfg80211_nan_func {
 	u8 instance_id;
 	u64 cookie;
 	struct cfg80211_nan_sec sec;
+	u8 ndp_required;
+	enum nl80211_nan_ndp_type ndp_type;
+	u8 fsd_required;
+	enum nl80211_nan_fsd fsd_method;
+	u16 range_limit_ingress;
+	u16 range_limit_egress;
 };
 
 /**
@@ -6591,18 +6612,42 @@ void cfg80211_free_nan_func(struct cfg80211_nan_func *f);
  *	(e.g. Device capability attribute, NAN availability attribute and NDC
  *	attribute).
  * @device_attrs_len: length of @device_attrs field in bytes.
+ * @ndp_required: 1 if NAN data path is required for the service, 0 otherwise.
+ *	The NDP type is specified by @ndp_type. Only valid if @type is
+ *	%NL80211_NAN_FUNC_PUBLISH.
+ * @ndp_type: the type of NDP required for the service as specified by
+ *	&enum nl80211_nan_ndp_type. Only valid if @ndp_required is 1, ignored
+ *	otherwise.
+ * @fsd_required: 1 if further service discovery is required for the service, 0
+ *	otherwise. The further service discovery method is specified by
+ *	@fsd_method. Only valid if @type is %NL80211_NAN_FUNC_PUBLISH.
+ * @fsd_method: the further service discovery method to be used for the service
+ *	as specified by &enum nl80211_nan_fsd. Only valid if @fsd_required is
+ *	set, ignored otherwise.
+ * @range_limit_ingress: the ingress range limit for the service in centimeters.
+ *	Zero if no range limit is set. Only valid if @type is
+ *	%NL80211_NAN_FUNC_PUBLISH.
+ * @range_limit_egress: the egress range limit for the service in centimeters.
+ *	Zero if no range limit is set. Only valid if @type is
+ *	%NL80211_NAN_FUNC_PUBLISH.
  */
 struct cfg80211_nan_match_params {
 	enum nl80211_nan_function_type type;
 	u8 inst_id;
 	u8 peer_inst_id;
 	const u8 *addr;
-	u8 info_len;
+	u16 info_len;
 	const u8 *info;
 	u64 cookie;
 	struct cfg80211_nan_sec sec;
 	const u8 *device_attrs;
 	u32 device_attrs_len;
+	u8 ndp_required;
+	enum nl80211_nan_ndp_type ndp_type;
+	u8 fsd_required;
+	enum nl80211_nan_fsd fsd_method;
+	u16 range_limit_ingress;
+	u16 range_limit_egress;
 };
 
 /**

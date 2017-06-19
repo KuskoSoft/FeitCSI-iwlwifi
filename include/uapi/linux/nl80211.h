@@ -5470,6 +5470,30 @@ enum nl80211_nan_sec_ctx_id {
 };
 
 /**
+ * enum nl80211_nan_fsd - NAN further service discovery method
+ * @NL80211_NAN_FSD_FOLLOW_UP: follow up is used for further service discovery.
+ * @NL80211_NAN_FSD_GAS: GAS is used for further service discovery.
+ */
+enum nl80211_nan_fsd {
+	NL80211_NAN_FSD_FOLLOW_UP,
+	NL80211_NAN_FSD_GAS,
+};
+
+/**
+ * enum nl80211_nan_ndp_type - NAN data path type
+ * @NL80211_NAN_NDP_TYPE_UNICAST: unicast data path is required for the service
+ * @NL80211_NAN_NDP_TYPE_MCAST_ONE_TO_MANY: NAN multicat service group (NMSG)
+ *	of type one to many is required for the service.
+ * @NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY: NAN multicat service group (NMSG)
+ *	of type many to many is required for the service.
+ */
+enum nl80211_nan_ndp_type {
+	NL80211_NAN_NDP_TYPE_UNICAST,
+	NL80211_NAN_NDP_TYPE_MCAST_ONE_TO_MANY,
+	NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY,
+};
+
+/**
  * enum nl80211_nan_func_attributes - NAN function attributes
  * @__NL80211_NAN_FUNC_INVALID: invalid
  * @NL80211_NAN_FUNC_TYPE: &enum nl80211_nan_function_type (u8).
@@ -5516,6 +5540,17 @@ enum nl80211_nan_sec_ctx_id {
  *	set of security context identifiers that may be used to set up a secured
  *	data path for the service, each one is a nested attribute,
  *	see &enum nl80211_nan_sec_ctx_id.
+ * @NL80211_NAN_FUNC_FSD: relevant if the function's type is publish. If further
+ *	service discovery is required for the service, specifies the further
+ *	service discovery method to be used, as specified by
+ *	&enum nl80211_nan_fsd (u32).
+ * @NL80211_NAN_FUNC_NDP_TYPE: relevant if the function's type is publish. If
+ *	NAN data path is required for the service, specifies the required NDP
+ *	type as specified by &enum nl80211_nan_ndp_type (u32).
+ * @NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS: specifies the ingress range limit for
+ *	the service in centimeters (u16).
+ * @NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS: specifies the egress range limit for
+ *	the service in centimeters (u16).
  *
  * @NUM_NL80211_NAN_FUNC_ATTR: internal
  * @NL80211_NAN_FUNC_ATTR_MAX: highest NAN function attribute
@@ -5540,6 +5575,10 @@ enum nl80211_nan_func_attributes {
 	NL80211_NAN_FUNC_TERM_REASON,
 	NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES,
 	NL80211_NAN_FUNC_SECURITY_CTX_IDS,
+	NL80211_NAN_FUNC_FSD,
+	NL80211_NAN_FUNC_NDP_TYPE,
+	NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS,
+	NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS,
 
 	/* keep last */
 	NUM_NL80211_NAN_FUNC_ATTR,
