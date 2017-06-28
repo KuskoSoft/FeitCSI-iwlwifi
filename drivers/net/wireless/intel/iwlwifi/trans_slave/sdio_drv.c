@@ -154,8 +154,8 @@ static int iwl_sdio_resume(struct device *dev)
  * Probe flow function for SDIO.
  * The transport layer should be initialized after this call.
  *
- *@func - SDIO bus function struct.
- *@id - SDIO Device id (one that was registered).
+ * @func - SDIO bus function struct.
+ * @id - SDIO Device id (one that was registered).
  */
 static int iwl_sdio_probe(struct sdio_func *func,
 			  const struct sdio_device_id *id)
@@ -206,7 +206,7 @@ out_free_trans:
  * Called to remove the sdio transport.
  * Powers down the entire HW, including AL.
  *
- *@func - SDIO bus function struct.
+ * @func - SDIO bus function struct.
  */
 static void iwl_sdio_remove(struct sdio_func *func)
 {

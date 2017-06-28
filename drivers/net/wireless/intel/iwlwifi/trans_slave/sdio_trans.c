@@ -796,7 +796,7 @@ static int iwl_trans_sdio_write_mem(struct iwl_trans *trans, u32 addr,
  * Enables the interrupt receiving on the SDIO HW function.
  * Clears the mask on all interrupts.
  *
- *@trans - the generic transport layer.
+ * @trans - the generic transport layer.
  */
 static int iwl_sdio_enable_interrupts(struct iwl_trans *trans)
 {
@@ -815,7 +815,7 @@ static int iwl_sdio_enable_interrupts(struct iwl_trans *trans)
  * Disables the interrupt receiving on the SDIO HW function.
  * Sets the masking on all interrupts.
  *
- *@trans - the generic transport layer.
+ * @trans - the generic transport layer.
  */
 static int iwl_sdio_disable_interrupts(struct iwl_trans *trans)
 {
@@ -1363,7 +1363,7 @@ clear_locks:
  * SDIO transport start HW.
  * This will enable the SDIO HW function and configure the SDIO AL.
  *
- *@trans - the generic transport layer.
+ * @trans - the generic transport layer.
  */
 static int iwl_trans_sdio_start_hw(struct iwl_trans *trans, bool low_power)
 {
@@ -2898,7 +2898,7 @@ free_trans:
  * Free the Generic transport layer and the sdio transport layer as part of it.
  * Frees internal generic transport layer fields if were allocated.
  *
- *@trans - The generic transport layer.
+ * @trans - The generic transport layer.
  */
 void iwl_trans_sdio_free(struct iwl_trans *trans)
 {
