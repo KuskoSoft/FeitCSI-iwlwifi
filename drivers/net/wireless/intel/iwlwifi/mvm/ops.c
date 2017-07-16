@@ -278,8 +278,6 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 		   RX_HANDLER_ASYNC_LOCKED),
 	RX_HANDLER(STATISTICS_NOTIFICATION, iwl_mvm_rx_statistics,
 		   RX_HANDLER_ASYNC_LOCKED),
-	RX_HANDLER(ANTENNA_COUPLING_NOTIFICATION,
-		   iwl_mvm_rx_ant_coupling_notif, RX_HANDLER_ASYNC_LOCKED),
 
 	RX_HANDLER(BA_WINDOW_STATUS_NOTIFICATION_ID,
 		   iwl_mvm_window_status_notif, RX_HANDLER_SYNC),
@@ -369,7 +367,6 @@ static const struct iwl_hcmd_names iwl_mvm_legacy_names[] = {
 	HCMD_NAME(INIT_COMPLETE_NOTIF),
 	HCMD_NAME(PHY_CONTEXT_CMD),
 	HCMD_NAME(DBG_CFG),
-	HCMD_NAME(ANTENNA_COUPLING_NOTIFICATION),
 	HCMD_NAME(SCAN_CFG_CMD),
 	HCMD_NAME(SCAN_REQ_UMAC),
 	HCMD_NAME(SCAN_ABORT_UMAC),
@@ -408,7 +405,6 @@ static const struct iwl_hcmd_names iwl_mvm_legacy_names[] = {
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 	HCMD_NAME(LTE_COEX_FINE_TUNING_PARAMS_CMD),
 #endif
-	HCMD_NAME(BT_COEX_UPDATE_CORUN_LUT),
 	HCMD_NAME(BT_COEX_UPDATE_REDUCED_TXP),
 	HCMD_NAME(BT_COEX_CI),
 	HCMD_NAME(PHY_CONFIGURATION_CMD),
