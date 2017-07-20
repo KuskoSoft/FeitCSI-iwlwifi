@@ -2974,7 +2974,7 @@ static const struct net_device_ops hwsim_netdev_ops = {
 static void hwsim_mon_setup(struct net_device *dev)
 {
 	dev->netdev_ops = &hwsim_netdev_ops;
-	dev->destructor = free_netdev;
+	netdev_set_def_destructor(dev);
 	ether_setup(dev);
 #if LINUX_VERSION_IS_GEQ(4,3,0)
 	dev->priv_flags |= IFF_NO_QUEUE;
