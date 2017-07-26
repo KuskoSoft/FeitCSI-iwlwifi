@@ -796,7 +796,11 @@ void iwl_slv_tx_lat_add_ts_write(struct iwl_trans_slv *trans_slv,
 
 	ts_1 = ktime_to_ns(data_entry->skb->tstamp) >> 32;
 	diff = temp - ts_1;
-	ktime_to_ns(data_entry->skb->tstamp) += diff << 16;
+#if LINUX_VERSION_IS_LESS(4,10,0)
+	data_entry->skb->tstamp.tv64 += diff << 16;
+#else
+	data_entry->skb->tstamp += diff << 16;
+#endif
 }
 #endif
 

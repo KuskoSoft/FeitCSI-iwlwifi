@@ -1955,7 +1955,11 @@ static void iwl_trans_pci_tx_lat_add_ts_write(struct sk_buff *skb)
 	s64 ts_1 = ktime_to_ns(skb->tstamp) >> 32;
 	s64 diff = temp - ts_1;
 
-	ktime_to_ns(skb->tstamp) += diff << 16;
+#if LINUX_VERSION_IS_LESS(4,10,0)
+	skb->tstamp.tv64 += diff << 16;
+#else
+	skb->tstamp += diff << 16;
+#endif
 }
 #endif
 
