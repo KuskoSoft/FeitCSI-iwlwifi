@@ -16,4 +16,3 @@ iwlmvm-$(CPTCFG_IWLMVM_VENDOR_CMDS) += vendor-cmd.o
 iwlmvm-$(CPTCFG_IWLWIFI_FRQ_MGR) += fm-ops.o
 iwlmvm-$(CPTCFG_IWLWIFI_FRQ_MGR_TEST) += fm-test.o
 iwlmvm-$(CPTCFG_IWLWIFI_DEVICE_TESTMODE) += testmode.o
-iwlmvm-$(CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE) += ax-softap-testmode.o
