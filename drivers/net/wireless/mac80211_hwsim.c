@@ -2499,7 +2499,7 @@ static const struct ieee80211_sband_iftype_data he_capa_2ghz = {
 				IEEE80211_HE_MAC_CAP1_MULTI_TID_AGG_QOS_8,
 			.mac_cap_info[2] =
 				IEEE80211_HE_MAC_CAP2_BSR |
-				IEEE80211_HE_MAC_CAP2_MU_CASCADE |
+				IEEE80211_HE_MAC_CAP2_MU_CASCADING |
 				IEEE80211_HE_MAC_CAP2_ACK_EN_MULTI_TID_ADD,
 			.mac_cap_info[3] =
 				IEEE80211_HE_MAC_CAP3_GRP_ADDR_MULTI_STA_BA_DL_MU |
@@ -2525,9 +2525,12 @@ static const struct ieee80211_sband_iftype_data he_capa_2ghz = {
 			 */
 		},
 		.he_mcs_nss_supp = {
-			.mcs_hdr = cpu_to_le16(0x7 |
-					       (HIGHEST_MCS_SUPPORTED_MCS11 <<
-						IEEE80211_TX_RX_MCS_NSS_SUPP_HIGHEST_MCS_POS)),
+			.rx_msc_80 = cpu_to_le16(0xfffa),
+			.tx_msc_80 = cpu_to_le16(0xfffa),
+			.rx_msc_160 = cpu_to_le16(0xffff),
+			.tx_msc_160 = cpu_to_le16(0xffff),
+			.rx_msc_80p80 = cpu_to_le16(0xffff),
+			.tx_msc_80p80 = cpu_to_le16(0xffff),
 		},
 	},
 };
@@ -2545,7 +2548,7 @@ static const struct ieee80211_sband_iftype_data he_capa_5ghz = {
 				IEEE80211_HE_MAC_CAP1_MULTI_TID_AGG_QOS_8,
 			.mac_cap_info[2] =
 				IEEE80211_HE_MAC_CAP2_BSR |
-				IEEE80211_HE_MAC_CAP2_MU_CASCADE |
+				IEEE80211_HE_MAC_CAP2_MU_CASCADING |
 				IEEE80211_HE_MAC_CAP2_ACK_EN_MULTI_TID_ADD,
 			.mac_cap_info[3] =
 				IEEE80211_HE_MAC_CAP3_GRP_ADDR_MULTI_STA_BA_DL_MU |
@@ -2554,9 +2557,9 @@ static const struct ieee80211_sband_iftype_data he_capa_5ghz = {
 			.mac_cap_info[4] = IEEE80211_HE_MAC_CAP4_BSRP_A_MPDU_AGG,
 			.phy_cap_info[0] =
 				IEEE80211_HE_PHY_CAP0_DUAL_BAND |
-				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G |
 				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_80MHZ_IN_5G |
-				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G,
+				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G |
+				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G,
 			.phy_cap_info[1] =
 				IEEE80211_HE_PHY_CAP1_PREAMBLE_PUNC_RX_MASK |
 				IEEE80211_HE_PHY_CAP1_DEVICE_CLASS_A |
@@ -2574,9 +2577,12 @@ static const struct ieee80211_sband_iftype_data he_capa_5ghz = {
 			 */
 		},
 		.he_mcs_nss_supp = {
-			.mcs_hdr = cpu_to_le16(0x7 |
-					       (HIGHEST_MCS_SUPPORTED_MCS11 <<
-						IEEE80211_TX_RX_MCS_NSS_SUPP_HIGHEST_MCS_POS)),
+			.rx_msc_80 = cpu_to_le16(0xfffa),
+			.tx_msc_80 = cpu_to_le16(0xfffa),
+			.rx_msc_160 = cpu_to_le16(0xfffa),
+			.tx_msc_160 = cpu_to_le16(0xfffa),
+			.rx_msc_80p80 = cpu_to_le16(0xfffa),
+			.tx_msc_80p80 = cpu_to_le16(0xfffa),
 		},
 	},
 };
