@@ -2507,10 +2507,7 @@ static const struct ieee80211_sband_iftype_data he_capa_2ghz = {
 				IEEE80211_HE_MAC_CAP3_MAX_A_AMPDU_LEN_EXP_VHT_2,
 			.mac_cap_info[4] = IEEE80211_HE_MAC_CAP4_BSRP_A_MPDU_AGG,
 			.phy_cap_info[0] =
-				IEEE80211_HE_PHY_CAP0_DUAL_BAND |
-				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G |
-				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_80MHZ_IN_5G |
-				IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G,
+				IEEE80211_HE_PHY_CAP0_DUAL_BAND,
 			.phy_cap_info[1] =
 				IEEE80211_HE_PHY_CAP1_PREAMBLE_PUNC_RX_MASK |
 				IEEE80211_HE_PHY_CAP1_DEVICE_CLASS_A |
@@ -2750,6 +2747,9 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 
 	for (band = NL80211_BAND_2GHZ; band < NUM_NL80211_BANDS; band++) {
 		struct ieee80211_supported_band *sband = &data->bands[band];
+
+		sband->band = band;
+
 		switch (band) {
 		case NL80211_BAND_2GHZ:
 			sband->channels = data->channels_2ghz;
