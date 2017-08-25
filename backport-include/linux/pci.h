@@ -184,4 +184,25 @@ static inline int pci_enable_msix_exact(struct pci_dev *dev,
 #endif
 #endif /* CONFIG_PCI */
 
+#if LINUX_VERSION_IS_LESS(4,9,0) &&			\
+	!LINUX_VERSION_IN_RANGE(3,12,69, 3,13,0) &&	\
+	!LINUX_VERSION_IN_RANGE(4,4,37, 4,5,0) &&	\
+	!LINUX_VERSION_IN_RANGE(4,8,13, 4,9,0)
+
+static inline struct pci_dev *pcie_find_root_port(struct pci_dev *dev)
+{
+	while (1) {
+		if (!pci_is_pcie(dev))
+			break;
+		if (pci_pcie_type(dev) == PCI_EXP_TYPE_ROOT_PORT)
+			return dev;
+		if (!dev->bus->self)
+			break;
+		dev = dev->bus->self;
+	}
+	return NULL;
+}
+
+#endif/* <4.9.0 but not >= 3.12.69, 4.4.37, 4.8.13 */
+
 #endif /* _BACKPORT_LINUX_PCI_H */
