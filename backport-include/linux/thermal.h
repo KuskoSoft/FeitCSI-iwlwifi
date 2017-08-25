@@ -3,6 +3,7 @@
 #include_next <linux/thermal.h>
 #include <linux/version.h>
 
+#ifdef CONFIG_THERMAL
 #if LINUX_VERSION_IS_LESS(3,8,0)
 #include <linux/errno.h>
 
@@ -140,5 +141,6 @@ void backport_thermal_zone_device_unregister(struct thermal_zone_device *);
 
 #endif /* LINUX_VERSION_IS_LESS(4,3,0) */
 #endif /* ! < 3.8.0 */
+#endif /* CONFIG_THERMAL */
 
 #endif /* __BACKPORT_LINUX_THERMAL_H */
