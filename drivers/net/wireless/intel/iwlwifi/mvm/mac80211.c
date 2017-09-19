@@ -4591,9 +4591,8 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 {
 	struct timespec ts;
 	int ret;
-	__le32 gp2 = 0;
+	struct iwl_mvm_marker_rsp *rsp;
 	struct iwl_mvm_marker *marker;
-	struct iwl_rx_packet *pkt;
 	struct iwl_host_cmd cmd = {
 		.id = MARKER_CMD,
 		.flags = CMD_WANT_SKB,
@@ -4635,11 +4634,9 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 		goto out;
 	}
 
-	pkt = cmd.resp_pkt;
-	gp2 = *(__le32 *)pkt->data;
-
+	rsp = (void *)cmd.resp_pkt->data;
+	ret = le32_to_cpu(rsp->gp2);
 	iwl_free_resp(&cmd);
-	ret = le32_to_cpu(gp2);
 out:
 	kfree(marker);
 	return ret;
