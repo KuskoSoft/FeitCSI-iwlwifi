@@ -789,7 +789,6 @@ enum iwl_mvm_queue_status {
 
 #define IWL_MVM_NUM_CIPHERS             10
 
-#ifdef CONFIG_ACPI
 struct iwl_mvm_sar_profile {
 	bool enabled;
 	u8 table[ACPI_SAR_TABLE_SIZE];
@@ -798,7 +797,6 @@ struct iwl_mvm_sar_profile {
 struct iwl_mvm_geo_profile {
 	u8 values[ACPI_GEO_TABLE_SIZE];
 };
-#endif
 
 struct iwl_mvm {
 	/* for logger access */
