@@ -795,7 +795,7 @@ static int ieee80211_tx_lat_set_thrshld(u32 **thrshlds, u32 bitmask,
 	u32 i;
 
 	if (!*thrshlds) {
-		*thrshlds = kzalloc(alloc_size_thrshld, GFP_ATOMIC);
+		*thrshlds = kzalloc(alloc_size_thrshld, GFP_KERNEL);
 		if (!*thrshlds)
 			return -ENOMEM;
 	}
@@ -823,15 +823,13 @@ void ieee80211_tx_lat_thrshld_cfg(struct ieee80211_hw *hw,
 	if (local->num_sta)
 		return;
 
-	tx_thrshld = rcu_dereference(local->tx_threshold);
-
 	/* Tx threshold already enabled */
-	if (tx_thrshld)
+	if (rcu_access_pointer(local->tx_threshold))
 		return;
 
 	alloc_size_struct = sizeof(struct ieee80211_tx_latency_threshold);
 
-	tx_thrshld = kzalloc(alloc_size_struct, GFP_ATOMIC);
+	tx_thrshld = kzalloc(alloc_size_struct, GFP_KERNEL);
 
 	if (!tx_thrshld)
 		return;
@@ -867,6 +865,7 @@ void ieee80211_tx_lat_thrshld_cfg(struct ieee80211_hw *hw,
 	local->tx_msrmnt_points[1] = IEEE80211_TX_LAT_DEL;
 
 	rcu_assign_pointer(local->tx_threshold, tx_thrshld);
+	synchronize_rcu();
 }
 EXPORT_SYMBOL(ieee80211_tx_lat_thrshld_cfg);
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
