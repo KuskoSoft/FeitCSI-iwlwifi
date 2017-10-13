@@ -39,7 +39,7 @@ endif
 
 subdir-ccflags-y += $(call cc-option, -fno-pie) $(call cc-option, -no-pie)
 
-subdir-ccflags-y += -D__CHECK_ENDIAN__
+subdir-ccflags-y += -D__CHECK_ENDIAN__ -Wunused-but-set-variable
 
 obj-y += compat/
 
