@@ -99,9 +99,6 @@
 #ifdef CPTCFG_IWLMVM_TCM
 #include <linux/average.h>
 #endif
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-#include <linux/wakelock.h>
-#endif
 
 #define IWL_MVM_MAX_ADDRESSES		5
 /* RSSI offset for WkP */
@@ -1175,9 +1172,6 @@ struct iwl_mvm {
 	u32 ciphers[IWL_MVM_NUM_CIPHERS];
 	struct ieee80211_cipher_scheme cs[IWL_UCODE_MAX_CS];
 	struct iwl_mvm_tof_data tof_data;
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	struct wake_lock recovery_wake_lock;
-#endif
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	struct iwl_mcast_filter_cmd *mcast_active_filter_cmd;

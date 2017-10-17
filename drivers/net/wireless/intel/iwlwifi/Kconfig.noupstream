@@ -137,13 +137,6 @@ config IWLMVM_TOF_TSF_WA
 	  form beacon/probes and the corresponding GP2; it's a workaround
 	  until FW implements it.
 
-config IWLMVM_WAKELOCK
-	def_bool y
-	depends on WAKELOCK || HAS_WAKELOCK
-	---help---
-	  This option allows to prevent the CPU from suspending while
-	  it is needed.
-
 config IWLWIFI_DISALLOW_OLDER_FW
 	bool "disallow fallback to older firmware images"
 	depends on IWLWIFI

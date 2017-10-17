@@ -107,22 +107,11 @@ struct iwl_trans *iwl_trans_alloc(unsigned int priv_size,
 
 	WARN_ON(!ops->wait_txq_empty && !ops->wait_tx_queues_empty);
 
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	spin_lock_init(&trans->ref_lock);
-	wake_lock_init(&trans->ref_wake_lock, WAKE_LOCK_SUSPEND,
-		       "iwlwifi_ref_wakelock");
-	wake_lock_init(&trans->timed_wake_lock, WAKE_LOCK_SUSPEND,
-		       "iwlwifi_timed_wakelock");
-#endif
 	return trans;
 }
 
 void iwl_trans_free(struct iwl_trans *trans)
 {
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	wake_lock_destroy(&trans->ref_wake_lock);
-	wake_lock_destroy(&trans->timed_wake_lock);
-#endif
 
 	kmem_cache_destroy(trans->dev_cmd_pool);
 }
@@ -223,25 +212,6 @@ IWL_EXPORT_SYMBOL(iwl_cmd_groups_verify_sorted);
 
 void iwl_trans_ref(struct iwl_trans *trans)
 {
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	{
-		unsigned long flags;
-
-		spin_lock_irqsave(&trans->ref_lock, flags);
-		trans->wakelock_count++;
-
-		/* take ref wakelock on first reference */
-		if (trans->wakelock_count == 1 &&
-		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
-		    !trans->suspending)
-			wake_lock(&trans->ref_wake_lock);
-
-		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans->wakelock_count);
-
-		spin_unlock_irqrestore(&trans->ref_lock, flags);
-	}
-#endif
 	if (trans->ops->ref)
 		trans->ops->ref(trans);
 }
@@ -249,35 +219,6 @@ IWL_EXPORT_SYMBOL(iwl_trans_ref);
 
 void iwl_trans_unref(struct iwl_trans *trans)
 {
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	{
-		unsigned long flags;
-
-		spin_lock_irqsave(&trans->ref_lock, flags);
-
-		if (WARN_ON_ONCE(trans->wakelock_count == 0)) {
-			spin_unlock_irqrestore(&trans->ref_lock, flags);
-			return;
-		}
-		trans->wakelock_count--;
-
-		/* Release ref wake lock and take timed wake lock when
-		 * last reference is released.
-		 */
-		if (trans->wakelock_count == 0 &&
-		    trans->dbg_cfg.wakelock_mode == IWL_WAKELOCK_MODE_IDLE &&
-		    !trans->suspending) {
-			wake_unlock(&trans->ref_wake_lock);
-			wake_lock_timeout(&trans->timed_wake_lock,
-				  msecs_to_jiffies(IWL_WAKELOCK_TIMEOUT_MS));
-		}
-
-		IWL_DEBUG_RPM(trans, "wakelock_counter: %d\n",
-			      trans->wakelock_count);
-
-		spin_unlock_irqrestore(&trans->ref_lock, flags);
-	}
-#endif
 	if (trans->ops->unref)
 		trans->ops->unref(trans);
 }

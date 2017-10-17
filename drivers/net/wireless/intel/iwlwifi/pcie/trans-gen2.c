@@ -175,11 +175,6 @@ void _iwl_trans_pcie_gen2_stop_device(struct iwl_trans *trans, bool low_power)
 			       "DEVICE_ENABLED bit was set and is now cleared\n");
 		iwl_pcie_gen2_tx_stop(trans);
 		iwl_pcie_rx_stop(trans);
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-		/* release wake_lock while device is stopped */
-		if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
-			wake_unlock(&trans->ref_wake_lock);
-#endif
 	}
 
 	iwl_pcie_ctxt_info_free_paging(trans);
@@ -333,11 +328,6 @@ int iwl_trans_pcie_gen2_start_fw(struct iwl_trans *trans,
 		goto out;
 	}
 
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	/* The ref wakelock is locked on init */
-	if (trans->dbg_cfg.wakelock_mode != IWL_WAKELOCK_MODE_OFF)
-		wake_lock(&trans->ref_wake_lock);
-#endif
 	/* make sure rfkill handshake bits are cleared */
 	iwl_write32(trans, CSR_UCODE_DRV_GP1_CLR, CSR_UCODE_SW_BIT_RFKILL);
 	iwl_write32(trans, CSR_UCODE_DRV_GP1_CLR,

@@ -72,9 +72,6 @@
 #include <net/ipv6.h>
 #include <net/tcp.h>
 #include <net/addrconf.h>
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-#include <linux/wakelock.h>
-#endif
 #include "iwl-modparams.h"
 #include "fw-api.h"
 #include "mvm.h"
@@ -1287,9 +1284,6 @@ static int __iwl_mvm_suspend(struct ieee80211_hw *hw,
 
 		if (!unified_image) {
 			iwl_mvm_ref(mvm, IWL_MVM_REF_UCODE_DOWN);
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-			wake_lock(&mvm->recovery_wake_lock);
-#endif
 			if (mvm->fw_restart > 0) {
 				mvm->fw_restart--;
 				ieee80211_restart_hw(mvm->hw);
@@ -2352,9 +2346,6 @@ static int iwl_mvm_d3_test_release(struct inode *inode, struct file *file)
 	mvm->trans->system_pm_mode = IWL_PLAT_PM_MODE_DISABLED;
 
 	iwl_abort_notification_waits(&mvm->notif_wait);
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	wake_lock(&mvm->recovery_wake_lock);
-#endif
 	if (!unified_image) {
 		int remaining_time = 10;
 

@@ -519,13 +519,6 @@ static int iwl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	 * interaction with the opmode, we don't do it now, but let
 	 * the opmode release it when it's ready.
 	 */
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-	/* We always unref before ref'ing at the beginning, to free
-	 * the RTPM initial reference.  So set the wakelock reference
-	 * count to 1 here, to acoount for that.
-	 */
-	iwl_trans->wakelock_count = 1;
-#endif
 
 	return 0;
 

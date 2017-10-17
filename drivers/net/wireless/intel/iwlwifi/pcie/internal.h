@@ -38,9 +38,6 @@
 #include <linux/pci.h>
 #include <linux/timer.h>
 #include <linux/cpu.h>
-#ifdef CPTCFG_IWLMVM_WAKELOCK
-#include <linux/wakelock.h>
-#endif
 
 #ifdef CPTCFG_IWLWIFI_PLATFORM_DATA
 #include <linux/platform_data/iwlwifi.h>
