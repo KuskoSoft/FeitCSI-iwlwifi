@@ -3,6 +3,7 @@ config IWLWIFI
 	depends on m
 	depends on MAC80211
 	depends on FW_LOADER
+	depends on HAS_IOMEM && PCI
 	---help---
 	  Select to build the driver supporting the:
 
@@ -72,38 +73,6 @@ config IWLWIFI_OPMODE_MODULAR
 comment "WARNING: iwlwifi is useless without IWLDVM or IWLMVM"
 	depends on IWLDVM=n && IWLMVM=n
 
-menu "Bus Support"
-
-comment "IWLWIFI Requires at least one enabled bus to be supported"
-	depends on !IWLWIFI_PCIE && !IWLWIFI_SDIO
-
-config IWLWIFI_PCIE
-	bool "iwlwifi PCIe bus support"
-	default y
-	depends on HAS_IOMEM && PCI
-	---help---
-	  This option enables support for devices which use the PCIe bus.
-
-	  You must select either the IWLWIFI_SDIO option or this option (or both)
-	  in order to use this device driver with your actual NIC.
-
-	  If unsure, select Y.
-
-config IWLWIFI_SDIO
-	bool "iwlwifi SDIO bus support"
-	depends on IWLMVM
-	depends on MMC
-	# 64-bit has compiler warnings that probably point to issues
-	---help---
-	  This option enables support for devices which use the SDIO bus.
-
-	  You must select either the IWLWIFI_PCIE option or this option (or both)
-	  in order to use this device driver with your actual NIC.
-
-	  If unsure, select Y.
-
-endmenu
-
 config IWLWIFI_BCAST_FILTERING
 	bool "Enable broadcast filtering"
 	depends on IWLMVM
@@ -119,7 +88,7 @@ config IWLWIFI_BCAST_FILTERING
 
 config IWLWIFI_PCIE_RTPM
        bool "Enable runtime power management mode for PCIe devices"
-       depends on IWLMVM && IWLWIFI_PCIE && PM && EXPERT
+       depends on IWLMVM && PM && EXPERT
        default false
        help
          Say Y here to enable runtime power management for PCIe
