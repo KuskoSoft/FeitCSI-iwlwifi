@@ -156,3 +156,13 @@ config REJECT_NONUPSTREAM_NL80211
 	help
 	  Say Y to disable non-upstream commands.
 
+config IWLWIFI_NIC_DISAPPEAR_TRIGGER_UEVENT
+	bool "Enable uevent while detect NIC disappear from PCI"
+	default n
+	help
+	  This option enables an uevent that is sent when a PCI
+	  failure is detected and the CSR_GP_CNTRL register contains
+	  0xffffffff. It is used as a workaround that lets the
+	  userspace do a PCI rescan, e.g. with an udev script.
+
+	  if unsure, select N.
