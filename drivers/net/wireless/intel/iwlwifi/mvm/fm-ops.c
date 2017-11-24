@@ -392,8 +392,8 @@ static int iwl_mvm_fm_send_dcdc_cmd(u32 div0, u32 div1, u32 flags)
 	};
 
 	/* fw does not support the dcdc cmd */
-	 if (!fw_has_capa(&g_mvm->fw->ucode_capa,
-			  IWL_UCODE_TLV_CAPA_DC2DC_CONFIG_SUPPORT))
+	if (!fw_has_capa(&g_mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_DC2DC_CONFIG_SUPPORT))
 		return -EINVAL;
 
 	ret = iwl_mvm_send_cmd(g_mvm, &cmd);
