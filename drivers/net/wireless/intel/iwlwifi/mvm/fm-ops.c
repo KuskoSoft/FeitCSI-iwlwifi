@@ -85,10 +85,10 @@ struct chan_list {
 };
 
 /* last reported channel notification to the FM */
-struct iui_fm_wlan_info last_chan_notif;
+static struct iui_fm_wlan_info last_chan_notif;
 /* last dcdc values requested by the FM */
-int g_dcdc_div0;
-int g_dcdc_div1;
+static int g_dcdc_div0;
+static int g_dcdc_div1;
 
 static struct work_struct fm_chan_notif_wk;
 
@@ -154,10 +154,8 @@ static void iwl_mvm_fm_chan_vldt_iter(void *_data, u8 *mac,
 	}
 
 	if (chanctx_conf->min_def.center_freq1 ==
-	    KHZ_TO_MHZ(data->chan_txpwr->frequency)) {
+	    KHZ_TO_MHZ(data->chan_txpwr->frequency))
 		data->num_of_vif++;
-		return;
-	}
 
 	rcu_read_unlock();
 }
@@ -329,7 +327,7 @@ iwl_mvm_fm_2g_coex(struct iui_fm_wlan_mitigation *mit)
 
 	g_mvm->coex_2g_enabled = mit->wlan_2g_coex_enable;
 
-	cmd.enabled = g_mvm->coex_2g_enabled;
+	cmd.enabled = cpu_to_le32(g_mvm->coex_2g_enabled);
 
 	mutex_lock(&g_mvm->mutex);
 	ret = iwl_mvm_send_cmd_pdu(g_mvm, CONFIG_2G_COEX_CMD, 0, sizeof(cmd),
@@ -413,8 +411,8 @@ static int iwl_mvm_fm_send_dcdc_cmd(u32 div0, u32 div1, u32 flags)
 	resp = (void *)pkt->data;
 
 	/* update the current dcdc values */
-	g_dcdc_div0 = resp->dc2dc_freq_tune0;
-	g_dcdc_div1 = resp->dc2dc_freq_tune1;
+	g_dcdc_div0 = le32_to_cpu(resp->dc2dc_freq_tune0);
+	g_dcdc_div1 = le32_to_cpu(resp->dc2dc_freq_tune1);
 
 	iwl_free_resp(&cmd);
 	return ret;

@@ -96,7 +96,7 @@
 /* pointer to callback function in debug mode */
 static iui_fm_mitigation_cb fm_callback;
 static struct iui_fm_wlan_info fm_notif;
-struct dentry *fm_debug_dir;
+static struct dentry *fm_debug_dir;
 
 static ssize_t
 iwl_mvm_fm_debug_mitigate_write(struct file *file,
