@@ -4305,6 +4305,8 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 		return;
 	}
 	sdata_unlock(sdata);
+
+	ieee80211_send_nullfunc(sdata->local, sdata, false);
 }
 #endif
 
