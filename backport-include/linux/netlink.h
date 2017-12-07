@@ -11,6 +11,9 @@ struct netlink_ext_ack {
 	const struct nlattr *bad_attr;
 	u8 cookie[NETLINK_MAX_COOKIE_LEN];
 	u8 cookie_len;
+
+	/* backport only field */
+	void *__bp_genl_real_ops;
 };
 
 #define NL_SET_ERR_MSG(extack, msg) do {	\

@@ -36,4 +36,9 @@ extern int param_get_ullong(char *buffer, const struct kernel_param *kp);
 #define param_check_ullong(name, p) __param_check(name, p, unsigned long long)
 #endif
 
+#ifndef module_param_hw_array
+#define module_param_hw_array(name, type, hwtype, nump, perm) \
+	module_param_array(name, type, nump, perm)
+#endif
+
 #endif /* __BACKPORT_LINUX_MODULEPARAM_H */

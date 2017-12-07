@@ -125,6 +125,10 @@ static inline struct device *kobj_to_dev(struct kobject *kobj)
 }
 #endif /* LINUX_VERSION_CODE <= KERNEL_VERSION(3,6,0) */
 
+#if LINUX_VERSION_IS_LESS(3,10,0)
+int devm_add_action(struct device *dev, void (*action) (void *), void *data);
+#endif
+
 #if LINUX_VERSION_IS_LESS(3,11,0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
 #ifndef DEVICE_ATTR_RO
 #define DEVICE_ATTR_RO(_name) \

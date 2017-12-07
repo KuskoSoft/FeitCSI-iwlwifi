@@ -322,3 +322,13 @@ void memzero_explicit(void *s, size_t count)
 }
 EXPORT_SYMBOL_GPL(memzero_explicit);
 #endif
+
+char *bin2hex(char *dst, const void *src, size_t count)
+{
+	const unsigned char *_src = src;
+
+	while (count--)
+		dst = hex_byte_pack(dst, *_src++);
+	return dst;
+}
+EXPORT_SYMBOL(bin2hex);

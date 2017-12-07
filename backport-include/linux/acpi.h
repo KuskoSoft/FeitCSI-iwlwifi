@@ -60,4 +60,13 @@ static inline struct acpi_device *_acpi_get_companion(struct device *dev)
 static inline void acpi_dev_remove_driver_gpios(struct acpi_device *adev) {}
 #endif /* LINUX_VERSION_IS_LESS(3, 19, 0) */
 
+#if LINUX_VERSION_IN_RANGE(3,19,0, 4,13,0)
+#define devm_acpi_dev_add_driver_gpios LINUX_BACKPORT(devm_acpi_dev_add_driver_gpios)
+static inline int devm_acpi_dev_add_driver_gpios(struct device *dev,
+			      const struct acpi_gpio_mapping *gpios)
+{
+	return -ENXIO;
+}
+#endif /* LINUX_VERSION_IN_RANGE(3,19,0, 4,13,0) */
+
 #endif /* __BACKPORT_LINUX_ACPI_H */

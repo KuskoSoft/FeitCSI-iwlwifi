@@ -38,6 +38,9 @@ NOSTDINC_FLAGS := \
 endif
 
 subdir-ccflags-y += $(call cc-option, -fno-pie) $(call cc-option, -no-pie)
+ifeq ($(CPTCFG_KERNEL_4_3),y)
+subdir-ccflags-y += -Wno-pointer-sign
+endif
 
 subdir-ccflags-y += -D__CHECK_ENDIAN__ -Wunused-but-set-variable
 
@@ -55,12 +58,6 @@ obj-$(CPTCFG_WLAN) += drivers/net/wireless/
 #obj-$(CPTCFG_NFC) += net/nfc/
 #obj-$(CPTCFG_NFC) += drivers/nfc/
 #obj-$(CPTCFG_MEDIA_SUPPORT) += drivers/media/
-#
-#obj-$(CPTCFG_6LOWPAN) += net/6lowpan/
-#obj-$(CPTCFG_IEEE802154) += net/ieee802154/
-#obj-$(CPTCFG_BT) += net/ieee802154/
-#obj-$(CPTCFG_MAC802154) += net/mac802154/
-#obj-$(CPTCFG_IEEE802154) += drivers/net/ieee802154/
 #
 #obj-$(CPTCFG_USB_WDM) += drivers/usb/class/
 #obj-$(CPTCFG_USB_USBNET) += drivers/net/usb/

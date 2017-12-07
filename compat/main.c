@@ -53,15 +53,9 @@ EXPORT_SYMBOL_GPL(backport_dependency_symbol);
 
 static int __init backport_init(void)
 {
-	int ret = crypto_ccm_module_init();
+	int ret = devcoredump_init();
 	if (ret)
 		return ret;
-
-	ret = devcoredump_init();
-	if (ret) {
-		crypto_ccm_module_exit();
-		return ret;
-	}
 
 	printk(KERN_INFO "Loading modules backported from " CPTCFG_KERNEL_NAME
 #ifndef BACKPORTS_GIT_TRACKED
@@ -86,7 +80,6 @@ subsys_initcall(backport_init);
 
 static void __exit backport_exit(void)
 {
-	crypto_ccm_module_exit();
 	devcoredump_exit();
 }
 module_exit(backport_exit);

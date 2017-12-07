@@ -76,4 +76,8 @@ wait_on_bit_timeout(void *word, int bit, unsigned mode, unsigned long timeout)
 #endif
 #endif
 
+#if LINUX_VERSION_IS_LESS(4,13,0)
+#define wait_queue_entry_t wait_queue_t
+#endif
+
 #endif /* __BACKPORT_LINUX_WAIT_H */

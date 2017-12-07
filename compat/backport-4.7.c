@@ -176,7 +176,9 @@ void dev_coredumpsg(struct device *dev, struct scatterlist *table,
 		    size_t datalen, gfp_t gfp)
 {
 	dev_coredumpm(dev, THIS_MODULE, table, datalen, gfp,
-		      devcd_read_from_sgtable, devcd_free_sgtable);
+		      /* cast away some const problems */
+		      (void *)devcd_read_from_sgtable,
+		      (void *)devcd_free_sgtable);
 }
 EXPORT_SYMBOL_GPL(dev_coredumpsg);
 #endif /* >= 3.18.0 */

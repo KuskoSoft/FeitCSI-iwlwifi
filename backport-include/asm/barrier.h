@@ -11,6 +11,10 @@
 #define dma_rmb()	rmb()
 #endif
 
+#ifndef dma_wmb
+#define dma_wmb()	wmb()
+#endif
+
 #ifndef smp_mb__after_atomic
 #define smp_mb__after_atomic smp_mb__after_clear_bit
 #endif

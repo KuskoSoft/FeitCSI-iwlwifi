@@ -159,6 +159,8 @@
 #endif /* rounddown */
 
 #if LINUX_VERSION_IS_LESS(3,2,0)
+#define hex_byte_pack pack_hex_byte
+
 /* kernels before 3.2 didn't have error checking for the function */
 #define hex2bin LINUX_BACKPORT(hex2bin)
 int __must_check hex2bin(u8 *dst, const char *src, size_t count);
@@ -210,6 +212,11 @@ static inline u32 reciprocal_scale(u32 val, u32 ep_ro)
 	return (u32)(((u64) val * ep_ro) >> 32);
 }
 #endif /* LINUX_VERSION_IS_LESS(3,14,0) */
+
+#if LINUX_VERSION_IS_LESS(3,18,0)
+#define bin2hex LINUX_BACKPORT(bin2hex)
+extern char *bin2hex(char *dst, const void *src, size_t count);
+#endif
 
 #endif /* __BACKPORT_KERNEL_H */
 

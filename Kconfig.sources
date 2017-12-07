@@ -16,9 +16,4 @@ source "$BACKPORT_DIR/drivers/net/wireless/Kconfig"
 
 #source "$BACKPORT_DIR/drivers/media/Kconfig"
 
-#source "$BACKPORT_DIR/net/6lowpan/Kconfig"
-#source "$BACKPORT_DIR/net/ieee802154/Kconfig"
-#source "$BACKPORT_DIR/net/mac802154/Kconfig"
-#source "$BACKPORT_DIR/drivers/net/ieee802154/Kconfig"
-
 #source "$BACKPORT_DIR/drivers/usb/class/Kconfig"

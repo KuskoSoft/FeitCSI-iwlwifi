@@ -3,6 +3,17 @@
 #include_next <net/genetlink.h>
 #include <linux/version.h>
 
+static inline void __bp_genl_info_userhdr_set(struct genl_info *info,
+					      void *userhdr)
+{
+	info->userhdr = userhdr;
+}
+
+static inline void *__bp_genl_info_userhdr(struct genl_info *info)
+{
+	return info->userhdr;
+}
+
 #if LINUX_VERSION_IS_LESS(4,12,0)
 #define GENL_SET_ERR_MSG(info, msg) do { } while (0)
 
@@ -23,8 +34,14 @@ static inline struct netlink_ext_ack *genl_info_extack(struct genl_info *info)
 #if LINUX_VERSION_IS_GEQ(4,12,0)
 	return info->extack;
 #else
-	return NULL;
+	return info->userhdr;
 #endif
+}
+
+/* this gets put in place of info->userhdr, since we use that above */
+static inline void *genl_info_userhdr(struct genl_info *info)
+{
+	return (u8 *)info->genlhdr + GENL_HDRLEN;
 }
 
 /* this is for patches we apply */
@@ -200,6 +217,25 @@ static inline struct nlattr **genl_family_attrbuf(struct genl_family *family)
 #define __genl_ro_after_init
 #else
 #define __genl_ro_after_init __ro_after_init
+#endif
+
+#if LINUX_VERSION_IS_LESS(4,12,0)
+static inline int
+__real_bp_extack_genl_register_family(struct genl_family *family)
+{
+	return genl_register_family(family);
+}
+static inline int
+__real_bp_extack_genl_unregister_family(struct genl_family *family)
+{
+	return genl_unregister_family(family);
+}
+int bp_extack_genl_register_family(struct genl_family *family);
+int bp_extack_genl_unregister_family(struct genl_family *family);
+#undef genl_register_family
+#define genl_register_family bp_extack_genl_register_family
+#undef genl_unregister_family
+#define genl_unregister_family bp_extack_genl_unregister_family
 #endif
 
 #endif /* __BACKPORT_NET_GENETLINK_H */

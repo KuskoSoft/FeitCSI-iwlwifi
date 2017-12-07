@@ -45,6 +45,7 @@ source "drivers/net/wireless/intel/Kconfig"
 #source "drivers/net/wireless/st/Kconfig"
 #source "drivers/net/wireless/ti/Kconfig"
 #source "drivers/net/wireless/zydas/Kconfig"
+#source "drivers/net/wireless/quantenna/Kconfig"
 
 config PCMCIA_RAYCS
 	depends on n
@@ -90,6 +91,7 @@ config MAC80211_HWSIM
 	  called mac80211_hwsim.  If unsure, say N.
 
 config USB_NET_RNDIS_WLAN
+	depends on !KERNEL_4_6
 	depends on n
 	tristate "Wireless RNDIS USB support"
 	depends on m

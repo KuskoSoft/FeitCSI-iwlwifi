@@ -3,6 +3,7 @@
 #include_next <linux/netdevice.h>
 #include <linux/netdev_features.h>
 #include <linux/version.h>
+#include <backport/magic.h>
 
 /*
  * This is declared implicitly in newer kernels by netdevice.h using
@@ -320,8 +321,7 @@ static inline void netif_trans_update(struct net_device *dev)
 }
 #endif
 
-#if LINUX_VERSION_IS_LESS(4,12,0) &&		\
-	!LINUX_VERSION_IN_RANGE(4,11,9, 4,12,0)
+#if LINUX_VERSION_IS_LESS(4,11,9)
 #define netdev_set_priv_destructor(_dev, _destructor) \
 	(_dev)->destructor = __ ## _destructor
 #define netdev_set_def_destructor(_dev) \
@@ -332,6 +332,24 @@ static inline void netif_trans_update(struct net_device *dev)
 	(_dev)->priv_destructor = (_destructor);
 #define netdev_set_def_destructor(_dev) \
 	(_dev)->needs_free_netdev = true;
+#endif
+
+#if LINUX_VERSION_IS_LESS(4,14,0)
+static inline int _bp_netdev_upper_dev_link(struct net_device *dev,
+					    struct net_device *upper_dev)
+{
+#if LINUX_VERSION_IS_LESS(3,9,0)
+	return 0;
+#else
+	return netdev_upper_dev_link(dev, upper_dev);
+#endif
+}
+#define netdev_upper_dev_link3(dev, upper, extack) \
+	netdev_upper_dev_link(dev, upper)
+#define netdev_upper_dev_link2(dev, upper) \
+	netdev_upper_dev_link(dev, upper)
+#define netdev_upper_dev_link(...) \
+	macro_dispatcher(netdev_upper_dev_link, __VA_ARGS__)(__VA_ARGS__)
 #endif
 
 #endif /* __BACKPORT_NETDEVICE_H */

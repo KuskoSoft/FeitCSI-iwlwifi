@@ -306,13 +306,71 @@ static inline void skb_free_frag(void *data)
 	put_page(virt_to_head_page(data));
 }
 
-/* iwlwifi doesn't need this function, so it's safe to just return 0 */
-static inline
-__u32 skb_get_hash_perturb(const struct sk_buff *skb, u32 perturb)
+#if LINUX_VERSION_IS_LESS(3,3,0)
+
+static inline u32 skb_get_hash_perturb(struct sk_buff *skb, u32 key)
 {
 	return 0;
 }
 
+#else
+#include <net/flow_keys.h>
+#include <linux/jhash.h>
+
+static inline u32 skb_get_hash_perturb(struct sk_buff *skb, u32 key)
+{
+	struct flow_keys keys;
+
+	skb_flow_dissect(skb, &keys);
+	return jhash_3words((__force u32)keys.dst,
+			    (__force u32)keys.src ^ keys.ip_proto,
+			    (__force u32)keys.ports, key);
+}
+#endif /* LINUX_VERSION_IS_LESS(3,3,0) */
+#endif /* LINUX_VERSION_IS_LESS(4,2,0) */
+
+#if LINUX_VERSION_IS_LESS(4,13,0)
+static inline void *backport_skb_put(struct sk_buff *skb, unsigned int len)
+{
+	return skb_put(skb, len);
+}
+#define skb_put LINUX_BACKPORT(skb_put)
+
+static inline void *backport_skb_push(struct sk_buff *skb, unsigned int len)
+{
+	return skb_push(skb, len);
+}
+#define skb_push LINUX_BACKPORT(skb_push)
+
+static inline void *backport___skb_push(struct sk_buff *skb, unsigned int len)
+{
+	return __skb_push(skb, len);
+}
+#define __skb_push LINUX_BACKPORT(__skb_push)
+
+static inline void *skb_put_zero(struct sk_buff *skb, unsigned int len)
+{
+	void *tmp = skb_put(skb, len);
+
+	memset(tmp, 0, len);
+
+	return tmp;
+}
+
+static inline void *skb_put_data(struct sk_buff *skb, const void *data,
+				 unsigned int len)
+{
+	void *tmp = skb_put(skb, len);
+
+	memcpy(tmp, data, len);
+
+	return tmp;
+}
+
+static inline void skb_put_u8(struct sk_buff *skb, u8 val)
+{
+	*(u8 *)skb_put(skb, 1) = val;
+}
 #endif
 
 #endif /* __BACKPORT_SKBUFF_H */
