@@ -551,6 +551,7 @@ free_txq:
 	}
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 free:
+	free_percpu(sta->pcpu_rx_stats);
 #ifdef CPTCFG_MAC80211_MESH
 	kfree(sta->mesh);
 #endif
