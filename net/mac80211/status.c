@@ -739,7 +739,6 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 {
 	u32 msrmnt;
 	u16 tid;
-	u8 *qc;
 	__le16 fc;
 	struct ieee80211_tx_latency_bin_ranges *tx_latency;
 	struct ieee80211_tx_consec_loss_ranges *tx_consec;
@@ -764,12 +763,10 @@ static void ieee80211_collect_tx_timing_stats(struct ieee80211_local *local,
 		return;
 
 	/* get frame tid */
-	if (ieee80211_is_data_qos(hdr->frame_control)) {
-		qc = ieee80211_get_qos_ctl(hdr);
-		tid = qc[0] & IEEE80211_QOS_CTL_TID_MASK;
-	} else {
+	if (ieee80211_is_data_qos(hdr->frame_control))
+		tid = ieee80211_get_tid(hdr);
+	else
 		tid = 0;
-	}
 
 	/* Calculate the latency */
 	msrmnt = ieee80211_calc_tx_latency(local, skb_arv);
