@@ -1,5 +1,5 @@
-#ifndef __BACKPORT_TIMKEEPING_H
-#define __BACKPORT_TIMKEEPING_H
+#ifndef __BACKPORT_TIMEKEEPING_H
+#define __BACKPORT_TIMEKEEPING_H
 #include <linux/version.h>
 #include <linux/types.h>
 
@@ -35,4 +35,4 @@ static inline time64_t ktime_get_seconds(void)
 }
 #endif
 
-#endif /* __BACKPORT_TIMKEEPING_H */
+#endif /* __BACKPORT_TIMEKEEPING_H */

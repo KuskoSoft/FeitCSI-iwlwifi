@@ -10,4 +10,4 @@
 #define __GFP_KSWAPD_RECLAIM	((__force gfp_t)___GFP_KSWAPD_RECLAIM) /* kswapd can wake */
 #endif
 
-#endif /* __BACKPORT_TIMKEEPING_H */
+#endif /* __BACKPORT_LINUX_GFP_H */

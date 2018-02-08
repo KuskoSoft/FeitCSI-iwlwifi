@@ -56,8 +56,24 @@ static inline void *genl_info_userhdr(struct genl_info *info)
 #endif
 
 #if LINUX_VERSION_IS_LESS(3,1,0)
-#define genl_dump_check_consistent(cb, user_hdr, family)
+#define genl_dump_check_consistent(cb, user_hdr)
 #endif
+
+#if LINUX_VERSION_IS_LESS(4,15,0)
+#ifndef genl_dump_check_consistent
+static inline
+void backport_genl_dump_check_consistent(struct netlink_callback *cb,
+					 void *user_hdr)
+{
+	struct genl_family dummy_family = {
+		.hdrsize = 0,
+	};
+
+	genl_dump_check_consistent(cb, user_hdr, &dummy_family);
+}
+#define genl_dump_check_consistent LINUX_BACKPORT(genl_dump_check_consistent)
+#endif
+#endif /* LINUX_VERSION_IS_LESS(4,15,0) */
 
 #if LINUX_VERSION_IS_LESS(3,13,0) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
 static inline int __real_genl_register_family(struct genl_family *family)
@@ -139,10 +155,7 @@ extern void genl_notify(struct sk_buff *skb, struct net *net, u32 pid,
 	genlmsg_put(_skb, _pid, _seq, &(_fam)->family, _flags, _cmd)
 #define genlmsg_nlhdr(_hdr, _fam)					\
 	genlmsg_nlhdr(_hdr, &(_fam)->family)
-#ifndef genl_dump_check_consistent
-#define genl_dump_check_consistent(_cb, _hdr, _fam)			\
-	genl_dump_check_consistent(_cb, _hdr, &(_fam)->family)
-#endif
+
 #ifndef genlmsg_put_reply /* might already be there from _info override above */
 #define genlmsg_put_reply(_skb, _info, _fam, _flags, _cmd)		\
 	genlmsg_put_reply(_skb, _info, &(_fam)->family, _flags, _cmd)

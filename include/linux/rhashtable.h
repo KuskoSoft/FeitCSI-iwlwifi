@@ -12,10 +12,12 @@
 #define rhashtable_walk_enter LINUX_BACKPORT(rhashtable_walk_enter)
 #undef rhashtable_walk_exit
 #define rhashtable_walk_exit LINUX_BACKPORT(rhashtable_walk_exit)
-#undef rhashtable_walk_start
-#define rhashtable_walk_start LINUX_BACKPORT(rhashtable_walk_start)
+#undef rhashtable_walk_start_check
+#define rhashtable_walk_start_check LINUX_BACKPORT(rhashtable_walk_start_check)
 #undef rhashtable_walk_next
 #define rhashtable_walk_next LINUX_BACKPORT(rhashtable_walk_next)
+#undef rhashtable_walk_peek
+#define rhashtable_walk_peek LINUX_BACKPORT(rhashtable_walk_peek)
 #undef rhashtable_walk_stop
 #define rhashtable_walk_stop LINUX_BACKPORT(rhashtable_walk_stop)
 #undef rhashtable_init

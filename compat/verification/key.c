@@ -1,6 +1,7 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/key.h>
+#include <linux/err.h>
 #include <keys/asymmetric-type.h>
 #include "x509_parser.h"
 

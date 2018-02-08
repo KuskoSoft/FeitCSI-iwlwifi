@@ -34,8 +34,6 @@
 #include "asn1.h"
 #include "pk.h"
 
-#include <stddef.h>
-
 #if defined(MBEDTLS_CIPHER_C)
 #include "cipher.h"
 #endif

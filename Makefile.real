@@ -130,3 +130,4 @@ uninstall:
 .PHONY: clean
 clean:
 	@$(MAKE) -f Makefile.build clean
+	@$(MAKE) -C kconf clean
