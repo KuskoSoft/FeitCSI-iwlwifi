@@ -1416,14 +1416,6 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm *mvm,
 		struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 		bool flushed = false;
 
-		if (mvm->trans->cfg->gen2) {
-			struct ieee80211_hdr *hdr = (void *)skb->data;
-
-			WARN_ONCE(le16_to_cpu(hdr->seq_ctrl) != seq_ctl,
-				  "Driver seq_ctrl 0x%x != FW seq_ctrl 0x%x\n",
-				  le16_to_cpu(hdr->seq_ctrl), seq_ctl);
-		}
-
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 		iwl_mvm_tx_lat_add_ts_ack(skb);
 #endif
