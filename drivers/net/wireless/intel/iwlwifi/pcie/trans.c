@@ -2016,6 +2016,10 @@ static void iwl_trans_pcie_rescan_wk(struct work_struct *wk)
 {
 	struct iwl_trans_pcie_rescan *rescan =
 		container_of(wk, struct iwl_trans_pcie_rescan, work);
+#if LINUX_VERSION_IS_LESS(3,14,0)
+	dev_err(&rescan->pdev->dev,
+		"Device disconnected - can't rescan on old kernels.\n");
+#else
 	struct pci_bus *parent;
 
 	pci_lock_rescan_remove();
@@ -2023,6 +2027,7 @@ static void iwl_trans_pcie_rescan_wk(struct work_struct *wk)
 	pci_stop_and_remove_bus_device(rescan->pdev);
 	pci_rescan_bus(parent);
 	pci_unlock_rescan_remove();
+#endif /* LINUX_VERSION_IS_LESS(3,14,0) */
 
 	pci_dev_put(rescan->pdev);
 
