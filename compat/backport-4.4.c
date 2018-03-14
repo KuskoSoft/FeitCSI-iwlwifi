@@ -15,6 +15,7 @@
 #include <linux/if_vlan.h>
 #include <linux/mm.h>
 #include <linux/skbuff.h>
+#include <linux/tcp.h>
 #include <net/ip.h>
 #include <net/tso.h>
 #include <asm/unaligned.h>
@@ -95,9 +96,14 @@ void tso_build_hdr(struct sk_buff *skb, char *hdr, struct tso_t *tso,
 		iph->tot_len = htons(size + hdr_len - mac_hdr_len);
 		tso->ip_id++;
 	} else {
+#ifdef CONFIG_IPV6
 		struct ipv6hdr *iph = (void *)(hdr + mac_hdr_len);
 
 		iph->payload_len = htons(size + tcp_hdrlen(skb));
+#else /* CONFIG_IPV6 */
+		/* tso->ipv6 should never be set if IPV6 is not enabeld */
+		WARN_ON(1);
+#endif /* CONFIG_IPV6 */
 	}
 	tcph = (struct tcphdr *)(hdr + skb_transport_offset(skb));
 	put_unaligned_be32(tso->tcp_seq, &tcph->seq);
