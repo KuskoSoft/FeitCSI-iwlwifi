@@ -967,8 +967,10 @@ static int regdb_query_country(const struct fwdb_header *db,
 		return -ENOMEM;
 
 	wmm_ptrs = kcalloc(coll->n_rules, sizeof(*wmm_ptrs), GFP_KERNEL);
-	if (!wmm_ptrs)
+	if (!wmm_ptrs) {
+		kfree(regdom);
 		return -ENOMEM;
+	}
 
 	regdom->n_reg_rules = coll->n_rules;
 	regdom->alpha2[0] = country->alpha2[0];
