@@ -99,9 +99,7 @@
 #include "lte-coex.h"
 #endif
 
-#ifdef CPTCFG_IWLMVM_TCM
 #include <linux/average.h>
-#endif
 
 #define IWL_MVM_MAX_ADDRESSES		5
 /* RSSI offset for WkP */
@@ -477,9 +475,7 @@ struct iwl_mvm_vif {
 	/* FW identified misbehaving AP */
 	u8 uapsd_misbehaving_bssid[ETH_ALEN];
 
-#ifdef CPTCFG_IWLMVM_TCM
 	struct delayed_work uapsd_nonagg_detected_wk;
-#endif
 
 	/* Indicates that CSA countdown may be started */
 	bool csa_countdown;
@@ -648,7 +644,6 @@ enum iwl_mvm_traffic_load {
 	IWL_MVM_TRAFFIC_HIGH,
 };
 
-#ifdef CPTCFG_IWLMVM_TCM
 
 DECLARE_EWMA(rate, 16, 16)
 
@@ -690,7 +685,6 @@ struct iwl_mvm_tcm {
 		bool global_change;
 	} result;
 };
-#endif
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
 #define IWL_MVM_TDLS_CNT_MAX_PEERS 4
@@ -1110,7 +1104,6 @@ struct iwl_mvm {
 	 */
 	bool temperature_test;  /* Debug test temperature is enabled */
 
-#ifdef CPTCFG_IWLMVM_TCM
 	unsigned long bt_coex_last_tcm_ts;
 
 	u8 uapsd_noagg_bssid_write_idx;
@@ -1118,7 +1111,6 @@ struct iwl_mvm {
 		__aligned(2);
 
 	struct iwl_mvm_tcm tcm;
-#endif
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
 	struct list_head tdls_peer_cache_list;
@@ -2145,7 +2137,6 @@ bool iwl_mvm_is_vif_assoc(struct iwl_mvm *mvm);
 
 void iwl_mvm_inactivity_check(struct iwl_mvm *mvm);
 
-#ifdef CPTCFG_IWLMVM_TCM
 #define MVM_TCM_PERIOD_MSEC 500
 #define MVM_TCM_PERIOD (HZ * MVM_TCM_PERIOD_MSEC / 1000)
 #define MVM_LL_PERIOD (10 * HZ)
@@ -2157,7 +2148,6 @@ void iwl_mvm_resume_tcm(struct iwl_mvm *mvm);
 void iwl_mvm_tcm_add_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 void iwl_mvm_tcm_rm_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 u8 iwl_mvm_tcm_load_percentage(u32 airtime, u32 elapsed);
-#endif
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 int iwl_mvm_send_lte_coex_static_params_cmd(struct iwl_mvm *mvm);

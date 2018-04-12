@@ -94,15 +94,6 @@ config IWLMVM_VENDOR_CMDS
 	  This option mostly exists for non-upstream tagging, so best
 	  leave it set to Y.
 
-config IWLMVM_TCM
-	bool "enable traffic conditions monitoring"
-	default y
-	help
-	  This option enables traffic monitoring for low-latency and
-	  traffic thresholds.  This is the basis for other submodules
-	  that can change their behavior according to traffic
-	  conditions.
-
 config IWLWIFI_LTE_COEX
         bool "enable lte coexistence support"
         depends on IWLMVM_VENDOR_CMDS

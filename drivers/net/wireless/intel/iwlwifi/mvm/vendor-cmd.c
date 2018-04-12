@@ -1596,20 +1596,16 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 };
 
 enum iwl_mvm_vendor_events_idx {
-#ifdef CPTCFG_IWLMVM_TCM
 	IWL_MVM_VENDOR_EVENT_IDX_TCM,
-#endif
 	NUM_IWL_MVM_VENDOR_EVENT_IDX
 };
 
 static const struct nl80211_vendor_cmd_info
 iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
-#ifdef CPTCFG_IWLMVM_TCM
 	[IWL_MVM_VENDOR_EVENT_IDX_TCM] = {
 		.vendor_id = INTEL_OUI,
 		.subcmd = IWL_MVM_VENDOR_CMD_TCM_EVENT,
 	},
-#endif
 };
 
 void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy)
@@ -1620,7 +1616,6 @@ void iwl_mvm_set_wiphy_vendor_commands(struct wiphy *wiphy)
 	wiphy->n_vendor_events = ARRAY_SIZE(iwl_mvm_vendor_events);
 }
 
-#ifdef CPTCFG_IWLMVM_TCM
 static enum iwl_mvm_vendor_load
 iwl_mvm_get_vendor_load(enum iwl_mvm_traffic_load load)
 {
@@ -1672,4 +1667,3 @@ void iwl_mvm_send_tcm_event(struct iwl_mvm *mvm, struct ieee80211_vif *vif)
  nla_put_failure:
 	kfree_skb(msg);
 }
-#endif

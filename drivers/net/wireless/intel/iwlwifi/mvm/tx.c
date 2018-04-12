@@ -1033,7 +1033,6 @@ static bool iwl_mvm_txq_should_update(struct iwl_mvm *mvm, int txq_id)
 	return false;
 }
 
-#ifdef CPTCFG_IWLMVM_TCM
 static void iwl_mvm_tx_airtime(struct iwl_mvm *mvm,
 			       struct iwl_mvm_sta *mvmsta,
 			       int airtime)
@@ -1059,7 +1058,6 @@ static void iwl_mvm_tx_pkt_queued(struct iwl_mvm *mvm,
 
 	mdata->tx.pkts[ac]++;
 }
-#endif
 
 /*
  * Sets the fields in the Tx cmd that are crypto related
@@ -1201,9 +1199,7 @@ static int iwl_mvm_tx_mpdu(struct iwl_mvm *mvm, struct sk_buff *skb,
 
 	spin_unlock(&mvmsta->lock);
 
-#ifdef CPTCFG_IWLMVM_TCM
 	iwl_mvm_tx_pkt_queued(mvm, mvmsta, tid == IWL_MAX_TID_COUNT ? 0 : tid);
-#endif
 
 	return 0;
 
@@ -1632,10 +1628,8 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm *mvm,
 	if (!IS_ERR(sta)) {
 		mvmsta = iwl_mvm_sta_from_mac80211(sta);
 
-#ifdef CPTCFG_IWLMVM_TCM
 		iwl_mvm_tx_airtime(mvm, mvmsta,
 				   le16_to_cpu(tx_resp->wireless_media_time));
-#endif
 
 		if (sta->wme && tid != IWL_MGMT_TID) {
 			struct iwl_mvm_tid_data *tid_data =
@@ -1782,10 +1776,8 @@ static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm *mvm,
 			le16_to_cpu(tx_resp->wireless_media_time);
 		mvmsta->tid_data[tid].lq_color =
 			TX_RES_RATE_TABLE_COL_GET(tx_resp->tlc_info);
-#ifdef CPTCFG_IWLMVM_TCM
 		iwl_mvm_tx_airtime(mvm, mvmsta,
 				   le16_to_cpu(tx_resp->wireless_media_time));
-#endif
 	}
 
 	rcu_read_unlock();
@@ -1983,10 +1975,8 @@ void iwl_mvm_rx_ba_notif(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb)
 					   le32_to_cpu(ba_res->tx_rate));
 		}
 
-#ifdef CPTCFG_IWLMVM_TCM
 		iwl_mvm_tx_airtime(mvm, mvmsta,
 				   le32_to_cpu(ba_res->wireless_time));
-#endif
 out_unlock:
 		rcu_read_unlock();
 out:
