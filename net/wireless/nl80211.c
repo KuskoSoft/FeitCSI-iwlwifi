@@ -13544,8 +13544,11 @@ static int nl80211_nan_ndp(struct sk_buff *skb, struct genl_info *info)
 			   ETH_ALEN);
 
 		if (params.oper == NL80211_NAN_NDP_OPER_TERM) {
-			/* NDP termination must be handled on the NAN device */
-			if (wdev->iftype != NL80211_IFTYPE_NAN)
+			/*
+			 * NDP termination must be handled only on NAN Data
+			 * interfaces.
+			 */
+			if (wdev->iftype != NL80211_IFTYPE_NAN_DATA)
 				return -EINVAL;
 
 			/* should not be specified for termination */
