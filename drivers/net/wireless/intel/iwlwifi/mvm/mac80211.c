@@ -3155,8 +3155,11 @@ static int iwl_mvm_mac_set_key(struct ieee80211_hw *hw,
 		if (!mvm->trans->cfg->gen2) {
 			key->flags |= IEEE80211_KEY_FLAG_GENERATE_MMIC;
 			key->flags |= IEEE80211_KEY_FLAG_PUT_IV_SPACE;
-		} else {
+		} else if (vif->type == NL80211_IFTYPE_STATION) {
 			key->flags |= IEEE80211_KEY_FLAG_PUT_MIC_SPACE;
+		} else {
+			IWL_DEBUG_MAC80211(mvm, "Use SW encryption for TKIP\n");
+			return -EOPNOTSUPP;
 		}
 		break;
 	case WLAN_CIPHER_SUITE_CCMP:
@@ -3217,11 +3220,6 @@ static int iwl_mvm_mac_set_key(struct ieee80211_hw *hw,
 				break;
 			}
 		}
-
-		if (mvm->trans->cfg->gen2 &&
-		    vif->type != NL80211_IFTYPE_STATION &&
-		    key->cipher == WLAN_CIPHER_SUITE_TKIP)
-			ret = -EOPNOTSUPP;
 
 		/* During FW restart, in order to restore the state as it was,
 		 * don't try to reprogram keys we previously failed for.
