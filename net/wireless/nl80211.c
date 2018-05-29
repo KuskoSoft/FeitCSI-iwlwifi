@@ -12296,6 +12296,8 @@ void cfg80211_nan_ndp_notify(struct wireless_dev *wdev,
 		goto nla_put_failure;
 
 	nested = nla_nest_start(msg, NL80211_ATTR_NAN_NDP_PARAMS);
+	if (!nested)
+		goto nla_put_failure;
 
 	/* set common attributes */
 	if (nla_put_u32(msg, NL80211_NAN_NDP_OPER, params->oper) ||
