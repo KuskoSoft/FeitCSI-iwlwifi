@@ -1,7 +1,6 @@
 config IWLWIFI
 	tristate "Intel Wireless WiFi Next Gen AGN - Wireless-N/Advanced-N/Ultimate-N (iwlwifi) "
 	depends on m
-	depends on MAC80211
 	depends on FW_LOADER
 	depends on HAS_IOMEM && PCI
 	---help---
@@ -49,6 +48,7 @@ if IWLWIFI
 config IWLWIFI_LEDS
 	bool
 	depends on LEDS_CLASS=y || LEDS_CLASS=IWLWIFI
+	depends on IWLMVM || IWLDVM
 	select BPAUTO_LEDS_TRIGGERS
 	select MAC80211_LEDS
 	default y
@@ -69,6 +69,7 @@ config IWLWIFI_OPMODE_MODULAR
 	default y if IWLMVM=m
 	default y if IWLXVT=m
 	default y if IWLTEST=m
+	default y if IWLFMAC=m
 
 comment "WARNING: iwlwifi is useless without IWLDVM or IWLMVM"
 	depends on IWLDVM=n && IWLMVM=n
