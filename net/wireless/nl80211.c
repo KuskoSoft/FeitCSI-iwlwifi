@@ -13659,8 +13659,13 @@ call_rdev:
 	kfree(params.sec.ctx_ids);
 	kfree(params.serv_spec_info);
 
-	if (err < 0 || params.oper != NL80211_NAN_NDP_OPER_REQ)
+	if (params.oper != NL80211_NAN_NDP_OPER_REQ)
 		return err;
+
+	if (err) {
+		nlmsg_free(msg);
+		return err;
+	}
 
 	WARN_ON(nla_put_u8(msg, NL80211_NAN_NDP_ID, params.ndp_id) ||
 		nla_put(msg, NL80211_NAN_NDP_INIT_NDI, ETH_ALEN,
