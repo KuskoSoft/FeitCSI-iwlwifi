@@ -1163,11 +1163,13 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	iwl_dnt_start(mvm->trans);
 #endif
 
-	mvm->fwrt.dump.conf = FW_DBG_INVALID;
-	/* if we have a destination, assume EARLY START */
-	if (mvm->fw->dbg.dest_tlv)
-		mvm->fwrt.dump.conf = FW_DBG_START_FROM_ALIVE;
-	iwl_fw_start_dbg_conf(&mvm->fwrt, FW_DBG_START_FROM_ALIVE);
+	if (!mvm->trans->ini_valid) {
+		mvm->fwrt.dump.conf = FW_DBG_INVALID;
+		/* if we have a destination, assume EARLY START */
+		if (mvm->fw->dbg.dest_tlv)
+			mvm->fwrt.dump.conf = FW_DBG_START_FROM_ALIVE;
+		iwl_fw_start_dbg_conf(&mvm->fwrt, FW_DBG_START_FROM_ALIVE);
+	}
 
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	if (iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY)) {
