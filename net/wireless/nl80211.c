@@ -553,6 +553,7 @@ nl80211_nan_func_policy[NL80211_NAN_FUNC_ATTR_MAX + 1] = {
 	[NL80211_NAN_FUNC_TERM_REASON] = { .type = NLA_U8 },
 	[NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES] = { .type = NLA_U32 },
 	[NL80211_NAN_FUNC_SECURITY_CTX_IDS] = { .type = NLA_NESTED },
+	[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL] = { .type = NLA_U8 },
 };
 
 /* policy for Service Response Filter attributes */
@@ -11744,6 +11745,13 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 
 	if (tb[NL80211_NAN_FUNC_TTL])
 		func->ttl = nla_get_u32(tb[NL80211_NAN_FUNC_TTL]);
+
+	if (tb[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL]) {
+		func->awake_dw_interval =
+			nla_get_u8(tb[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL]);
+		if (func->awake_dw_interval > NL80211_NAN_FUNC_MAX_DW_INTERVAL)
+			return -EINVAL;
+	}
 
 	switch (func->type) {
 	case NL80211_NAN_FUNC_PUBLISH:

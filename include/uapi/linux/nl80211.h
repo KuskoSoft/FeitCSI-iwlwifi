@@ -5629,6 +5629,8 @@ enum nl80211_nan_ndp_type {
 	NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY,
 };
 
+#define NL80211_NAN_FUNC_MAX_DW_INTERVAL	4
+
 /**
  * enum nl80211_nan_func_attributes - NAN function attributes
  * @__NL80211_NAN_FUNC_INVALID: invalid
@@ -5687,6 +5689,10 @@ enum nl80211_nan_ndp_type {
  *	the service in centimeters (u16).
  * @NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS: specifies the egress range limit for
  *	the service in centimeters (u16).
+ * @NL80211_NAN_FUNC_AWAKE_DW_INTERVAL: specifies the interval between two
+ *	discovery windows in which the device shall be awake to transmit or
+ *	receive SDFs. The interval will be 2^dw_interval * 512 TUs. Valid values
+ *	are 0 - 4.
  *
  * @NUM_NL80211_NAN_FUNC_ATTR: internal
  * @NL80211_NAN_FUNC_ATTR_MAX: highest NAN function attribute
@@ -5715,6 +5721,7 @@ enum nl80211_nan_func_attributes {
 	NL80211_NAN_FUNC_NDP_TYPE,
 	NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS,
 	NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS,
+	NL80211_NAN_FUNC_AWAKE_DW_INTERVAL,
 
 	/* keep last */
 	NUM_NL80211_NAN_FUNC_ATTR,

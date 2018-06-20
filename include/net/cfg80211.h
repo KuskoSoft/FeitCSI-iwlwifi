@@ -2955,6 +2955,9 @@ struct cfg80211_nan_sec {
  *	Zero if no range limit is set.
  * @range_limit_egress: the egress range limit for the service in centimeters.
  *	Zero if no range limit is set.
+ * @awake_dw_interval: specifies the interval between two discovery windows in
+ *	which the device shall be awake to transmit or receive SDFs. The
+ *	interval will be 2^dw_interval * 512 TUs. Valid values are 0 - 4.
  */
 struct cfg80211_nan_func {
 	enum nl80211_nan_function_type type;
@@ -2988,6 +2991,7 @@ struct cfg80211_nan_func {
 	enum nl80211_nan_fsd fsd_method;
 	u16 range_limit_ingress;
 	u16 range_limit_egress;
+	u8 awake_dw_interval;
 };
 
 /**
