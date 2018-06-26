@@ -2893,7 +2893,7 @@ struct cfg80211_nan_func_filter {
  */
 struct cfg80211_nan_sec_ctx_id {
 	enum nl80211_nan_sec_ctx_type type;
-	u8 len;
+	u16 len;
 	const u8 *data;
 };
 
