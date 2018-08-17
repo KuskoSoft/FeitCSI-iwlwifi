@@ -2303,9 +2303,6 @@ enum nl80211_commands {
  * @NL80211_ATTR_CIVIC: The content of measurement Report IE (Section 8.4.2.21
  *	in spec) with type 11 - Civic (Section 8.4.2.21.13)
  *
- * @NL80211_ATTR_HE_CAPABILITY: HE Capability information element (from
- *	association request when used with NL80211_CMD_NEW_STATION). Can be set
- *	only if &NL80211_STA_FLAG_WME is set.
  * @NL80211_ATTR_NAN_CDW_2G: defines the NAN device committed DW on 2.4GHz.
  *      This is a u8, where valid values are 1..5. The device must wake for at
  *      least every 2^(val-1) DW on 2.4GHz. When using %NL80211_CMD_START_NAN,
@@ -2771,8 +2768,6 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_LCI,
 	NL80211_ATTR_CIVIC,
-
-	NL80211_ATTR_HE_CAPABILITY,
 
 	NL80211_ATTR_NAN_CDW_2G,
 	NL80211_ATTR_NAN_CDW_5G,
