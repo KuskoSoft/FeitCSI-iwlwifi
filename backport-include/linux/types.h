@@ -7,4 +7,8 @@
 typedef __s64 time64_t;
 #endif
 
+#if LINUX_VERSION_IS_LESS(4,16,0)
+typedef unsigned __poll_t;
+#endif
+
 #endif /* __BACKPORT_TYPES */

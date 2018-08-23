@@ -39,6 +39,10 @@
 #define ETH_P_8021AD	0x88A8          /* 802.1ad Service VLAN		*/
 #endif
 
+#ifndef ETH_P_PREAUTH
+#define ETH_P_PREAUTH   0x88C7          /* 802.11 Preauthentication */
+#endif
+
 #ifndef ETH_MIN_MTU
 #define ETH_MIN_MTU	68
 #endif

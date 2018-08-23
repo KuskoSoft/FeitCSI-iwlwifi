@@ -1,6 +1,7 @@
 #ifndef __BACKPORT_KERNEL_H
 #define __BACKPORT_KERNEL_H
 #include_next <linux/kernel.h>
+#include <linux/bug.h>
 #include <linux/version.h>
 /*
  * some older kernels don't have this and thus don't

@@ -4,7 +4,7 @@
  * ASN.1 parser for x509
  */
 #include <linux/asn1_ber_bytecode.h>
-#include "x509-asn1.h"
+#include "x509.asn1.h"
 
 enum x509_actions {
 	ACT_x509_extract_key_data = 0,
