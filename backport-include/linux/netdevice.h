@@ -334,7 +334,7 @@ static inline void netif_trans_update(struct net_device *dev)
 	(_dev)->needs_free_netdev = true;
 #endif
 
-#if LINUX_VERSION_IS_LESS(4,14,0)
+#if LINUX_VERSION_IS_LESS(4,15,0)
 static inline int _bp_netdev_upper_dev_link(struct net_device *dev,
 					    struct net_device *upper_dev)
 {

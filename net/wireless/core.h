@@ -81,7 +81,7 @@ struct cfg80211_registered_device {
 	struct cfg80211_scan_request *scan_req; /* protected by RTNL */
 	struct sk_buff *scan_msg;
 	struct list_head sched_scan_req_list;
-	unsigned long suspend_at;
+	time64_t suspend_at;
 	struct work_struct scan_done_wk;
 
 	struct genl_info *cur_cmd_info;
@@ -294,10 +294,10 @@ void cfg80211_bss_age(struct cfg80211_registered_device *rdev,
                       unsigned long age_secs);
 
 /* IBSS */
-int cfg80211_join_ibss(struct cfg80211_registered_device *rdev,
-		       struct net_device *dev,
-		       struct cfg80211_ibss_params *params,
-		       struct cfg80211_cached_keys *connkeys);
+int __cfg80211_join_ibss(struct cfg80211_registered_device *rdev,
+			 struct net_device *dev,
+			 struct cfg80211_ibss_params *params,
+			 struct cfg80211_cached_keys *connkeys);
 void cfg80211_clear_ibss(struct net_device *dev, bool nowext);
 int __cfg80211_leave_ibss(struct cfg80211_registered_device *rdev,
 			  struct net_device *dev, bool nowext);
@@ -315,10 +315,6 @@ int __cfg80211_join_mesh(struct cfg80211_registered_device *rdev,
 			 struct net_device *dev,
 			 struct mesh_setup *setup,
 			 const struct mesh_config *conf);
-int cfg80211_join_mesh(struct cfg80211_registered_device *rdev,
-		       struct net_device *dev,
-		       struct mesh_setup *setup,
-		       const struct mesh_config *conf);
 int __cfg80211_leave_mesh(struct cfg80211_registered_device *rdev,
 			  struct net_device *dev);
 int cfg80211_leave_mesh(struct cfg80211_registered_device *rdev,
@@ -518,8 +514,6 @@ void cfg80211_stop_p2p_device(struct cfg80211_registered_device *rdev,
 
 void cfg80211_stop_nan(struct cfg80211_registered_device *rdev,
 		       struct wireless_dev *wdev);
-
-#define CFG80211_MAX_NUM_DIFFERENT_CHANNELS 10
 
 #ifdef CPTCFG_CFG80211_DEVELOPER_WARNINGS
 #define CFG80211_DEV_WARN_ON(cond)	WARN_ON(cond)

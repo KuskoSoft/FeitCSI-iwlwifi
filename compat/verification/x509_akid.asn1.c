@@ -4,7 +4,7 @@
  * ASN.1 parser for x509_akid
  */
 #include <linux/asn1_ber_bytecode.h>
-#include "x509_akid-asn1.h"
+#include "x509_akid.asn1.h"
 
 enum x509_akid_actions {
 	ACT_x509_akid_note_kid = 0,

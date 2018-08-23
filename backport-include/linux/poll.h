@@ -2,6 +2,7 @@
 #define __BACKPORT_LINUX_POLL_H
 #include_next <linux/poll.h>
 #include <linux/version.h>
+#include <linux/eventpoll.h>
 
 #if  LINUX_VERSION_IS_LESS(3,4,0)
 #define poll_does_not_wait LINUX_BACKPORT(poll_does_not_wait)

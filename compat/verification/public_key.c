@@ -18,7 +18,7 @@
 #include <linux/scatterlist.h>
 #include <linux/asn1_decoder.h>
 #include <crypto/public_key.h>
-#include "rsapubkey-asn1.h"
+#include "rsapubkey.asn1.h"
 #include "mbedtls/rsa.h"
 #include "mbedtls/md.h"
 

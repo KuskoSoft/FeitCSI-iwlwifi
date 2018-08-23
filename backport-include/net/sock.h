@@ -63,4 +63,16 @@ static inline void sk_clear_bit(int nr, struct sock *sk)
 }
 #endif /* < 4.5 */
 
+#if LINUX_VERSION_IS_LESS(4,16,0)
+#define sk_pacing_shift_update LINUX_BACKPORT(sk_pacing_shift_update)
+static inline void sk_pacing_shift_update(struct sock *sk, int val)
+{
+#if LINUX_VERSION_IS_GEQ(4,15,0)
+	if (!sk || !sk_fullsock(sk) || sk->sk_pacing_shift == val)
+		return;
+	sk->sk_pacing_shift = val;
+#endif /* >= 4.15 */
+}
+#endif /* < 4.16 */
+
 #endif /* __BACKPORT_NET_SOCK_H */

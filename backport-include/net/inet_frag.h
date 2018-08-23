@@ -29,7 +29,7 @@ void inet_frag_maybe_warn_overflow(struct inet_frag_queue *q,
 #endif /* LINUX_VERSION_IS_LESS(3,9,0) */
 
 /* the type of the paramater changed with kernel 4.3 */
-#if LINUX_VERSION_IS_LESS(3,9,0)
+#if LINUX_VERSION_IS_LESS(3,9,0) || LINUX_VERSION_IN_RANGE(3,16,51, 3,17,0)
 #define sub_frag_mem_limit LINUX_BACKPORT(sub_frag_mem_limit)
 static inline void sub_frag_mem_limit(struct netns_frags *nf, int i)
 {

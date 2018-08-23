@@ -4,7 +4,7 @@
  * ASN.1 parser for rsapubkey
  */
 #include <linux/asn1_ber_bytecode.h>
-#include "rsapubkey-asn1.h"
+#include "rsapubkey.asn1.h"
 
 enum rsapubkey_actions {
 	ACT_rsa_get_e = 0,

@@ -4,7 +4,7 @@
  * ASN.1 parser for pkcs7
  */
 #include <linux/asn1_ber_bytecode.h>
-#include "pkcs7-asn1.h"
+#include "pkcs7.asn1.h"
 
 enum pkcs7_actions {
 	ACT_pkcs7_check_content_type = 0,

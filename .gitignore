@@ -19,6 +19,7 @@ kconf/conf
 .tmp_versions
 Module.symvers
 *.mod.c
+.cache.mk
 *.pyc
 __pycache__
 # cscope files
