@@ -32,11 +32,4 @@ struct netlink_ext_ack {
 #define NETLINK_CB_PORTID(__skb) NETLINK_CB(__skb).portid
 #endif
 
-#ifndef NL_SET_BAD_ATTR
-#define NL_SET_BAD_ATTR(extack, attr) do {		\
-	if ((extack))					\
-		(extack)->bad_attr = (attr);		\
-} while (0)
-#endif
-
 #endif /* __BACKPORT_LINUX_NETLINK_H */
