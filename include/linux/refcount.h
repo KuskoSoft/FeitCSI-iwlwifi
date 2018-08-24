@@ -24,7 +24,5 @@
 #define refcount_dec_and_mutex_lock LINUX_BACKPORT(refcount_dec_and_mutex_lock)
 #undef refcount_dec_and_lock
 #define refcount_dec_and_lock LINUX_BACKPORT(refcount_dec_and_lock)
-#undef refcount_dec_and_lock_irqsave
-#define refcount_dec_and_lock_irqsave LINUX_BACKPORT(refcount_dec_and_lock_irqsave)
 #include <linux/backport-refcount.h>
 #endif /* CPTCFG_BPAUTO_REFCOUNT */

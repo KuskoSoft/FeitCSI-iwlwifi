@@ -592,11 +592,11 @@ minstrel_alloc_sta(void *priv, struct ieee80211_sta *sta, gfp_t gfp)
 			max_rates = sband->n_bitrates;
 	}
 
-	mi->r = kcalloc(max_rates, sizeof(struct minstrel_rate), gfp);
+	mi->r = kzalloc(sizeof(struct minstrel_rate) * max_rates, gfp);
 	if (!mi->r)
 		goto error;
 
-	mi->sample_table = kmalloc_array(max_rates, SAMPLE_COLUMNS, gfp);
+	mi->sample_table = kmalloc(SAMPLE_COLUMNS * max_rates, gfp);
 	if (!mi->sample_table)
 		goto error1;
 
@@ -690,7 +690,7 @@ minstrel_alloc(struct ieee80211_hw *hw, struct dentry *debugfsdir)
 #ifdef CPTCFG_MAC80211_DEBUGFS
 	mp->fixed_rate_idx = (u32) -1;
 	mp->dbg_fixed_rate = debugfs_create_u32("fixed_rate_idx",
-			0666, debugfsdir, &mp->fixed_rate_idx);
+			S_IRUGO | S_IWUGO, debugfsdir, &mp->fixed_rate_idx);
 #endif
 
 	minstrel_init_cck_rates(mp);
@@ -751,3 +751,4 @@ rc80211_minstrel_exit(void)
 {
 	ieee80211_rate_control_unregister(&mac80211_minstrel);
 }
+

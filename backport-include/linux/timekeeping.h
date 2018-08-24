@@ -33,29 +33,6 @@ static inline time64_t ktime_get_seconds(void)
 
 	return t.tv_sec;
 }
-
-static inline time64_t ktime_get_real_seconds(void)
-{
-	struct timeval tv;
-
-	do_gettimeofday(&tv);
-
-	return tv.tv_sec;
-}
-#endif
-
-#if LINUX_VERSION_IS_LESS(3,17,0)
-static inline void ktime_get_ts64(struct timespec64 *ts)
-{
-	ktime_get_ts(ts);
-}
-#endif
-
-#if LINUX_VERSION_IS_LESS(4,18,0)
-static inline time64_t ktime_get_boottime_seconds(void)
-{
-	return ktime_divns(ktime_get_boottime(), NSEC_PER_SEC);
-}
 #endif
 
 #endif /* __BACKPORT_TIMEKEEPING_H */

@@ -17,5 +17,3 @@ source "$BACKPORT_DIR/drivers/net/wireless/Kconfig"
 #source "$BACKPORT_DIR/drivers/media/Kconfig"
 
 #source "$BACKPORT_DIR/drivers/usb/class/Kconfig"
-
-#source "$BACKPORT_DIR/drivers/staging/Kconfig"

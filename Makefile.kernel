@@ -61,5 +61,3 @@ obj-$(CPTCFG_WLAN) += drivers/net/wireless/
 #
 #obj-$(CPTCFG_USB_WDM) += drivers/usb/class/
 #obj-$(CPTCFG_USB_USBNET) += drivers/net/usb/
-#
-#obj-$(CPTCFG_STAGING) += drivers/staging/

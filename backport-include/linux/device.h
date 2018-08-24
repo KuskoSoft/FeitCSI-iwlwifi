@@ -12,9 +12,6 @@
  */
 #include <linux/string.h>
 
-/* In 4.18 overflow.h was created and included in device.h */
-#include <linux/overflow.h>
-
 #if LINUX_VERSION_IS_LESS(3,9,0)
 /* backport
  * commit 9f3b795a626ee79574595e06d1437fe0c7d51d29

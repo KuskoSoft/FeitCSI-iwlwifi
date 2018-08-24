@@ -133,7 +133,6 @@ config BPAUTO_RHASHTABLE
 	# not very nice - but better than always having it
 	default y if BACKPORTED_MAC80211
 	#h-file linux/rhashtable.h
-	#h-file linux/rhashtable-types.h
 	#c-file lib/rhashtable.c
 
 config BPAUTO_BUCKET_LOCKS
