@@ -52,6 +52,10 @@ static inline void ktime_get_ts64(struct timespec64 *ts)
 #endif
 
 #if LINUX_VERSION_IS_LESS(4,18,0)
+#if LINUX_VERSION_IS_LESS(3,17,0)
+#include <linux/hrtimer.h>
+#endif
+
 static inline time64_t ktime_get_boottime_seconds(void)
 {
 	return ktime_divns(ktime_get_boottime(), NSEC_PER_SEC);

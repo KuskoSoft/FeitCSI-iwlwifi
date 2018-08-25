@@ -8,7 +8,6 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/leds.h>
 #include <linux/device.h>
 #include <linux/export.h>
 #include <linux/errno.h>
