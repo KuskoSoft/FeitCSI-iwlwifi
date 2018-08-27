@@ -263,6 +263,16 @@ netdev_features_t passthru_features_check(struct sk_buff *skb,
 					  netdev_features_t features);
 #endif /* LINUX_VERSION_IS_LESS(4,1,0) */
 
+#if LINUX_VERSION_IS_LESS(4,2,0)
+#undef u64_stats_init
+static inline void u64_stats_init(struct u64_stats_sync *syncp)
+{
+#if BITS_PER_LONG == 32 && defined(CONFIG_SMP)
+	seqcount_init(&syncp->seq);
+#endif
+}
+#endif /* LINUX_VERSION_IS_LESS(4,2,0) */
+
 #ifndef netdev_alloc_pcpu_stats
 #define netdev_alloc_pcpu_stats(type)				\
 ({								\
