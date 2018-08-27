@@ -56,6 +56,7 @@ config IWLWIFI_LEDS
 config IWLMVM
 	tristate "Intel Wireless WiFi MVM Firmware support"
 	depends on m
+	depends on MAC80211
 	select BPAUTO_WANT_DEV_COREDUMP
 	help
 	  This is the driver that supports the MVM firmware. The list
