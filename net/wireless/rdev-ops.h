@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
-* Portions of this file
-* Copyright(c) 2016-2017 Intel Deutschland GmbH
-*/
+ * Portions of this file
+ * Copyright(c) 2016-2017 Intel Deutschland GmbH
+ * Copyright (C) 2018 Intel Corporation
+ */
 
 #ifndef __CFG80211_RDEV_OPS
 #define __CFG80211_RDEV_OPS
@@ -1250,6 +1251,31 @@ rdev_get_ftm_responder_stats(struct cfg80211_registered_device *rdev,
 							ftm_stats);
 	trace_rdev_return_int(&rdev->wiphy, ret);
 	return ret;
+}
+
+static inline int
+rdev_start_pmsr(struct cfg80211_registered_device *rdev,
+		struct wireless_dev *wdev,
+		struct cfg80211_pmsr_request *request)
+{
+	int ret = -EOPNOTSUPP;
+
+	trace_rdev_start_pmsr(&rdev->wiphy, wdev, request->cookie);
+	if (rdev->ops->start_pmsr)
+		ret = rdev->ops->start_pmsr(&rdev->wiphy, wdev, request);
+	trace_rdev_return_int(&rdev->wiphy, ret);
+	return ret;
+}
+
+static inline void
+rdev_abort_pmsr(struct cfg80211_registered_device *rdev,
+		struct wireless_dev *wdev,
+		struct cfg80211_pmsr_request *request)
+{
+	trace_rdev_abort_pmsr(&rdev->wiphy, wdev, request->cookie);
+	if (rdev->ops->abort_pmsr)
+		rdev->ops->abort_pmsr(&rdev->wiphy, wdev, request);
+	trace_rdev_return_void(&rdev->wiphy);
 }
 
 #endif /* __CFG80211_RDEV_OPS */

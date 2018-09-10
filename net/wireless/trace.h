@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
-* Portions of this file
-* Copyright(c) 2016-2017 Intel Deutschland GmbH
-*/
+ * Portions of this file
+ * Copyright(c) 2016-2017 Intel Deutschland GmbH
+ * Copyright (C) 2018 Intel Corporation
+ */
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM cfg80211
@@ -374,6 +375,24 @@ DECLARE_EVENT_CLASS(wiphy_wdev_evt,
 		WDEV_ASSIGN;
 	),
 	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT, WIPHY_PR_ARG, WDEV_PR_ARG)
+);
+
+DECLARE_EVENT_CLASS(wiphy_wdev_cookie_evt,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev, u64 cookie),
+	TP_ARGS(wiphy, wdev, cookie),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		WDEV_ENTRY
+		__field(u64, cookie)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		WDEV_ASSIGN;
+		__entry->cookie = cookie;
+	),
+	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", cookie: %lld",
+		  WIPHY_PR_ARG, WDEV_PR_ARG,
+		  (unsigned long long)__entry->cookie)
 );
 
 DEFINE_EVENT(wiphy_wdev_evt, rdev_return_wdev,
@@ -2521,6 +2540,16 @@ TRACE_EVENT(rdev_get_ftm_responder_stats,
 		__entry->out_of_window)
 );
 
+DEFINE_EVENT(wiphy_wdev_cookie_evt, rdev_start_pmsr,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev, u64 cookie),
+	TP_ARGS(wiphy, wdev, cookie)
+);
+
+DEFINE_EVENT(wiphy_wdev_cookie_evt, rdev_abort_pmsr,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev, u64 cookie),
+	TP_ARGS(wiphy, wdev, cookie)
+);
+
 /*************************************************************
  *	     cfg80211 exported functions traces		     *
  *************************************************************/
@@ -3312,6 +3341,46 @@ TRACE_EVENT(cfg80211_stop_iface,
 	),
 	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT,
 		  WIPHY_PR_ARG, WDEV_PR_ARG)
+);
+
+TRACE_EVENT(cfg80211_pmsr_report,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev,
+		 u64 cookie, const u8 *addr),
+	TP_ARGS(wiphy, wdev, cookie, addr),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		WDEV_ENTRY
+		__field(u64, cookie)
+		MAC_ENTRY(addr)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		WDEV_ASSIGN;
+		__entry->cookie = cookie;
+		MAC_ASSIGN(addr, addr);
+	),
+	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", cookie:%lld, " MAC_PR_FMT,
+		  WIPHY_PR_ARG, WDEV_PR_ARG,
+		  (unsigned long long)__entry->cookie,
+		  MAC_PR_ARG(addr))
+);
+
+TRACE_EVENT(cfg80211_pmsr_complete,
+	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev, u64 cookie),
+	TP_ARGS(wiphy, wdev, cookie),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		WDEV_ENTRY
+		__field(u64, cookie)
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		WDEV_ASSIGN;
+		__entry->cookie = cookie;
+	),
+	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", cookie:%lld",
+		  WIPHY_PR_ARG, WDEV_PR_ARG,
+		  (unsigned long long)__entry->cookie)
 );
 
 #endif /* !__RDEV_OPS_TRACE || TRACE_HEADER_MULTI_READ */
