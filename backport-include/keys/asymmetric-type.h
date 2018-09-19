@@ -2,6 +2,8 @@
 #define __BP_ASYMMETRIC_TYPE_H
 #ifdef CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION
 
+#include <linux/string.h>
+
 struct asymmetric_key_id {
 	unsigned short	len;
 	unsigned char	data[];

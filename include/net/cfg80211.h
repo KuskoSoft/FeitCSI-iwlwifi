@@ -149,7 +149,7 @@ enum ieee80211_channel_flags {
  */
 struct ieee80211_channel {
 	enum nl80211_band band;
-	u16 center_freq;
+	u32 center_freq;
 	u16 hw_value;
 	u32 flags;
 	int max_antenna_gain;
@@ -5168,6 +5168,17 @@ const u8 *cfg80211_find_vendor_ie(unsigned int oui, int oui_type,
 				  const u8 *ies, int len);
 
 /**
+ * cfg80211_send_layer2_update - send layer 2 update frame
+ *
+ * @dev: network device
+ * @addr: STA MAC address
+ *
+ * Wireless drivers can use this function to update forwarding tables in bridge
+ * devices upon STA association.
+ */
+void cfg80211_send_layer2_update(struct net_device *dev, const u8 *addr);
+
+/**
  * DOC: Regulatory enforcement infrastructure
  *
  * TODO
@@ -5300,8 +5311,8 @@ const char *reg_initiator_name(enum nl80211_reg_initiator initiator);
  *
  * Return: 0 on success. -ENODATA.
  */
-int reg_query_regdb_wmm(char *alpha2, int freq, u32 *ptr,
-			struct ieee80211_wmm_rule *rule);
+int reg_query_regdb_wmm(char *alpha2, int freq,
+			struct ieee80211_reg_rule *rule);
 
 /*
  * callbacks for asynchronous cfg80211 methods, notification
