@@ -3,7 +3,9 @@
 #include <linux/version.h>
 #include_next <crypto/algapi.h>
 
-#if LINUX_VERSION_IS_LESS(3,13,0)
+#if LINUX_VERSION_IS_LESS(3,13,0) && \
+    !LINUX_VERSION_IN_RANGE(3,12,59, 3,12,255) && \
+    !LINUX_VERSION_IN_RANGE(3,10,106, 3,10,255)
 #define __crypto_memneq LINUX_BACKPORT(__crypto_memneq)
 noinline unsigned long __crypto_memneq(const void *a, const void *b, size_t size);
 #define crypto_memneq LINUX_BACKPORT(crypto_memneq)

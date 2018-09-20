@@ -37,6 +37,6 @@ struct netlink_ext_ack {
 	if ((extack))					\
 		(extack)->bad_attr = (attr);		\
 } while (0)
-#endif
+#endif /* NL_SET_BAD_ATTR */
 
 #endif /* __BACKPORT_LINUX_NETLINK_H */
