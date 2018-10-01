@@ -152,7 +152,8 @@ static inline bool u64_stats_fetch_retry_irq(const struct u64_stats_sync *syncp,
 #endif /* LINUX_VERSION_IS_LESS(3,13,0) */
 
 #if LINUX_VERSION_IS_LESS(4,16,0) && \
-    !LINUX_VERSION_IN_RANGE(4,14,44, 4,15,0)
+    !LINUX_VERSION_IN_RANGE(4,14,44, 4,15,0) && \
+    !(LINUX_VERSION_IS_GEQ(4,15,18) && UTS_UBUNTU_RELEASE_ABI >= 33)
 static inline unsigned long
 u64_stats_update_begin_irqsave(struct u64_stats_sync *syncp)
 {
