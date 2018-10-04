@@ -72,8 +72,8 @@ config IWLWIFI_OPMODE_MODULAR
 	default y if IWLTEST=m
 	default y if IWLFMAC=m
 
-comment "WARNING: iwlwifi is useless without IWLDVM or IWLMVM"
-	depends on IWLDVM=n && IWLMVM=n
+comment "WARNING: iwlwifi is useless without IWLDVM, IWLMVM or IWLFMAC"
+	depends on IWLDVM=n && IWLMVM=n && IWLFMAC=n
 
 config IWLWIFI_BCAST_FILTERING
 	bool "Enable broadcast filtering"
