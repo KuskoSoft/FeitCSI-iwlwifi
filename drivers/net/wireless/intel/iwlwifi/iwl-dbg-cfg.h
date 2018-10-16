@@ -191,7 +191,6 @@ struct iwl_dbg_cfg {
 	IWL_MVM_MOD_PARAM(int, power_scheme)
 	IWL_MVM_MOD_PARAM(bool, init_dbg)
 	IWL_MVM_MOD_PARAM(bool, tfd_q_hang_detect)
-	IWL_MVM_MOD_PARAM(bool, ftm_resp_asap)
 #endif /* CPTCFG_IWLMVM */
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR_TEST
 	IWL_DBG_CFG_NODEF(u8, fm_debug_mode)

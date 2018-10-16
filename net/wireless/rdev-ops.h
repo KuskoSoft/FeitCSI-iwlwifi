@@ -1237,62 +1237,6 @@ rdev_external_auth(struct cfg80211_registered_device *rdev,
 	return ret;
 }
 
-static inline int rdev_perform_msrment(struct cfg80211_registered_device *rdev,
-				       struct wireless_dev *wdev,
-				       struct cfg80211_msrment_request *request,
-				       u64 *cookie)
-{
-	int ret = -ENOTSUPP;
-
-	trace_rdev_perform_msrment(&rdev->wiphy, wdev, request);
-	if (rdev->ops->perform_msrment)
-		ret = rdev->ops->perform_msrment(&rdev->wiphy, wdev,
-						 request, cookie);
-	trace_rdev_return_int_cookie(&rdev->wiphy, ret, *cookie);
-	return ret;
-}
-
-static inline int rdev_abort_msrment(struct cfg80211_registered_device *rdev,
-				     struct wireless_dev *wdev, u64 cookie)
-{
-	int ret = -ENOTSUPP;
-
-	trace_rdev_abort_msrment(&rdev->wiphy, wdev, cookie);
-	if (rdev->ops->abort_msrment)
-		ret = rdev->ops->abort_msrment(&rdev->wiphy, wdev, cookie);
-	trace_rdev_return_int(&rdev->wiphy, ret);
-	return ret;
-}
-
-static inline int
-rdev_start_ftm_responder(struct cfg80211_registered_device *rdev,
-			 struct net_device *dev,
-			 struct cfg80211_ftm_responder_params *params)
-{
-	int ret = -EOPNOTSUPP;
-
-	trace_rdev_start_ftm_responder(&rdev->wiphy, dev, params);
-	if (rdev->ops->start_ftm_responder)
-		ret = rdev->ops->start_ftm_responder(&rdev->wiphy, dev, params);
-	trace_rdev_return_int(&rdev->wiphy, ret);
-	return ret;
-}
-
-static inline int
-rdev_get_ftm_responder_stats(struct cfg80211_registered_device *rdev,
-			     struct net_device *dev,
-			     struct cfg80211_ftm_responder_stats *ftm_stats)
-{
-	int ret = -EOPNOTSUPP;
-
-	trace_rdev_get_ftm_responder_stats(&rdev->wiphy, dev, ftm_stats);
-	if (rdev->ops->get_ftm_responder_stats)
-		ret = rdev->ops->get_ftm_responder_stats(&rdev->wiphy, dev,
-							ftm_stats);
-	trace_rdev_return_int(&rdev->wiphy, ret);
-	return ret;
-}
-
 static inline int rdev_nan_ndp(struct cfg80211_registered_device *rdev,
 			       struct wireless_dev *wdev,
 			       struct cfg80211_nan_ndp_params *params)

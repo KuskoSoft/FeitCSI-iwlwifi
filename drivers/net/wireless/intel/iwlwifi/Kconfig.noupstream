@@ -109,15 +109,6 @@ config IWLMVM_TDLS_PEER_CACHE
 	  traffic to and from specific peers on the same BSS. These peers
 	  might be TDLS peers, or candidates to become such.
 
-config IWLMVM_TOF_TSF_WA
-	bool "maintain hashtable of TSF diff between GP2 and beacons/probes"
-	depends on IWLMVM
-	default y
-	help
-	  This option enables hashtable of differences between TSF values
-	  form beacon/probes and the corresponding GP2; it's a workaround
-	  until FW implements it.
-
 config IWLWIFI_DISALLOW_OLDER_FW
 	bool "disallow fallback to older firmware images"
 	depends on IWLWIFI

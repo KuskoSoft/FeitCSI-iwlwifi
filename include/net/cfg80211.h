@@ -2661,255 +2661,6 @@ struct cfg80211_qos_map {
 };
 
 /**
- * struct cfg80211_ftm_target - data for an FTM target (FTM responder)
- *
- * @cookie: Extra data for the use of the invoking component. This will be
- *	passed back to the caller in the response, along with the rest of the
- *	request.
- * @chan_def: target's channel info
- * @bssid: target's BSSID.
- * @one_sided: whether to perform a one-sided (flag set) or two-sided (flag
- *	clear) measurement.
- * @asap: Whether to perform the measurement in ASAP mode. Ignored if one-sided.
- * @lci: Whether to query for LCI in the request. Ignored if one-sided.
- * @civic: Whether to query for CIVIC in the request. Ignored if one-sided.
- * @num_of_bursts_exp: exponent of 2 of the number of measurement iterations.
- * @burst_period: Measurement periodicity in units of 100ms.
- *	Ignored if num_of_bursts_exp is 0.
- * @samples_per_burst: Number of measurement frames requested per burst.
- * @retries: Number of retries per sample.
- * @burst_duration: duration of an rtt burst. Valid values are 2-11 and 15
- * @ftm_preamble: Allowed preamble types to be used for FTM frames.
- *	Bitfield, as specified in @enum nl80211_ftm_preamble.
- * @ftm_bw: Allowed bandwidths to be used for FTM frames.
- *	Bitfield, as specified in @enum nl80211_ftm_bw.
- */
-struct cfg80211_ftm_target {
-	u64 cookie;
-	struct cfg80211_chan_def chan_def;
-	u8 bssid[ETH_ALEN];
-	bool one_sided;
-	bool asap;
-	bool lci;
-	bool civic;
-	u8 num_of_bursts_exp;
-	u16 burst_period;
-	u8 samples_per_burst;
-	u8 retries;
-	u8 burst_duration;
-	u8 ftm_preamble;
-	u8 ftm_bw;
-};
-
-/**
- * struct cfg80211_ftm_request - data for FTM requests
- *
- * @report_tsf: if true, report the TSF of the AP to which the vif is
- *	associated. Not relevant if the vif is not associated.
- * @timeout: Timespan within which measurement should complete. Given in units
- *	of 100ms.
- * @macaddr_template: Sets the fixed part of a randomized mac address.
- * @macaddr_mask: Bits set to 1 shall be copied from @macaddr_template. Bits set
- *	to 0 shall be randomized by the device.
- * @num_of_targets: Number of targets (with which to perform a measurement)
- *	contained in this request (see @targets). &num_of_target will not
- *	exceed the value reported for the device in
- *	%NL80211_ATTR_MAX_TOTAL_FTM_TARGETS.
- * @targets: List of targets with which to perform the measurement. This list is
- *	dynamically allocated when the request arrives, and should be released
- *	using kfree by the underlying driver when it is no longer required.
- *	Amongst these targets, the number of 2-sided requests will not exceed
- *	the value reported for the device in
- *	%NL80211_ATTR_MAX_TWO_SIDED_FTM_TARGETS.
- */
-struct cfg80211_ftm_request {
-	bool report_tsf;
-	u8 timeout;
-	u8 macaddr_template[ETH_ALEN];
-	u8 macaddr_mask[ETH_ALEN];
-	u8 num_of_targets;
-	struct cfg80211_ftm_target *targets;
-};
-
-/**
- * struct cfg80211_msrment_request - measurement request data
- *
- * @type: Type of measurement. Determines the actual type of the union field
- *	below.
- * @nl_portid: the netlink port used for this request
- * @u: Data for the specific required measurement type.
- */
-struct cfg80211_msrment_request {
-	enum nl80211_msrment_type type;
-	u32 nl_portid;
-	union {
-		struct cfg80211_ftm_request ftm;
-	} u;
-};
-
-/**
- * struct cfg80211_ftm_result - data for an FTM result of a single target
- *
- * @filled: bitmap using the bits of &enum nl80211_ftm_response_entry to
- *	indicate which field is relevant in this struct.
- * @status: Status of measurement
- * @complete: Whether this measurement is the last one expected for this target.
- *	This implies that resources associated with this target may be released.
- * @target: Pointer to the corresponding FTM target given in the request.
- * @host_time: Time in which:
- *	- in case of error - error was detected
- *	- in case of success - successful measurement started
- *	Given value is in nanoseconds elapsed since host boot time
- *	(referring to CLOCK_BOOTTIME).
- *	Note that this reported value is an estimation of the actual event time,
- *	with expected error of up to 20ms off the actual mark. Underlying
- *	devices must make sure they comply with this limited tolerance.
- * @tsf: Same as %host_time, but in the expressed as the TSF of the AP the vif
- *	is associated to. This value is not an estimation. If field
- *	&report_tsf in the request is not set, this field is ignored.
- * @burst_index: Ordinal number of currently reported measurement iteration.
- * @measurement_num: Total FTM measurement frames attempted
- * @success_num: Total successful FTM measurement frames
- * @num_per_burst: Maximum number of FTM frames per burst supported by the
- *	responder. Applies to 2-sided FTM only.
- * @retry_after_duration: When status == NL80211_FTM_RESP_TARGET_BUSY, the
- *	initiator may retry after this given time. In sec
- * @burst_duration: Actual time taken by the FW to finish one burst. In usec.
- * @negotiated_burst_num: Number of bursts allowed by the responder. Applies
- *	to 2-sided FTM only
- * @rssi: Measured RSSI, given in dBm. Valid values range: -128-0.
- * @rssi_spread: The difference between max and min measured RSSI values
- * @tx_rate_info: Used tx rate-related data.
- * @rx_rate_info: Used rx rate-related data.
- * @rtt: The Round Trip Time that took for the last measurement for current
- *	target, in psec. Since a measurement can have an error tolerance, this
- *	value can be negative.
- * @rtt_variance: The variance of the RTT values measured for current target, in
- *	psec^2.
- * @rtt_spread: The difference between max and min RTT values measured for
- *	the current target in the current session, in psec.
- * @distance: distance from target, in cm.  Since a measurement can have an
- *	error tolerance, this value can be negative.
- * @distance_variance: variance of the distance, in cm^2.
- * @distance_spread: The difference between max and min distance values measured
- *	for the current target in the current session, in cm.
- * @lci_len: length of the LCI buffer.
- * @lci: the LCI info buffer.
- * @civic_len: length of the CIVIC buffer.
- * @civic: the CIVIC info buffer.
- */
-struct cfg80211_ftm_result {
-	u32 filled;
-	enum nl80211_ftm_response_status status;
-	bool complete;
-	struct cfg80211_ftm_target *target;
-	u64 host_time;
-	u64 tsf;
-	u8 burst_index;
-	u32 measurement_num;
-	u32 success_num;
-	u8 num_per_burst;
-	u8 retry_after_duration;
-	u32 burst_duration;
-	u32 negotiated_burst_num;
-	s8 rssi;
-	u8 rssi_spread;
-	struct rate_info tx_rate_info;
-	struct rate_info rx_rate_info;
-	s64 rtt;
-	u64 rtt_variance;
-	u64 rtt_spread;
-	s64 distance;
-	u64 distance_variance;
-	u64 distance_spread;
-	u32 lci_len;
-	const u8 *lci;
-	u32 civic_len;
-	const u8 *civic;
-};
-
-/**
- * struct cfg80211_ftm_results - data for FTM results of all targets
- *
- * @num_of_entries: num of entries in the results array
- * @entries: an array of FTM results. this array is both allocated and
- *	released in the driver.
- */
-struct cfg80211_ftm_results {
-	u8 num_of_entries;
-	struct cfg80211_ftm_result *entries;
-};
-
-/**
- * struct cfg80211_msrment_response - measurement response data
- * @cookie: Identifier of current measurement response, matching the one given
- *	in the request.
- * @type: Type of measurement. Determines the actual type of the union field
- *	below.
- * @status: Status of current measurement response.
- * @nl_portid: netlink port this response should be sent to
- * @u: Data for the specific reported measurement type.
- */
-struct cfg80211_msrment_response {
-	u64 cookie;
-	enum nl80211_msrment_type type;
-	enum nl80211_msrment_status status;
-	u32 nl_portid;
-	union {
-		struct cfg80211_ftm_results ftm;
-	} u;
-};
-
-/**
- * cfg80211_ftm_responder_params - FTM responder parameters
- *
- * @lci: LCI subelemnt content
- * @civic: CIVIC subelemnt content
- * @lci_len: LCI data len
- * @civic_len: CIVIC data len
- */
-struct cfg80211_ftm_responder_params {
-	const u8 *lci;
-	const u8 *civic;
-	size_t lci_len;
-	size_t civic_len;
-};
-
-/**
- * cfg80211_ftm_responder_stats - FTM responder statistics
- *
- * @filled: bitflag of flags using the bits of &enum nl80211_ftm_stats to
- *	indicate the relevant values in this struct for them
- * @success_num: number of FTM sessions in which all frames were successfully
- *	answered
- * @partial_num: number of FTM sessions in which part of frames were
- *	successfully answered
- * @failed_num: number of failed FTM sessions
- * @asap_num: number of ASAP FTM sessions
- * @non_asap_num: number of  non-ASAP FTM sessions
- * @total_duration_ms: total sessions durations - gives an indication
- *	of how much time the responder was busy
- * @unknown_triggers_num: number of unknown FTM triggers - triggers from
- *	initiators that didn't finish successfully the negotiation phase with
- *	the responder
- * @reschedule_requests_num: number of FTM reschedule requests - initiator asks
- *	for a new scheduling although it already has scheduled FTM slot
- * @out_of_window_triggers_num: total FTM triggers out of scheduled window
- */
-struct cfg80211_ftm_responder_stats {
-	u32 filled;
-	u32 success_num;
-	u32 partial_num;
-	u32 failed_num;
-	u32 asap_num;
-	u32 non_asap_num;
-	u64 total_duration_ms;
-	u32 unknown_triggers_num;
-	u32 reschedule_requests_num;
-	u32 out_of_window_triggers_num;
-};
-
-/**
  * struct cfg80211_nan_conf - NAN configuration
  *
  * This struct defines NAN configuration parameters
@@ -3468,14 +3219,6 @@ struct cfg80211_nan_ndp_params {
  *	and returning to the base channel for communication with the AP.
  * @tdls_cancel_channel_switch: Stop channel-switching with a TDLS peer. Both
  *	peers must be on the base channel when the call completes.
- *
- * @perform_msrment: Perform a measurement according to the given request. Once
- *	this function returns, the given request pointer in no longer valid.
- *	The cookie must be filled to a unique value for this request, for later
- *	possible aborting.
- * @abort_msrment: Abort a previously requested measurement.
- *
- * @start_ftm_responder: Start and configure FTM responder.
  * @start_nan: Start the NAN interface.
  * @stop_nan: Stop the NAN interface.
  * @add_nan_func: Add a NAN function. Returns negative value on failure.
@@ -3786,18 +3529,6 @@ struct cfg80211_ops {
 	void	(*tdls_cancel_channel_switch)(struct wiphy *wiphy,
 					      struct net_device *dev,
 					      const u8 *addr);
-	int	(*perform_msrment)(struct wiphy *wiphy,
-				   struct wireless_dev *wdev,
-				   struct cfg80211_msrment_request *request,
-				   u64 *cookie);
-	int	(*abort_msrment)(struct wiphy *wiphy, struct wireless_dev *wdev,
-				 u64 cookie);
-	int	(*start_ftm_responder)(struct wiphy *wiphy,
-				       struct net_device *dev,
-				struct cfg80211_ftm_responder_params *params);
-	int	(*get_ftm_responder_stats)(struct wiphy *wiphy,
-					   struct net_device *dev,
-				struct cfg80211_ftm_responder_stats *ftm_stats);
 	int	(*start_nan)(struct wiphy *wiphy, struct wireless_dev *wdev,
 			     struct cfg80211_nan_conf *conf);
 	void	(*stop_nan)(struct wiphy *wiphy, struct wireless_dev *wdev);
@@ -3881,7 +3612,6 @@ struct cfg80211_ops {
  *	beaconing mode (AP, IBSS, Mesh, ...).
  * @WIPHY_FLAG_HAS_STATIC_WEP: The device supports static WEP key installation
  *	before connection.
- * @WIPHY_FLAG_HAS_FTM_RESPONDER: Device supports FTM responder
  */
 enum wiphy_flags {
 	/* use hole at 0 */
@@ -3908,7 +3638,6 @@ enum wiphy_flags {
 	WIPHY_FLAG_SUPPORTS_5_10_MHZ		= BIT(22),
 	WIPHY_FLAG_HAS_CHANNEL_SWITCH		= BIT(23),
 	WIPHY_FLAG_HAS_STATIC_WEP		= BIT(24),
-	WIPHY_FLAG_HAS_FTM_RESPONDER		= BIT(25),
 };
 
 /**
@@ -4190,36 +3919,6 @@ struct wiphy_vendor_command {
 };
 
 /**
- * struct wiphy_ftm_initiator_capa - wiphy FTM initiator capabilities
- *
- * @max_two_sided_ftm_targets: Max number of 2-sided targets allowed by the
- *	device in an FTM request.
- * @max_total_ftm_targets: Max number of targets (both 1-sided and 2-sided)
- *	allowed by the device in an FTM request.
- * @asap: true if ASAP is supported.
- * @non_asap: true if non-ASAP is supported.
- * @req_tsf: true if user can request to report the associated AP's TSF.
- *	see %NL80211_FTM_REQ_ATTR_REPORT_TSF.
- * @req_lci: true if reporting target's LCI is supported.
- * @req_civic: true if reporting target's CIVIC is supported.
- * @preamble: bitmap of supported preambles for FTM frames. Values are defined
- *	in &enum nl80211_ftm_preamble.
- * @bw: bitmap of supported bandwidths for FTM frames. Values are defined in
- *	&enum nl80211_ftm_bw.
- */
-struct wiphy_ftm_initiator_capa {
-	u32 max_two_sided_ftm_targets;
-	u32 max_total_ftm_targets;
-	bool asap;
-	bool non_asap;
-	bool req_tsf;
-	bool req_lci;
-	bool req_civic;
-	u32 preamble;
-	u32 bw;
-};
-
-/**
  * struct wiphy_iftype_ext_capab - extended capabilities per interface type
  * @iftype: interface type
  * @extended_capabilities: extended capabilities supported by the driver,
@@ -4388,8 +4087,6 @@ struct wiphy_iftype_ext_capab {
  *	attribute indices defined in &enum nl80211_bss_select_attr.
  *
  * @cookie_counter: unique generic cookie counter, used to identify objects.
- * @ftm_initiator_capa: FTM initiator capabilities. If NULL, ftm initiator is
- *	not supported.
  * @nan_supported_bands: bands supported by the device in NAN mode, a
  *	bitmap of &enum nl80211_band values.  For instance, for
  *	NL80211_BAND_2GHZ, bit 0 would be set
@@ -4531,8 +4228,6 @@ struct wiphy {
 	u32 bss_select_support;
 
 	u64 cookie_counter;
-
-	const struct wiphy_ftm_initiator_capa *ftm_initiator_capa;
 
 	u8 nan_supported_bands;
 
@@ -6836,17 +6531,6 @@ void cfg80211_crit_proto_stopped(struct wireless_dev *wdev, gfp_t gfp);
  * Return: the number of channels supported by the device.
  */
 unsigned int ieee80211_get_num_supported_channels(struct wiphy *wiphy);
-
-/**
- * cfg80211_measurement_response - notify regarding a measurement response
- *
- * @wiphy: the wiphy
- * @response: a response for which to notify
- * @gfp: allocation flags
- */
-void cfg80211_measurement_response(struct wiphy *wiphy,
-				   struct cfg80211_msrment_response *response,
-				   gfp_t gfp);
 
 /**
  * cfg80211_check_combinations - check interface combinations

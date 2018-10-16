@@ -378,33 +378,6 @@ static void cfg80211_propagate_cac_done_wk(struct work_struct *work)
 	rtnl_unlock();
 }
 
-static void cfg80211_abort_msrment_wk(struct work_struct *work)
-{
-	struct cfg80211_registered_device *rdev;
-	struct cfg80211_active_msrment *msrment, *tmp;
-	LIST_HEAD(msrments_list);
-
-	rdev = container_of(work, struct cfg80211_registered_device,
-			    msrment_abort_wk);
-
-	spin_lock_bh(&rdev->msrments_lock);
-	list_for_each_entry_safe(msrment, tmp, &rdev->msrments_list, list) {
-		if (msrment->nl_portid != 0)
-			continue;
-		list_del(&msrment->list);
-		list_add(&msrment->list, &msrments_list);
-	}
-	spin_unlock_bh(&rdev->msrments_lock);
-
-	rtnl_lock();
-	list_for_each_entry_safe(msrment, tmp, &msrments_list, list) {
-		rdev_abort_msrment(rdev, msrment->wdev, msrment->cookie);
-		list_del(&msrment->list);
-		kfree(msrment);
-	}
-	rtnl_unlock();
-}
-
 /* exported functions */
 
 struct wiphy *wiphy_new_nm(const struct cfg80211_ops *ops, int sizeof_priv,
@@ -502,9 +475,6 @@ use_default_name:
 	spin_lock_init(&rdev->bss_lock);
 	INIT_LIST_HEAD(&rdev->bss_list);
 	INIT_LIST_HEAD(&rdev->sched_scan_req_list);
-	spin_lock_init(&rdev->msrments_lock);
-	INIT_LIST_HEAD(&rdev->msrments_list);
-	INIT_WORK(&rdev->msrment_abort_wk, cfg80211_abort_msrment_wk);
 	INIT_WORK(&rdev->scan_done_wk, __cfg80211_scan_done);
 	INIT_LIST_HEAD(&rdev->mlme_unreg);
 	spin_lock_init(&rdev->mlme_unreg_lock);
@@ -750,10 +720,6 @@ int wiphy_register(struct wiphy *wiphy)
 		     !rdev->ops->set_mac_acl)))
 		return -EINVAL;
 
-	if (WARN_ON((wiphy->ftm_initiator_capa) &&
-		    (!rdev->ops->perform_msrment || !rdev->ops->abort_msrment)))
-		return -EINVAL;
-
 	/* assure only valid behaviours are flagged by driver
 	 * hence subtract 2 as bit 0 is invalid.
 	 */
@@ -982,9 +948,6 @@ void wiphy_unregister(struct wiphy *wiphy)
 		rfkill_unregister(rdev->rfkill);
 
 	rtnl_lock();
-	/* since we no longer have any wdevs, the list should be empty */
-	WARN_ON(!list_empty(&rdev->msrments_list));
-
 	nl80211_notify_wiphy(rdev, NL80211_CMD_DEL_WIPHY);
 	rdev->wiphy.registered = false;
 
@@ -1018,7 +981,6 @@ void wiphy_unregister(struct wiphy *wiphy)
 	flush_work(&rdev->mlme_unreg_wk);
 	flush_work(&rdev->propagate_radar_detect_wk);
 	flush_work(&rdev->propagate_cac_done_wk);
-	flush_work(&rdev->msrment_abort_wk);
 
 #ifdef CONFIG_PM
 	if (rdev->wiphy.wowlan_config && rdev->ops->set_wakeup)
@@ -1110,28 +1072,6 @@ void cfg80211_update_iface_num(struct cfg80211_registered_device *rdev,
 		rdev->num_running_monitor_ifaces += num;
 }
 
-static void cfg80211_abort_all_msrments(struct cfg80211_registered_device *rdev,
-					struct wireless_dev *wdev)
-{
-	struct cfg80211_active_msrment *msrment, *tmp;
-	LIST_HEAD(msrments_list);
-
-	spin_lock_bh(&rdev->msrments_lock);
-	list_for_each_entry_safe(msrment, tmp, &rdev->msrments_list, list) {
-		if (msrment->wdev != wdev)
-			continue;
-		list_del(&msrment->list);
-		list_add(&msrment->list, &msrments_list);
-	}
-	spin_unlock_bh(&rdev->msrments_lock);
-
-	list_for_each_entry_safe(msrment, tmp, &msrments_list, list) {
-		rdev_abort_msrment(rdev, wdev, msrment->cookie);
-		list_del(&msrment->list);
-		kfree(msrment);
-	}
-}
-
 void __cfg80211_leave(struct cfg80211_registered_device *rdev,
 		      struct wireless_dev *wdev)
 {
@@ -1140,8 +1080,6 @@ void __cfg80211_leave(struct cfg80211_registered_device *rdev,
 
 	ASSERT_RTNL();
 	ASSERT_WDEV_LOCK(wdev);
-
-	cfg80211_abort_all_msrments(rdev, wdev);
 
 	switch (wdev->iftype) {
 	case NL80211_IFTYPE_ADHOC:

@@ -3611,80 +3611,6 @@ static int ieee80211_del_tx_ts(struct wiphy *wiphy, struct net_device *dev,
 	return -ENOENT;
 }
 
-static u64 ieee80211_msrment_cookie(struct ieee80211_local *local,
-				    enum nl80211_msrment_type type)
-{
-	ASSERT_RTNL();
-
-	local->msrment_cookie_counter++;
-	if (local->msrment_cookie_counter == (1ULL << 48))
-		local->msrment_cookie_counter = 1;
-
-	return ((u64)type << 48) | local->msrment_cookie_counter;
-}
-
-static int ieee80211_perform_msrment(struct wiphy *wiphy,
-				     struct wireless_dev *wdev,
-				     struct cfg80211_msrment_request *request,
-				     u64 *cookie)
-{
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
-
-	*cookie = ieee80211_msrment_cookie(local, request->type);
-
-	switch (request->type) {
-	case NL80211_MSRMENT_TYPE_FTM:
-		if (!local->ops->perform_ftm)
-			return -EOPNOTSUPP;
-		return local->ops->perform_ftm(&local->hw, *cookie, vif,
-					       &request->u.ftm);
-	default:
-		break;
-	}
-
-	return -EOPNOTSUPP;
-}
-
-static int ieee80211_abort_msrment(struct wiphy *wiphy,
-				   struct wireless_dev *wdev, u64 cookie)
-{
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-
-	enum nl80211_msrment_type type = cookie >> 48;
-
-	switch (type) {
-	case NL80211_MSRMENT_TYPE_FTM:
-		if (!local->ops->abort_ftm)
-			return -EOPNOTSUPP;
-		return local->ops->abort_ftm(&local->hw, cookie);
-	default:
-		break;
-	}
-
-	return -EOPNOTSUPP;
-}
-
-static int ieee80211_start_ftm_responder(struct wiphy *wiphy,
-					 struct net_device *dev,
-			       struct cfg80211_ftm_responder_params *params)
-{
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
-
-	return drv_start_ftm_responder(local, sdata, params);
-}
-
-static int ieee80211_get_ftm_responder_stats(struct wiphy *wiphy,
-					    struct net_device *dev,
-			       struct cfg80211_ftm_responder_stats *ftm_stats)
-{
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
-
-	return drv_get_ftm_responder_stats(local, sdata, ftm_stats);
-}
-
 void ieee80211_nan_func_terminated(struct ieee80211_vif *vif,
 				   u8 inst_id,
 				   enum nl80211_nan_func_term_reason reason,
@@ -3872,10 +3798,6 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.get_station = ieee80211_get_station,
 	.dump_station = ieee80211_dump_station,
 	.dump_survey = ieee80211_dump_survey,
-	.perform_msrment = ieee80211_perform_msrment,
-	.abort_msrment = ieee80211_abort_msrment,
-	.start_ftm_responder = ieee80211_start_ftm_responder,
-	.get_ftm_responder_stats = ieee80211_get_ftm_responder_stats,
 #ifdef CPTCFG_MAC80211_MESH
 	.add_mpath = ieee80211_add_mpath,
 	.del_mpath = ieee80211_del_mpath,

@@ -2304,112 +2304,6 @@ TRACE_EVENT(rdev_tdls_cancel_channel_switch,
 		  WIPHY_PR_ARG, NETDEV_PR_ARG, MAC_PR_ARG(addr))
 );
 
-TRACE_EVENT(rdev_perform_msrment,
-	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev,
-		 struct cfg80211_msrment_request *request),
-	TP_ARGS(wiphy, wdev, request),
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		WDEV_ENTRY
-		__field(enum nl80211_msrment_type, type)
-	),
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		WDEV_ASSIGN;
-		__entry->type = request->type;
-	),
-	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", type %d",
-		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->type)
-);
-
-TRACE_EVENT(rdev_abort_msrment,
-	TP_PROTO(struct wiphy *wiphy, struct wireless_dev *wdev, u64 cookie),
-	TP_ARGS(wiphy, wdev, cookie),
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		WDEV_ENTRY
-		__field(u64, cookie)
-	),
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		WDEV_ASSIGN;
-		__entry->cookie = cookie;
-	),
-	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT ", cookie %llu",
-		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->cookie)
-);
-
-TRACE_EVENT(rdev_start_ftm_responder,
-	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
-		 struct cfg80211_ftm_responder_params *params),
-	TP_ARGS(wiphy, netdev, params),
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		NETDEV_ENTRY
-		CHAN_DEF_ENTRY
-		__dynamic_array(u8, lci, params->lci_len)
-		__dynamic_array(u8, civic, params->civic_len)
-	),
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		NETDEV_ASSIGN;
-		memcpy(__get_dynamic_array(lci), params->lci, params->lci_len);
-		memcpy(__get_dynamic_array(civic), params->civic,
-		       params->civic_len);
-	),
-	TP_printk(WIPHY_PR_FMT ", " NETDEV_PR_FMT
-		  "lci %s civic %s", WIPHY_PR_ARG,
-		  NETDEV_PR_ARG,
-		  __print_array(__get_dynamic_array(lci),
-				__get_dynamic_array_len(lci), 1),
-		  __print_array(__get_dynamic_array(civic),
-				__get_dynamic_array_len(civic), 1))
-);
-
-TRACE_EVENT(rdev_get_ftm_responder_stats,
-	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
-		 struct cfg80211_ftm_responder_stats *ftm_stats),
-
-	TP_ARGS(wiphy, netdev, ftm_stats),
-
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		NETDEV_ENTRY
-		__field(u64, timestamp)
-		__field(u32, success_num)
-		__field(u32, partial_num)
-		__field(u32, failed_num)
-		__field(u32, asap_num)
-		__field(u32, non_asap_num)
-		__field(u64, duration)
-		__field(u32, unknown_triggers)
-		__field(u32, reschedule)
-		__field(u32, out_of_window)
-	),
-
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		NETDEV_ASSIGN;
-		__entry->success_num = ftm_stats->success_num;
-		__entry->partial_num = ftm_stats->partial_num;
-		__entry->failed_num = ftm_stats->failed_num;
-		__entry->asap_num = ftm_stats->asap_num;
-		__entry->non_asap_num = ftm_stats->non_asap_num;
-		__entry->duration = ftm_stats->total_duration_ms;
-		__entry->unknown_triggers = ftm_stats->unknown_triggers_num;
-		__entry->reschedule = ftm_stats->reschedule_requests_num;
-		__entry->out_of_window = ftm_stats->out_of_window_triggers_num;
-	),
-
-	TP_printk(WIPHY_PR_FMT "Ftm responder stats: success %u, partial %u, "
-		"failed %u, asap %u, non asap %u, total duration %llu, unknown "
-		"triggers %u, rescheduled %u, out of window %u", WIPHY_PR_ARG,
-		__entry->success_num, __entry->partial_num, __entry->failed_num,
-		__entry->asap_num, __entry->non_asap_num, __entry->duration,
-		__entry->unknown_triggers, __entry->reschedule,
-		__entry->out_of_window)
-);
-
 TRACE_EVENT(rdev_set_pmk,
 	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
 		 struct cfg80211_pmk_conf *pmk_conf),
@@ -3383,26 +3277,6 @@ TRACE_EVENT(rdev_get_txq_stats,
 		WDEV_ASSIGN;
 	),
 	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT, WIPHY_PR_ARG, WDEV_PR_ARG)
-);
-
-TRACE_EVENT(cfg80211_measurement_response,
-	TP_PROTO(struct wiphy *wiphy,
-		 struct cfg80211_msrment_response *response),
-	TP_ARGS(wiphy, response),
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		__field(u64, cookie)
-		__field(enum nl80211_msrment_type, type)
-		__field(enum nl80211_msrment_status, status)
-	),
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		__entry->cookie = response->cookie;
-		__entry->type = response->type;
-		__entry->status = response->status;
-	),
-	TP_printk(WIPHY_PR_FMT ", cookie %llu, type %d, status %d",
-		  WIPHY_PR_ARG, __entry->cookie, __entry->type, __entry->status)
 );
 
 DECLARE_EVENT_CLASS(nan_ndp_handle,

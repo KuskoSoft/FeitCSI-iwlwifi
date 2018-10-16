@@ -64,10 +64,6 @@ struct cfg80211_registered_device {
 	spinlock_t mlme_unreg_lock;
 	struct work_struct mlme_unreg_wk;
 
-	spinlock_t msrments_lock;
-	struct list_head msrments_list;
-	struct work_struct msrment_abort_wk;
-
 	/* protected by RTNL only */
 	int num_running_ifaces;
 	int num_running_monitor_ifaces;
@@ -270,13 +266,6 @@ struct cfg80211_cqm_config {
 	s32 last_rssi_event_value;
 	int n_rssi_thresholds;
 	s32 rssi_thresholds[0];
-};
-
-struct cfg80211_active_msrment {
-	struct wireless_dev *wdev;
-	struct list_head list;
-	u64 cookie;
-	u32 nl_portid;
 };
 
 void cfg80211_destroy_ifaces(struct cfg80211_registered_device *rdev);
