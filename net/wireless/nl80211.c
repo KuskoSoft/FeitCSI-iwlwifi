@@ -14056,7 +14056,8 @@ call_rdev:
 	kfree(params.sec.ctx_ids);
 	kfree(params.serv_spec_info);
 
-	if (params.oper != NL80211_NAN_NDP_OPER_REQ)
+	/* return immediately if not sending a response message */
+	if (!msg)
 		return err;
 
 	if (err) {
