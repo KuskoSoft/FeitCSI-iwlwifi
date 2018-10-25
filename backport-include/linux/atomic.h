@@ -51,4 +51,13 @@
 
 #endif /* atomic_try_cmpxchg_acquire */
 
+#if LINUX_VERSION_IS_LESS(4,19,0)
+#ifndef atomic_fetch_add_unless
+static inline int atomic_fetch_add_unless(atomic_t *v, int a, int u)
+{
+	return __atomic_add_unless(v, a, u);
+}
+#endif
+#endif
+
 #endif /* __BP_ATOMIC_H */
