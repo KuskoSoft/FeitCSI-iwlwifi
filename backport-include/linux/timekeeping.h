@@ -55,9 +55,9 @@ static inline void ktime_get_ts64(struct timespec64 *ts)
 }
 #endif
 
-#if LINUX_VERSION_IS_LESS(3,19,0)
+#if LINUX_VERSION_IS_LESS(3,17,0)
 /* This was introduced in 4.15, but we only need it in the
- * ktime_get_raw_ts64 backport() for < 3.19.
+ * ktime_get_raw_ts64 backport() for < 3.17.
  */
 #if __BITS_PER_LONG == 64
 static inline struct timespec64 timespec_to_timespec64(const struct timespec ts)
@@ -75,7 +75,7 @@ static inline struct timespec64 timespec_to_timespec64(const struct timespec ts)
 	return ret;
 }
 #endif
-#endif /* < 3.19 */
+#endif /* < 3.17 */
 
 #if LINUX_VERSION_IS_LESS(4,18,0)
 #define ktime_get_raw_ts64 LINUX_BACKPORT(ktime_get_raw_ts64)

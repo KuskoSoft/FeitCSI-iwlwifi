@@ -11,76 +11,11 @@
  */
 #include <linux/version.h>
 #include <linux/kernel.h>
-#include <net/genetlink.h>
 #include <linux/delay.h>
 #include <linux/pci.h>
 #include <linux/device.h>
 #include <linux/hwmon.h>
-
-/************* generic netlink backport *****************/
-#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)
-
-#undef genl_register_family
-#undef genl_unregister_family
-
-int __backport_genl_register_family(struct genl_family *family)
-{
-	int i, ret;
-
-#define __copy(_field) family->family._field = family->_field
-	__copy(id);
-	__copy(hdrsize);
-	__copy(version);
-	__copy(maxattr);
-	strncpy(family->family.name, family->name, sizeof(family->family.name));
-	__copy(netnsok);
-	__copy(pre_doit);
-	__copy(post_doit);
-#if LINUX_VERSION_IS_GEQ(3,10,0)
-	__copy(parallel_ops);
-#endif
-#if LINUX_VERSION_IS_GEQ(3,11,0)
-	__copy(module);
-#endif
-#undef __copy
-
-	ret = genl_register_family(&family->family);
-	if (ret < 0)
-		return ret;
-
-	family->attrbuf = family->family.attrbuf;
-	family->id = family->family.id;
-
-	for (i = 0; i < family->n_ops; i++) {
-		ret = genl_register_ops(&family->family, &family->ops[i]);
-		if (ret < 0)
-			goto error;
-	}
-
-	for (i = 0; i < family->n_mcgrps; i++) {
-		ret = genl_register_mc_group(&family->family,
-					     &family->mcgrps[i]);
-		if (ret)
-			goto error;
-	}
-
-	return 0;
-
- error:
-	backport_genl_unregister_family(family);
-	return ret;
-}
-EXPORT_SYMBOL_GPL(__backport_genl_register_family);
-
-int backport_genl_unregister_family(struct genl_family *family)
-{
-	int err;
-	err = genl_unregister_family(&family->family);
-	return err;
-}
-EXPORT_SYMBOL_GPL(backport_genl_unregister_family);
-
-#endif /* RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0) */
+#include <linux/net.h>
 
 #ifdef __BACKPORT_NET_GET_RANDOM_ONCE
 struct __net_random_once_work {

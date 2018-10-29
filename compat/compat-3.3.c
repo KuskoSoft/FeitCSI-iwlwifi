@@ -224,16 +224,3 @@ void backport_destroy_workqueue(struct workqueue_struct *wq)
 	spin_unlock(&wq_name_lock);
 }
 EXPORT_SYMBOL_GPL(backport_destroy_workqueue);
-
-void genl_notify(struct sk_buff *skb, struct net *net, u32 pid, u32 group,
-		 struct nlmsghdr *nlh, gfp_t flags)
-{
-	struct sock *sk = net->genl_sock;
-	int report = 0;
-
-	if (nlh)
-		report = nlmsg_report(nlh);
-
-	nlmsg_notify(sk, skb, pid, group, report, flags);
-}
-EXPORT_SYMBOL_GPL(genl_notify);

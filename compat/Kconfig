@@ -110,7 +110,6 @@ config BPAUTO_CRYPTO_SKCIPHER
 	depends on KERNEL_4_3
 	default y if BACKPORTED_LIB80211_CRYPT_WEP
 	default y if BACKPORTED_LIB80211_CRYPT_TKIP
-	default y if BACKPORTED_BT
 	#c-file crypto/skcipher.c
 	#module-name skcipher
 

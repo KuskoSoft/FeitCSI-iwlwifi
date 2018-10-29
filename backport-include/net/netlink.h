@@ -4,73 +4,264 @@
 #include <linux/version.h>
 #include <linux/in6.h>
 
+#if LINUX_VERSION_IS_LESS(4,20,0)
+/* can't backport using the enum - need to override */
+#define NLA_UNSPEC		0
+#define NLA_U8			1
+#define NLA_U16			2
+#define NLA_U32			3
+#define NLA_U64			4
+#define NLA_STRING		5
+#define NLA_FLAG		6
+#define NLA_MSECS		7
+#define NLA_NESTED		8
+#define NLA_NESTED_ARRAY	9
+#define NLA_NUL_STRING		10
+#define NLA_BINARY		11
+#define NLA_S8			12
+#define NLA_S16			13
+#define NLA_S32			14
+#define NLA_S64			15
+#define NLA_BITFIELD32		16
+#define NLA_REJECT		17
+#define NLA_EXACT_LEN		18
+#define NLA_EXACT_LEN_WARN	19
+#define __NLA_TYPE_MAX		20
+#define NLA_TYPE_MAX		(__NLA_TYPE_MAX - 1)
+
+enum nla_policy_validation {
+	NLA_VALIDATE_NONE,
+	NLA_VALIDATE_RANGE,
+	NLA_VALIDATE_MIN,
+	NLA_VALIDATE_MAX,
+	NLA_VALIDATE_FUNCTION,
+};
+
+struct backport_nla_policy {
+	u8		type;
+	u8		validation_type;
+	u16		len;
+	union {
+		const void *validation_data;
+		struct {
+			s16 min, max;
+		};
+		int (*validate)(const struct nlattr *attr,
+				struct netlink_ext_ack *extack);
+	};
+};
+#define nla_policy backport_nla_policy
+
+#define NLA_POLICY_EXACT_LEN(_len)	{ .type = NLA_EXACT_LEN, .len = _len }
+#define NLA_POLICY_EXACT_LEN_WARN(_len)	{ .type = NLA_EXACT_LEN_WARN, \
+					  .len = _len }
+
+#define NLA_POLICY_ETH_ADDR		NLA_POLICY_EXACT_LEN(ETH_ALEN)
+#define NLA_POLICY_ETH_ADDR_COMPAT	NLA_POLICY_EXACT_LEN_WARN(ETH_ALEN)
+
+#define NLA_POLICY_NESTED(maxattr, policy) \
+	{ .type = NLA_NESTED, .validation_data = policy, .len = maxattr }
+#define NLA_POLICY_NESTED_ARRAY(maxattr, policy) \
+	{ .type = NLA_NESTED_ARRAY, .validation_data = policy, .len = maxattr }
+
+#define __NLA_ENSURE(condition) (sizeof(char[1 - 2*!(condition)]) - 1)
+#define NLA_ENSURE_INT_TYPE(tp)				\
+	(__NLA_ENSURE(tp == NLA_S8 || tp == NLA_U8 ||	\
+		      tp == NLA_S16 || tp == NLA_U16 ||	\
+		      tp == NLA_S32 || tp == NLA_U32 ||	\
+		      tp == NLA_S64 || tp == NLA_U64) + tp)
+#define NLA_ENSURE_NO_VALIDATION_PTR(tp)		\
+	(__NLA_ENSURE(tp != NLA_BITFIELD32 &&		\
+		      tp != NLA_REJECT &&		\
+		      tp != NLA_NESTED &&		\
+		      tp != NLA_NESTED_ARRAY) + tp)
+
+#define NLA_POLICY_RANGE(tp, _min, _max) {		\
+	.type = NLA_ENSURE_INT_TYPE(tp),		\
+	.validation_type = NLA_VALIDATE_RANGE,		\
+	.min = _min,					\
+	.max = _max					\
+}
+
+#define NLA_POLICY_MIN(tp, _min) {			\
+	.type = NLA_ENSURE_INT_TYPE(tp),		\
+	.validation_type = NLA_VALIDATE_MIN,		\
+	.min = _min,					\
+}
+
+#define NLA_POLICY_MAX(tp, _max) {			\
+	.type = NLA_ENSURE_INT_TYPE(tp),		\
+	.validation_type = NLA_VALIDATE_MAX,		\
+	.max = _max,					\
+}
+
+#define NLA_POLICY_VALIDATE_FN(tp, fn, ...) {		\
+	.type = NLA_ENSURE_NO_VALIDATION_PTR(tp),	\
+	.validation_type = NLA_VALIDATE_FUNCTION,	\
+	.validate = fn,					\
+	.len = __VA_ARGS__ + 0,				\
+}
+
+#define nla_validate LINUX_BACKPORT(nla_validate)
+int nla_validate(const struct nlattr *head, int len, int maxtype,
+		 const struct nla_policy *policy,
+		 struct netlink_ext_ack *extack);
+#define nla_parse LINUX_BACKPORT(nla_parse)
+int nla_parse(struct nlattr **tb, int maxtype, const struct nlattr *head,
+	      int len, const struct nla_policy *policy,
+	      struct netlink_ext_ack *extack);
+#define nla_policy_len LINUX_BACKPORT(nla_policy_len)
+int nla_policy_len(const struct nla_policy *, int);
+
+#define nlmsg_parse LINUX_BACKPORT(nlmsg_parse)
+static inline int nlmsg_parse(const struct nlmsghdr *nlh, int hdrlen,
+			      struct nlattr *tb[], int maxtype,
+			      const struct nla_policy *policy,
+			      struct netlink_ext_ack *extack)
+{
+	if (nlh->nlmsg_len < nlmsg_msg_size(hdrlen))
+		return -EINVAL;
+
+	return nla_parse(tb, maxtype, nlmsg_attrdata(nlh, hdrlen),
+			 nlmsg_attrlen(nlh, hdrlen), policy, extack);
+}
+
+#define nlmsg_validate LINUX_BACKPORT(nlmsg_validate)
+static inline int nlmsg_validate(const struct nlmsghdr *nlh,
+				 int hdrlen, int maxtype,
+				 const struct nla_policy *policy,
+				 struct netlink_ext_ack *extack)
+{
+	if (nlh->nlmsg_len < nlmsg_msg_size(hdrlen))
+		return -EINVAL;
+
+	return nla_validate(nlmsg_attrdata(nlh, hdrlen),
+			    nlmsg_attrlen(nlh, hdrlen), maxtype, policy,
+			    extack);
+}
+
+#define nla_parse_nested LINUX_BACKPORT(nla_parse_nested)
+static inline int nla_parse_nested(struct nlattr *tb[], int maxtype,
+				   const struct nlattr *nla,
+				   const struct nla_policy *policy,
+				   struct netlink_ext_ack *extack)
+{
+	return nla_parse(tb, maxtype, nla_data(nla), nla_len(nla), policy,
+			 extack);
+}
+
+#define nla_validate_nested LINUX_BACKPORT(nla_validate_nested)
+static inline int nla_validate_nested(const struct nlattr *start, int maxtype,
+				      const struct nla_policy *policy,
+				      struct netlink_ext_ack *extack)
+{
+	return nla_validate(nla_data(start), nla_len(start), maxtype, policy,
+			    extack);
+}
+#endif /* < 4.20 */
+
 #if LINUX_VERSION_IS_LESS(4,12,0)
 #include <backport/magic.h>
 
-static inline int nla_validate5(const struct nlattr *head,
-				int len, int maxtype,
-				const struct nla_policy *policy,
-				struct netlink_ext_ack *extack)
+static inline int _nla_validate5(const struct nlattr *head,
+				 int len, int maxtype,
+				 const struct nla_policy *policy,
+				 struct netlink_ext_ack *extack)
 {
-	return nla_validate(head, len, maxtype, policy);
+	return nla_validate(head, len, maxtype, policy, extack);
 }
-#define nla_validate4 nla_validate
+static inline int _nla_validate4(const struct nlattr *head,
+				 int len, int maxtype,
+				 const struct nla_policy *policy)
+{
+	return nla_validate(head, len, maxtype, policy, NULL);
+}
+#undef nla_validate
 #define nla_validate(...) \
-	macro_dispatcher(nla_validate, __VA_ARGS__)(__VA_ARGS__)
+	macro_dispatcher(_nla_validate, __VA_ARGS__)(__VA_ARGS__)
 
-static inline int nla_parse6(struct nlattr **tb, int maxtype,
-			     const struct nlattr *head,
-			     int len, const struct nla_policy *policy,
-			     struct netlink_ext_ack *extack)
+static inline int _nla_parse6(struct nlattr **tb, int maxtype,
+			      const struct nlattr *head,
+			      int len, const struct nla_policy *policy,
+			      struct netlink_ext_ack *extack)
 {
-	return nla_parse(tb, maxtype, head, len, policy);
+	return nla_parse(tb, maxtype, head, len, policy, extack);
 }
-#define nla_parse5(...) nla_parse(__VA_ARGS__)
+static inline int _nla_parse5(struct nlattr **tb, int maxtype,
+			      const struct nlattr *head,
+			      int len, const struct nla_policy *policy)
+{
+	return nla_parse(tb, maxtype, head, len, policy, NULL);
+}
+#undef nla_parse
 #define nla_parse(...) \
-	macro_dispatcher(nla_parse, __VA_ARGS__)(__VA_ARGS__)
+	macro_dispatcher(_nla_parse, __VA_ARGS__)(__VA_ARGS__)
 
-static inline int nlmsg_parse6(const struct nlmsghdr *nlh, int hdrlen,
-			       struct nlattr *tb[], int maxtype,
-			       const struct nla_policy *policy,
-			       struct netlink_ext_ack *extack)
+static inline int _nlmsg_parse6(const struct nlmsghdr *nlh, int hdrlen,
+			        struct nlattr *tb[], int maxtype,
+			        const struct nla_policy *policy,
+			        struct netlink_ext_ack *extack)
 {
-	return nlmsg_parse(nlh, hdrlen, tb, maxtype, policy);
+	return nlmsg_parse(nlh, hdrlen, tb, maxtype, policy, extack);
 }
-#define nlmsg_parse5 nlmsg_parse
+static inline int _nlmsg_parse5(const struct nlmsghdr *nlh, int hdrlen,
+			        struct nlattr *tb[], int maxtype,
+			        const struct nla_policy *policy)
+{
+	return nlmsg_parse(nlh, hdrlen, tb, maxtype, policy, NULL);
+}
+#undef nlmsg_parse
 #define nlmsg_parse(...) \
-	macro_dispatcher(nlmsg_parse, __VA_ARGS__)(__VA_ARGS__)
+	macro_dispatcher(_nlmsg_parse, __VA_ARGS__)(__VA_ARGS__)
 
-static inline int nlmsg_validate5(const struct nlmsghdr *nlh,
-				  int hdrlen, int maxtype,
-				  const struct nla_policy *policy,
-				  struct netlink_ext_ack *extack)
+static inline int _nlmsg_validate5(const struct nlmsghdr *nlh,
+				   int hdrlen, int maxtype,
+				   const struct nla_policy *policy,
+				   struct netlink_ext_ack *extack)
 {
-	return nlmsg_validate(nlh, hdrlen, maxtype, policy);
+	return nlmsg_validate(nlh, hdrlen, maxtype, policy, extack);
 }
-#define nlmsg_validate4 nlmsg_validate
+static inline int _nlmsg_validate4(const struct nlmsghdr *nlh,
+				   int hdrlen, int maxtype,
+				   const struct nla_policy *policy)
+{
+	return nlmsg_validate(nlh, hdrlen, maxtype, policy, NULL);
+}
+#undef nlmsg_validate
 #define nlmsg_validate(...) \
-	macro_dispatcher(nlmsg_validate, __VA_ARGS__)(__VA_ARGS__)
+	macro_dispatcher(_nlmsg_validate, __VA_ARGS__)(__VA_ARGS__)
 
-static inline int nla_parse_nested5(struct nlattr *tb[], int maxtype,
-				    const struct nlattr *nla,
-				    const struct nla_policy *policy,
-				    struct netlink_ext_ack *extack)
+static inline int _nla_parse_nested5(struct nlattr *tb[], int maxtype,
+				     const struct nlattr *nla,
+				     const struct nla_policy *policy,
+				     struct netlink_ext_ack *extack)
 {
-	return nla_parse_nested(tb, maxtype, nla, policy);
+	return nla_parse_nested(tb, maxtype, nla, policy, extack);
 }
-#define nla_parse_nested4 nla_parse_nested
+static inline int _nla_parse_nested4(struct nlattr *tb[], int maxtype,
+				     const struct nlattr *nla,
+				     const struct nla_policy *policy)
+{
+	return nla_parse_nested(tb, maxtype, nla, policy, NULL);
+}
+#undef nla_parse_nested
 #define nla_parse_nested(...) \
-	macro_dispatcher(nla_parse_nested, __VA_ARGS__)(__VA_ARGS__)
+	macro_dispatcher(_nla_parse_nested, __VA_ARGS__)(__VA_ARGS__)
 
-static inline int nla_validate_nested4(const struct nlattr *start, int maxtype,
-				       const struct nla_policy *policy,
-				       struct netlink_ext_ack *extack)
+static inline int _nla_validate_nested4(const struct nlattr *start, int maxtype,
+					const struct nla_policy *policy,
+					struct netlink_ext_ack *extack)
 {
-	return nla_validate_nested(start, maxtype, policy);
+	return nla_validate_nested(start, maxtype, policy, extack);
 }
-#define nla_validate_nested3 nla_validate_nested
+static inline int _nla_validate_nested3(const struct nlattr *start, int maxtype,
+					const struct nla_policy *policy)
+{
+	return nla_validate_nested(start, maxtype, policy, NULL);
+}
+#undef nla_validate_nested
 #define nla_validate_nested(...) \
-	macro_dispatcher(nla_validate_nested, __VA_ARGS__)(__VA_ARGS__)
+	macro_dispatcher(_nla_validate_nested, __VA_ARGS__)(__VA_ARGS__)
 #endif /* LINUX_VERSION_IS_LESS(4,12,0) */
 
 #if LINUX_VERSION_IS_LESS(3,7,0)

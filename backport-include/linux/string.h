@@ -29,6 +29,10 @@ void memzero_explicit(void *s, size_t count);
 ssize_t strscpy(char *dest, const char *src, size_t count);
 #endif
 
+#if LINUX_VERSION_IS_LESS(4,2,0)
+char *strreplace(char *s, char old, char new);
+#endif
+
 #if LINUX_VERSION_IS_LESS(4,6,0)
 int match_string(const char * const *array, size_t n, const char *string);
 #endif /* LINUX_VERSION_IS_LESS(4,5,0) */

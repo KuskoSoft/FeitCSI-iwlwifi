@@ -10,8 +10,6 @@ source "$BACKPORT_DIR/drivers/net/wireless/Kconfig"
 #source "$BACKPORT_DIR/drivers/ssb/Kconfig"
 #source "$BACKPORT_DIR/drivers/bcma/Kconfig"
 
-#source "$BACKPORT_DIR/net/nfc/Kconfig"
-
 #source "$BACKPORT_DIR/drivers/usb/class/Kconfig"
 
 #source "$BACKPORT_DIR/drivers/staging/Kconfig"

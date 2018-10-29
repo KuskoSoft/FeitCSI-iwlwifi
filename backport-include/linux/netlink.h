@@ -3,6 +3,13 @@
 #include_next <linux/netlink.h>
 #include <linux/version.h>
 
+#if LINUX_VERSION_IS_LESS(4,14,0)
+struct nla_bitfield32 {
+	__u32 value;
+	__u32 selector;
+};
+#endif
+
 #if LINUX_VERSION_IS_LESS(4,12,0)
 #define NETLINK_MAX_COOKIE_LEN  20
 
@@ -13,13 +20,25 @@ struct netlink_ext_ack {
 	u8 cookie_len;
 
 	/* backport only field */
-	void *__bp_genl_real_ops;
+	void *__bp_doit;
 };
 
 #define NL_SET_ERR_MSG(extack, msg) do {	\
 	static const char _msg[] = (msg);	\
 						\
 	(extack)->_msg = _msg;			\
+} while (0)
+#endif
+
+#ifndef NL_SET_ERR_MSG_ATTR
+#define NL_SET_ERR_MSG_ATTR(extack, attr, msg) do {	\
+	static const char __msg[] = msg;		\
+	struct netlink_ext_ack *__extack = (extack);	\
+							\
+	if (__extack) {					\
+		__extack->_msg = __msg;			\
+		__extack->bad_attr = (attr);		\
+	}						\
 } while (0)
 #endif
 

@@ -382,4 +382,11 @@ static inline void skb_put_u8(struct sk_buff *skb, u8 val)
 }
 #endif
 
+#if LINUX_VERSION_IS_LESS(4,20,0)
+static inline struct sk_buff *__skb_peek(const struct sk_buff_head *list_)
+{
+	return list_->next;
+}
+#endif
+
 #endif /* __BACKPORT_SKBUFF_H */
