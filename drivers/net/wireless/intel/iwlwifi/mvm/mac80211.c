@@ -91,7 +91,6 @@
 #ifdef CPTCFG_NL80211_TESTMODE
 #include "fw/testmode.h"
 #endif
-#include "tof.h"
 #include "fw/api/nan.h"
 
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
