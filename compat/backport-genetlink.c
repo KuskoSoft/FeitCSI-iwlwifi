@@ -172,7 +172,7 @@ static int backport_pre_doit(__genl_const struct genl_ops *ops,
 
 	err = nlmsg_validate(info->nlhdr, GENL_HDRLEN + family->hdrsize,
 			     family->maxattr, ops->policy, extack);
-	if (!err)
+	if (!err && family->pre_doit)
 		err = family->pre_doit(ops, skb, info);
 
 #if LINUX_VERSION_IS_LESS(4,12,0)
@@ -206,7 +206,8 @@ static void backport_post_doit(__genl_const struct genl_ops *ops,
 #else
 	if (1)
 #endif
-		family->post_doit(ops, skb, info);
+		if (family->post_doit)
+			family->post_doit(ops, skb, info);
 
 #if LINUX_VERSION_IS_LESS(4,12,0)
 	kfree(__bp_genl_info_userhdr(info));
