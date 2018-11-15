@@ -1618,6 +1618,8 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 	if (ret)
 		goto out_unlock;
 
+	rcu_assign_pointer(mvm->vif_id_to_mac[mvmvif->id], vif);
+
 	/* Currently not much to do for NAN */
 	if (vif->type == NL80211_IFTYPE_NAN)
 		goto out_unlock;
@@ -1664,8 +1666,6 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 	ret = iwl_mvm_mac_ctxt_add(mvm, vif);
 	if (ret)
 		goto out_release;
-
-	rcu_assign_pointer(mvm->vif_id_to_mac[mvmvif->id], vif);
 
 	ret = iwl_mvm_power_update_mac(mvm);
 	if (ret)
