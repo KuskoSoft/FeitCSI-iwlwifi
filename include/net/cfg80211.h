@@ -2870,6 +2870,9 @@ struct cfg80211_pmk_conf {
  *	use %WLAN_STATUS_UNSPECIFIED_FAILURE if user space cannot give you
  *	the real status code for failures. Used only for the authentication
  *	response command interface (user space to driver).
+ * @pmk_len: Length of PMK if present.
+ * @pmk: Derived PMK
+ * @pmkid: PMKID of the derived PMK
  */
 struct cfg80211_external_auth_params {
 	enum nl80211_external_auth_action action;
@@ -2877,6 +2880,9 @@ struct cfg80211_external_auth_params {
 	struct cfg80211_ssid ssid;
 	unsigned int key_mgmt_suite;
 	u16 status;
+	int pmk_len;
+	const u8 *pmk;
+	const u8 *pmkid;
 };
 
 /**

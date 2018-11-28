@@ -1022,7 +1022,9 @@
  *	further with the association after getting successful authentication
  *	status. User space indicates the authentication status through
  *	%NL80211_ATTR_STATUS_CODE attribute in %NL80211_CMD_EXTERNAL_AUTH
- *	command interface.
+ *	command interface. In case of success, user space also includes the
+ *	derived PMK and PMKID through %NL80211_ATTR_PMK and
+ *	%NL80211_ATTR_PMKID.
  *
  *	Host driver reports this status on an authentication failure to the
  *	user space through the connect result as the user space would have
