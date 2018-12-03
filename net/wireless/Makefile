@@ -18,6 +18,7 @@ cfg80211-$(CPTCFG_CFG80211_DEBUGFS) += debugfs.o
 cfg80211-$(CPTCFG_CFG80211_WEXT) += wext-compat.o wext-sme.o
 
 CFLAGS_trace.o := -I$(src)
+subdir-ccflags-y += $(call cc-option,-Wimplicit-fallthrough)
 
 cfg80211-$(CPTCFG_CFG80211_USE_KERNEL_REGDB_KEYS) += shipped-certs.o
 ifneq ($(CPTCFG_CFG80211_EXTRA_REGDB_KEYDIR),)

@@ -52,6 +52,7 @@ mac80211-$(CPTCFG_MAC80211_MESH) += \
 mac80211-$(CONFIG_PM) += pm.o
 
 CFLAGS_trace.o := -I$(src)
+subdir-ccflags-y += $(call cc-option,-Wimplicit-fallthrough)
 
 rc80211_minstrel-y := \
 	rc80211_minstrel.o \
