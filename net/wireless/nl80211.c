@@ -12043,8 +12043,11 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 	if (tb[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL]) {
 		func->awake_dw_interval =
 			nla_get_u8(tb[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL]);
-		if (func->awake_dw_interval > NL80211_NAN_FUNC_MAX_DW_INTERVAL)
-			return -EINVAL;
+		if (func->awake_dw_interval >
+				NL80211_NAN_FUNC_MAX_DW_INTERVAL) {
+			err = -EINVAL;
+			goto out;
+		}
 	}
 
 	switch (func->type) {
@@ -12073,8 +12076,10 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 			func->fsd_required = 1;
 			func->fsd_method =
 				nla_get_u32(tb[NL80211_NAN_FUNC_FSD]);
-			if (func->fsd_method > NL80211_NAN_FSD_GAS)
-				return -EINVAL;
+			if (func->fsd_method > NL80211_NAN_FSD_GAS) {
+				err = -EINVAL;
+				goto out;
+			}
 		}
 
 		if (tb[NL80211_NAN_FUNC_NDP_TYPE]) {
@@ -12082,8 +12087,10 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 			func->ndp_type =
 				nla_get_u32(tb[NL80211_NAN_FUNC_NDP_TYPE]);
 			if (func->ndp_type >
-			    NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY)
-				return -EINVAL;
+			    NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY) {
+				err = -EINVAL;
+				goto out;
+			}
 		}
 
 		if (tb[NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS])
