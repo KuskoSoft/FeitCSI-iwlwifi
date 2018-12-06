@@ -158,12 +158,10 @@ static int backport_pre_doit(__genl_const struct genl_ops *ops,
 #if LINUX_VERSION_IS_LESS(4,12,0)
 	struct netlink_ext_ack *extack = kzalloc(sizeof(*extack), GFP_KERNEL);
 
-	__bp_genl_info_userhdr_set(info, extack);
+	if (!extack)
+		return -ENOMEM;
 
-	if (!extack) {
-		err = -ENOMEM;
-		goto err;
-	}
+	__bp_genl_info_userhdr_set(info, extack);
 
 	extack->__bp_doit = ops->doit;
 #else
@@ -176,7 +174,6 @@ static int backport_pre_doit(__genl_const struct genl_ops *ops,
 		err = family->pre_doit(ops, skb, info);
 
 #if LINUX_VERSION_IS_LESS(4,12,0)
-err:
 	if (err) {
 		/* signal to do nothing */
 		extack->__bp_doit = NULL;
