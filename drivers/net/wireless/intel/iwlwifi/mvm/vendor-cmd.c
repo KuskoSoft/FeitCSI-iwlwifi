@@ -1395,7 +1395,7 @@ static int iwl_mvm_vendor_test_fips(struct wiphy *wiphy,
 	mutex_unlock(&mvm->mutex);
 
 	if (ret)
-		return ret;
+		goto free;
 
 	pkt = hcmd.resp_pkt;
 	resp = (void *)pkt->data;
@@ -1403,8 +1403,9 @@ static int iwl_mvm_vendor_test_fips(struct wiphy *wiphy,
 	iwl_mvm_vendor_test_fips_send_resp(wiphy, resp);
 	iwl_free_resp(&hcmd);
 
+free:
 	kfree(buf);
-	return 0;
+	return ret;
 }
 
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
