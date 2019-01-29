@@ -1084,10 +1084,7 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 
 	iwl_mvm_thermal_exit(mvm);
 
-	if (mvm->init_status & IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE) {
-		ieee80211_unregister_hw(mvm->hw);
-		mvm->init_status &= ~IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE;
-	}
+	ieee80211_unregister_hw(mvm->hw);
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
 	iwl_mvm_fm_unregister(mvm);
