@@ -5372,7 +5372,7 @@ static inline void cfg80211_gen_new_bssid(const u8 *bssid, u8 max_bssid,
 
 	lsb_n = bssid_tmp & ((1 << max_bssid) - 1);
 	new_bssid = bssid_tmp;
-	new_bssid &= ~((1 << max_bssid) - 1);
+	new_bssid &= ~((1ULL << max_bssid) - 1);
 	new_bssid |= (lsb_n + mbssid_index) % (1 << max_bssid);
 
 	u64_to_ether_addr(new_bssid, new_bssid_addr);
