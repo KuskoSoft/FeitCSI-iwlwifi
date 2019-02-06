@@ -15,6 +15,9 @@
 #include <linux/printk.h>
 #include <linux/thermal.h>
 #include <linux/slab.h>
+#include <linux/property.h>
+#include <linux/etherdevice.h>
+#include <linux/of.h>
 
 #ifdef CONFIG_THERMAL
 #if LINUX_VERSION_IS_GEQ(3,8,0)
@@ -336,3 +339,57 @@ ssize_t strscpy(char *dest, const char *src, size_t count)
 	return -E2BIG;
 }
 EXPORT_SYMBOL_GPL(strscpy);
+
+static void *device_get_mac_addr(struct device *dev,
+				 const char *name, char *addr,
+				 int alen)
+{
+#if LINUX_VERSION_IS_GEQ(3,18,0)
+	int ret = device_property_read_u8_array(dev, name, addr, alen);
+#else
+	int ret = of_property_read_u8_array(dev->of_node, name, addr, alen);
+#endif
+
+	if (ret == 0 && alen == ETH_ALEN && is_valid_ether_addr(addr))
+		return addr;
+	return NULL;
+}
+
+/**
+ * device_get_mac_address - Get the MAC for a given device
+ * @dev:	Pointer to the device
+ * @addr:	Address of buffer to store the MAC in
+ * @alen:	Length of the buffer pointed to by addr, should be ETH_ALEN
+ *
+ * Search the firmware node for the best MAC address to use.  'mac-address' is
+ * checked first, because that is supposed to contain to "most recent" MAC
+ * address. If that isn't set, then 'local-mac-address' is checked next,
+ * because that is the default address.  If that isn't set, then the obsolete
+ * 'address' is checked, just in case we're using an old device tree.
+ *
+ * Note that the 'address' property is supposed to contain a virtual address of
+ * the register set, but some DTS files have redefined that property to be the
+ * MAC address.
+ *
+ * All-zero MAC addresses are rejected, because those could be properties that
+ * exist in the firmware tables, but were not updated by the firmware.  For
+ * example, the DTS could define 'mac-address' and 'local-mac-address', with
+ * zero MAC addresses.  Some older U-Boots only initialized 'local-mac-address'.
+ * In this case, the real MAC is in 'local-mac-address', and 'mac-address'
+ * exists but is all zeros.
+*/
+void *device_get_mac_address(struct device *dev, char *addr, int alen)
+{
+	char *res;
+
+	res = device_get_mac_addr(dev, "mac-address", addr, alen);
+	if (res)
+		return res;
+
+	res = device_get_mac_addr(dev, "local-mac-address", addr, alen);
+	if (res)
+		return res;
+
+	return device_get_mac_addr(dev, "address", addr, alen);
+}
+EXPORT_SYMBOL_GPL(device_get_mac_address);

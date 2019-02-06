@@ -8,6 +8,16 @@ static inline void page_ref_inc(struct page *page)
 {
 	atomic_inc(&page->_count);
 }
+
+static inline int page_ref_count(struct page *page)
+{
+	return atomic_read(&page->_count);
+}
+
+static inline int page_ref_sub_and_test(struct page *page, int nr)
+{
+	return atomic_sub_and_test(nr, &page->_count);
+}
 #endif
 
 #endif /* __BP_PAGE_REF_H */

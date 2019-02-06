@@ -3001,14 +3001,15 @@ static int nl80211_send_chandef(struct sk_buff *msg,
 
 static int nl80211_send_iface(struct sk_buff *msg, u32 portid, u32 seq, int flags,
 			      struct cfg80211_registered_device *rdev,
-			      struct wireless_dev *wdev, bool removal)
+			      struct wireless_dev *wdev,
+			      enum nl80211_commands cmd)
 {
 	struct net_device *dev = wdev->netdev;
-	u8 cmd = NL80211_CMD_NEW_INTERFACE;
 	void *hdr;
 
-	if (removal)
-		cmd = NL80211_CMD_DEL_INTERFACE;
+	WARN_ON(cmd != NL80211_CMD_NEW_INTERFACE &&
+		cmd != NL80211_CMD_DEL_INTERFACE &&
+		cmd != NL80211_CMD_SET_INTERFACE);
 
 	hdr = nl80211hdr_put(msg, portid, seq, flags, cmd);
 	if (!hdr)
@@ -3156,7 +3157,8 @@ static int nl80211_dump_interface(struct sk_buff *skb, struct netlink_callback *
 			}
 			if (nl80211_send_iface(skb, NETLINK_CB_PORTID(cb->skb),
 					       cb->nlh->nlmsg_seq, NLM_F_MULTI,
-					       rdev, wdev, false) < 0) {
+					       rdev, wdev,
+					       NL80211_CMD_NEW_INTERFACE) < 0) {
 				goto out;
 			}
 			if_idx++;
@@ -3186,7 +3188,7 @@ static int nl80211_get_interface(struct sk_buff *skb, struct genl_info *info)
 		return -ENOMEM;
 
 	if (nl80211_send_iface(msg, genl_info_snd_portid(info), info->snd_seq, 0,
-			       rdev, wdev, false) < 0) {
+			       rdev, wdev, NL80211_CMD_NEW_INTERFACE) < 0) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}
@@ -3376,6 +3378,12 @@ static int nl80211_set_interface(struct sk_buff *skb, struct genl_info *info)
 	if (!err && params.use_4addr != -1)
 		dev->ieee80211_ptr->use_4addr = params.use_4addr;
 
+	if (change && !err) {
+		struct wireless_dev *wdev = dev->ieee80211_ptr;
+
+		nl80211_notify_iface(rdev, wdev, NL80211_CMD_SET_INTERFACE);
+	}
+
 	return err;
 }
 
@@ -3467,7 +3475,7 @@ static int nl80211_new_interface(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	if (nl80211_send_iface(msg, genl_info_snd_portid(info), info->snd_seq, 0,
-			       rdev, wdev, false) < 0) {
+			       rdev, wdev, NL80211_CMD_NEW_INTERFACE) < 0) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}
@@ -4901,6 +4909,7 @@ static int nl80211_send_station(struct sk_buff *msg, u32 cmd, u32 portid,
 	PUT_SINFO(LOCAL_PM, local_pm, u32);
 	PUT_SINFO(PEER_PM, peer_pm, u32);
 	PUT_SINFO(NONPEER_PM, nonpeer_pm, u32);
+	PUT_SINFO(CONNECTED_TO_GATE, connected_to_gate, u8);
 
 	if (sinfo->filled & BIT_ULL(NL80211_STA_INFO_BSS_PARAM)) {
 		bss_param = nla_nest_start(msg, NL80211_STA_INFO_BSS_PARAM);
@@ -6293,7 +6302,9 @@ static int nl80211_get_mesh_config(struct sk_buff *skb,
 	    nla_put_u16(msg, NL80211_MESHCONF_AWAKE_WINDOW,
 			cur_params.dot11MeshAwakeWindowDuration) ||
 	    nla_put_u32(msg, NL80211_MESHCONF_PLINK_TIMEOUT,
-			cur_params.plink_timeout))
+			cur_params.plink_timeout) ||
+	    nla_put_u8(msg, NL80211_MESHCONF_CONNECTED_TO_GATE,
+		       cur_params.dot11MeshConnectedToMeshGate))
 		goto nla_put_failure;
 	nla_nest_end(msg, pinfoattr);
 	genlmsg_end(msg, hdr);
@@ -6350,6 +6361,7 @@ nl80211_meshconf_params_policy[NL80211_MESHCONF_ATTR_MAX+1] = {
 				 NL80211_MESH_POWER_MAX),
 	[NL80211_MESHCONF_AWAKE_WINDOW] = { .type = NLA_U16 },
 	[NL80211_MESHCONF_PLINK_TIMEOUT] = { .type = NLA_U32 },
+	[NL80211_MESHCONF_CONNECTED_TO_GATE] = NLA_POLICY_RANGE(NLA_U8, 0, 1),
 };
 
 static const struct nla_policy
@@ -6461,6 +6473,9 @@ do {									\
 	FILL_IN_MESH_PARAM_IF_SET(tb, cfg, rssi_threshold, mask,
 				  NL80211_MESHCONF_RSSI_THRESHOLD,
 				  nla_get_s32);
+	FILL_IN_MESH_PARAM_IF_SET(tb, cfg, dot11MeshConnectedToMeshGate, mask,
+				  NL80211_MESHCONF_CONNECTED_TO_GATE,
+				  nla_get_u8);
 	/*
 	 * Check HT operation mode based on
 	 * IEEE 802.11-2016 9.4.2.57 HT Operation element.
@@ -7995,6 +8010,60 @@ static int nl80211_start_radar_detection(struct sk_buff *skb,
 	return err;
 }
 
+static int nl80211_notify_radar_detection(struct sk_buff *skb,
+					  struct genl_info *info)
+{
+	struct cfg80211_registered_device *rdev = info->user_ptr[0];
+	struct net_device *dev = info->user_ptr[1];
+	struct wireless_dev *wdev = dev->ieee80211_ptr;
+	struct wiphy *wiphy = wdev->wiphy;
+	struct cfg80211_chan_def chandef;
+	enum nl80211_dfs_regions dfs_region;
+	int err;
+
+	dfs_region = reg_get_dfs_region(wiphy);
+	if (dfs_region == NL80211_DFS_UNSET) {
+		GENL_SET_ERR_MSG(info,
+				 "DFS Region is not set. Unexpected Radar indication");
+		return -EINVAL;
+	}
+
+	err = nl80211_parse_chandef(rdev, info, &chandef);
+	if (err) {
+		GENL_SET_ERR_MSG(info, "Unable to extract chandef info");
+		return err;
+	}
+
+	err = cfg80211_chandef_dfs_required(wiphy, &chandef, wdev->iftype);
+	if (err < 0) {
+		GENL_SET_ERR_MSG(info, "chandef is invalid");
+		return err;
+	}
+
+	if (err == 0) {
+		GENL_SET_ERR_MSG(info,
+				 "Unexpected Radar indication for chandef/iftype");
+		return -EINVAL;
+	}
+
+	/* Do not process this notification if radar is already detected
+	 * by kernel on this channel, and return success.
+	 */
+	if (chandef.chan->dfs_state == NL80211_DFS_UNAVAILABLE)
+		return 0;
+
+	cfg80211_set_dfs_state(wiphy, &chandef, NL80211_DFS_UNAVAILABLE);
+
+	cfg80211_sched_dfs_chan_update(rdev);
+
+	memcpy(&rdev->radar_chandef, &chandef, sizeof(chandef));
+
+	/* Propagate this notification to other radios as well */
+	queue_work(cfg80211_wq, &rdev->propagate_radar_detect_wk);
+
+	return 0;
+}
+
 static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 {
 	struct cfg80211_registered_device *rdev = info->user_ptr[0];
@@ -8043,6 +8112,7 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 	}
 
 	memset(&params, 0, sizeof(params));
+	params.beacon_csa.ftm_responder = -1;
 
 	if (!info->attrs[NL80211_ATTR_WIPHY_FREQ] ||
 	    !info->attrs[NL80211_ATTR_CH_SWITCH_COUNT])
@@ -14407,6 +14477,14 @@ static __genl_const struct genl_ops nl80211_ops[] = {
 		.internal_flags = NL80211_FLAG_NEED_WDEV_UP |
 				  NL80211_FLAG_NEED_RTNL,
 	},
+	{
+		.cmd = NL80211_CMD_NOTIFY_RADAR,
+		.doit = nl80211_notify_radar_detection,
+		.policy = nl80211_policy,
+		.flags = GENL_UNS_ADMIN_PERM,
+		.internal_flags = NL80211_FLAG_NEED_NETDEV_UP |
+				  NL80211_FLAG_NEED_RTNL,
+	},
 };
 
 static struct genl_family nl80211_fam __genl_ro_after_init = {
@@ -14454,15 +14532,11 @@ void nl80211_notify_iface(struct cfg80211_registered_device *rdev,
 {
 	struct sk_buff *msg;
 
-	WARN_ON(cmd != NL80211_CMD_NEW_INTERFACE &&
-		cmd != NL80211_CMD_DEL_INTERFACE);
-
 	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
 	if (!msg)
 		return;
 
-	if (nl80211_send_iface(msg, 0, 0, 0, rdev, wdev,
-			       cmd == NL80211_CMD_DEL_INTERFACE) < 0) {
+	if (nl80211_send_iface(msg, 0, 0, 0, rdev, wdev, cmd) < 0) {
 		nlmsg_free(msg);
 		return;
 	}
@@ -15081,7 +15155,8 @@ void nl80211_send_ibss_bssid(struct cfg80211_registered_device *rdev,
 }
 
 void cfg80211_notify_new_peer_candidate(struct net_device *dev, const u8 *addr,
-					const u8* ie, u8 ie_len, gfp_t gfp)
+					const u8 *ie, u8 ie_len,
+					int sig_dbm, gfp_t gfp)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wdev->wiphy);
@@ -15107,7 +15182,9 @@ void cfg80211_notify_new_peer_candidate(struct net_device *dev, const u8 *addr,
 	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, dev->ifindex) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr) ||
 	    (ie_len && ie &&
-	     nla_put(msg, NL80211_ATTR_IE, ie_len , ie)))
+	     nla_put(msg, NL80211_ATTR_IE, ie_len, ie)) ||
+	    (sig_dbm &&
+	     nla_put_u32(msg, NL80211_ATTR_RX_SIGNAL_DBM, sig_dbm)))
 		goto nla_put_failure;
 
 	genlmsg_end(msg, hdr);
@@ -16392,7 +16469,8 @@ static int nl80211_netlink_notify(struct notifier_block * nb,
 				schedule_work(&wdev->disconnect_wk);
 			}
 
-			cfg80211_release_pmsr(wdev, notify->portid);
+			cfg80211_release_pmsr(wdev,
+					      netlink_notify_portid(notify));
 		}
 
 		spin_lock_bh(&rdev->beacon_registrations_lock);

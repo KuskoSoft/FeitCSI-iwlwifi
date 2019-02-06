@@ -134,6 +134,25 @@ static inline int pci_vfs_assigned(struct pci_dev *dev)
 
 #endif /* LINUX_VERSION_IS_LESS(3,10,0) */
 
+#if LINUX_VERSION_IS_LESS(4,8,0)
+#define pci_alloc_irq_vectors LINUX_BACKPORT(pci_alloc_irq_vectors)
+#ifdef CONFIG_PCI_MSI
+int pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
+		unsigned int max_vecs, unsigned int flags);
+#else
+static inline int pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
+		unsigned int max_vecs, unsigned int flags)
+{ return -ENOSYS; }
+#endif
+#endif
+
+#if LINUX_VERSION_IS_LESS(4,8,0)
+#define pci_free_irq_vectors LINUX_BACKPORT(pci_free_irq_vectors)
+static inline void pci_free_irq_vectors(struct pci_dev *dev)
+{
+}
+#endif
+
 #if LINUX_VERSION_IS_LESS(3,14,0)
 #define pci_enable_msi_range LINUX_BACKPORT(pci_enable_msi_range)
 #ifdef CONFIG_PCI_MSI
@@ -204,5 +223,13 @@ static inline struct pci_dev *pcie_find_root_port(struct pci_dev *dev)
 }
 
 #endif/* <4.9.0 but not >= 3.12.69, 4.4.37, 4.8.13 */
+
+#ifndef PCI_IRQ_LEGACY
+#define PCI_IRQ_LEGACY		(1 << 0) /* Allow legacy interrupts */
+#define PCI_IRQ_MSI		(1 << 1) /* Allow MSI interrupts */
+#define PCI_IRQ_MSIX		(1 << 2) /* Allow MSI-X interrupts */
+#define PCI_IRQ_ALL_TYPES \
+	(PCI_IRQ_LEGACY | PCI_IRQ_MSI | PCI_IRQ_MSIX)
+#endif
 
 #endif /* _BACKPORT_LINUX_PCI_H */

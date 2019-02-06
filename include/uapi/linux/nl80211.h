@@ -1062,6 +1062,11 @@
  *	the measurement completed, using the measurement cookie
  *	(%NL80211_ATTR_COOKIE).
  *
+ * @NL80211_CMD_NOTIFY_RADAR: Notify the kernel that a radar signal was
+ *	detected and reported by a neighboring device on the channel
+ *	indicated by %NL80211_ATTR_WIPHY_FREQ and other attributes
+ *	determining the width and type.
+ *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
  */
@@ -1279,6 +1284,8 @@ enum nl80211_commands {
 	NL80211_CMD_PEER_MEASUREMENT_START,
 	NL80211_CMD_PEER_MEASUREMENT_RESULT,
 	NL80211_CMD_PEER_MEASUREMENT_COMPLETE,
+
+	NL80211_CMD_NOTIFY_RADAR,
 
 	/* let this always be before all commands we haven't upstreamed yet */
 	__NL80211_CMD_NONUPSTREAM_START,
@@ -1738,7 +1745,7 @@ enum nl80211_commands {
  *	the values passed in @NL80211_ATTR_SCAN_SSIDS (eg. if an SSID
  *	is included in the probe request, but the match attributes
  *	will never let it go through), -EINVAL may be returned.
- *	If ommited, no filtering is done.
+ *	If omitted, no filtering is done.
  *
  * @NL80211_ATTR_INTERFACE_COMBINATIONS: Nested attribute listing the supported
  *	interface combinations. In each nested item, it contains attributes
@@ -1843,7 +1850,7 @@ enum nl80211_commands {
  *
  * @NL80211_ATTR_INACTIVITY_TIMEOUT: timeout value in seconds, this can be
  *	used by the drivers which has MLME in firmware and does not have support
- *	to report per station tx/rx activity to free up the staion entry from
+ *	to report per station tx/rx activity to free up the station entry from
  *	the list. This needs to be used when the driver advertises the
  *	capability to timeout the stations.
  *
@@ -2204,7 +2211,7 @@ enum nl80211_commands {
  *
  * @NL80211_ATTR_SCHED_SCAN_RSSI_ADJUST: When present the RSSI level for BSSs in
  *	the specified band is to be adjusted before doing
- *	%NL80211_ATTR_SCHED_SCAN_RELATIVE_RSSI based comparision to figure out
+ *	%NL80211_ATTR_SCHED_SCAN_RELATIVE_RSSI based comparison to figure out
  *	better BSSs. The attribute value is a packed structure
  *	value as specified by &struct nl80211_bss_select_rssi_adjust.
  *
@@ -3135,6 +3142,8 @@ enum nl80211_sta_bss_param {
  *	with an FCS error (u32, from this station). This count may not include
  *	some packets with an FCS error due to TA corruption. Hence this counter
  *	might not be fully accurate.
+ * @NL80211_STA_INFO_CONNECTED_TO_GATE: set to true if STA has a path to a
+ *	mesh gate (u8, 0 or 1)
  * @__NL80211_STA_INFO_AFTER_LAST: internal
  * @NL80211_STA_INFO_MAX: highest possible station info attribute
  */
@@ -3177,6 +3186,7 @@ enum nl80211_sta_info {
 	NL80211_STA_INFO_ACK_SIGNAL_AVG,
 	NL80211_STA_INFO_RX_MPDUS,
 	NL80211_STA_INFO_FCS_ERROR_COUNT,
+	NL80211_STA_INFO_CONNECTED_TO_GATE,
 
 	/* keep last */
 	__NL80211_STA_INFO_AFTER_LAST,
@@ -3956,6 +3966,11 @@ enum nl80211_mesh_power_mode {
  *	remove it from the STA's list of peers. You may set this to 0 to disable
  *	the removal of the STA. Default is 30 minutes.
  *
+ * @NL80211_MESHCONF_CONNECTED_TO_GATE: If set to true then this mesh STA
+ *	will advertise that it is connected to a gate in the mesh formation
+ *	field.  If left unset then the mesh formation field will only
+ *	advertise such if there is an active root mesh path.
+ *
  * @__NL80211_MESHCONF_ATTR_AFTER_LAST: internal use
  */
 enum nl80211_meshconf_params {
@@ -3988,6 +4003,7 @@ enum nl80211_meshconf_params {
 	NL80211_MESHCONF_POWER_MODE,
 	NL80211_MESHCONF_AWAKE_WINDOW,
 	NL80211_MESHCONF_PLINK_TIMEOUT,
+	NL80211_MESHCONF_CONNECTED_TO_GATE,
 
 	/* keep last */
 	__NL80211_MESHCONF_ATTR_AFTER_LAST,
@@ -4920,7 +4936,7 @@ enum nl80211_iface_limit_attrs {
  *	numbers = [ #{STA} <= 1, #{P2P-client,P2P-GO} <= 3 ], max = 4
  *	=> allows a STA plus three P2P interfaces
  *
- * The list of these four possiblities could completely be contained
+ * The list of these four possibilities could completely be contained
  * within the %NL80211_ATTR_INTERFACE_COMBINATIONS attribute to indicate
  * that any of these groups must match.
  *
@@ -4950,7 +4966,7 @@ enum nl80211_if_combination_attrs {
  * enum nl80211_plink_state - state of a mesh peer link finite state machine
  *
  * @NL80211_PLINK_LISTEN: initial state, considered the implicit
- *	state of non existant mesh peer links
+ *	state of non existent mesh peer links
  * @NL80211_PLINK_OPN_SNT: mesh plink open frame has been sent to
  *	this mesh peer
  * @NL80211_PLINK_OPN_RCVD: mesh plink open frame has been received
@@ -5442,7 +5458,7 @@ enum nl80211_timeout_reason {
  *	request parameters IE in the probe request
  * @NL80211_SCAN_FLAG_ACCEPT_BCAST_PROBE_RESP: accept broadcast probe responses
  * @NL80211_SCAN_FLAG_OCE_PROBE_REQ_HIGH_TX_RATE: send probe request frames at
- *	rate of at least 5.5M. In case non OCE AP is dicovered in the channel,
+ *	rate of at least 5.5M. In case non OCE AP is discovered in the channel,
  *	only the first probe req in the channel will be sent in high rate.
  * @NL80211_SCAN_FLAG_OCE_PROBE_REQ_DEFERRAL_SUPPRESSION: allow probe request
  *	tx deferral (dot11FILSProbeDelay shall be set to 15ms)

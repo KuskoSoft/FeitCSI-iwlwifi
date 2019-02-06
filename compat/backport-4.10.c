@@ -12,6 +12,8 @@
 #include <linux/netdevice.h>
 #include <linux/ethtool.h>
 #include <linux/mii.h>
+#include <linux/page_ref.h>
+#include <linux/gfp.h>
 
 #if LINUX_VERSION_IS_GEQ(4,6,0)
 #if LINUX_VERSION_IS_LESS(4,7,0)
@@ -252,3 +254,23 @@ int mii_ethtool_get_link_ksettings(struct mii_if_info *mii,
 }
 EXPORT_SYMBOL(mii_ethtool_get_link_ksettings);
 #endif /* LINUX_VERSION_IS_GEQ(4,6,0) */
+
+#if LINUX_VERSION_IS_GEQ(4,2,0)
+void __page_frag_cache_drain(struct page *page, unsigned int count)
+{
+	VM_BUG_ON_PAGE(page_ref_count(page) == 0, page);
+
+	if (page_ref_sub_and_test(page, count)) {
+		unsigned int order = compound_order(page);
+
+		/*
+		 * __free_pages_ok() is not exported so call
+		 * __free_pages() which decrements the ref counter
+		 * and increment the ref counter before.
+		 */
+		page_ref_inc(page);
+		__free_pages(page, order);
+	}
+}
+EXPORT_SYMBOL_GPL(__page_frag_cache_drain);
+#endif

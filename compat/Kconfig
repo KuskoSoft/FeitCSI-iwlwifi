@@ -104,15 +104,6 @@ config BPAUTO_USERSEL_BUILD_ALL
 	  It's only really useful for compat testing, so
 	  you probably shouldn't enable it.
 
-config BPAUTO_CRYPTO_SKCIPHER
-	tristate
-	depends on m
-	depends on KERNEL_4_3
-	default y if BACKPORTED_LIB80211_CRYPT_WEP
-	default y if BACKPORTED_LIB80211_CRYPT_TKIP
-	#c-file crypto/skcipher.c
-	#module-name skcipher
-
 config BPAUTO_WANT_DEV_COREDUMP
 	bool
 

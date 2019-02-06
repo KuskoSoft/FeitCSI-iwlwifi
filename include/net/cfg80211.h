@@ -1300,6 +1300,7 @@ struct cfg80211_tid_stats {
  * @rx_beacon: number of beacons received from this peer
  * @rx_beacon_signal_avg: signal strength average (in dBm) for beacons received
  *	from this peer
+ * @connected_to_gate: true if mesh STA has a path to mesh gate
  * @rx_duration: aggregate PPDU duration(usecs) for all the frames from a peer
  * @pertid: per-TID statistics, see &struct cfg80211_tid_stats, using the last
  *	(IEEE80211_NUM_TIDS) index for MSDUs not encapsulated in QoS-MPDUs.
@@ -1354,6 +1355,8 @@ struct station_info {
 	u64 rx_beacon;
 	u64 rx_duration;
 	u8 rx_beacon_signal_avg;
+	u8 connected_to_gate;
+
 	struct cfg80211_tid_stats *pertid;
 	s8 ack_signal;
 	s8 avg_ack_signal;
@@ -1563,6 +1566,10 @@ struct bss_parameters {
  * @plink_timeout: If no tx activity is seen from a STA we've established
  *	peering with for longer than this time (in seconds), then remove it
  *	from the STA's list of peers.  Default is 30 minutes.
+ * @dot11MeshConnectedToMeshGate: if set to true, advertise that this STA is
+ *      connected to a mesh gate in mesh formation info.  If false, the
+ *      value in mesh formation is determined by the presence of root paths
+ *      in the mesh path table
  */
 struct mesh_config {
 	u16 dot11MeshRetryTimeout;
@@ -1582,6 +1589,7 @@ struct mesh_config {
 	u16 dot11MeshHWMPperrMinInterval;
 	u16 dot11MeshHWMPnetDiameterTraversalTime;
 	u8 dot11MeshHWMPRootMode;
+	bool dot11MeshConnectedToMeshGate;
 	u16 dot11MeshHWMPRannInterval;
 	bool dot11MeshGateAnnouncementProtocol;
 	bool dot11MeshForwarding;
@@ -2895,7 +2903,7 @@ struct cfg80211_external_auth_params {
 };
 
 /**
- * cfg80211_ftm_responder_stats - FTM responder statistics
+ * struct cfg80211_ftm_responder_stats - FTM responder statistics
  *
  * @filled: bitflag of flags using the bits of &enum nl80211_ftm_stats to
  *	indicate the relevant values in this struct for them
@@ -5673,7 +5681,8 @@ void cfg80211_ibss_joined(struct net_device *dev, const u8 *bssid,
  * cfg80211 then sends a notification to userspace.
  */
 void cfg80211_notify_new_peer_candidate(struct net_device *dev,
-		const u8 *macaddr, const u8 *ie, u8 ie_len, gfp_t gfp);
+		const u8 *macaddr, const u8 *ie, u8 ie_len,
+		int sig_dbm, gfp_t gfp);
 
 /**
  * DOC: RFkill integration
