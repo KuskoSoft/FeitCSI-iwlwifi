@@ -3,7 +3,7 @@
  * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2011, Javier Lopez <jlopex@gmail.com>
  * Copyright (c) 2016 - 2017 Intel Deutschland GmbH
- * Copyright (C) 2018 Intel Corporation
+ * Copyright (C) 2018 - 2019 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2797,10 +2797,14 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 	hw->wiphy->n_iface_combinations = 1;
 
 	if (param->ciphers) {
-		memcpy(data->ciphers, param->ciphers,
-		       param->n_ciphers * sizeof(u32));
+		int ciphers_len = param->n_ciphers * sizeof(data->ciphers[0]);
+
+		if (WARN_ON_ONCE(ciphers_len > sizeof(data->ciphers)))
+			ciphers_len = sizeof(data->ciphers);
+
+		memcpy(data->ciphers, param->ciphers, ciphers_len);
 		hw->wiphy->cipher_suites = data->ciphers;
-		hw->wiphy->n_cipher_suites = param->n_ciphers;
+		hw->wiphy->n_cipher_suites = ciphers_len / sizeof(data->ciphers[0]);
 	}
 
 	data->rx_rssi = DEFAULT_RX_RSSI;
