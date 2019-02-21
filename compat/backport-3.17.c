@@ -31,6 +31,7 @@ int bit_wait_io(void *word)
 EXPORT_SYMBOL_GPL(bit_wait_io);
 #endif
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 /**
  * ktime_get_raw - Returns the raw monotonic time in ktime_t format
  */
@@ -42,7 +43,7 @@ ktime_t ktime_get_raw(void)
 	return timespec_to_ktime(ts);
 }
 EXPORT_SYMBOL_GPL(ktime_get_raw);
-
+#endif /* RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6) */
 
 /**
  * nsecs_to_jiffies64 - Convert nsecs in u64 to jiffies64
@@ -148,6 +149,7 @@ char *devm_kasprintf(struct device *dev, gfp_t gfp, const char *fmt, ...)
 }
 EXPORT_SYMBOL_GPL(devm_kasprintf);
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define STANDARD_PARAM_DEF(name, type, format, strtolfn)      		\
 	int param_set_##name(const char *val, const struct kernel_param *kp) \
 	{								\
@@ -166,3 +168,4 @@ EXPORT_SYMBOL_GPL(devm_kasprintf);
 	EXPORT_SYMBOL(param_get_##name);				\
 	EXPORT_SYMBOL(param_ops_##name)
 STANDARD_PARAM_DEF(ullong, unsigned long long, "%llu", kstrtoull);
+#endif /* RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6) */

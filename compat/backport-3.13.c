@@ -118,7 +118,8 @@ bool pci_device_is_present(struct pci_dev *pdev)
 EXPORT_SYMBOL_GPL(pci_device_is_present);
 #endif /* CONFIG_PCI */
 
-#ifdef CONFIG_HWMON
+#if defined(CONFIG_HWMON) &&	\
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 struct device*
 hwmon_device_register_with_groups(struct device *dev, const char *name,
 				  void *drvdata,

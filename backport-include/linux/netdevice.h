@@ -259,7 +259,8 @@ static inline struct sk_buff *napi_alloc_skb(struct napi_struct *napi,
 #define IFF_TX_SKB_SHARING 0
 #endif
 
-#if LINUX_VERSION_IS_LESS(4,1,0)
+#if LINUX_VERSION_IS_LESS(4,1,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 netdev_features_t passthru_features_check(struct sk_buff *skb,
 					  struct net_device *dev,
 					  netdev_features_t features);

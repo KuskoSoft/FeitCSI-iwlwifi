@@ -48,7 +48,8 @@ static inline void *genl_info_userhdr(struct genl_info *info)
 #define genl_info_snd_portid(__genl_info) (__genl_info->snd_portid)
 #endif
 
-#if LINUX_VERSION_IS_LESS(3,13,0)
+#if LINUX_VERSION_IS_LESS(3,13,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define __genl_const
 #else /* < 3.13 */
 #define __genl_const const
