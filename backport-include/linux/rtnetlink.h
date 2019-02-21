@@ -19,7 +19,8 @@
 #endif
 
 #if LINUX_VERSION_IS_LESS(3,13,0) &&		\
-	!defined(CONFIG_PROVE_LOCKING)
+	!defined(CONFIG_PROVE_LOCKING) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline bool lockdep_rtnl_is_held(void)
 {
 	return true;

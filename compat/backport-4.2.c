@@ -11,7 +11,8 @@
 #include <crypto/scatterwalk.h>
 #include <crypto/aead.h>
 
-static struct scatterlist *scatterwalk_ffwd(struct scatterlist dst[2],
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
+ static struct scatterlist *scatterwalk_ffwd(struct scatterlist dst[2],
 					    struct scatterlist *src,
 					    unsigned int len)
 {
@@ -32,6 +33,7 @@ static struct scatterlist *scatterwalk_ffwd(struct scatterlist dst[2],
 
 	return dst;
 }
+#endif
 
 struct aead_old_request {
 	struct scatterlist srcbuf[2];

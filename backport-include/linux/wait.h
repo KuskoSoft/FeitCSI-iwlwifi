@@ -2,7 +2,8 @@
 #define __BACKPORT_LINUX_WAIT_H
 #include_next <linux/wait.h>
 
-#if LINUX_VERSION_IS_LESS(3,17,0)
+#if LINUX_VERSION_IS_LESS(3,17,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 extern int bit_wait(void *);
 extern int bit_wait_io(void *);
 

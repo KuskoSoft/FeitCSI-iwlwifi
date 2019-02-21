@@ -83,6 +83,7 @@ int woken_wake_function(wait_queue_t *wait, unsigned mode, int sync, void *key)
 EXPORT_SYMBOL(woken_wake_function);
 #endif
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static u8 netdev_rss_key[NETDEV_RSS_KEY_LEN];
 
 void netdev_rss_key_fill(void *buffer, size_t len)
@@ -96,6 +97,7 @@ void netdev_rss_key_fill(void *buffer, size_t len)
 #endif
 }
 EXPORT_SYMBOL_GPL(netdev_rss_key_fill);
+#endif
 
 #if defined(CONFIG_DEBUG_FS)
 struct debugfs_devm_entry {

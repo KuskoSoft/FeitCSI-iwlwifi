@@ -80,7 +80,8 @@ extern int eth_prepare_mac_addr_change(struct net_device *dev, void *p);
 extern void eth_commit_mac_addr_change(struct net_device *dev, void *p);
 #endif /* < 3.9 */
 
-#if LINUX_VERSION_IS_LESS(3,12,0)
+#if LINUX_VERSION_IS_LESS(3,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 /**
  * eth_hw_addr_inherit - Copy dev_addr from another net_device
  * @dst: pointer to net_device to copy dev_addr to
@@ -193,7 +194,8 @@ static inline int eth_skb_pad(struct sk_buff *skb)
 }
 #endif /* LINUX_VERSION_IS_LESS(3,19,0) */
 
-#if LINUX_VERSION_IS_LESS(4,11,0)
+#if LINUX_VERSION_IS_LESS(4,11,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 /**
  * ether_addr_to_u64 - Convert an Ethernet address into a u64 value.
  * @addr: Pointer to a six-byte array containing the Ethernet address

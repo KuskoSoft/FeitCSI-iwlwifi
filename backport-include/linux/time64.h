@@ -6,7 +6,8 @@
 #include <linux/time.h>
 #endif
 
-#if LINUX_VERSION_IS_LESS(3,17,0)
+#if LINUX_VERSION_IS_LESS(3,17,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define timespec64_equal		timespec_equal
 #define timespec64_compare		timespec_compare
 #define set_normalized_timespec64	set_normalized_timespec

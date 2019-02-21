@@ -206,7 +206,8 @@ static inline int pci_enable_msix_exact(struct pci_dev *dev,
 #if LINUX_VERSION_IS_LESS(4,9,0) &&			\
 	!LINUX_VERSION_IN_RANGE(3,12,69, 3,13,0) &&	\
 	!LINUX_VERSION_IN_RANGE(4,4,37, 4,5,0) &&	\
-	!LINUX_VERSION_IN_RANGE(4,8,13, 4,9,0)
+	!LINUX_VERSION_IN_RANGE(4,8,13, 4,9,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 
 static inline struct pci_dev *pcie_find_root_port(struct pci_dev *dev)
 {

@@ -3,7 +3,8 @@
 #include_next <linux/netlink.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_IS_LESS(4,14,0)
+#if LINUX_VERSION_IS_LESS(4,14,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 struct nla_bitfield32 {
 	__u32 value;
 	__u32 selector;

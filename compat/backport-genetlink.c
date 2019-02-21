@@ -17,6 +17,7 @@
 #include <net/netlink.h>
 #include <net/sock.h>
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static const struct genl_family *find_family_real_ops(__genl_const struct genl_ops **ops)
 {
 	const struct genl_family *family;
@@ -33,7 +34,8 @@ static const struct genl_family *find_family_real_ops(__genl_const struct genl_o
 	return family;
 }
 
-#if LINUX_VERSION_IS_LESS(4,12,0)
+#if LINUX_VERSION_IS_LESS(4,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 enum nlmsgerr_attrs {
 	NLMSGERR_ATTR_UNUSED,
 	NLMSGERR_ATTR_MSG,
@@ -155,7 +157,8 @@ static int backport_pre_doit(__genl_const struct genl_ops *ops,
 {
 	const struct genl_family *family = find_family_real_ops(&ops);
 	int err;
-#if LINUX_VERSION_IS_LESS(4,12,0)
+#if LINUX_VERSION_IS_LESS(4,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 	struct netlink_ext_ack *extack = kzalloc(sizeof(*extack), GFP_KERNEL);
 
 	if (!extack)
@@ -173,7 +176,8 @@ static int backport_pre_doit(__genl_const struct genl_ops *ops,
 	if (!err && family->pre_doit)
 		err = family->pre_doit(ops, skb, info);
 
-#if LINUX_VERSION_IS_LESS(4,12,0)
+#if LINUX_VERSION_IS_LESS(4,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 	if (err) {
 		/* signal to do nothing */
 		extack->__bp_doit = NULL;
@@ -198,7 +202,8 @@ static void backport_post_doit(__genl_const struct genl_ops *ops,
 {
 	const struct genl_family *family = find_family_real_ops(&ops);
 
-#if LINUX_VERSION_IS_LESS(4,12,0)
+#if LINUX_VERSION_IS_LESS(4,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 	if (genl_info_extack(info)->__bp_doit)
 #else
 	if (1)
@@ -206,11 +211,13 @@ static void backport_post_doit(__genl_const struct genl_ops *ops,
 		if (family->post_doit)
 			family->post_doit(ops, skb, info);
 
-#if LINUX_VERSION_IS_LESS(4,12,0)
+#if LINUX_VERSION_IS_LESS(4,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 	kfree(__bp_genl_info_userhdr(info));
 #endif
 }
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 int backport_genl_register_family(struct genl_family *family)
 {
 	struct genl_ops *ops;
@@ -228,7 +235,8 @@ int backport_genl_register_family(struct genl_family *family)
 	 */
 	for (i = 0; i < family->n_ops; i++) {
 		ops[i].policy = NULL;
-#if LINUX_VERSION_IS_LESS(4,12,0)
+#if LINUX_VERSION_IS_LESS(4,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 		if (ops[i].doit)
 			ops[i].doit = extack_doit;
 #endif
@@ -296,6 +304,7 @@ int backport_genl_unregister_family(struct genl_family *family)
 	return __real_backport_genl_unregister_family(&family->family);
 }
 EXPORT_SYMBOL_GPL(backport_genl_unregister_family);
+#endif
 
 #define INVALID_GROUP	0xffffffff
 
@@ -428,3 +437,4 @@ int backport_genlmsg_multicast_allns(const struct genl_family *family,
 	return genlmsg_mcast(skb, portid, group, flags);
 }
 EXPORT_SYMBOL_GPL(backport_genlmsg_multicast_allns);
+#endif /* RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6) */

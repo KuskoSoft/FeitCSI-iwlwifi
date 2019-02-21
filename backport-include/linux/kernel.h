@@ -207,7 +207,8 @@ int __must_check kstrtobool_from_user(const char __user *s, size_t count, bool *
 
 #endif
 
-#if LINUX_VERSION_IS_LESS(3,14,0)
+#if LINUX_VERSION_IS_LESS(3,14,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline u32 reciprocal_scale(u32 val, u32 ep_ro)
 {
 	return (u32)(((u64) val * ep_ro) >> 32);

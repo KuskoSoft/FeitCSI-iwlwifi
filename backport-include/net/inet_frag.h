@@ -41,7 +41,8 @@ static inline void add_frag_mem_limit(struct netns_frags *nf, int i)
 {
 	atomic_add(i, &nf->mem);
 }
-#elif LINUX_VERSION_IS_LESS(4,3,0)
+#elif LINUX_VERSION_IS_LESS(4,3,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define sub_frag_mem_limit LINUX_BACKPORT(sub_frag_mem_limit)
 static inline void sub_frag_mem_limit(struct netns_frags *nf, int i)
 {
@@ -56,7 +57,8 @@ static inline void add_frag_mem_limit(struct netns_frags *nf, int i)
 #endif /* LINUX_VERSION_IS_LESS(4,3,0) */
 
 #if LINUX_VERSION_IS_LESS(4,4,0) && \
-    LINUX_VERSION_IS_GEQ(3,9,0)
+    LINUX_VERSION_IS_GEQ(3,9,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define inet_frags_uninit_net LINUX_BACKPORT(inet_frags_uninit_net)
 static inline void inet_frags_uninit_net(struct netns_frags *nf)
 {

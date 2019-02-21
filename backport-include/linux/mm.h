@@ -30,14 +30,16 @@
 void kvfree(const void *addr);
 #endif /* < 3.15 */
 
-#if LINUX_VERSION_IS_LESS(3,20,0)
+#if LINUX_VERSION_IS_LESS(3,20,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define get_user_pages_locked LINUX_BACKPORT(get_user_pages_locked)
 long get_user_pages_locked(unsigned long start, unsigned long nr_pages,
 		    int write, int force, struct page **pages, int *locked);
 #define get_user_pages_unlocked LINUX_BACKPORT(get_user_pages_unlocked)
 long get_user_pages_unlocked(unsigned long start, unsigned long nr_pages,
 		    int write, int force, struct page **pages);
-#elif LINUX_VERSION_IS_LESS(4,6,0)
+#elif LINUX_VERSION_IS_LESS(4,6,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline
 long backport_get_user_pages_locked(unsigned long start, unsigned long nr_pages,
 		    int write, int force, struct page **pages, int *locked)
@@ -74,7 +76,8 @@ long backport_get_user_pages(unsigned long start, unsigned long nr_pages,
 #endif
 
 #if LINUX_VERSION_IS_LESS(4,1,9) && \
-     LINUX_VERSION_IS_GEQ(3,6,0)
+     LINUX_VERSION_IS_GEQ(3,6,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define page_is_pfmemalloc LINUX_BACKPORT(page_is_pfmemalloc)
 static inline bool page_is_pfmemalloc(struct page *page)
 {

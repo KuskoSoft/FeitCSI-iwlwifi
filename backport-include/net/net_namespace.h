@@ -14,7 +14,8 @@ static inline struct net *get_net_ns_by_fd(int fd)
 }
 #endif
 
-#if LINUX_VERSION_IS_LESS(4,1,0)
+#if LINUX_VERSION_IS_LESS(4,1,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 typedef struct {
 #ifdef CONFIG_NET_NS
 	struct net *net;

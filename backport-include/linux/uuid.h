@@ -11,7 +11,8 @@
 #define	UUID_STRING_LEN		36
 #endif
 
-#if LINUX_VERSION_IS_LESS(4,13,0)
+#if LINUX_VERSION_IS_LESS(4,13,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define guid_t uuid_le
 #define uuid_t uuid_be
 

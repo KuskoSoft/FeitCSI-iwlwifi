@@ -309,7 +309,8 @@ int skb_ensure_writable(struct sk_buff *skb, int write_len);
 
 #endif /* LINUX_VERSION_IS_LESS(3,19,0) */
 
-#if LINUX_VERSION_IS_LESS(4,2,0)
+#if LINUX_VERSION_IS_LESS(4,2,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline void skb_free_frag(void *data)
 {
 	put_page(virt_to_head_page(data));
@@ -338,7 +339,8 @@ static inline u32 skb_get_hash_perturb(struct sk_buff *skb, u32 key)
 #endif /* LINUX_VERSION_IS_LESS(3,3,0) */
 #endif /* LINUX_VERSION_IS_LESS(4,2,0) */
 
-#if LINUX_VERSION_IS_LESS(4,13,0)
+#if LINUX_VERSION_IS_LESS(4,13,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline void *backport_skb_put(struct sk_buff *skb, unsigned int len)
 {
 	return skb_put(skb, len);

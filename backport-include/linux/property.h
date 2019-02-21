@@ -1,7 +1,8 @@
 #ifndef __BACKPORT_LINUX_PROPERTY_H_
 #define __BACKPORT_LINUX_PROPERTY_H_
 #include <linux/version.h>
-#if LINUX_VERSION_IS_GEQ(3,18,17)
+#if LINUX_VERSION_IS_GEQ(3,18,17) || \
+	RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,6)
 #include_next <linux/property.h>
 #endif
 

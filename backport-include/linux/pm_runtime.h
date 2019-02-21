@@ -16,7 +16,8 @@ static inline bool pm_runtime_active(struct device *dev) { return true; }
 
 #endif /* LINUX_VERSION_IS_LESS(3,9,0) */
 
-#if LINUX_VERSION_IS_LESS(3,15,0)
+#if LINUX_VERSION_IS_LESS(3,15,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline int pm_runtime_force_suspend(struct device *dev)
 {
 #ifdef CONFIG_PM

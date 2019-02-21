@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/scatterlist.h>
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static bool sg_miter_get_next_page(struct sg_mapping_iter *miter)
 {
 	if (!miter->__remaining) {
@@ -122,3 +123,4 @@ size_t sg_copy_buffer(struct scatterlist *sgl, unsigned int nents, void *buf,
 	return offset;
 }
 EXPORT_SYMBOL_GPL(sg_copy_buffer);
+#endif

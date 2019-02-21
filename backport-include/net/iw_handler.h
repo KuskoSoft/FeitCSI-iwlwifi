@@ -2,7 +2,8 @@
 #define __BACKPORT_IW_HANDLER_H
 #include_next <net/iw_handler.h>
 
-#if LINUX_VERSION_IS_LESS(4,1,0)
+#if LINUX_VERSION_IS_LESS(4,1,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline char *
 iwe_stream_add_event_check(struct iw_request_info *info, char *stream,
 			   char *ends, struct iw_event *iwe, int event_len)

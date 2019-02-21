@@ -1,5 +1,10 @@
 #ifndef __BACKPORT_LNIUX_JIFFIES_H
 #define __BACKPORT_LNIUX_JIFFIES_H
+
+#ifndef NSEC_PER_SEC
+#define NSEC_PER_SEC	1000000000L
+#endif
+
 #include_next <linux/jiffies.h>
 
 #ifndef time_is_before_jiffies

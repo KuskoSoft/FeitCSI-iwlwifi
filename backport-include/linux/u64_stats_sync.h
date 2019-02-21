@@ -115,7 +115,8 @@ static inline bool u64_stats_fetch_retry(const struct u64_stats_sync *syncp,
 #endif /* LINUX_VERSION_IS_GEQ(3,6,0) */
 
 #if LINUX_VERSION_IS_LESS(3,15,0) && \
-    !(LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30)
+    !(LINUX_VERSION_CODE == KERNEL_VERSION(3,13,11) && UTS_UBUNTU_RELEASE_ABI > 30) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline unsigned int u64_stats_fetch_begin_irq(const struct u64_stats_sync *syncp)
 {
 #if BITS_PER_LONG==32 && defined(CONFIG_SMP)

@@ -18,7 +18,8 @@
 #include <linux/ftrace_event.h>
 #include <asm/unaligned.h>
 
-static __always_inline long __get_user_pages_locked(struct task_struct *tsk,
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
+ static __always_inline long __get_user_pages_locked(struct task_struct *tsk,
 						struct mm_struct *mm,
 						unsigned long start,
 						unsigned long nr_pages,
@@ -194,7 +195,7 @@ long get_user_pages_unlocked(unsigned long start, unsigned long nr_pages,
 					 write, force, pages, FOLL_TOUCH);
 }
 EXPORT_SYMBOL_GPL(get_user_pages_unlocked);
-
+#endif
 
 /**
  * hex_dump_to_buffer - convert a blob of data to "hex ASCII" in memory
@@ -324,7 +325,8 @@ overflow1:
 }
 EXPORT_SYMBOL_GPL(hex_dump_to_buffer);
 
-#if LINUX_VERSION_IS_LESS(3,17,0)
+#if LINUX_VERSION_IS_LESS(3,17,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline unsigned char *
 trace_seq_buffer_ptr(struct trace_seq *s)
 {

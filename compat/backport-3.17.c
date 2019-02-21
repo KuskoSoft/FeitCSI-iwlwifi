@@ -15,6 +15,7 @@
 #include <linux/jiffies.h>
 #include <linux/moduleparam.h>
 
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 int bit_wait(void *word)
 {
 	schedule();
@@ -28,6 +29,7 @@ int bit_wait_io(void *word)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bit_wait_io);
+#endif
 
 /**
  * ktime_get_raw - Returns the raw monotonic time in ktime_t format

@@ -386,7 +386,8 @@ static inline int nla_put_be64(struct sk_buff *skb, int attrtype, __be64 value)
 #define NLA_TYPE_MAX (__NLA_TYPE_MAX - 1)
 #endif
 
-#if LINUX_VERSION_IS_LESS(4,1,0)
+#if LINUX_VERSION_IS_LESS(4,1,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define nla_put_in_addr LINUX_BACKPORT(nla_put_in_addr)
 static inline int nla_put_in_addr(struct sk_buff *skb, int attrtype,
 				  __be32 addr)
@@ -536,7 +537,8 @@ static inline int nla_put_s64(struct sk_buff *skb, int attrtype, s64 value,
 }
 #endif /* < 4.7 */
 
-#if LINUX_VERSION_IS_LESS(4,10,0)
+#if LINUX_VERSION_IS_LESS(4,10,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 /**
  * nla_memdup - duplicate attribute memory (kmemdup)
  * @src: netlink attribute to duplicate from

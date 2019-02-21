@@ -27,7 +27,8 @@ static inline int genl_err_attr(struct genl_info *info, int err,
 /* this is for patches we apply */
 static inline struct netlink_ext_ack *genl_info_extack(struct genl_info *info)
 {
-#if LINUX_VERSION_IS_GEQ(4,12,0)
+#if LINUX_VERSION_IS_GEQ(4,12,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 	return info->extack;
 #else
 	return info->userhdr;

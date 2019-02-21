@@ -7,7 +7,8 @@
  * 4.6, outside that we can let our BPAUTO mechanism handle it.
  */
 #if (LINUX_VERSION_IS_GEQ(3,18,0) &&	\
-     LINUX_VERSION_IS_LESS(4,7,0))
+     LINUX_VERSION_IS_LESS(4,7,0)) ||   \
+	RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,6)
 static inline
 void backport_dev_coredumpm(struct device *dev, struct module *owner,
 			    void *data, size_t datalen, gfp_t gfp,

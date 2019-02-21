@@ -21,7 +21,8 @@ struct inet6_dev;
  */
 #include <linux/hardirq.h>
 
-#if LINUX_VERSION_IS_LESS(3,14,0)
+#if LINUX_VERSION_IS_LESS(3,14,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 /*
  * Backports note: if in-kernel support is provided we could then just
  * take the kernel's implementation of __dev_kfree_skb_irq() as it requires
@@ -237,7 +238,8 @@ static inline void backport_unregister_netdevice_many(struct list_head *head)
 #define napi_alloc_frag(fragsz) netdev_alloc_frag(fragsz)
 #endif
 
-#if LINUX_VERSION_IS_LESS(3,19,0)
+#if LINUX_VERSION_IS_LESS(3,19,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 /* RSS keys are 40 or 52 bytes long */
 #define NETDEV_RSS_KEY_LEN 52
 #define netdev_rss_key_fill LINUX_BACKPORT(netdev_rss_key_fill)
@@ -323,7 +325,8 @@ static inline void netif_tx_napi_add(struct net_device *dev,
 #define NETIF_F_CSUM_MASK NETIF_F_ALL_CSUM
 #endif
 
-#if LINUX_VERSION_IS_LESS(4,7,0)
+#if LINUX_VERSION_IS_LESS(4,7,0) && \
+	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 #define netif_trans_update LINUX_BACKPORT(netif_trans_update)
 static inline void netif_trans_update(struct net_device *dev)
 {
