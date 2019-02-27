@@ -1305,6 +1305,7 @@ struct iwl_mvm {
 	u8 sar_chain_b_profile;
 #endif
 	struct iwl_mvm_geo_profile geo_profiles[ACPI_NUM_GEO_PROFILES];
+	u32 geo_rev;
 #endif
 
 };
