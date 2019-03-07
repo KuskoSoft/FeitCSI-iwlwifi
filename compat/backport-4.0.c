@@ -15,6 +15,7 @@
 #include <linux/printk.h>
 #include <linux/export.h>
 #include <linux/trace_seq.h>
+#include <linux/ftrace_event.h>
 #include <asm/unaligned.h>
 
 #if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
