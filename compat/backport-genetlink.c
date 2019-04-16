@@ -221,7 +221,11 @@ int backport_genl_register_family(struct genl_family *family)
 
 	/* we append one entry to the ops to find our family pointer ... */
 	ops = kzalloc(sizeof(*ops) * (family->n_ops + 1), GFP_KERNEL);
+	if (!ops)
+		return -ENOMEM;
+
 	memcpy(ops, family->ops, sizeof(*ops) * family->n_ops);
+
 	/*
 	 * Remove policy to skip validation as the struct nla_policy
 	 * memory layout isn't compatible with the old version
