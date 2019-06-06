@@ -598,11 +598,6 @@ struct iwl_mvm_frame_stats {
 	int last_frame_idx;
 };
 
-enum {
-	D0I3_DEFER_WAKEUP,
-	D0I3_PENDING_WAKEUP,
-};
-
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 struct lte_coex_state {
 	u8 state;
@@ -1283,7 +1278,6 @@ struct iwl_mvm {
  * @IWL_MVM_STATUS_ROC_RUNNING: remain-on-channel is running
  * @IWL_MVM_STATUS_HW_RESTART_REQUESTED: HW restart was requested
  * @IWL_MVM_STATUS_IN_HW_RESTART: HW restart is active
- * @IWL_MVM_STATUS_IN_D0I3: NIC is in D0i3
  * @IWL_MVM_STATUS_ROC_AUX_RUNNING: AUX remain-on-channel is running
  * @IWL_MVM_STATUS_FIRMWARE_RUNNING: firmware is running
  * @IWL_MVM_STATUS_NEED_FLUSH_P2P: need to flush P2P bcast STA
@@ -1294,7 +1288,6 @@ enum iwl_mvm_status {
 	IWL_MVM_STATUS_ROC_RUNNING,
 	IWL_MVM_STATUS_HW_RESTART_REQUESTED,
 	IWL_MVM_STATUS_IN_HW_RESTART,
-	IWL_MVM_STATUS_IN_D0I3,
 	IWL_MVM_STATUS_ROC_AUX_RUNNING,
 	IWL_MVM_STATUS_FIRMWARE_RUNNING,
 	IWL_MVM_STATUS_NEED_FLUSH_P2P,
