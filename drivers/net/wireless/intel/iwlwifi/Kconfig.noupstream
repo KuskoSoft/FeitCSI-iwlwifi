@@ -117,15 +117,6 @@ config IWLWIFI_DISALLOW_OLDER_FW
 	  to ensure tight coupling between driver and firmware releases. When
 	  enabled, the dbg-cfg framework can still override this setting.
 
-config IWLWIFI_D0I3_DEFAULT_DISABLE
-	bool "Disable D0I3 by default"
-	depends on IWLMVM
-	help
-	  Say Y here to disable D0I3 by default (e.g. if the platform
-	  isn't well configured for issuing interrupts while in D0I3).
-
-	  If unsure, select N.
-
 config IWLWIFI_NUM_STA_INTERFACES
 	int "number of supported concurrent station interfaces"
 	range 1 2
