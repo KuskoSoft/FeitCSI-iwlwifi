@@ -1498,10 +1498,6 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	}
 #endif
 
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-	iwl_mvm_fm_notify_current_dcdc();
-#endif
-
 	if (iwl_acpi_get_eckv(mvm->dev, &mvm->ext_clock_valid))
 		IWL_DEBUG_INFO(mvm, "ECKV table doesn't exist in BIOS\n");
 

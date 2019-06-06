@@ -1024,12 +1024,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	else
 		memset(&mvm->rx_stats, 0, sizeof(struct mvm_statistics_rx));
 
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-	err = iwl_mvm_fm_register(mvm);
-	if (err)
-		pr_err("Unable to register with Frequency Manager: %d\n", err);
-#endif
-
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_mvm_init_modparams(mvm);
 #endif
@@ -1065,10 +1059,6 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	iwl_mvm_thermal_exit(mvm);
 
 	ieee80211_unregister_hw(mvm->hw);
-
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-	iwl_mvm_fm_unregister(mvm);
-#endif
 
 	kfree(mvm->scan_cmd);
 	kfree(mvm->mcast_filter_cmd);

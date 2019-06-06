@@ -8,7 +8,7 @@
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
  * Copyright(c) 2017        Intel Deutschland GmbH
- * Copyright(c) 2018        Intel Corporation
+ * Copyright(c) 2018 - 2019 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -31,7 +31,7 @@
  * Copyright(c) 2013 - 2014 Intel Corporation. All rights reserved.
  * Copyright(c) 2013 - 2014 Intel Mobile Communications GmbH
  * Copyright(c) 2017        Intel Deutschland GmbH
- * Copyright(c) 2018        Intel Corporation
+ * Copyright(c) 2018 - 2019 Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -241,17 +241,6 @@ struct iwl_bt_coex_profile_notif {
 	u8 rrc_status;
 	__le16 reserved;
 } __packed; /* BT_COEX_PROFILE_NTFY_API_S_VER_4 */
-
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-/*
- * struct iwl_config_2g_coex_cmd - 2G Coex configuration command
- * (CONFIG_2G_COEX_CMD = 0x71)
- * @enabled: 2g coex is enabled/disabled
- */
-struct iwl_config_2g_coex_cmd {
-	__le32 enabled;
-} __packed; /* CONFIG_2G_COEX_CMD_API_S_VER_1 */
-#endif
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 

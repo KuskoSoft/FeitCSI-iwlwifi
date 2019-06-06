@@ -38,15 +38,6 @@ config IWLWIFI_DEVICE_TESTMODE
 	default y if IWLMVM
 	select IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 
-config IWLWIFI_FRQ_MGR
-	bool "enable Frequency Manager API"
-	depends on IWLMVM && IUI_FM
-	help
-	  This option enables The Frequency Manager API.
-	  Enabling this option allows the driver to receive and send
-	  Frequency notification from and to the Frequency Manager.
-	  The notification can involve Tx power, Rx gain, and ADC/DAC
-
 config IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	depends on IWLWIFI
 	bool "enable default value override (for debugging)"

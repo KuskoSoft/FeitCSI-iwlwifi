@@ -162,10 +162,6 @@ struct iwl_mvm_phy_ctxt {
 	 */
 	struct ieee80211_channel *channel;
 
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-	/* Frequency Manager tx power limit*/
-	s8 fm_tx_power_limit;
-#endif
 };
 
 struct iwl_mvm_time_event_data {
@@ -1088,10 +1084,6 @@ struct iwl_mvm {
 	/* Aux ROC */
 	struct list_head aux_roc_te_list;
 
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-	/* 2G-Coex */
-	bool coex_2g_enabled;
-#endif
 	/* Thermal Throttling and CTkill */
 	struct iwl_mvm_tt_mgmt thermal_throttle;
 #ifdef CONFIG_THERMAL
@@ -2089,27 +2081,6 @@ void iwl_mvm_ct_kill_notif(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb);
 void iwl_mvm_enter_ctkill(struct iwl_mvm *mvm);
 int iwl_mvm_send_temp_report_ths_cmd(struct iwl_mvm *mvm);
 int iwl_mvm_ctdp_command(struct iwl_mvm *mvm, u32 op, u32 budget);
-
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-/* Frequency Manager */
-#define FM_2G_COEX_ENABLE_DISABLE 0xFFFFFFFF
-#define FM_2G_COEX_ENABLE -100
-#define FM_2G_COEX_DISABLE 25
-
-enum iwl_fm_chan_change_action {
-	IWL_FM_ADD_CHANCTX = 0,
-	IWL_FM_REMOVE_CHANCTX = 1,
-	IWL_FM_CHANGE_CHANCTX = 2,
-};
-
-int iwl_mvm_fm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
-			    s8 txpower);
-void iwl_mvm_fm_notify_channel_change(struct ieee80211_chanctx_conf *ctx,
-				      enum iwl_fm_chan_change_action action);
-void iwl_mvm_fm_notify_current_dcdc(void);
-int iwl_mvm_fm_register(struct iwl_mvm *mvm);
-int iwl_mvm_fm_unregister(struct iwl_mvm *mvm);
-#endif
 
 /* Location Aware Regulatory */
 struct iwl_mcc_update_resp *
