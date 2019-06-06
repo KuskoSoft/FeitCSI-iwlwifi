@@ -204,9 +204,6 @@ struct iwl_dbg_cfg {
 	IWL_MVM_MOD_PARAM(bool, init_dbg)
 	IWL_MVM_MOD_PARAM(bool, tfd_q_hang_detect)
 #endif /* CPTCFG_IWLMVM */
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR_TEST
-	IWL_DBG_CFG_NODEF(u8, fm_debug_mode)
-#endif
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	IWL_DBG_CFG_NODEF(u32, dnt_out_mode)
 	/* XXX: should be dbgm_ or dbg_mon_ for consistency? */

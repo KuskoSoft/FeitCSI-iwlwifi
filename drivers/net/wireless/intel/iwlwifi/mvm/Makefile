@@ -17,4 +17,3 @@ ccflags-y += -I$(src)/../
 # non-upstream things
 iwlmvm-$(CPTCFG_IWLMVM_VENDOR_CMDS) += vendor-cmd.o
 iwlmvm-$(CPTCFG_IWLWIFI_FRQ_MGR) += fm-ops.o
-iwlmvm-$(CPTCFG_IWLWIFI_FRQ_MGR_TEST) += fm-test.o
