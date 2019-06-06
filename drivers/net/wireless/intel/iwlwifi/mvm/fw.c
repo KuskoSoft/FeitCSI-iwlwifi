@@ -1471,10 +1471,6 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status))
 		iwl_mvm_send_recovery_cmd(mvm, ERROR_RECOVERY_UPDATE_DB);
 
-#ifdef CPTCFG_IWLWIFI_LTE_COEX
-	iwl_mvm_send_lte_commands(mvm);
-#endif
-
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	/* set_mode must be IWL_TX_POWER_MODE_SET_DEVICE if this was
 	 * ever initialized.

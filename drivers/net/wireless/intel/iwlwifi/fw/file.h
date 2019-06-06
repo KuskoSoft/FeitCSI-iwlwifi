@@ -248,9 +248,6 @@ enum iwl_ucode_tlv_flag {
 	IWL_UCODE_TLV_FLAGS_EBS_SUPPORT		= BIT(25),
 	IWL_UCODE_TLV_FLAGS_P2P_PS_UAPSD	= BIT(26),
 	IWL_UCODE_TLV_FLAGS_BCAST_FILTERING	= BIT(29),
-#ifdef CPTCFG_IWLWIFI_LTE_COEX
-	IWL_UCODE_TLV_FLAGS_LTE_COEX		= BIT(31),
-#endif
 };
 
 typedef unsigned int __bitwise iwl_ucode_tlv_api_t;

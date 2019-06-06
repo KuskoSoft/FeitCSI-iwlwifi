@@ -74,12 +74,6 @@ config IWLMVM_VENDOR_CMDS
 	  This option mostly exists for non-upstream tagging, so best
 	  leave it set to Y.
 
-config IWLWIFI_LTE_COEX
-        bool "enable lte coexistence support"
-        depends on IWLMVM_VENDOR_CMDS
-	help
-	  This option enables LTE-Coexistence (vendor) commands
-
 config IWLMVM_TDLS_PEER_CACHE
 	bool "enable TDLS peer caching and traffic monitoring"
 	depends on IWLMVM_VENDOR_CMDS

@@ -89,10 +89,6 @@
 #include "fw/acpi.h"
 #include "iwl-nvm-parse.h"
 
-#ifdef CPTCFG_IWLWIFI_LTE_COEX
-#include "lte-coex.h"
-#endif
-
 #include <linux/average.h>
 
 #define IWL_MVM_MAX_ADDRESSES		5
@@ -594,24 +590,6 @@ struct iwl_mvm_frame_stats {
 	int last_frame_idx;
 };
 
-#ifdef CPTCFG_IWLWIFI_LTE_COEX
-struct lte_coex_state {
-	u8 state;
-
-	bool has_static;
-	bool has_config;
-	bool has_sps;
-	bool has_rprtd_chan;
-	bool has_ft;
-
-	struct iwl_lte_coex_static_params_cmd stat;
-	struct iwl_lte_coex_config_cmd config;
-	struct iwl_lte_coex_sps_cmd sps;
-	struct iwl_lte_coex_wifi_reported_channel_cmd rprtd_chan;
-	struct iwl_lte_coex_fine_tuning_params_cmd ft;
-};
-#endif
-
 #define IWL_MVM_DEBUG_SET_TEMPERATURE_DISABLE 0xff
 #define IWL_MVM_DEBUG_SET_TEMPERATURE_MIN -100
 #define IWL_MVM_DEBUG_SET_TEMPERATURE_MAX 200
@@ -1077,10 +1055,6 @@ struct iwl_mvm {
 	u8 bt_tx_prio;
 	enum iwl_bt_force_ant_mode bt_force_ant_mode;
 
-#ifdef CPTCFG_IWLWIFI_LTE_COEX
-	/* LTE-Coex */
-	struct lte_coex_state lte_state;
-#endif
 	/* Aux ROC */
 	struct list_head aux_roc_te_list;
 
@@ -2178,16 +2152,6 @@ void iwl_mvm_resume_tcm(struct iwl_mvm *mvm);
 void iwl_mvm_tcm_add_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 void iwl_mvm_tcm_rm_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 u8 iwl_mvm_tcm_load_percentage(u32 airtime, u32 elapsed);
-
-#ifdef CPTCFG_IWLWIFI_LTE_COEX
-int iwl_mvm_send_lte_coex_static_params_cmd(struct iwl_mvm *mvm);
-int iwl_mvm_send_lte_coex_config_cmd(struct iwl_mvm *mvm);
-int iwl_mvm_send_lte_coex_wifi_reported_channel_cmd(struct iwl_mvm *mvm);
-int iwl_mvm_send_lte_sps_cmd(struct iwl_mvm *mvm);
-int iwl_mvm_send_lte_fine_tuning_params_cmd(struct iwl_mvm *mvm);
-void iwl_mvm_reset_lte_state(struct iwl_mvm *mvm);
-void iwl_mvm_send_lte_commands(struct iwl_mvm *mvm);
-#endif
 
 void iwl_mvm_nic_restart(struct iwl_mvm *mvm, bool fw_error);
 unsigned int iwl_mvm_get_wd_timeout(struct iwl_mvm *mvm,
