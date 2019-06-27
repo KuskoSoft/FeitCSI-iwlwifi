@@ -4,6 +4,19 @@
 #include <linux/version.h>
 #include <linux/in6.h>
 
+#if LINUX_VERSION_IS_LESS(5,1,0)
+#undef NLA_POLICY_NESTED
+#undef NLA_POLICY_NESTED_ARRAY
+#define _NLA_POLICY_NESTED(maxattr, policy) \
+	{ .type = NLA_NESTED, .validation_data = policy, .len = maxattr }
+#define _NLA_POLICY_NESTED_ARRAY(maxattr, policy) \
+	{ .type = NLA_NESTED_ARRAY, .validation_data = policy, .len = maxattr }
+#define NLA_POLICY_NESTED(policy) \
+	_NLA_POLICY_NESTED(ARRAY_SIZE(policy) - 1, policy)
+#define NLA_POLICY_NESTED_ARRAY(policy) \
+	_NLA_POLICY_NESTED_ARRAY(ARRAY_SIZE(policy) - 1, policy)
+#endif /* < 5.1 */
+
 #if LINUX_VERSION_IS_LESS(4,20,0)
 /* can't backport using the enum - need to override */
 #define NLA_UNSPEC		0
@@ -58,11 +71,6 @@ struct backport_nla_policy {
 
 #define NLA_POLICY_ETH_ADDR		NLA_POLICY_EXACT_LEN(ETH_ALEN)
 #define NLA_POLICY_ETH_ADDR_COMPAT	NLA_POLICY_EXACT_LEN_WARN(ETH_ALEN)
-
-#define NLA_POLICY_NESTED(maxattr, policy) \
-	{ .type = NLA_NESTED, .validation_data = policy, .len = maxattr }
-#define NLA_POLICY_NESTED_ARRAY(maxattr, policy) \
-	{ .type = NLA_NESTED_ARRAY, .validation_data = policy, .len = maxattr }
 
 #define __NLA_ENSURE(condition) (sizeof(char[1 - 2*!(condition)]) - 1)
 #define NLA_ENSURE_INT_TYPE(tp)				\

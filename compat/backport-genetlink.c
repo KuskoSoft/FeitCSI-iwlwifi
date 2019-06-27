@@ -169,7 +169,7 @@ static int backport_pre_doit(__genl_const struct genl_ops *ops,
 #endif
 
 	err = nlmsg_validate(info->nlhdr, GENL_HDRLEN + family->hdrsize,
-			     family->maxattr, ops->policy, extack);
+			     family->maxattr, family->policy, extack);
 	if (!err && family->pre_doit)
 		err = family->pre_doit(ops, skb, info);
 

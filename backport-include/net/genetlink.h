@@ -93,7 +93,7 @@ void backport_genl_dump_check_consistent(struct netlink_callback *cb,
 #endif
 #endif /* LINUX_VERSION_IS_LESS(4,15,0) */
 
-#if LINUX_VERSION_IS_LESS(4,20,0)
+#if LINUX_VERSION_IS_LESS(5,2,0)
 static inline int
 __real_backport_genl_register_family(struct genl_family *family)
 {
@@ -117,6 +117,7 @@ struct backport_genl_family {
 	unsigned int		maxattr;
 	bool			netnsok;
 	bool			parallel_ops;
+	const struct nla_policy *policy;
 	int			(*pre_doit)(__genl_const struct genl_ops *ops,
 					    struct sk_buff *skb,
 					    struct genl_info *info);
