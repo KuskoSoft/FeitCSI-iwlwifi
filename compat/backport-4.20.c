@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Intel Corporation
+ * Copyright (C) 2018 - 2019 Intel Corporation
  *
  * Backport functionality introduced in Linux 4.20.
  * This is basically upstream lib/nlattr.c.
@@ -158,6 +158,9 @@ static int validate_nla(const struct nlattr *nla, int maxtype,
 	if (type <= 0 || type > maxtype)
 		return 0;
 
+	if (WARN_ON(!policy))
+		return -EINVAL;
+
 	pt = &policy[type];
 
 	BUG_ON(pt->type > NLA_TYPE_MAX);
@@ -315,6 +318,9 @@ int backport_nla_validate(const struct nlattr *head, int len, int maxtype,
 {
 	const struct nlattr *nla;
 	int rem;
+
+	if (!policy)
+		return 0;
 
 	nla_for_each_attr(nla, head, len, rem) {
 		int err = validate_nla(nla, maxtype, policy, extack);
