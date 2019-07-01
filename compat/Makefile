@@ -39,7 +39,7 @@ compat-$(CPTCFG_KERNEL_4_10) += backport-4.10.o
 compat-$(CPTCFG_KERNEL_4_18) += backport-4.18.o
 compat-$(CPTCFG_KERNEL_4_20) += backport-4.20.o
 
-compat-$(CPTCFG_KERNEL_4_20) += backport-genetlink.o
+compat-$(CPTCFG_KERNEL_5_2) += backport-genetlink.o
 
 compat-$(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) += verification/verify.o
 compat-$(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) += verification/pkcs7.asn1.o
