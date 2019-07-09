@@ -1316,8 +1316,6 @@ static void iwl_mvm_mac_stop(struct ieee80211_hw *hw)
 	 */
 	clear_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
 
-	iwl_fw_cancel_dumps(&mvm->fwrt);
-
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
 	cancel_delayed_work_sync(&mvm->tx_latency_watchdog_wk);
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
