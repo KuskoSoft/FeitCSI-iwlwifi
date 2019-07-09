@@ -4,7 +4,7 @@
  * Copyright 2006-2007	Jiri Benc <jbenc@suse.cz>
  * Copyright 2007	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
- * Copyright (C) 2018 Intel Corporation
+ * Copyright (C) 2018-2019 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2356,7 +2356,7 @@ static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
 	tx_thrshld = rcu_dereference(local->tx_threshold);
 	if (!tx_latency && !tx_consec && !tx_thrshld)
 		return;
-	temp = ktime_to_ms(ktime_get());
+	temp = ktime_to_us(ktime_get());
 #if LINUX_VERSION_IS_LESS(4,10,0)
 	skb->tstamp.tv64 += temp << 32;
 #else
