@@ -200,14 +200,14 @@ static inline struct sk_buff *__pskb_copy_fclone(struct sk_buff *skb,
 struct sk_buff *skb_clone_sk(struct sk_buff *skb);
 #endif
 
-
+static inline bool skb_xmit_more(struct sk_buff *skb)
+{
 #if LINUX_VERSION_IS_LESS(3,18,0)
-#define skb_xmit_more(skb) false
-#elif LINUX_VERSION_IS_LESS(5,2,0)
-#define skb_xmit_more(skb) ((skb)->xmit_more)
+	return false;
 #else
-#define skb_xmit_more(skb) netdev_xmit_more()
+	return skb->xmit_more;
 #endif
+}
 
 #if LINUX_VERSION_IS_LESS(3,19,0)
 /**

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 config CFG80211
 	tristate "cfg80211 - wireless configuration API"
 	depends on m

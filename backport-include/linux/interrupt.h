@@ -5,6 +5,25 @@
 #include <linux/ktime.h>
 
 #if LINUX_VERSION_IS_LESS(4,10,0)
+
+/* Forward a hrtimer so it expires after now: */
+static inline u64
+backport_hrtimer_forward(struct hrtimer *timer, ktime_t now, s64 interval)
+{
+	ktime_t _interval = { .tv64 = interval };
+
+	return hrtimer_forward(timer, now, _interval);
+}
+#define hrtimer_forward LINUX_BACKPORT(hrtimer_forward)
+
+static inline s64 backport_ns_to_ktime(u64 ns)
+{
+	ktime_t _time = ns_to_ktime(ns);
+
+	return _time.tv64;
+}
+#define ns_to_ktime LINUX_BACKPORT(ns_to_ktime)
+
 static inline void backport_hrtimer_start(struct hrtimer *timer, s64 time,
 					  const enum hrtimer_mode mode)
 {
