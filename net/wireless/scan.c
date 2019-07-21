@@ -15,6 +15,7 @@
 #include <linux/nl80211.h>
 #include <linux/etherdevice.h>
 #include <linux/crc32.h>
+#include <linux/bitfield.h>
 #include <net/arp.h>
 #include <net/cfg80211.h>
 #include <net/cfg80211-wext.h>
@@ -483,10 +484,170 @@ static bool cfg80211_bss_expire_oldest(struct cfg80211_registered_device *rdev)
 	return ret;
 }
 
+static void cfg80211_parse_bss_param(u8 data,
+				     struct cfg80211_colocated_ap *coloc_ap)
+{
+	coloc_ap->oct_recommended =
+		u8_get_bits(data, IEEE80211_RNR_TBTT_PARAMS_OCT_RECOMMENDED);
+	coloc_ap->same_ssid =
+		u8_get_bits(data, IEEE80211_RNR_TBTT_PARAMS_SAME_SSID);
+	coloc_ap->multi_bss =
+		u8_get_bits(data, IEEE80211_RNR_TBTT_PARAMS_MULTI_BSSID);
+	coloc_ap->transmitted_bssid =
+		u8_get_bits(data, IEEE80211_RNR_TBTT_PARAMS_TRANSMITTED_BSSID);
+	coloc_ap->unsolicited_probe =
+		u8_get_bits(data, IEEE80211_RNR_TBTT_PARAMS_PROBE_ACTIVE);
+	coloc_ap->colocated_ess =
+		u8_get_bits(data, IEEE80211_RNR_TBTT_PARAMS_COLOC_ESS);
+}
+
+static u32 cfg80211_calc_short_ssid(const struct cfg80211_bss_ies *ies,
+				    u8 *ssid, size_t *ssid_len)
+{
+	const struct element *elem;
+	u32 s_ssid = 0;
+
+	elem = cfg80211_find_elem(WLAN_EID_SSID, ies->data, ies->len);
+	if (!elem || elem->datalen > IEEE80211_MAX_SSID_LEN) {
+		*ssid_len = 0;
+		return 0;
+	}
+
+	*ssid_len = elem->datalen;
+	memcpy(ssid, elem->data, elem->datalen);
+	s_ssid = crc32_be(~0, elem->data, elem->datalen);
+	return s_ssid;
+}
+
+static void cfg80211_free_coloc_ap_list(struct list_head *coloc_ap_list)
+{
+	struct cfg80211_colocated_ap *ap, *tmp_ap;
+
+	list_for_each_entry_safe(ap, tmp_ap, coloc_ap_list, list) {
+		list_del(&ap->list);
+		kfree(ap);
+	}
+}
+
 static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 				       struct list_head *list)
 {
-	return 0;
+	const struct element *elem;
+	const u8 *pos, *end;
+	u8 ssid[IEEE80211_MAX_SSID_LEN] = {0};
+	size_t ssid_len;
+	u32 s_ssid_tmp;
+	int n_coloc = 0;
+	LIST_HEAD(ap_list);
+
+	elem = cfg80211_find_elem(WLAN_EID_REDUCED_NEIGHBOR_REPORT, ies->data,
+				  ies->len);
+	if (!elem)
+		return 0;
+
+	pos = elem->data;
+	end = pos + elem->datalen;
+	s_ssid_tmp = cfg80211_calc_short_ssid(ies, ssid, &ssid_len);
+
+	/* RNR IE may contain more than one NEIGHBOR_AP_INFO */
+	while (pos + IEEE80211_MIN_AP_NEIGHBOR_INFO_SIZE <= end) {
+		bool filtered, colocated;
+		struct cfg80211_neighbor_ap_info *ap_info;
+		enum nl80211_band band;
+		int freq;
+		u8 length, i, count;
+
+		ap_info = (struct cfg80211_neighbor_ap_info *)pos;
+		filtered = u8_get_bits(ap_info->tbtt_info_hdr,
+				       IEEE80211_AP_INFO_TBTT_HDR_FILTERED);
+		colocated = u8_get_bits(ap_info->tbtt_info_hdr,
+					IEEE80211_AP_INFO_TBTT_HDR_COLOC);
+		count = u8_get_bits(ap_info->tbtt_info_hdr,
+				    IEEE80211_AP_INFO_TBTT_HDR_COUNT) + 1;
+		length = ap_info->tbtt_info_len;
+
+		pos += sizeof(*ap_info);
+
+		ieee80211_operating_class_to_band(ap_info->op_class, &band);
+		freq = ieee80211_channel_to_frequency(ap_info->channel, band);
+
+		/*
+		 * TBTT info must include both BSSID and (short SSID or SSID)
+		 * ignore other options, and move to the next AP info
+		 */
+		if (!colocated || band != NL80211_BAND_6GHZ ||
+		    pos + count * ap_info->tbtt_info_len > end ||
+		    (length != IEEE80211_TBTT_INFO_OFFSET_BSSID &&
+		     length != IEEE80211_TBTT_INFO_OFFSET_BSSID_BSS_PARAM &&
+		     length != IEEE80211_TBTT_INFO_OFFSET_BSSID_SSSID &&
+		     length < IEEE80211_TBTT_INFO_OFFSET_BSSID_SSSID_BSS_PARAM)) {
+			pos += count * ap_info->tbtt_info_len;
+			continue;
+		}
+
+		for (i = 0; i < count; i++) {
+			struct cfg80211_colocated_ap *entry;
+			const u8 *tmp = pos;
+
+			entry = kzalloc(sizeof(*entry) +
+					IEEE80211_MAX_SSID_LEN, GFP_ATOMIC);
+
+			if (!entry) {
+				cfg80211_free_coloc_ap_list(&ap_list);
+				return 0;
+			}
+
+			entry->center_freq = freq;
+
+			/* skipping the TBTT offset */
+			tmp++;
+
+			memcpy(entry->bssid, tmp, ETH_ALEN);
+			tmp += ETH_ALEN;
+
+			if (length == IEEE80211_TBTT_INFO_OFFSET_BSSID_SSSID ||
+			    length ==
+			    IEEE80211_TBTT_INFO_OFFSET_BSSID_SSSID_BSS_PARAM) {
+				memcpy(&entry->short_ssid, tmp,
+				       sizeof(entry->short_ssid));
+				tmp += 4;
+			}
+
+			if (length ==
+			    IEEE80211_TBTT_INFO_OFFSET_BSSID_BSS_PARAM) {
+				cfg80211_parse_bss_param(*tmp, entry);
+				tmp++;
+
+				/*
+				 * no information about the short ssid -
+				 * ignore it
+				 */
+				if (!entry->same_ssid) {
+					kfree(entry);
+					goto next;
+				}
+			}
+
+			if (entry->same_ssid || filtered) {
+				entry->short_ssid = s_ssid_tmp;
+				memcpy(&entry->ssid, &ssid, ssid_len);
+				entry->ssid_len = ssid_len;
+			}
+
+			n_coloc++;
+			list_add_tail(&entry->list, &ap_list);
+next:
+			pos += ap_info->tbtt_info_len;
+		}
+	}
+
+	if (pos != end) {
+		cfg80211_free_coloc_ap_list(&ap_list);
+		return 0;
+	}
+
+	list_splice_tail(&ap_list, list);
+	return n_coloc;
 }
 
 static  void cfg80211_scan_req_add_chan(struct cfg80211_scan_request *request,
@@ -548,16 +709,6 @@ static bool is_psc_chan(struct ieee80211_channel *chan)
 		ieee80211_frequency_to_channel(chan->center_freq);
 
 	return chan->band == NL80211_BAND_6GHZ && chan_num % 16 == 1;
-}
-
-static void cfg80211_free_coloc_ap_list(struct list_head *coloc_ap_list)
-{
-	struct cfg80211_colocated_ap *ap, *tmp_ap;
-
-	list_for_each_entry_safe(ap, tmp_ap, coloc_ap_list, list) {
-		list_del(&ap->list);
-		kfree(ap);
-	}
 }
 
 static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
