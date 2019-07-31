@@ -1121,7 +1121,7 @@ enum ieee80211_tx_lat_msr_point {
  * struct ieee80211_tx_latency_bin_ranges - Tx latency statistics bins ranges
  *
  * Measuring Tx latency statistics. Counts how many Tx frames transmitted in a
- * certain latency range (in Milliseconds). Each station that uses these
+ * certain latency range (in Microseconds). Each station that uses these
  * ranges will have bins to count the amount of frames received in that range.
  * The user can configure the ranges via debugfs.
  * If ranges is NULL then Tx latency statistics bins are disabled for all

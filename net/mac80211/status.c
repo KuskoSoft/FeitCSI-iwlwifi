@@ -605,7 +605,7 @@ tx_consec_loss_msrmnt(struct ieee80211_tx_consec_loss_ranges *tx_consec,
 	 */
 
 	if (send_failed ||
-	    (!send_failed && tx_consec->late_threshold < msrmnt)) {
+	    (!send_failed && tx_consec->late_threshold < msrmnt / 1000)) {
 		tx_csc->consec_total_loss++;
 	} else {
 		update_consec_bins(tx_csc->total_loss_bins, bin_ranges,
@@ -626,7 +626,7 @@ tx_consec_loss_msrmnt(struct ieee80211_tx_consec_loss_ranges *tx_consec,
 	if (send_failed) /* only count packets sent successfully */
 		return;
 
-	if (tx_consec->late_threshold < msrmnt) {
+	if (tx_consec->late_threshold < msrmnt / 1000) {
 		tx_csc->consec_late_loss++;
 	} else {
 		update_consec_bins(tx_csc->late_bins, bin_ranges,
@@ -692,7 +692,7 @@ tx_latency_threshold(struct ieee80211_local *local, struct sk_buff *skb,
 	    !sta->tx_lat_thrshld[tid])
 		return;
 
-	if (sta->tx_lat_thrshld[tid] < msrmnt) {
+	if (sta->tx_lat_thrshld[tid] < msrmnt / 1000) {
 		struct ieee80211_event event = {
 			.type = TX_LATENCY_EVENT,
 			.u.tx_lat.mode = tx_thrshld->monitor_record_mode,
@@ -700,7 +700,7 @@ tx_latency_threshold(struct ieee80211_local *local, struct sk_buff *skb,
 				tx_thrshld->monitor_collec_wind,
 			.u.tx_lat.pkt_start = ktime_to_us(skb->tstamp),
 			.u.tx_lat.pkt_end = ktime_to_us(skb->tstamp) + msrmnt,
-			.u.tx_lat.msrmnt = msrmnt,
+			.u.tx_lat.msrmnt = msrmnt / 1000,
 			.u.tx_lat.tid = tid,
 			.u.tx_lat.seq = (le16_to_cpu(hdr->seq_ctrl) &
 					 IEEE80211_SCTL_SEQ) >> 4,
