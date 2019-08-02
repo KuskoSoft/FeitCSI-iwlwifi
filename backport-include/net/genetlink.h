@@ -35,6 +35,16 @@ static inline struct netlink_ext_ack *genl_info_extack(struct genl_info *info)
 #endif
 }
 
+/* this is for patches we apply */
+static inline struct netlink_ext_ack *genl_callback_extack(struct netlink_callback *cb)
+{
+#if LINUX_VERSION_IS_GEQ(4,20,0)
+	return cb->extack;
+#else
+	return NULL;
+#endif
+}
+
 /* this gets put in place of info->userhdr, since we use that above */
 static inline void *genl_info_userhdr(struct genl_info *info)
 {
