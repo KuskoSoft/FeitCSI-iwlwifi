@@ -3,6 +3,13 @@
 #include_next <linux/pci.h>
 #include <linux/version.h>
 
+#ifndef CONFIG_PCI
+struct msix_entry {
+	u32 vector;
+	u16 entry;
+};
+#endif
+
 #ifndef module_pci_driver
 /**
  * module_pci_driver() - Helper macro for registering a PCI driver
