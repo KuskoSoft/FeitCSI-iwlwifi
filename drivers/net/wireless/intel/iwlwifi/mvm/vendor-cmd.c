@@ -941,7 +941,6 @@ out:
 
 	return cfg80211_vendor_cmd_reply(skb);
 }
-#endif
 
 static const struct nla_policy
 iwl_mvm_vendor_fips_hw_policy[NUM_IWL_VENDOR_FIPS_TEST_VECTOR_HW] = {
@@ -1175,6 +1174,7 @@ free:
 	kfree(tb);
 	return ret;
 }
+#endif
 
 static int iwl_mvm_vendor_csi_register(struct wiphy *wiphy,
 				       struct wireless_dev *wdev,
