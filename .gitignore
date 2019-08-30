@@ -26,3 +26,5 @@ __pycache__
 # cscope files
 cscope.*
 ncscope.*
+# gcc profile objects
+*.gcno
