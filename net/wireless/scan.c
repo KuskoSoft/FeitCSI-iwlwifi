@@ -448,6 +448,49 @@ static bool cfg80211_bss_expire_oldest(struct cfg80211_registered_device *rdev)
 	return ret;
 }
 
+static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
+{
+	return -EINVAL;
+	/* TODO: call scan for 6ghz */
+}
+
+int cfg80211_scan(struct cfg80211_registered_device *rdev)
+{
+	struct cfg80211_scan_request *request;
+	struct cfg80211_scan_request *rdev_req = rdev->scan_req;
+	u32 n_channels = 0, idx, i;
+
+	if (!(rdev->wiphy.flags & WIPHY_FLAG_SPLIT_SCAN_6GHZ))
+		return rdev_scan(rdev, rdev_req);
+
+	for (i = 0; i < rdev_req->n_channels; i++) {
+		if (rdev_req->channels[i]->band != NL80211_BAND_6GHZ)
+			n_channels++;
+	}
+
+	if (!n_channels) {
+		rdev_req->scan_6ghz = true;
+		return cfg80211_scan_6ghz(rdev);
+	}
+
+	request = kzalloc(struct_size(request, channels, n_channels),
+			  GFP_KERNEL);
+	if (!request)
+		return -ENOMEM;
+
+	*request = *rdev_req;
+	request->n_channels = n_channels;
+
+	for (i = idx = 0; i < rdev_req->n_channels; i++) {
+		if (rdev_req->channels[i]->band != NL80211_BAND_6GHZ)
+			request->channels[idx++] = rdev_req->channels[i];
+	}
+
+	rdev_req->scan_6ghz = false;
+	rdev->int_scan_req = request;
+	return rdev_scan(rdev, request);
+}
+
 void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 			   bool send_message)
 {
@@ -472,6 +515,15 @@ void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 
 	wdev = request->wdev;
 
+	kfree(rdev->int_scan_req);
+	rdev->int_scan_req = NULL;
+
+	if ((rdev->wiphy.flags & WIPHY_FLAG_SPLIT_SCAN_6GHZ) &&
+	    !request->scan_6ghz) {
+		request->scan_6ghz = true;
+		if (!cfg80211_scan_6ghz(rdev))
+			return;
+	}
 	/*
 	 * This must be before sending the other events!
 	 * Otherwise, wpa_supplicant gets completely confused with
@@ -526,7 +578,6 @@ void cfg80211_scan_done(struct cfg80211_scan_request *request,
 			struct cfg80211_scan_info *info)
 {
 	trace_cfg80211_scan_done(request, info);
-	WARN_ON(request != wiphy_to_rdev(request->wiphy)->scan_req);
 
 	request->info = *info;
 	request->notified = true;

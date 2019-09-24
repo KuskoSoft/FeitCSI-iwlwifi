@@ -7630,7 +7630,7 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
 	request->scan_start = jiffies;
 
 	rdev->scan_req = request;
-	err = rdev_scan(rdev, request);
+	err = cfg80211_scan(rdev);
 
 	if (!err) {
 		nl80211_send_scan_start(rdev, wdev);
