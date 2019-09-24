@@ -852,7 +852,7 @@ int iwl_mvm_get_sar_geo_profile(struct iwl_mvm *mvm)
 	return ret;
 }
 
-int iwl_mvm_sar_geo_init(struct iwl_mvm *mvm)
+static int iwl_mvm_sar_geo_init(struct iwl_mvm *mvm)
 {
 	u16 cmd_wide_id =  WIDE_ID(PHY_OPS_GROUP, GEO_TX_POWER_LIMIT);
 	union geo_tx_power_profiles_cmd cmd;
@@ -997,6 +997,11 @@ inline int iwl_mvm_sar_select_profile(struct iwl_mvm *mvm,
 inline int iwl_mvm_get_sar_geo_profile(struct iwl_mvm *mvm)
 {
 	return -ENOENT;
+}
+
+static int iwl_mvm_sar_geo_init(struct iwl_mvm *mvm)
+{
+	return 0;
 }
 
 static int iwl_mvm_get_ppag_table(struct iwl_mvm *mvm)
