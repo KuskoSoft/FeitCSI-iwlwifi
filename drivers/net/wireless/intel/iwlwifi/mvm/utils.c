@@ -820,7 +820,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	iwl_mvm_bt_coex_vif_change(mvm);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWLMVM_VENDOR_TCM_EVENTS
 	iwl_mvm_send_tcm_event(mvm, vif);
 #endif
 
@@ -1088,7 +1088,7 @@ static void iwl_mvm_tcm_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
 		iwl_mvm_update_low_latency(mvm, vif, low_latency,
 					   LOW_LATENCY_TRAFFIC);
 	} else {
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWLMVM_VENDOR_TCM_EVENTS
 		iwl_mvm_send_tcm_event(mvm, vif);
 #endif
 		iwl_mvm_update_quotas(mvm, false, NULL);
@@ -1110,7 +1110,7 @@ static void iwl_mvm_tcm_results(struct iwl_mvm *mvm)
 		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
 		iwl_mvm_tcm_iter, &data);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWLMVM_VENDOR_TCM_EVENTS
 	/* send global only */
 	if (mvm->tcm.result.global_change && !data.any_sent)
 		iwl_mvm_send_tcm_event(mvm, NULL);
