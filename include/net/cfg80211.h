@@ -1784,6 +1784,20 @@ struct cfg80211_scan_info {
 };
 
 /**
+ * struct cfg80211_scan_6ghz_params - relevant for 6ghz only
+ *
+ * @short_bssid: short ssid to scan for
+ * @bssid: bssid to scan for
+ * @channel_idx: idx of the channel in the channel array in the scan request
+ *	 which the above info relvant to
+ */
+struct cfg80211_scan_6ghz_params {
+	u32 short_ssid;
+	u32 channel_idx;
+	u8 bssid[ETH_ALEN];
+};
+
+/**
  * struct cfg80211_scan_request - scan request description
  *
  * @ssids: SSIDs to scan for (active scan only)
@@ -1812,6 +1826,8 @@ struct cfg80211_scan_info {
  *	be taken from the @mac_addr
  * @scan_6ghz: relevant for split scan request only,
  *	set to 1 if this is the second scan request
+ * @n_6ghz_params: number of 6 GHZ params
+ * @scan_6ghz_params: 6 GHZ params
  * @bssid: BSSID to scan for (most commonly, the wildcard BSSID)
  */
 struct cfg80211_scan_request {
@@ -1840,6 +1856,8 @@ struct cfg80211_scan_request {
 	bool notified;
 	bool no_cck;
 	bool scan_6ghz;
+	u32 n_6ghz_params;
+	struct cfg80211_scan_6ghz_params *scan_6ghz_params;
 
 	/* keep last */
 	struct ieee80211_channel *channels[0];
