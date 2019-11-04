@@ -678,6 +678,10 @@ static int __ieee80211_start_scan(struct ieee80211_sub_if_data *sdata,
 			req->duration_mandatory;
 
 		local->hw_scan_band = 0;
+		local->hw_scan_req->req.n_6ghz_params = req->n_6ghz_params;
+		local->hw_scan_req->req.scan_6ghz_params =
+			req->scan_6ghz_params;
+		local->hw_scan_req->req.scan_6ghz = req->scan_6ghz;
 
 		/*
 		 * After allocating local->hw_scan_req, we must
