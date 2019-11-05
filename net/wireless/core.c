@@ -820,6 +820,11 @@ int wiphy_register(struct wiphy *wiphy)
 			    !sband->n_bitrates))
 			return -EINVAL;
 
+		if (WARN_ON(band == NL80211_BAND_6GHZ &&
+			    (sband->ht_cap.ht_supported ||
+			     sband->vht_cap.vht_supported)))
+			return -EINVAL;
+
 		/*
 		 * Since cfg80211_disable_40mhz_24ghz is global, we can
 		 * modify the sband's ht data even if the driver uses a
