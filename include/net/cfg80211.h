@@ -1042,6 +1042,7 @@ struct sta_txpwr {
  * @he_capa: HE capabilities of station
  * @he_capa_len: the length of the HE capabilities
  * @airtime_weight: airtime scheduler weight for this station
+ * @he_6ghz_capa: HE 6 GHz band capability
  */
 struct station_parameters {
 	const u8 *supported_rates;
@@ -1073,6 +1074,7 @@ struct station_parameters {
 	u8 he_capa_len;
 	u16 airtime_weight;
 	struct sta_txpwr txpwr;
+	__le16 *he_6ghz_capa;
 };
 
 /**

@@ -2354,6 +2354,9 @@ enum nl80211_commands {
  *	should be picking up the lowest tx power, either tx power per-interface
  *	or per-station.
  *
+ * @NL80211_ATTR_HE_6GHZ_CAPABILITY: HE 6 GHz Band Capabilities element (__le16)
+ *	from association request when used with NL80211_CMD_NEW_STATION
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2809,6 +2812,8 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_NAN_CDW_2G,
 	NL80211_ATTR_NAN_CDW_5G,
+
+	NL80211_ATTR_HE_6GHZ_CAPABILITY,
 
 	/* add attributes here, update the policy in nl80211.c */
 

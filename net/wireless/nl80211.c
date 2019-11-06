@@ -609,6 +609,7 @@ const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 
 	[NL80211_ATTR_NAN_CDW_2G] = { .type = NLA_U8 },
 	[NL80211_ATTR_NAN_CDW_5G] = { .type = NLA_U8 },
+	[NL80211_ATTR_HE_6GHZ_CAPABILITY] = { .type = NLA_U16 },
 };
 
 /* policy for the key attributes */
@@ -5554,6 +5555,9 @@ static int nl80211_set_station_tdls(struct genl_info *info,
 		if (params->he_capa_len < NL80211_HE_MIN_CAPABILITY_LEN)
 			return -EINVAL;
 	}
+	if (info->attrs[NL80211_ATTR_HE_6GHZ_CAPABILITY])
+		params->he_6ghz_capa =
+			nla_data(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
 
 	err = nl80211_parse_sta_channel_info(info, params);
 	if (err)
@@ -5807,6 +5811,10 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 			return -EINVAL;
 	}
 
+	if (info->attrs[NL80211_ATTR_HE_6GHZ_CAPABILITY])
+		params.he_6ghz_capa =
+			nla_data(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
+
 	if (info->attrs[NL80211_ATTR_OPMODE_NOTIF]) {
 		params.opmode_notif_used = true;
 		params.opmode_notif =
@@ -5851,7 +5859,7 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 		params.vht_capa = NULL;
 
 		/* HE requires WME */
-		if (params.he_capa_len)
+		if (params.he_capa_len || params.he_6ghz_capa)
 			return -EINVAL;
 	}
 
