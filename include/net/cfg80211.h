@@ -317,7 +317,7 @@ struct ieee80211_sta_he_cap {
 struct ieee80211_sband_iftype_data {
 	u16 types_mask;
 	struct ieee80211_sta_he_cap he_cap;
-	u16 he_6ghz_capa;
+	__le16 he_6ghz_capa;
 };
 
 /**

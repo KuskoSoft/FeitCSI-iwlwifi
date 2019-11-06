@@ -1545,8 +1545,9 @@ nl80211_send_iftype_data(struct sk_buff *msg,
 	}
 
 	if (sband->band == NL80211_BAND_6GHZ &&
-	    nla_put_u16(msg, NL80211_BAND_IFTYPE_ATTR_HE_6GHZ_CAPA,
-			iftdata->he_6ghz_capa))
+	    nla_put(msg, NL80211_BAND_IFTYPE_ATTR_HE_6GHZ_CAPA,
+		    sizeof(iftdata->he_6ghz_capa),
+		    &iftdata->he_6ghz_capa))
 		return -ENOBUFS;
 
 	return 0;
