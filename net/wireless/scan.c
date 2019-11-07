@@ -719,6 +719,9 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 	struct cfg80211_scan_request *request, *rdev_req;
 	LIST_HEAD(coloc_ap_list);
 
+	if (!rdev->wiphy.bands[NL80211_BAND_6GHZ])
+		return -EOPNOTSUPP;
+
 	rdev_req = rdev->scan_req;
 	n_channels = rdev->wiphy.bands[NL80211_BAND_6GHZ]->n_channels;
 
