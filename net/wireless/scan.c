@@ -758,8 +758,9 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 	 * in case that NL80211_SCAN_FLAG_COLOCATED_6GHZ is not set)
 	 */
 	for (i = 0; i < rdev_req->n_channels; i++) {
-		if (is_psc_chan(rdev_req->channels[i]) ||
-		    !(rdev_req->flags & NL80211_SCAN_FLAG_COLOCATED_6GHZ)) {
+		if (rdev_req->channels[i]->band == NL80211_BAND_6GHZ &&
+		    (is_psc_chan(rdev_req->channels[i]) ||
+		     !(rdev_req->flags & NL80211_SCAN_FLAG_COLOCATED_6GHZ))) {
 			cfg80211_scan_req_add_chan(request,
 						   rdev_req->channels[i],
 						   false);
