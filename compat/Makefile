@@ -75,3 +75,4 @@ compat-$(CPTCFG_BPAUTO_RHASHTABLE) += lib-rhashtable.o
 compat-$(CPTCFG_BPAUTO_PUBLIC_KEY) += 
 compat-$(CPTCFG_BPAUTO_BUCKET_LOCKS) += lib-bucket_locks.o
 compat-$(CPTCFG_BPAUTO_PKCS7) += 
+compat-$(CPTCFG_BPAUTO_BUILD_CRYPTO_LIB_ARC4) += lib-crypto-arc4.o
