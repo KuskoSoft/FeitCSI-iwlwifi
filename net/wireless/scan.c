@@ -776,7 +776,9 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 	if (!(rdev_req->flags & NL80211_SCAN_FLAG_COLOCATED_6GHZ)) {
 		cfg80211_free_coloc_ap_list(&coloc_ap_list);
 		rdev->int_scan_req = request;
-		return rdev_scan(rdev, request);
+		if (request->n_channels)
+			return rdev_scan(rdev, request);
+		return -EINVAL;
 	}
 
 	list_for_each_entry(ap, &coloc_ap_list, list) {
@@ -810,7 +812,9 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 	cfg80211_free_coloc_ap_list(&coloc_ap_list);
 
 	rdev->int_scan_req = request;
-	return rdev_scan(rdev, request);
+	if (request->n_channels)
+		return rdev_scan(rdev, request);
+	return -EINVAL;
 }
 
 int cfg80211_scan(struct cfg80211_registered_device *rdev)
