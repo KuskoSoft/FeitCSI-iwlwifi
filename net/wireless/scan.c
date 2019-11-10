@@ -748,9 +748,15 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 
 	*request = *rdev_req;
 	request->n_channels = 0;
-
-	request->scan_6ghz_params =
-		(void *)&request->channels[n_channels];
+	if (request->ie_len)
+		request->scan_6ghz_params =
+			(void *)&request->ie + request->ie_len;
+	else if (request->n_ssids)
+		request->scan_6ghz_params =
+			(void *)(request->ssids + request->n_ssids);
+	else
+		request->scan_6ghz_params =
+			(void *)&request->channels[n_channels];
 
 	/*
 	 * add to the scan request the channels that need to be scanned
