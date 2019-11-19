@@ -1829,9 +1829,9 @@ struct cfg80211_scan_6ghz_params {
  *	are 0 in the mask should be randomised, bits that are 1 should
  *	be taken from the @mac_addr
  * @scan_6ghz: relevant for split scan request only,
- *	set to 1 if this is the second scan request
- * @n_6ghz_params: number of 6 GHZ params
- * @scan_6ghz_params: 6 GHZ params
+ *	true if this is the second scan request
+ * @n_6ghz_params: number of 6 GHz params
+ * @scan_6ghz_params: 6 GHz params
  * @bssid: BSSID to scan for (most commonly, the wildcard BSSID)
  */
 struct cfg80211_scan_request {
