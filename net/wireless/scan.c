@@ -868,9 +868,11 @@ void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 		return;
 
 	wdev = rdev_req->wdev;
+	request = rdev->int_scan_req ? rdev->int_scan_req : rdev_req;
 
-	if ((rdev->wiphy.flags & WIPHY_FLAG_SPLIT_SCAN_6GHZ) &&
-	    !rdev_req->scan_6ghz) {
+	if (wdev_running(wdev) &&
+	    (rdev->wiphy.flags & WIPHY_FLAG_SPLIT_SCAN_6GHZ) &&
+	    !rdev_req->scan_6ghz && !request->info.aborted) {
 		rdev_req->scan_6ghz = true;
 		if (!cfg80211_scan_6ghz(rdev))
 			return;
@@ -883,7 +885,6 @@ void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 	if (wdev->netdev)
 		cfg80211_sme_scan_done(wdev->netdev);
 
-	request = rdev->int_scan_req ? rdev->int_scan_req : rdev_req;
 	if (!request->info.aborted &&
 	    request->flags & NL80211_SCAN_FLAG_FLUSH) {
 		/* flush entries from previous scans */
