@@ -1794,11 +1794,13 @@ struct cfg80211_scan_info {
  * @bssid: bssid to scan for
  * @channel_idx: idx of the channel in the channel array in the scan request
  *	 which the above info relvant to
+ * @unsolicited_probe: the AP transmits unsolicited probe response every 20 TU
  */
 struct cfg80211_scan_6ghz_params {
 	u32 short_ssid;
 	u32 channel_idx;
 	u8 bssid[ETH_ALEN];
+	bool unsolicited_probe;
 };
 
 /**

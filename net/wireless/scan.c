@@ -781,6 +781,8 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 
 	list_for_each_entry(ap, &coloc_ap_list, list) {
 		bool found = false;
+		struct cfg80211_scan_6ghz_params *scan_6ghz_params =
+			&request->scan_6ghz_params[request->n_6ghz_params];
 		struct ieee80211_channel *chan =
 			ieee80211_get_channel(&rdev->wiphy, ap->center_freq);
 
@@ -800,10 +802,9 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 			continue;
 
 		cfg80211_scan_req_add_chan(request, chan, true);
-		memcpy(&request->scan_6ghz_params[request->n_6ghz_params].bssid,
-		       ap->bssid, ETH_ALEN);
-		request->scan_6ghz_params[request->n_6ghz_params].short_ssid =
-			ap->short_ssid;
+		memcpy(scan_6ghz_params->bssid, ap->bssid, ETH_ALEN);
+		scan_6ghz_params->short_ssid = ap->short_ssid;
+		scan_6ghz_params->unsolicited_probe = ap->unsolicited_probe;
 		request->n_6ghz_params++;
 	}
 
