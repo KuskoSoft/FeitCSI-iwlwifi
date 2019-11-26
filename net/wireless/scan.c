@@ -850,7 +850,7 @@ int cfg80211_scan(struct cfg80211_registered_device *rdev)
 void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 			   bool send_message)
 {
-	struct cfg80211_scan_request *request;
+	struct cfg80211_scan_request *request, *rdev_req;
 	struct wireless_dev *wdev;
 	struct sk_buff *msg;
 #ifdef CPTCFG_CFG80211_WEXT
@@ -865,18 +865,15 @@ void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 		return;
 	}
 
-	request = rdev->scan_req;
-	if (!request)
+	rdev_req = rdev->scan_req;
+	if (!rdev_req)
 		return;
 
-	wdev = request->wdev;
-
-	kfree(rdev->int_scan_req);
-	rdev->int_scan_req = NULL;
+	wdev = rdev_req->wdev;
 
 	if ((rdev->wiphy.flags & WIPHY_FLAG_SPLIT_SCAN_6GHZ) &&
-	    !request->scan_6ghz) {
-		request->scan_6ghz = true;
+	    !rdev_req->scan_6ghz) {
+		rdev_req->scan_6ghz = true;
 		if (!cfg80211_scan_6ghz(rdev))
 			return;
 	}
@@ -888,6 +885,7 @@ void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 	if (wdev->netdev)
 		cfg80211_sme_scan_done(wdev->netdev);
 
+	request = rdev->int_scan_req ? rdev->int_scan_req : rdev_req;
 	if (!request->info.aborted &&
 	    request->flags & NL80211_SCAN_FLAG_FLUSH) {
 		/* flush entries from previous scans */
@@ -909,8 +907,11 @@ void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 	if (wdev->netdev)
 		dev_put(wdev->netdev);
 
+	kfree(rdev->int_scan_req);
+	rdev->int_scan_req = NULL;
+
+	kfree(rdev->scan_req);
 	rdev->scan_req = NULL;
-	kfree(request);
 
 	if (!send_message)
 		rdev->scan_msg = msg;
