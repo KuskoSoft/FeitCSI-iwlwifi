@@ -708,14 +708,6 @@ static bool cfg80211_find_ssid_match(struct cfg80211_colocated_ap *ap,
 	return false;
 }
 
-static bool is_psc_chan(struct ieee80211_channel *chan)
-{
-	int chan_num =
-		ieee80211_frequency_to_channel(chan->center_freq);
-
-	return chan->band == NL80211_BAND_6GHZ && chan_num % 16 == 1;
-}
-
 static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 {
 	u8 i;
@@ -763,7 +755,7 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 	 */
 	for (i = 0; i < rdev_req->n_channels; i++) {
 		if (rdev_req->channels[i]->band == NL80211_BAND_6GHZ &&
-		    (is_psc_chan(rdev_req->channels[i]) ||
+		    (cfg80211_is_psc(rdev_req->channels[i]) ||
 		     !(rdev_req->flags & NL80211_SCAN_FLAG_COLOCATED_6GHZ))) {
 			cfg80211_scan_req_add_chan(request,
 						   rdev_req->channels[i],
