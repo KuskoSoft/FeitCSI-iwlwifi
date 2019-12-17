@@ -10430,7 +10430,8 @@ static int nl80211_register_mgmt(struct sk_buff *skb, struct genl_info *info)
 	return cfg80211_mlme_register_mgmt(wdev, genl_info_snd_portid(info),
 					   frame_type,
 					   nla_data(info->attrs[NL80211_ATTR_FRAME_MATCH]),
-					   nla_len(info->attrs[NL80211_ATTR_FRAME_MATCH]));
+					   nla_len(info->attrs[NL80211_ATTR_FRAME_MATCH]),
+					   genl_info_extack(info));
 }
 
 static int nl80211_tx_mgmt(struct sk_buff *skb, struct genl_info *info)
