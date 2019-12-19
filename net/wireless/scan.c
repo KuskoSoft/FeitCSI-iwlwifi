@@ -604,7 +604,7 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 		freq = ieee80211_channel_to_frequency(ap_info->channel, band);
 
 		if (end - pos < count * ap_info->tbtt_info_len)
-			return 0;
+			break;
 
 		/*
 		 * TBTT info must include bss param + BSSID +
@@ -625,10 +625,8 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 			entry = kzalloc(sizeof(*entry) + IEEE80211_MAX_SSID_LEN,
 					GFP_ATOMIC);
 
-			if (!entry) {
-				cfg80211_free_coloc_ap_list(&ap_list);
-				return 0;
-			}
+			if (!entry)
+				break;
 
 			entry->center_freq = freq;
 
