@@ -597,7 +597,10 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 
 		pos += sizeof(*ap_info);
 
-		ieee80211_operating_class_to_band(ap_info->op_class, &band);
+		if (!ieee80211_operating_class_to_band(ap_info->op_class,
+						       &band))
+			break;
+
 		freq = ieee80211_channel_to_frequency(ap_info->channel, band);
 
 		if (end - pos < count * ap_info->tbtt_info_len)
