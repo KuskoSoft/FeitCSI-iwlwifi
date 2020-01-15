@@ -5,7 +5,7 @@
  * Copyright 2008 Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
  * Copyright 2016	Intel Deutschland GmbH
- * Copyright (C) 2018-2019 Intel Corporation
+ * Copyright (C) 2018-2020 Intel Corporation
  */
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -511,7 +511,7 @@ static int cfg80211_calc_short_ssid(const struct cfg80211_bss_ies *ies,
 	if (!*elem || (*elem)->datalen > IEEE80211_MAX_SSID_LEN)
 		return -EINVAL;
 
-	*s_ssid = crc32_be(~0, (*elem)->data, (*elem)->datalen);
+	*s_ssid = crc32_le(~0, (*elem)->data, (*elem)->datalen);
 	return 0;
 }
 
