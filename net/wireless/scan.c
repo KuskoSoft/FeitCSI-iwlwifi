@@ -555,6 +555,11 @@ static int cfg80211_parse_ap_info(struct cfg80211_colocated_ap *entry,
 
 	if (entry->same_ssid) {
 		entry->short_ssid = s_ssid_tmp;
+		/*
+		 * This is safe because we validate datalen in
+		 * cfg80211_parse_colocated_ap(), before calling this
+		 * function.
+		 */
 		memcpy(&entry->ssid, &ssid_elem->data,
 		       ssid_elem->datalen);
 		entry->ssid_len = ssid_elem->datalen;
@@ -573,7 +578,7 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 
 	elem = cfg80211_find_elem(WLAN_EID_REDUCED_NEIGHBOR_REPORT, ies->data,
 				  ies->len);
-	if (!elem)
+	if (!elem || elem->datalen > IEEE80211_MAX_SSID_LEN)
 		return 0;
 
 	pos = elem->data;
