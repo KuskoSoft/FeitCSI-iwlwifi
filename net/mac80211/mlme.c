@@ -1698,6 +1698,8 @@ static u32 ieee80211_handle_pwr_constr(struct ieee80211_sub_if_data *sdata,
 			sdata, channel, cisco_dtpc_ie, &pwr_level_cisco);
 		has_cisco_pwr = true;
 	}
+#else
+	pwr_level_cisco = 0;
 #endif
 	if (!has_80211h_pwr && !has_cisco_pwr)
 		return 0;
