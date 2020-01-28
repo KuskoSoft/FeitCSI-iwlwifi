@@ -5,7 +5,7 @@
  * Copyright 2006-2007	Jiri Benc <jbenc@suse.cz>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
  * Copyright (C) 2017     Intel Deutschland GmbH
- * Copyright (C) 2018 - 2019 Intel Corporation
+ * Copyright (C) 2018 - 2020 Intel Corporation
  */
 
 #include <net/mac80211.h>
@@ -1016,10 +1016,6 @@ int ieee80211_register_hw(struct ieee80211_hw *hw)
 		sband->ht_cap.cap |= WLAN_HT_CAP_SM_PS_DISABLED <<
 			             IEEE80211_HT_CAP_SM_PS_SHIFT;
 	}
-
-	/* TODO: Add support for NAN Data interfaces */
-	if (local->hw.wiphy->interface_modes & BIT(NL80211_IFTYPE_NAN_DATA))
-		return -EINVAL;
 
 	/* if low-level driver supports AP, we also support VLAN.
 	 * drivers advertising SW_CRYPTO_CONTROL should enable AP_VLAN
