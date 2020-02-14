@@ -359,11 +359,7 @@ static inline void netif_trans_update(struct net_device *dev)
 static inline int _bp_netdev_upper_dev_link(struct net_device *dev,
 					    struct net_device *upper_dev)
 {
-#if LINUX_VERSION_IS_LESS(3,9,0)
-	return 0;
-#else
 	return netdev_upper_dev_link(dev, upper_dev);
-#endif
 }
 #define netdev_upper_dev_link3(dev, upper, extack) \
 	netdev_upper_dev_link(dev, upper)
