@@ -388,6 +388,11 @@ static inline struct sk_buff *__skb_peek(const struct sk_buff_head *list_)
 {
 	return list_->next;
 }
+
+static inline void skb_mark_not_on_list(struct sk_buff *skb)
+{
+	skb->next = NULL;
+}
 #endif
 
 #if LINUX_VERSION_IS_LESS(4,11,0)
@@ -414,6 +419,12 @@ static inline void nf_reset_ct(struct sk_buff *skb)
 {
 	nf_reset(skb);
 }
+#endif
+
+#ifndef skb_list_walk_safe
+#define skb_list_walk_safe(first, skb, next_skb)				\
+	for ((skb) = (first), (next_skb) = (skb) ? (skb)->next : NULL; (skb); 	\
+	     (skb) = (next_skb), (next_skb) = (skb) ? (skb)->next : NULL)
 #endif
 
 #endif /* __BACKPORT_SKBUFF_H */
