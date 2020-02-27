@@ -388,7 +388,10 @@ static inline struct sk_buff *__skb_peek(const struct sk_buff_head *list_)
 {
 	return list_->next;
 }
+#endif
 
+#if LINUX_VERSION_IS_LESS(4,20,0) && \
+    !LINUX_VERSION_IS_GEQ(4,19,10)
 static inline void skb_mark_not_on_list(struct sk_buff *skb)
 {
 	skb->next = NULL;
