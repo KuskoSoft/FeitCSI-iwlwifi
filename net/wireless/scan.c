@@ -548,9 +548,13 @@ static int cfg80211_parse_ap_info(struct cfg80211_colocated_ap *entry,
 	pos++;
 
 	if (length == IEEE80211_TBTT_INFO_OFFSET_BSSID_BSS_PARAM) {
-		/* no information about the short ssid - ignore it */
+		/*
+		 * no information about the short ssid. Consider the entry valid
+		 * for now. It would later be dropped in case there are explicit
+		 * SSIDs that need to be matched
+		 */
 		if (!entry->same_ssid)
-			return -EINVAL;
+			return 0;
 	}
 
 	if (entry->same_ssid) {
