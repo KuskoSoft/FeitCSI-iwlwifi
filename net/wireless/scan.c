@@ -702,8 +702,8 @@ static bool cfg80211_find_ssid_match(struct cfg80211_colocated_ap *ap,
 				    ap->ssid_len))
 				return true;
 		} else {
-			s_ssid = crc32_be(~0, request->ssids[i].ssid,
-					  request->ssids[i].ssid_len);
+			s_ssid = ~crc32_le(~0, request->ssids[i].ssid,
+					   request->ssids[i].ssid_len);
 
 			if (ap->short_ssid == s_ssid)
 				return true;
