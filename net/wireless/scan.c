@@ -94,6 +94,7 @@ MODULE_PARM_DESC(bss_entries_limit,
  * @transmitted_bssid: the reported AP is the transmitting BSSID
  * @colocated_ess: all the APs that share the same ESS as the reported AP are
  *	colocated and can be discovered via legacy bands.
+ * @short_ssid_valid: short_ssid is valid and can be used
  */
 struct cfg80211_colocated_ap {
 	struct list_head list;
@@ -107,7 +108,8 @@ struct cfg80211_colocated_ap {
 	   same_ssid:1,
 	   multi_bss:1,
 	   transmitted_bssid:1,
-	   colocated_ess:1;
+	   colocated_ess:1,
+	   short_ssid_valid:1;
 };
 
 static void bss_free(struct cfg80211_internal_bss *bss)
@@ -539,6 +541,7 @@ static int cfg80211_parse_ap_info(struct cfg80211_colocated_ap *entry,
 	if (length == IEEE80211_TBTT_INFO_OFFSET_BSSID_SSSID_BSS_PARAM) {
 		memcpy(&entry->short_ssid, pos,
 		       sizeof(entry->short_ssid));
+		entry->short_ssid_valid = true;
 		pos += 4;
 	}
 
@@ -559,6 +562,8 @@ static int cfg80211_parse_ap_info(struct cfg80211_colocated_ap *entry,
 
 	if (entry->same_ssid) {
 		entry->short_ssid = s_ssid_tmp;
+		entry->short_ssid_valid = true;
+
 		/*
 		 * This is safe because we validate datalen in
 		 * cfg80211_parse_colocated_ap(), before calling this
@@ -701,7 +706,7 @@ static bool cfg80211_find_ssid_match(struct cfg80211_colocated_ap *ap,
 			if (!memcmp(request->ssids[i].ssid, ap->ssid,
 				    ap->ssid_len))
 				return true;
-		} else {
+		} else if (ap->short_ssid_valid) {
 			s_ssid = ~crc32_le(~0, request->ssids[i].ssid,
 					   request->ssids[i].ssid_len);
 
@@ -801,6 +806,7 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 		cfg80211_scan_req_add_chan(request, chan, true);
 		memcpy(scan_6ghz_params->bssid, ap->bssid, ETH_ALEN);
 		scan_6ghz_params->short_ssid = ap->short_ssid;
+		scan_6ghz_params->short_ssid_valid = ap->short_ssid_valid;
 		scan_6ghz_params->unsolicited_probe = ap->unsolicited_probe;
 		request->n_6ghz_params++;
 	}
