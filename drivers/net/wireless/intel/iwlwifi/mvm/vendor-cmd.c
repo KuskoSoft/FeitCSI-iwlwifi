@@ -139,6 +139,7 @@ iwl_mvm_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_FIPS_TEST_VECTOR_HW_CCM] = { .type = NLA_NESTED },
 	[IWL_MVM_VENDOR_ATTR_FIPS_TEST_VECTOR_HW_GCM] = { .type = NLA_NESTED },
 	[IWL_MVM_VENDOR_ATTR_FIPS_TEST_VECTOR_HW_AES] = { .type = NLA_NESTED },
+	[IWL_MVM_VENDOR_ATTR_STA_CIPHER] = { .type = NLA_U32 },
 };
 
 static struct nlattr **iwl_mvm_parse_vendor_data(const void *data, int data_len)
@@ -1188,6 +1189,68 @@ static int iwl_mvm_vendor_csi_register(struct wiphy *wiphy,
 	return 0;
 }
 
+static int iwl_mvm_vendor_add_pasn_sta(struct wiphy *wiphy,
+				       struct wireless_dev *wdev,
+				       const void *data, int data_len)
+{
+	struct nlattr **tb;
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+	u8 *addr, *tk, *hltk;
+	u32 tk_len, hltk_len, cipher;
+	int ret;
+
+	tb = iwl_mvm_parse_vendor_data(data, data_len);
+	if (IS_ERR(tb))
+		return PTR_ERR(tb);
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_ADDR] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_STA_TK] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_STA_HLTK] ||
+	    !tb[IWL_MVM_VENDOR_ATTR_STA_CIPHER])
+		return -EINVAL;
+
+	addr = nla_data(tb[IWL_MVM_VENDOR_ATTR_ADDR]);
+	cipher = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_STA_CIPHER]);
+	tk = nla_data(tb[IWL_MVM_VENDOR_ATTR_STA_TK]);
+	tk_len = nla_len(tb[IWL_MVM_VENDOR_ATTR_STA_TK]);
+	hltk = nla_data(tb[IWL_MVM_VENDOR_ATTR_STA_HLTK]);
+	hltk_len = nla_len(tb[IWL_MVM_VENDOR_ATTR_STA_HLTK]);
+
+	mutex_lock(&mvm->mutex);
+	ret = iwl_mvm_ftm_respoder_add_pasn_sta(mvm, vif, addr, cipher, tk,
+						tk_len, hltk, hltk_len);
+	mutex_unlock(&mvm->mutex);
+	return ret;
+}
+
+static int iwl_mvm_vendor_remove_pasn_sta(struct wiphy *wiphy,
+					  struct wireless_dev *wdev,
+					  const void *data, int data_len)
+{
+	struct nlattr **tb;
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+	u8 *addr;
+	int ret;
+
+	tb = iwl_mvm_parse_vendor_data(data, data_len);
+	if (IS_ERR(tb))
+		return PTR_ERR(tb);
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_ADDR])
+		return -EINVAL;
+
+	addr = nla_data(tb[IWL_MVM_VENDOR_ATTR_ADDR]);
+
+	mutex_lock(&mvm->mutex);
+	ret = iwl_mvm_ftm_resp_remove_pasn_sta(mvm, vif, addr);
+	mutex_unlock(&mvm->mutex);
+	return ret;
+}
+
 static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 	{
 		.info = {
@@ -1379,6 +1442,25 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		.policy = iwl_mvm_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_ADD_PASN_STA,
+		},
+		.doit = iwl_mvm_vendor_add_pasn_sta,
+		.policy = iwl_mvm_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_REMOVE_PASN_STA,
+		},
+		.doit = iwl_mvm_vendor_remove_pasn_sta,
+		.policy = iwl_mvm_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+
 };
 
 enum iwl_mvm_vendor_events_idx {
