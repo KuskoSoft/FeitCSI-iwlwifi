@@ -2428,7 +2428,7 @@ void cfg80211_bss_iter(struct wiphy *wiphy,
 EXPORT_SYMBOL(cfg80211_bss_iter);
 
 void cfg80211_update_assoc_bss_entry(struct wireless_dev *wdev,
-				     struct cfg80211_chan_def *chandef)
+				     struct ieee80211_channel *chan)
 {
 	struct wiphy *wiphy = wdev->wiphy;
 	struct cfg80211_registered_device *rdev = wiphy_to_rdev(wiphy);
@@ -2437,13 +2437,10 @@ void cfg80211_update_assoc_bss_entry(struct wireless_dev *wdev,
 	struct cfg80211_internal_bss *bss;
 	struct cfg80211_bss *nontrans_bss;
 	struct cfg80211_bss *tmp;
-	enum nl80211_bss_scan_width scan_width =
-		cfg80211_chandef_to_scan_width(chandef);
 
 	spin_lock_bh(&rdev->bss_lock);
 
-	if (WARN_ON(cbss->pub.channel == chandef->chan &&
-		    cbss->pub.scan_width == scan_width))
+	if (WARN_ON(cbss->pub.channel == chan))
 		goto done;
 
 	/* use transmitting bss */
@@ -2452,8 +2449,7 @@ void cfg80211_update_assoc_bss_entry(struct wireless_dev *wdev,
 				    struct cfg80211_internal_bss,
 				    pub);
 
-	cbss->pub.channel = chandef->chan;
-	cbss->pub.scan_width = scan_width;
+	cbss->pub.channel = chan;
 
 	list_for_each_entry(bss, &rdev->bss_list, list) {
 		if (!cfg80211_bss_type_match(bss->pub.capability,
@@ -2500,8 +2496,7 @@ void cfg80211_update_assoc_bss_entry(struct wireless_dev *wdev,
 				 nontrans_list) {
 		bss = container_of(nontrans_bss,
 				   struct cfg80211_internal_bss, pub);
-		bss->pub.channel = chandef->chan;
-		bss->pub.scan_width = scan_width;
+		bss->pub.channel = chan;
 		rb_erase(&bss->rbn, &rdev->bss_tree);
 		rb_insert_bss(rdev, bss);
 		rdev->bss_generation++;
