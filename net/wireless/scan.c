@@ -725,6 +725,7 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 	int n_channels, count = 0;
 	struct cfg80211_scan_request *request, *rdev_req;
 	LIST_HEAD(coloc_ap_list);
+	bool need_scan_psc;
 
 	if (!rdev->wiphy.bands[NL80211_BAND_6GHZ])
 		return -EOPNOTSUPP;
@@ -759,13 +760,31 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 		(void *)&request->channels[n_channels];
 
 	/*
+	 * PSC channels should not be scanned if all the reported co-located APs
+	 * are indicating that all APs in the same ESS are co-located
+	 */
+	if (count) {
+		need_scan_psc = false;
+
+		list_for_each_entry(ap, &coloc_ap_list, list) {
+			if (!ap->colocated_ess) {
+				need_scan_psc = true;
+				break;
+			}
+		}
+	} else {
+		need_scan_psc = true;
+	}
+
+	/*
 	 * add to the scan request the channels that need to be scanned
 	 * regardless of the collocated APs (PSC channels or all channels
 	 * in case that NL80211_SCAN_FLAG_COLOCATED_6GHZ is not set)
 	 */
 	for (i = 0; i < rdev_req->n_channels; i++) {
 		if (rdev_req->channels[i]->band == NL80211_BAND_6GHZ &&
-		    (cfg80211_is_psc(rdev_req->channels[i]) ||
+		    ((need_scan_psc &&
+		      cfg80211_is_psc(rdev_req->channels[i])) ||
 		     !(rdev_req->flags & NL80211_SCAN_FLAG_COLOCATED_6GHZ))) {
 			cfg80211_scan_req_add_chan(request,
 						   rdev_req->channels[i],
