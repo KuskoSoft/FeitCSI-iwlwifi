@@ -5184,7 +5184,7 @@ static void iwl_mvm_event_bar_rx_callback(struct iwl_mvm *mvm,
 static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 					   u16 seq, u16 tid)
 {
-	struct timespec ts;
+	struct timespec64 ts;
 	int ret;
 	struct iwl_mvm_marker_rsp *rsp;
 	struct iwl_mvm_marker *marker;
@@ -5195,7 +5195,7 @@ static u32 iwl_mvm_send_latency_marker_cmd(struct iwl_mvm *mvm, u32 msrmnt,
 	u32 cmd_size = sizeof(struct iwl_mvm_marker) +
 		MARKER_CMD_TX_LAT_PAYLOAD_SIZE * sizeof(u32);
 
-	getnstimeofday(&ts);
+	ktime_get_real_ts64(&ts);
 
 	marker = kzalloc(cmd_size, GFP_KERNEL);
 	if (!marker)
