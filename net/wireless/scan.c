@@ -722,15 +722,16 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 {
 	u8 i;
 	struct cfg80211_colocated_ap *ap;
-	int n_channels, count = 0;
-	struct cfg80211_scan_request *request, *rdev_req;
+	int n_channels, count = 0, err;
+	struct cfg80211_scan_request *request, *rdev_req = rdev->scan_req;
 	LIST_HEAD(coloc_ap_list);
 	bool need_scan_psc;
+
+	rdev_req->scan_6ghz = true;
 
 	if (!rdev->wiphy.bands[NL80211_BAND_6GHZ])
 		return -EOPNOTSUPP;
 
-	rdev_req = rdev->scan_req;
 	n_channels = rdev->wiphy.bands[NL80211_BAND_6GHZ]->n_channels;
 
 	if (rdev_req->flags & NL80211_SCAN_FLAG_COLOCATED_6GHZ) {
@@ -828,13 +829,22 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 skip:
 	cfg80211_free_coloc_ap_list(&coloc_ap_list);
 
-	kfree(rdev->int_scan_req);
 	if (request->n_channels) {
+		struct cfg80211_scan_request *old = rdev->int_scan_req;
+
 		rdev->int_scan_req = request;
-		return rdev_scan(rdev, request);
+
+		err = rdev_scan(rdev, request);
+		if (err) {
+			rdev->int_scan_req = old;
+			kfree(request);
+		} else {
+			kfree(old);
+		}
+
+		return err;
 	}
 
-	rdev->int_scan_req = NULL;
 	kfree(request);
 	return -EINVAL;
 }
@@ -853,10 +863,8 @@ int cfg80211_scan(struct cfg80211_registered_device *rdev)
 			n_channels++;
 	}
 
-	if (!n_channels) {
-		rdev_req->scan_6ghz = true;
+	if (!n_channels)
 		return cfg80211_scan_6ghz(rdev);
-	}
 
 	request = kzalloc(struct_size(request, channels, n_channels),
 			  GFP_KERNEL);
@@ -903,11 +911,10 @@ void ___cfg80211_scan_done(struct cfg80211_registered_device *rdev,
 
 	if (wdev_running(wdev) &&
 	    (rdev->wiphy.flags & WIPHY_FLAG_SPLIT_SCAN_6GHZ) &&
-	    !rdev_req->scan_6ghz && !request->info.aborted) {
-		rdev_req->scan_6ghz = true;
-		if (!cfg80211_scan_6ghz(rdev))
-			return;
-	}
+	    !rdev_req->scan_6ghz && !request->info.aborted &&
+	    !cfg80211_scan_6ghz(rdev))
+		return;
+
 	/*
 	 * This must be before sending the other events!
 	 * Otherwise, wpa_supplicant gets completely confused with
