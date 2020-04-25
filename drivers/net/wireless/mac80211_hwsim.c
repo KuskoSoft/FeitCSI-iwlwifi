@@ -315,8 +315,8 @@ static struct net_device *hwsim_mon; /* global monitor netdev */
 
 #define CHAN6G(_chan) { \
 	.band = NL80211_BAND_6GHZ, \
-	.center_freq = 5940 + 5 * (_chan), \
-	.hw_value = 5940 + 5 * (_chan), \
+	.center_freq = 5950 + 5 * (_chan), \
+	.hw_value = 5950 + 5 * (_chan), \
 	.max_power = 20, \
 }
 
