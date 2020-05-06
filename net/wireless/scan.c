@@ -834,6 +834,9 @@ skip:
 
 		rdev->int_scan_req = request;
 
+		/* Save the scan start info from the first part of the scan */
+		rdev->int_scan_req->info = old->info;
+
 		err = rdev_scan(rdev, request);
 		if (err) {
 			rdev->int_scan_req = old;
@@ -971,11 +974,24 @@ void __cfg80211_scan_done(struct work_struct *wk)
 void cfg80211_scan_done(struct cfg80211_scan_request *request,
 			struct cfg80211_scan_info *info)
 {
+	struct cfg80211_scan_info old_info = request->info;
+
 	trace_cfg80211_scan_done(request, info);
 	WARN_ON(request != wiphy_to_rdev(request->wiphy)->scan_req &&
 		request != wiphy_to_rdev(request->wiphy)->int_scan_req);
 
 	request->info = *info;
+
+	/*
+	 * In case the scan is split, the scan_start_tsf and tsf_bssid should
+	 * be of the first part.
+	 */
+	if (request->scan_6ghz) {
+		request->info.scan_start_tsf = old_info.scan_start_tsf;
+		memcpy(request->info.tsf_bssid, old_info.tsf_bssid,
+		       sizeof(old_info.tsf_bssid));
+	}
+
 	request->notified = true;
 	queue_work(cfg80211_wq, &wiphy_to_rdev(request->wiphy)->scan_done_wk);
 }
