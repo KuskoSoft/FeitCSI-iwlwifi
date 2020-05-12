@@ -989,7 +989,7 @@ void cfg80211_scan_done(struct cfg80211_scan_request *request,
 	if (request->scan_6ghz) {
 		request->info.scan_start_tsf = old_info.scan_start_tsf;
 		memcpy(request->info.tsf_bssid, old_info.tsf_bssid,
-		       sizeof(old_info.tsf_bssid));
+		       sizeof(request->info.tsf_bssid));
 	}
 
 	request->notified = true;
