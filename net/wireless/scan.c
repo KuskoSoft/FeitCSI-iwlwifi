@@ -834,8 +834,12 @@ skip:
 
 		rdev->int_scan_req = request;
 
-		/* Save the scan start info from the first part of the scan */
-		rdev->int_scan_req->info = old->info;
+		/*
+		 * If this scan follows a previous scan, save the scan start
+		 * info from the first part of the scan
+		 */
+		if (old)
+			rdev->int_scan_req->info = old->info;
 
 		err = rdev_scan(rdev, request);
 		if (err) {
@@ -984,9 +988,10 @@ void cfg80211_scan_done(struct cfg80211_scan_request *request,
 
 	/*
 	 * In case the scan is split, the scan_start_tsf and tsf_bssid should
-	 * be of the first part.
+	 * be of the first part. In such a case old_info.scan_start_tsf should
+	 * be non zero.
 	 */
-	if (request->scan_6ghz) {
+	if (request->scan_6ghz && old_info.scan_start_tsf) {
 		request->info.scan_start_tsf = old_info.scan_start_tsf;
 		memcpy(request->info.tsf_bssid, old_info.tsf_bssid,
 		       sizeof(request->info.tsf_bssid));
