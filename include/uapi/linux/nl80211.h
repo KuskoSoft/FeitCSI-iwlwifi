@@ -978,8 +978,7 @@
  *	has been started, the NAN interface will create or join a
  *	cluster. This command must have a valid
  *	%NL80211_ATTR_NAN_MASTER_PREF attribute and optional
- *	%NL80211_ATTR_BANDS, %NL80211_ATTR_NAN_CDW_2G and
- *	%NL80211_ATTR_NAN_CDW_5G attributes. If %NL80211_ATTR_BANDS is
+ *	%NL80211_ATTR_BANDS attributes.  If %NL80211_ATTR_BANDS is
  *	omitted or set to 0, it means don't-care and the device will
  *	decide what to use.  After this command NAN functions can be
  *	added.
@@ -1007,9 +1006,10 @@
  *	configuration. NAN must be operational (%NL80211_CMD_START_NAN
  *	was executed).  It must contain at least one of the following
  *	attributes: %NL80211_ATTR_NAN_MASTER_PREF,
- *	%NL80211_ATTR_BANDS, %NL80211_ATTR_NAN_CDW_2G, %NL80211_ATTR_NAN_CDW_5G.
- *	If %NL80211_ATTR_BANDS is present but set to zero, the configuration is
- *	changed to don't-care (i.e. the device can decide what to do).
+ *	%NL80211_ATTR_BANDS.  If %NL80211_ATTR_BANDS is omitted, the
+ *	current configuration is not changed.  If it is present but
+ *	set to zero, the configuration is changed to don't-care
+ *	(i.e. the device can decide what to do).
  * @NL80211_CMD_NAN_FUNC_MATCH: Notification sent when a match is reported.
  *	This will contain a %NL80211_ATTR_NAN_MATCH nested attribute and
  *	%NL80211_ATTR_COOKIE.
@@ -2363,15 +2363,6 @@ enum nl80211_commands {
  * @NL80211_ATTR_FTM_RESPONDER_STATS: Nested attribute with FTM responder
  *	statistics, see &enum nl80211_ftm_responder_stats.
  *
- * @NL80211_ATTR_NAN_CDW_2G: defines the NAN device committed DW on 2.4GHz.
- *      This is a u8, where valid values are 1..5. The device must wake for at
- *      least every 2^(val-1) DW on 2.4GHz. When using %NL80211_CMD_START_NAN,
- *      if the attribute is not specified, the default committed DW is 1.
- * @NL80211_ATTR_NAN_CDW_5G: defines the NAN device committed DW on 5.2GHz.
- *      This is a u8, where valid values are 0..5. If the value is 0, then there
- *      are no wake ups on 5.2GHz DWs. When using %NL80211_CMD_START_NAN,
- *      if the attribute is not specified, the default committed DW is 1.
- *
  * @NL80211_ATTR_TIMEOUT: Timeout for the given operation in milliseconds (u32),
  *	if the attribute is not given no timeout is requested. Note that 0 is an
  *	invalid value.
@@ -2882,9 +2873,6 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_HE_6GHZ_CAPABILITY,
 
-	NL80211_ATTR_NAN_CDW_2G,
-	NL80211_ATTR_NAN_CDW_5G,
-
 	/* add attributes here, update the policy in nl80211.c */
 
 	__NL80211_ATTR_AFTER_LAST,
@@ -2938,7 +2926,6 @@ enum nl80211_attrs {
 #define NL80211_HE_MAX_CAPABILITY_LEN           54
 #define NL80211_MAX_NR_CIPHER_SUITES		5
 #define NL80211_MAX_NR_AKM_SUITES		2
-#define NL80211_MAX_NR_NAN_SEC_CTX_IDS		5
 
 #define NL80211_MIN_REMAIN_ON_CHANNEL_TIME	10
 
@@ -6035,76 +6022,6 @@ enum nl80211_nan_func_term_reason {
 #define NL80211_NAN_FUNC_SRF_MAX_LEN 0xff
 
 /**
- * enum nl80211_nan_sec_ctx_type - NAN security context identifier type
- * @NL80211_NAN_SEC_CTX_TYPE_PMKID: a 16 octet PMKID identifying the PMK used
- *	for setting up the secure data path.
- */
-enum nl80211_nan_sec_ctx_type {
-	NL80211_NAN_SEC_CTX_TYPE_PMKID,
-};
-
-/**
- * enum nl80211_nan_cs_ids - NAN cipher suite identifiers
- *
- * Defines cipher suite identifiers for NAN security association
- *
- * @NL80211_NAN_CS_ID_SK_CCM_128: uses CCMP-128 for frame encryption, SHA-256
- *	for the hash function used in PRF, and HMAC-SHA-256 for KDF.
- * @NL80211_NAN_CS_ID_SK_GCM_256: uses GCMP-256 for frames encryption, SHA-384
- *	for the hash function used in PRF, and HMAC-SHA-384 for KDF.
- */
-enum nl80211_nan_cs_ids {
-	NL80211_NAN_CS_ID_SK_CCM_128 = 1 << 0,
-	NL80211_NAN_CS_ID_SK_GCM_256 = 1 << 1,
-};
-
-/**
- * enum nl80211_nan_sec_ctx_id - NAN security context identifier
- * @_NL80211_NAN_SEC_CTX_INVALID: invalid
- * @NL80211_NAN_SEC_CTX_ID_TYPE: the type of the identifier as specified in
- *	&enum nl80211_nan_sec_ctx_type.
- * @NL80211_NAN_SEC_CTX_ID_DATA: the security context identifier data.
- *
- * @NUM_NL80211_NAN_SEC_CTX: internal
- * @NL80211_NAN_SEC_CTX_MAX: highest NAN security context attribute
- */
-enum nl80211_nan_sec_ctx_id {
-	_NL80211_NAN_SEC_CTX_INVALID,
-	NL80211_NAN_SEC_CTX_ID_TYPE,
-	NL80211_NAN_SEC_CTX_ID_DATA,
-
-	/* keep last */
-	NUM_NL80211_NAN_SEC_CTX,
-	NL80211_NAN_SEC_CTX_MAX = NUM_NL80211_NAN_SEC_CTX - 1
-};
-
-/**
- * enum nl80211_nan_fsd - NAN further service discovery method
- * @NL80211_NAN_FSD_FOLLOW_UP: follow up is used for further service discovery.
- * @NL80211_NAN_FSD_GAS: GAS is used for further service discovery.
- */
-enum nl80211_nan_fsd {
-	NL80211_NAN_FSD_FOLLOW_UP,
-	NL80211_NAN_FSD_GAS,
-};
-
-/**
- * enum nl80211_nan_ndp_type - NAN data path type
- * @NL80211_NAN_NDP_TYPE_UNICAST: unicast data path is required for the service
- * @NL80211_NAN_NDP_TYPE_MCAST_ONE_TO_MANY: NAN multicat service group (NMSG)
- *	of type one to many is required for the service.
- * @NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY: NAN multicat service group (NMSG)
- *	of type many to many is required for the service.
- */
-enum nl80211_nan_ndp_type {
-	NL80211_NAN_NDP_TYPE_UNICAST,
-	NL80211_NAN_NDP_TYPE_MCAST_ONE_TO_MANY,
-	NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY,
-};
-
-#define NL80211_NAN_FUNC_MAX_DW_INTERVAL	4
-
-/**
  * enum nl80211_nan_func_attributes - NAN function attributes
  * @__NL80211_NAN_FUNC_INVALID: invalid
  * @NL80211_NAN_FUNC_TYPE: &enum nl80211_nan_function_type (u8).
@@ -6142,30 +6059,6 @@ enum nl80211_nan_ndp_type {
  *	Its type is u8 and it cannot be 0.
  * @NL80211_NAN_FUNC_TERM_REASON: NAN function termination reason.
  *	See &enum nl80211_nan_func_term_reason.
- * @NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES: relevant if the function's type is
- *	publish. This is a bitmap specifying the cipher suites identifiers of
- *	the cipher suites supported by the service. See &enum nl80211_nan_cs_ids
- *	(u32).
- * @NL80211_NAN_FUNC_SECURITY_CTX_IDS: relevant if the function's type is
- *	publish and %NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES is set. This is a
- *	set of security context identifiers that may be used to set up a secured
- *	data path for the service, each one is a nested attribute,
- *	see &enum nl80211_nan_sec_ctx_id.
- * @NL80211_NAN_FUNC_FSD: relevant if the function's type is publish. If further
- *	service discovery is required for the service, specifies the further
- *	service discovery method to be used, as specified by
- *	&enum nl80211_nan_fsd (u32).
- * @NL80211_NAN_FUNC_NDP_TYPE: relevant if the function's type is publish. If
- *	NAN data path is required for the service, specifies the required NDP
- *	type as specified by &enum nl80211_nan_ndp_type (u32).
- * @NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS: specifies the ingress range limit for
- *	the service in centimeters (u16).
- * @NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS: specifies the egress range limit for
- *	the service in centimeters (u16).
- * @NL80211_NAN_FUNC_AWAKE_DW_INTERVAL: specifies the interval between two
- *	discovery windows in which the device shall be awake to transmit or
- *	receive SDFs. The interval will be 2^dw_interval * 512 TUs. Valid values
- *	are 0 - 4.
  *
  * @NUM_NL80211_NAN_FUNC_ATTR: internal
  * @NL80211_NAN_FUNC_ATTR_MAX: highest NAN function attribute
@@ -6188,13 +6081,6 @@ enum nl80211_nan_func_attributes {
 	NL80211_NAN_FUNC_TX_MATCH_FILTER,
 	NL80211_NAN_FUNC_INSTANCE_ID,
 	NL80211_NAN_FUNC_TERM_REASON,
-	NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES,
-	NL80211_NAN_FUNC_SECURITY_CTX_IDS,
-	NL80211_NAN_FUNC_FSD,
-	NL80211_NAN_FUNC_NDP_TYPE,
-	NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS,
-	NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS,
-	NL80211_NAN_FUNC_AWAKE_DW_INTERVAL,
 
 	/* keep last */
 	NUM_NL80211_NAN_FUNC_ATTR,
@@ -6237,9 +6123,6 @@ enum nl80211_nan_srf_attributes {
  * @NL80211_NAN_MATCH_FUNC_PEER: the peer function
  *	that caused the match. This is a nested attribute.
  *	See &enum nl80211_nan_func_attributes.
- * @NL80211_NAN_MATCH_DEVICE_ATTRS: attributes from the service discovery frame
- *	with information about the peer device (e.g. device capabilities,
- *	availability attribute etc).
  *
  * @NUM_NL80211_NAN_MATCH_ATTR: internal
  * @NL80211_NAN_MATCH_ATTR_MAX: highest NAN match attribute
@@ -6248,7 +6131,6 @@ enum nl80211_nan_match_attributes {
 	__NL80211_NAN_MATCH_INVALID,
 	NL80211_NAN_MATCH_FUNC_LOCAL,
 	NL80211_NAN_MATCH_FUNC_PEER,
-	NL80211_NAN_MATCH_DEVICE_ATTRS,
 
 	/* keep last */
 	NUM_NL80211_NAN_MATCH_ATTR,

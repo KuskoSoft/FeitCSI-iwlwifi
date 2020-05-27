@@ -2048,21 +2048,17 @@ TRACE_EVENT(rdev_start_nan,
 		WDEV_ENTRY
 		__field(u8, master_pref)
 		__field(u8, bands)
-		__field(u8, cdw_2g)
-		__field(u8, cdw_5g)
 	),
 	TP_fast_assign(
 		WIPHY_ASSIGN;
 		WDEV_ASSIGN;
 		__entry->master_pref = conf->master_pref;
 		__entry->bands = conf->bands;
-		__entry->cdw_2g = conf->cdw_2g;
-		__entry->cdw_5g = conf->cdw_5g;
 	),
 	TP_printk(WIPHY_PR_FMT ", " WDEV_PR_FMT
-		  ", master preference: %u, bands: 0x%0x, cdw_2g: %u, cdw_5g: %u",
+		  ", master preference: %u, bands: 0x%0x",
 		  WIPHY_PR_ARG, WDEV_PR_ARG, __entry->master_pref,
-		  __entry->bands, __entry->cdw_2g, __entry->cdw_5g)
+		  __entry->bands)
 );
 
 TRACE_EVENT(rdev_nan_change_conf,

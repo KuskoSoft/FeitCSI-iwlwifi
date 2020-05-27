@@ -2980,14 +2980,10 @@ struct cfg80211_qos_map {
  * @bands: operating bands, a bitmap of &enum nl80211_band values.
  *	For instance, for NL80211_BAND_2GHZ, bit 0 would be set
  *	(i.e. BIT(NL80211_BAND_2GHZ)).
- * @cdw_2g: Committed DW on 2.4GHz
- * @cdw_5g: Committed DW on 5.2GHz
  */
 struct cfg80211_nan_conf {
 	u8 master_pref;
 	u8 bands;
-	u8 cdw_2g;
-	u8 cdw_5g;
 };
 
 /**
@@ -2996,14 +2992,10 @@ struct cfg80211_nan_conf {
  *
  * @CFG80211_NAN_CONF_CHANGED_PREF: master preference
  * @CFG80211_NAN_CONF_CHANGED_BANDS: operating bands
- * @CFG80211_NAN_CONF_CHANGED_CDW_2G: committed DW on 2.4GHz
- * @CFG80211_NAN_CONF_CHANGED_CDW_5G: committed DW on 5.2GHz
  */
 enum cfg80211_nan_conf_changes {
 	CFG80211_NAN_CONF_CHANGED_PREF = BIT(0),
 	CFG80211_NAN_CONF_CHANGED_BANDS = BIT(1),
-	CFG80211_NAN_CONF_CHANGED_CDW_2G = BIT(2),
-	CFG80211_NAN_CONF_CHANGED_CDW_5G = BIT(3),
 };
 
 /**
@@ -3015,34 +3007,6 @@ enum cfg80211_nan_conf_changes {
 struct cfg80211_nan_func_filter {
 	const u8 *filter;
 	u8 len;
-};
-
-/**
- * struct cfg80211_nan_sec_ctx_id - NAN security context ID
- *
- * @type: the type of the security context ID as specified by
- *	&enum nl80211_nan_sec_ctx_type.
- * @len: the length of the @data field in bytes.
- * @data: the security context ID data.
- */
-struct cfg80211_nan_sec_ctx_id {
-	enum nl80211_nan_sec_ctx_type type;
-	u16 len;
-	const u8 *data;
-};
-
-/**
- * struct cfg80211_nan_sec - NAN security configuration
- *
- * @cipher_suite_ids: cipher suites IDs supported by the service. A bitmap of
- *	&enum nl80211_nan_cs_ids.
- * @n_ctx_ids: number of security context IDs in @ctx_ids array.
- * @ctx_ids: an array of security context IDs.
- */
-struct cfg80211_nan_sec {
-	u32 cipher_suite_ids;
-	u8 n_ctx_ids;
-	struct cfg80211_nan_sec_ctx_id *ctx_ids;
 };
 
 /**
@@ -3073,25 +3037,6 @@ struct cfg80211_nan_sec {
  * @num_tx_filters: length of &tx_filters.
  * @instance_id: driver allocated id of the function.
  * @cookie: unique NAN function identifier.
- * @sec: security configuration for the service.
- * @ndp_required: 1 if NAN data path is required for the service, 0 otherwise.
- *	The NDP type is specified by @ndp_type.
- * @ndp_type: the type of NDP required for the service as specified by
- *	&enum nl80211_nan_ndp_type. Only valid if @ndp_required is 1, ignored
- *	otherwise.
- * @fsd_required: 1 if further service discovery is required for the service, 0
- *	otherwise. The further service discovery method is specified by
- *	@fsd_method.
- * @fsd_method: the further service discovery method to be used for the service
- *	as specified by &enum nl80211_nan_fsd. Only valid if @fsd_required is
- *	set, ignored otherwise.
- * @range_limit_ingress: the ingress range limit for the service in centimeters.
- *	Zero if no range limit is set.
- * @range_limit_egress: the egress range limit for the service in centimeters.
- *	Zero if no range limit is set.
- * @awake_dw_interval: specifies the interval between two discovery windows in
- *	which the device shall be awake to transmit or receive SDFs. The
- *	interval will be 2^dw_interval * 512 TUs. Valid values are 0 - 4.
  */
 struct cfg80211_nan_func {
 	enum nl80211_nan_function_type type;
@@ -3105,7 +3050,7 @@ struct cfg80211_nan_func {
 	struct mac_address followup_dest;
 	u32 ttl;
 	const u8 *serv_spec_info;
-	u16 serv_spec_info_len;
+	u8 serv_spec_info_len;
 	bool srf_include;
 	const u8 *srf_bf;
 	u8 srf_bf_len;
@@ -3118,14 +3063,6 @@ struct cfg80211_nan_func {
 	u8 num_rx_filters;
 	u8 instance_id;
 	u64 cookie;
-	struct cfg80211_nan_sec sec;
-	u8 ndp_required;
-	enum nl80211_nan_ndp_type ndp_type;
-	u8 fsd_required;
-	enum nl80211_nan_fsd fsd_method;
-	u16 range_limit_ingress;
-	u16 range_limit_egress;
-	u8 awake_dw_interval;
 };
 
 /**
@@ -7515,48 +7452,15 @@ void cfg80211_free_nan_func(struct cfg80211_nan_func *f);
  * @info_len: the length of the &info
  * @info: the Service Specific Info from the peer (if any)
  * @cookie: unique identifier of the corresponding function
- * @sec: security configuration for the service. Only valid if @type is
- *	%NL80211_NAN_FUNC_PUBLISH.
- * @device_attrs: device related attributes from the service discovery frame.
- *	(e.g. Device capability attribute, NAN availability attribute and NDC
- *	attribute).
- * @device_attrs_len: length of @device_attrs field in bytes.
- * @ndp_required: 1 if NAN data path is required for the service, 0 otherwise.
- *	The NDP type is specified by @ndp_type. Only valid if @type is
- *	%NL80211_NAN_FUNC_PUBLISH.
- * @ndp_type: the type of NDP required for the service as specified by
- *	&enum nl80211_nan_ndp_type. Only valid if @ndp_required is 1, ignored
- *	otherwise.
- * @fsd_required: 1 if further service discovery is required for the service, 0
- *	otherwise. The further service discovery method is specified by
- *	@fsd_method. Only valid if @type is %NL80211_NAN_FUNC_PUBLISH.
- * @fsd_method: the further service discovery method to be used for the service
- *	as specified by &enum nl80211_nan_fsd. Only valid if @fsd_required is
- *	set, ignored otherwise.
- * @range_limit_ingress: the ingress range limit for the service in centimeters.
- *	Zero if no range limit is set. Only valid if @type is
- *	%NL80211_NAN_FUNC_PUBLISH.
- * @range_limit_egress: the egress range limit for the service in centimeters.
- *	Zero if no range limit is set. Only valid if @type is
- *	%NL80211_NAN_FUNC_PUBLISH.
  */
 struct cfg80211_nan_match_params {
 	enum nl80211_nan_function_type type;
 	u8 inst_id;
 	u8 peer_inst_id;
 	const u8 *addr;
-	u16 info_len;
+	u8 info_len;
 	const u8 *info;
 	u64 cookie;
-	struct cfg80211_nan_sec sec;
-	const u8 *device_attrs;
-	u32 device_attrs_len;
-	u8 ndp_required;
-	enum nl80211_nan_ndp_type ndp_type;
-	u8 fsd_required;
-	enum nl80211_nan_fsd fsd_method;
-	u16 range_limit_ingress;
-	u16 range_limit_egress;
 };
 
 /**

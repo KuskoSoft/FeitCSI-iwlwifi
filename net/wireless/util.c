@@ -1945,10 +1945,6 @@ void cfg80211_free_nan_func(struct cfg80211_nan_func *f)
 	for (i = 0; i < f->num_tx_filters; i++)
 		kfree(f->tx_filters[i].filter);
 
-	for (i = 0; i < f->sec.n_ctx_ids; i++)
-		kfree(f->sec.ctx_ids[i].data);
-
-	kfree(f->sec.ctx_ids);
 	kfree(f->rx_filters);
 	kfree(f->tx_filters);
 	kfree(f);

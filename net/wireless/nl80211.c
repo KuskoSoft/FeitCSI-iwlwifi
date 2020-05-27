@@ -633,9 +633,6 @@ const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_TWT_RESPONDER] = { .type = NLA_FLAG },
 	[NL80211_ATTR_HE_OBSS_PD] = NLA_POLICY_NESTED(he_obss_pd_policy),
 	[NL80211_ATTR_VLAN_ID] = NLA_POLICY_RANGE(NLA_U16, 1, VLAN_N_VID - 2),
-
-	[NL80211_ATTR_NAN_CDW_2G] = { .type = NLA_U8 },
-	[NL80211_ATTR_NAN_CDW_5G] = { .type = NLA_U8 },
 	[NL80211_ATTR_HE_6GHZ_CAPABILITY] = { .type = NLA_U16 },
 };
 
@@ -789,9 +786,6 @@ nl80211_nan_func_policy[NL80211_NAN_FUNC_ATTR_MAX + 1] = {
 	[NL80211_NAN_FUNC_TX_MATCH_FILTER] = { .type = NLA_NESTED },
 	[NL80211_NAN_FUNC_INSTANCE_ID] = { .type = NLA_U8 },
 	[NL80211_NAN_FUNC_TERM_REASON] = { .type = NLA_U8 },
-	[NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES] = { .type = NLA_U32 },
-	[NL80211_NAN_FUNC_SECURITY_CTX_IDS] = { .type = NLA_NESTED },
-	[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL] = { .type = NLA_U8 },
 };
 
 /* policy for Service Response Filter attributes */
@@ -810,12 +804,6 @@ nl80211_packet_pattern_policy[MAX_NL80211_PKTPAT + 1] = {
 	[NL80211_PKTPAT_MASK] = { .type = NLA_BINARY, },
 	[NL80211_PKTPAT_PATTERN] = { .type = NLA_BINARY, },
 	[NL80211_PKTPAT_OFFSET] = { .type = NLA_U32 },
-};
-
-static const struct nla_policy
-nl80211_nan_sec_ctx_policy[NL80211_NAN_SEC_CTX_MAX + 1] = {
-	[NL80211_NAN_SEC_CTX_ID_TYPE] = { .type = NLA_U32 },
-	[NL80211_NAN_SEC_CTX_ID_DATA] = { .type = NLA_BINARY },
 };
 
 int nl80211_prepare_wdev_dump(struct netlink_callback *cb,
@@ -12410,19 +12398,6 @@ static int nl80211_start_nan(struct sk_buff *skb, struct genl_info *info)
 		conf.bands = bands;
 	}
 
-	if (info->attrs[NL80211_ATTR_NAN_CDW_2G])
-		conf.cdw_2g = nla_get_u8(info->attrs[NL80211_ATTR_NAN_CDW_2G]);
-	else
-		conf.cdw_2g = 1;
-
-	if (info->attrs[NL80211_ATTR_NAN_CDW_5G])
-		conf.cdw_5g = nla_get_u8(info->attrs[NL80211_ATTR_NAN_CDW_5G]);
-	else
-		conf.cdw_5g = 1;
-
-	if (!conf.cdw_2g || conf.cdw_2g > 5 || conf.cdw_5g > 5)
-		return -EINVAL;
-
 	err = rdev_start_nan(rdev, wdev, &conf);
 	if (err)
 		return err;
@@ -12497,108 +12472,6 @@ static int handle_nan_filter(struct nlattr *attr_filter,
 	return 0;
 }
 
-static bool nl80211_nan_cipher_suites_valid(struct wiphy *wiphy, u32 ids)
-{
-	if (ids & (~(NL80211_NAN_CS_ID_SK_CCM_128 |
-		     NL80211_NAN_CS_ID_SK_GCM_256)))
-		return false;
-
-	if ((ids & NL80211_NAN_CS_ID_SK_CCM_128) &&
-	    !cfg80211_supported_cipher_suite(wiphy, WLAN_CIPHER_SUITE_CCMP))
-		return false;
-
-	if ((ids & NL80211_NAN_CS_ID_SK_GCM_256) &&
-	    !cfg80211_supported_cipher_suite(wiphy, WLAN_CIPHER_SUITE_GCMP_256))
-		return false;
-
-	return true;
-}
-
-static bool nl80211_nan_sec_ctx_id_valid(struct cfg80211_nan_sec_ctx_id *id)
-{
-	if (id->type == NL80211_NAN_SEC_CTX_TYPE_PMKID &&
-	    id->len == WLAN_PMKID_LEN)
-		return true;
-
-	return false;
-}
-
-static int nl80211_nan_set_security(struct cfg80211_registered_device *rdev,
-				    struct nlattr **tb,
-				    struct cfg80211_nan_sec *sec)
-{
-	int rem, ret, i, n_ctx_ids = 0;
-	struct nlattr *sec_attr;
-
-	if (!tb[NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES])
-		return 0;
-
-	sec->cipher_suite_ids =
-		nla_get_u32(tb[NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES]);
-	if (!nl80211_nan_cipher_suites_valid(&rdev->wiphy,
-					     sec->cipher_suite_ids))
-		return -EINVAL;
-
-	if (!tb[NL80211_NAN_FUNC_SECURITY_CTX_IDS])
-		return 0;
-
-	nla_for_each_nested(sec_attr, tb[NL80211_NAN_FUNC_SECURITY_CTX_IDS],
-			    rem)
-		n_ctx_ids++;
-
-	if (n_ctx_ids > NL80211_MAX_NR_NAN_SEC_CTX_IDS)
-		return -EINVAL;
-
-	sec->ctx_ids = kcalloc(n_ctx_ids, sizeof(*sec->ctx_ids), GFP_KERNEL);
-	if (!sec->ctx_ids)
-		return -ENOMEM;
-
-	nla_for_each_nested(sec_attr, tb[NL80211_NAN_FUNC_SECURITY_CTX_IDS],
-			    rem) {
-		struct nlattr *attr[NL80211_NAN_SEC_CTX_MAX + 1];
-		struct cfg80211_nan_sec_ctx_id *id =
-			&sec->ctx_ids[sec->n_ctx_ids];
-
-		ret = nla_parse_nested(attr, NL80211_NAN_SEC_CTX_MAX,
-				       sec_attr, nl80211_nan_sec_ctx_policy,
-				       NULL);
-		if (ret)
-			goto out;
-
-		if (!attr[NL80211_NAN_SEC_CTX_ID_TYPE] ||
-		    !attr[NL80211_NAN_SEC_CTX_ID_DATA]) {
-			ret = -EINVAL;
-			goto out;
-		}
-
-		id->type = nla_get_u32(attr[NL80211_NAN_SEC_CTX_ID_TYPE]);
-		id->len = nla_len(attr[NL80211_NAN_SEC_CTX_ID_DATA]);
-		id->data = kmemdup(nla_data(attr[NL80211_NAN_SEC_CTX_ID_DATA]),
-				   id->len, GFP_KERNEL);
-		if (!id->data) {
-			ret = -ENOMEM;
-			goto out;
-		}
-
-		sec->n_ctx_ids++;
-
-		if (!nl80211_nan_sec_ctx_id_valid(id)) {
-			ret = -EINVAL;
-			goto out;
-		}
-	}
-
-	return 0;
-out:
-	for (i = 0; i < sec->n_ctx_ids; i++)
-		kfree(sec->ctx_ids[i].data);
-
-	kfree(sec->ctx_ids);
-	sec->ctx_ids = NULL;
-	sec->n_ctx_ids = 0;
-	return ret;
-}
-
 static int nl80211_nan_add_func(struct sk_buff *skb,
 				struct genl_info *info)
 {
@@ -12668,16 +12541,6 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 	if (tb[NL80211_NAN_FUNC_TTL])
 		func->ttl = nla_get_u32(tb[NL80211_NAN_FUNC_TTL]);
 
-	if (tb[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL]) {
-		func->awake_dw_interval =
-			nla_get_u8(tb[NL80211_NAN_FUNC_AWAKE_DW_INTERVAL]);
-		if (func->awake_dw_interval >
-				NL80211_NAN_FUNC_MAX_DW_INTERVAL) {
-			err = -EINVAL;
-			goto out;
-		}
-	}
-
 	switch (func->type) {
 	case NL80211_NAN_FUNC_PUBLISH:
 		if (!tb[NL80211_NAN_FUNC_PUBLISH_TYPE]) {
@@ -12695,40 +12558,6 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 			err = -EINVAL;
 			goto out;
 		}
-
-		err = nl80211_nan_set_security(rdev, tb, &func->sec);
-		if (err)
-			goto out;
-
-		if (tb[NL80211_NAN_FUNC_FSD]) {
-			func->fsd_required = 1;
-			func->fsd_method =
-				nla_get_u32(tb[NL80211_NAN_FUNC_FSD]);
-			if (func->fsd_method > NL80211_NAN_FSD_GAS) {
-				err = -EINVAL;
-				goto out;
-			}
-		}
-
-		if (tb[NL80211_NAN_FUNC_NDP_TYPE]) {
-			func->ndp_required = 1;
-			func->ndp_type =
-				nla_get_u32(tb[NL80211_NAN_FUNC_NDP_TYPE]);
-			if (func->ndp_type >
-			    NL80211_NAN_NDP_TYPE_MCAST_MANY_TO_MANY) {
-				err = -EINVAL;
-				goto out;
-			}
-		}
-
-		if (tb[NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS])
-			func->range_limit_ingress =
-				nla_get_u16(tb[NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS]);
-
-		if (tb[NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS])
-			func->range_limit_ingress =
-				nla_get_u16(tb[NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS]);
-
 		break;
 	case NL80211_NAN_FUNC_SUBSCRIBE:
 		func->subscribe_active =
@@ -12942,65 +12771,10 @@ static int nl80211_nan_change_config(struct sk_buff *skb,
 		changed |= CFG80211_NAN_CONF_CHANGED_BANDS;
 	}
 
-	if (info->attrs[NL80211_ATTR_NAN_CDW_2G]) {
-		conf.cdw_2g = nla_get_u8(info->attrs[NL80211_ATTR_NAN_CDW_2G]);
-
-		if (!conf.cdw_2g || conf.cdw_2g > 5)
-			return -EINVAL;
-
-		changed |= CFG80211_NAN_CONF_CHANGED_CDW_2G;
-	}
-
-	if (info->attrs[NL80211_ATTR_NAN_CDW_5G]) {
-		conf.cdw_5g = nla_get_u8(info->attrs[NL80211_ATTR_NAN_CDW_2G]);
-
-		if (conf.cdw_5g > 5)
-			return -EINVAL;
-
-		changed |= CFG80211_NAN_CONF_CHANGED_CDW_5G;
-	}
-
 	if (!changed)
 		return -EINVAL;
 
 	return rdev_nan_change_conf(rdev, wdev, &conf, changed);
-}
-
-static int nl80211_nan_put_security(struct sk_buff *msg,
-				    struct cfg80211_nan_sec *sec)
-{
-	struct nlattr *ctx_ids, *ctx_id;
-	u8 i;
-
-	if (!sec->cipher_suite_ids)
-		return 0;
-
-	if (nla_put_u32(msg, NL80211_NAN_FUNC_SECURITY_CIPHER_SUITES,
-			sec->cipher_suite_ids))
-		return -ENOBUFS;
-
-	if (!sec->n_ctx_ids)
-		return 0;
-
-	ctx_ids = nla_nest_start(msg, NL80211_NAN_FUNC_SECURITY_CTX_IDS);
-	if (!ctx_ids)
-		return -ENOBUFS;
-
-	for (i = 0; i < sec->n_ctx_ids; i++) {
-		struct cfg80211_nan_sec_ctx_id *id = &sec->ctx_ids[i];
-
-		ctx_id = nla_nest_start(msg, i + 1);
-		if (!ctx_id ||
-		    nla_put_u32(msg, NL80211_NAN_SEC_CTX_ID_TYPE, id->type) ||
-		    nla_put(msg, NL80211_NAN_SEC_CTX_ID_DATA, id->len,
-			    id->data))
-			return -ENOBUFS;
-
-		nla_nest_end(msg, ctx_id);
-	}
-
-	nla_nest_end(msg, ctx_ids);
-	return 0;
 }
 
 void cfg80211_nan_match(struct wireless_dev *wdev,
@@ -13011,24 +12785,11 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	struct nlattr *match_attr, *local_func_attr, *peer_func_attr;
 	struct sk_buff *msg;
 	void *hdr;
-	u32 size = 200;
-	u8 i;
 
 	if (WARN_ON(!match->inst_id || !match->peer_inst_id || !match->addr))
 		return;
 
-	/*
-	 * Add room for security context IDs. Each security context ID will
-	 * require a nested attribute with type and data.
-	 */
-	for (i = 0; i < match->sec.n_ctx_ids; i++)
-		size += NLA_HDRLEN + NLA_HDRLEN + NLA_ALIGN(sizeof(u32)) +
-			NLA_HDRLEN + NLA_ALIGN(match->sec.ctx_ids[i].len);
-
-	size += NLA_HDRLEN + NLA_ALIGN(match->device_attrs_len) +
-		NLA_HDRLEN + NLA_ALIGN(match->info_len);
-
-	msg = nlmsg_new(size, gfp);
+	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, gfp);
 	if (!msg)
 		return;
 
@@ -13054,12 +12815,6 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	if (!match_attr)
 		goto nla_put_failure;
 
-	if (match->type == NL80211_NAN_FUNC_PUBLISH &&
-	    match->device_attrs_len && match->device_attrs &&
-	    nla_put(msg, NL80211_NAN_MATCH_DEVICE_ATTRS,
-		    match->device_attrs_len, match->device_attrs))
-		goto nla_put_failure;
-
 	local_func_attr = nla_nest_start_noflag(msg,
 						NL80211_NAN_MATCH_FUNC_LOCAL);
 	if (!local_func_attr)
@@ -13083,30 +12838,6 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
 	    nla_put(msg, NL80211_NAN_FUNC_SERVICE_INFO, match->info_len,
 		    match->info))
 		goto nla_put_failure;
-
-	if (match->type == NL80211_NAN_FUNC_PUBLISH) {
-		if (nl80211_nan_put_security(msg, &match->sec))
-			goto nla_put_failure;
-
-		if (match->fsd_required &&
-		    nla_put_u32(msg, NL80211_NAN_FUNC_FSD, match->fsd_method))
-			goto nla_put_failure;
-
-		if (match->ndp_required &&
-		    nla_put_u32(msg, NL80211_NAN_FUNC_NDP_TYPE,
-				match->ndp_type))
-			goto nla_put_failure;
-
-		if (match->range_limit_ingress &&
-		    nla_put_u16(msg, NL80211_NAN_FUNC_RANGE_LIMIT_INGRESS,
-				match->range_limit_ingress))
-			goto nla_put_failure;
-
-		if (match->range_limit_egress &&
-		    nla_put_u16(msg, NL80211_NAN_FUNC_RANGE_LIMIT_EGRESS,
-				match->range_limit_egress))
-			goto nla_put_failure;
-	}
 
 	nla_nest_end(msg, peer_func_attr);
 	nla_nest_end(msg, match_attr);
