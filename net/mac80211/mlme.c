@@ -4318,8 +4318,7 @@ void ieee80211_sta_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
 		ieee80211_rx_mgmt_assoc_resp(sdata, mgmt, skb->len);
 		break;
 	case IEEE80211_STYPE_ACTION:
-		switch (mgmt->u.action.category) {
-		case WLAN_CATEGORY_SPECTRUM_MGMT:
+		if (mgmt->u.action.category == WLAN_CATEGORY_SPECTRUM_MGMT) {
 			ies_len = skb->len -
 				  offsetof(struct ieee80211_mgmt,
 					   u.action.u.chan_switch.variable);
@@ -4339,9 +4338,7 @@ void ieee80211_sta_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
 						 rx_status->mactime,
 						 rx_status->device_timestamp,
 						 &elems, false);
-			break;
-		case WLAN_CATEGORY_PUBLIC:
-		case WLAN_CATEGORY_PROTECTED_DUAL_OF_PUBLIC_ACTION:
+		} else if (mgmt->u.action.category == WLAN_CATEGORY_PUBLIC) {
 			ies_len = skb->len -
 				  offsetof(struct ieee80211_mgmt,
 					   u.action.u.ext_chan_switch.variable);
@@ -4368,7 +4365,6 @@ void ieee80211_sta_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
 						 rx_status->mactime,
 						 rx_status->device_timestamp,
 						 &elems, false);
-			break;
 		}
 		break;
 	}
