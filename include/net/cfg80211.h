@@ -7749,4 +7749,10 @@ static inline bool cfg80211_is_psc(struct ieee80211_channel *chan)
 	return chan->band == NL80211_BAND_6GHZ && chan_num % 16 == 5;
 }
 
+/**
+ * cfg80211_bss_flush - resets all the scan entries
+ * @wiphy: the wiphy
+ */
+void cfg80211_bss_flush(struct wiphy *wiphy);
+
 #endif /* __NET_CFG80211_H */
