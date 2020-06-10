@@ -2013,6 +2013,8 @@ struct cfg80211_scan_info {
  *	 which the above info relvant to
  * @unsolicited_probe: the AP transmits unsolicited probe response every 20 TU
  * @short_ssid_valid: short_ssid is valid and can be used
+ * @psc_no_listen: when set, and the channel is a PSC channel, no need to wait
+ *       20 TUs before starting to send probe requests.
  */
 struct cfg80211_scan_6ghz_params {
 	u32 short_ssid;
@@ -2020,6 +2022,7 @@ struct cfg80211_scan_6ghz_params {
 	u8 bssid[ETH_ALEN];
 	bool unsolicited_probe;
 	bool short_ssid_valid;
+	bool psc_no_listen;
 };
 
 /**

@@ -821,6 +821,16 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 		scan_6ghz_params->short_ssid = ap->short_ssid;
 		scan_6ghz_params->short_ssid_valid = ap->short_ssid_valid;
 		scan_6ghz_params->unsolicited_probe = ap->unsolicited_probe;
+
+		/*
+		 * If a PSC channel is added to the scan and 'need_scan_psc' is
+		 * set to false, then all the APs that the scan logic is
+		 * interested with on the channel are collocated and thus there
+		 * is no need to perform the initial PSC channel listen.
+		 */
+		if (cfg80211_is_psc(chan) && !need_scan_psc)
+			scan_6ghz_params->psc_no_listen = true;
+
 		request->n_6ghz_params++;
 	}
 
