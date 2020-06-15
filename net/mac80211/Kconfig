@@ -306,20 +306,6 @@ config MAC80211_STA_HASH_MAX_SIZE
 
 	  If unsure, leave the default of 0.
 
-config MAC80211_LATENCY_MEASUREMENTS
-	bool "Enable latency measurements in mac80211"
-	depends on MAC80211_DEBUGFS
-	default y
-	---help---
-	  Selecting this option causes mac80211 to keep additional
-	  and very verbose statistics about TX. The purpose is to
-	  measure the latency of the TX and classify the packets
-	  into categories based on the time they have been waiting
-	  from the time they entered mac80211 until they have been
-	  freed in mac80211.
-
-	  If unsure, say N.
-
 config IWL_TIMEOUT_FACTOR
 	int "Factor to multiply timeouts by"
 	range 1 2500

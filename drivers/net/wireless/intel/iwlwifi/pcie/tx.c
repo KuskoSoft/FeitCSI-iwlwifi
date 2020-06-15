@@ -1440,21 +1440,6 @@ int iwl_trans_pcie_send_hcmd(struct iwl_trans *trans, struct iwl_host_cmd *cmd)
 	return iwl_pcie_send_hcmd_sync(trans, cmd);
 }
 
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-static void iwl_trans_pci_tx_lat_add_ts_write(struct sk_buff *skb)
-{
-	s64 temp = ktime_to_ms(ktime_get());
-	s64 ts_1 = ktime_to_ns(skb->tstamp) >> 32;
-	s64 diff = temp - ts_1;
-
-#if LINUX_VERSION_IS_LESS(4,10,0)
-	skb->tstamp.tv64 += diff << 16;
-#else
-	skb->tstamp += diff << 16;
-#endif
-}
-#endif
-
 static int iwl_fill_data_tbs(struct iwl_trans *trans, struct sk_buff *skb,
 			     struct iwl_txq *txq, u8 hdr_len,
 			     struct iwl_cmd_meta *out_meta)
@@ -1924,9 +1909,6 @@ int iwl_trans_pcie_tx(struct iwl_trans *trans, struct sk_buff *skb,
 	 * At this point the frame is "transmitted" successfully
 	 * and we will get a TX status notification eventually.
 	 */
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-	iwl_trans_pci_tx_lat_add_ts_write(skb);
-#endif
 	spin_unlock(&txq->lock);
 	return 0;
 out_err:

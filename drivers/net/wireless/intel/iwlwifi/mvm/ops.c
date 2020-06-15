@@ -807,11 +807,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	INIT_WORK(&mvm->async_handlers_wk, iwl_mvm_async_handlers_wk);
 	INIT_WORK(&mvm->roc_done_wk, iwl_mvm_roc_done_wk);
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-	INIT_WORK(&mvm->tx_latency_wk, iwl_mvm_tx_latency_wk);
-	INIT_DELAYED_WORK(&mvm->tx_latency_watchdog_wk,
-			  iwl_mvm_tx_latency_watchdog_wk);
-#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 	INIT_DELAYED_WORK(&mvm->tdls_cs.dwork, iwl_mvm_tdls_ch_switch_work);
 	INIT_DELAYED_WORK(&mvm->scan_timeout_dwork, iwl_mvm_scan_timeout_wk);
 	INIT_WORK(&mvm->add_stream_wk, iwl_mvm_add_new_dqa_stream_wk);

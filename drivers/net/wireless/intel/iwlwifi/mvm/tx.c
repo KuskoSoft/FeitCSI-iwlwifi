@@ -1394,21 +1394,6 @@ static void iwl_mvm_hwrate_to_tx_status(u32 rate_n_flags,
 	iwl_mvm_hwrate_to_tx_rate(rate_n_flags, info->band, r);
 }
 
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-static void iwl_mvm_tx_lat_add_ts_ack(struct sk_buff *skb)
-{
-	s64 temp = ktime_to_ms(ktime_get());
-	s64 ts_1 = ktime_to_ns(skb->tstamp) >> 32;
-	s64 diff = temp - ts_1;
-
-#if LINUX_VERSION_IS_LESS(4,10,0)
-	skb->tstamp.tv64 += diff;
-#else
-	skb->tstamp += diff;
-#endif
-}
-#endif
-
 static void iwl_mvm_tx_status_check_trigger(struct iwl_mvm *mvm,
 					    u32 status)
 {
@@ -1494,9 +1479,6 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm *mvm,
 		struct ieee80211_hdr *hdr = (void *)skb->data;
 		bool flushed = false;
 
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-		iwl_mvm_tx_lat_add_ts_ack(skb);
-#endif
 		skb_freed++;
 
 		iwl_trans_free_tx_cmd(mvm->trans, info->driver_data[1]);
@@ -1886,9 +1868,6 @@ static void iwl_mvm_tx_reclaim(struct iwl_mvm *mvm, int sta_id, int tid,
 		struct ieee80211_hdr *hdr = (void *)skb->data;
 		struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-		iwl_mvm_tx_lat_add_ts_ack(skb);
-#endif
 		if (ieee80211_is_data_qos(hdr->frame_control))
 			freed++;
 		else
