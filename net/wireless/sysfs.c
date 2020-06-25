@@ -114,7 +114,6 @@ static int wiphy_suspend(struct device *dev)
 	if (rdev->wiphy.registered) {
 		if (!rdev->wiphy.wowlan_config) {
 			cfg80211_leave_all(rdev);
-			cfg80211_bss_flush(&rdev->wiphy);
 			cfg80211_process_rdev_events(rdev);
 		}
 		if (rdev->ops->suspend)
