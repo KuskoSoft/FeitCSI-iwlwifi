@@ -281,7 +281,8 @@ void ieee80211_scan_rx(struct ieee80211_local *local, struct sk_buff *skb)
 			return;
 	}
 
-	channel = ieee80211_get_channel(local->hw.wiphy, rx_status->freq);
+	channel = ieee80211_get_channel_khz(local->hw.wiphy,
+					ieee80211_rx_status_to_khz(rx_status));
 
 	if (!channel || channel->flags & IEEE80211_CHAN_DISABLED)
 		return;
@@ -312,8 +313,9 @@ ieee80211_prepare_scan_chandef(struct cfg80211_chan_def *chandef,
 }
 
 /* return false if no more work */
-static bool ieee80211_prep_hw_scan(struct ieee80211_local *local)
+static bool ieee80211_prep_hw_scan(struct ieee80211_sub_if_data *sdata)
 {
+	struct ieee80211_local *local = sdata->local;
 	struct cfg80211_scan_request *req;
 	struct cfg80211_chan_def chandef;
 	u8 bands_used = 0;
@@ -360,7 +362,7 @@ static bool ieee80211_prep_hw_scan(struct ieee80211_local *local)
 	if (req->flags & NL80211_SCAN_FLAG_MIN_PREQ_CONTENT)
 		flags |= IEEE80211_PROBE_FLAG_MIN_CONTENT;
 
-	ielen = ieee80211_build_preq_ies(local,
+	ielen = ieee80211_build_preq_ies(sdata,
 					 (u8 *)local->hw_scan_req->req.ie,
 					 local->hw_scan_ies_bufsize,
 					 &local->hw_scan_req->ies,
@@ -400,9 +402,12 @@ static void __ieee80211_scan_completed(struct ieee80211_hw *hw, bool aborted)
 	if (WARN_ON(!local->scan_req))
 		return;
 
+	scan_sdata = rcu_dereference_protected(local->scan_sdata,
+					       lockdep_is_held(&local->mtx));
+
 	if (hw_scan && !aborted &&
 	    !ieee80211_hw_check(&local->hw, SINGLE_SCAN_ON_ALL_BANDS) &&
-	    ieee80211_prep_hw_scan(local)) {
+	    ieee80211_prep_hw_scan(scan_sdata)) {
 		int rc;
 
 		rc = drv_hw_scan(local,
@@ -431,9 +436,6 @@ static void __ieee80211_scan_completed(struct ieee80211_hw *hw, bool aborted)
 		cfg80211_scan_done(scan_req, &local->scan_info);
 	}
 	RCU_INIT_POINTER(local->scan_req, NULL);
-
-	scan_sdata = rcu_dereference_protected(local->scan_sdata,
-					       lockdep_is_held(&local->mtx));
 	RCU_INIT_POINTER(local->scan_sdata, NULL);
 
 	local->scanning = 0;
@@ -778,7 +780,7 @@ static int __ieee80211_start_scan(struct ieee80211_sub_if_data *sdata,
 	ieee80211_recalc_idle(local);
 
 	if (hw_scan) {
-		WARN_ON(!ieee80211_prep_hw_scan(local));
+		WARN_ON(!ieee80211_prep_hw_scan(sdata));
 		rc = drv_hw_scan(local, sdata, local->hw_scan_req);
 	} else {
 		rc = ieee80211_start_sw_scan(local, sdata);
@@ -905,6 +907,7 @@ static void ieee80211_scan_state_set_channel(struct ieee80211_local *local,
 
 	local->scan_chandef.chan = chan;
 	local->scan_chandef.center_freq1 = chan->center_freq;
+	local->scan_chandef.freq1_offset = chan->freq_offset;
 	local->scan_chandef.center_freq2 = 0;
 	switch (scan_req->scan_width) {
 	case NL80211_BSS_CHAN_WIDTH_5:
@@ -1276,7 +1279,7 @@ int __ieee80211_request_sched_scan_start(struct ieee80211_sub_if_data *sdata,
 
 	ieee80211_prepare_scan_chandef(&chandef, req->scan_width);
 
-	ieee80211_build_preq_ies(local, ie, num_bands * iebufsz,
+	ieee80211_build_preq_ies(sdata, ie, num_bands * iebufsz,
 				 &sched_scan_ies, req->ie,
 				 req->ie_len, bands_used, rate_masks, &chandef,
 				 flags);
