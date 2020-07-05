@@ -644,8 +644,8 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 
 			entry->center_freq = freq;
 
-			if (!cfg80211_parse_ap_info(entry, pos, length, elem,
-						    s_ssid_tmp)){
+			if (!cfg80211_parse_ap_info(entry, pos, length,
+						    ssid_elem, s_ssid_tmp)) {
 				n_coloc++;
 				list_add_tail(&entry->list, &ap_list);
 			} else {
