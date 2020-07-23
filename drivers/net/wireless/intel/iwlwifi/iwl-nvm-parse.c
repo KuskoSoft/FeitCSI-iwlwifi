@@ -752,14 +752,21 @@ static void iwl_init_he_hw_capab(struct iwl_trans *trans,
 				 struct ieee80211_supported_band *sband,
 				 u8 tx_chains, u8 rx_chains)
 {
+	int i;
+
 	sband->iftype_data = iwl_he_capa;
 	sband->n_iftype_data = ARRAY_SIZE(iwl_he_capa);
 
-	/* If not 2x2, we need to indicate 1x1 in the Midamble RX Max NSTS */
-	if ((tx_chains & rx_chains) != ANT_AB) {
-		int i;
+	for (i = 0; i < sband->n_iftype_data; i++) {
+		if (iwl_he_capa[i].types_mask == BIT(NL80211_IFTYPE_STATION) &&
+		    trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_AX210) {
+			iwl_he_capa[i].he_cap.he_cap_elem.phy_cap_info[9] |=
+				IEEE80211_HE_PHY_CAP9_TX_1024_QAM_LESS_THAN_242_TONE_RU |
+				IEEE80211_HE_PHY_CAP9_RX_1024_QAM_LESS_THAN_242_TONE_RU;
+		}
 
-		for (i = 0; i < sband->n_iftype_data; i++) {
+		/* If not 2x2, we need to indicate 1x1 in the Midamble RX Max NSTS */
+		if ((tx_chains & rx_chains) != ANT_AB) {
 			iwl_he_capa[i].he_cap.he_cap_elem.phy_cap_info[1] &=
 				~IEEE80211_HE_PHY_CAP1_MIDAMBLE_RX_TX_MAX_NSTS;
 			iwl_he_capa[i].he_cap.he_cap_elem.phy_cap_info[2] &=
