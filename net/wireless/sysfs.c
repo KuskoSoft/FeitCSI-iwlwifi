@@ -5,7 +5,6 @@
  *
  * Copyright 2005-2006	Jiri Benc <jbenc@suse.cz>
  * Copyright 2006	Johannes Berg <johannes@sipsolutions.net>
- * Copyright (C) 2020 Intel Corporation
  */
 
 #include <linux/device.h>
