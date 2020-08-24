@@ -2895,7 +2895,7 @@ static const struct ieee80211_sband_iftype_data he_capa_5ghz[] = {
 			},
 		},
 		/* ignored on 5 GHz, so add it here for 6 GHz */
-		.he_6ghz_capa =
+		.he_6ghz_capa.capa =
 			cpu_to_le16((IEEE80211_HT_MPDU_DENSITY_NONE << 0) |
 				    (IEEE80211_VHT_MAX_AMPDU_1024K << 3) |
 				    (IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454 << 6) |
@@ -2944,7 +2944,7 @@ static const struct ieee80211_sband_iftype_data he_capa_5ghz[] = {
 			},
 		},
 		/* ignored on 5 GHz, so add it here for 6 GHz */
-		.he_6ghz_capa =
+		.he_6ghz_capa.capa =
 			cpu_to_le16((IEEE80211_HT_MPDU_DENSITY_NONE << 0) |
 				    (IEEE80211_VHT_MAX_AMPDU_1024K << 3) |
 				    (IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454 << 6) |
