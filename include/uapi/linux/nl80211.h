@@ -2513,6 +2513,10 @@ enum nl80211_commands {
  * @NL80211_ATTR_HE_6GHZ_CAPABILITY: HE 6 GHz Band Capabilities element (__le16)
  *	from association request when used with NL80211_CMD_NEW_STATION
  *
+ * @NL80211_ATTR_RECONNECT_REQUESTED: flag attribute, used with deauth and
+ *	disassoc events to indicate that an immediate reconnect to the AP
+ *	is desired.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2994,6 +2998,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_SCAN_FREQ_KHZ,
 
 	NL80211_ATTR_HE_6GHZ_CAPABILITY,
+
+	NL80211_ATTR_RECONNECT_REQUESTED,
 
 	/* add attributes here, update the policy in nl80211.c */
 
