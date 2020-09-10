@@ -789,7 +789,7 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 	for (i = 0; i < rdev_req->n_channels; i++) {
 		if (rdev_req->channels[i]->band == NL80211_BAND_6GHZ &&
 		    ((need_scan_psc &&
-		      cfg80211_is_psc(rdev_req->channels[i])) ||
+		      cfg80211_channel_is_psc(rdev_req->channels[i])) ||
 		     !(rdev_req->flags & NL80211_SCAN_FLAG_COLOCATED_6GHZ))) {
 			cfg80211_scan_req_add_chan(request,
 						   rdev_req->channels[i],
@@ -834,7 +834,7 @@ static int cfg80211_scan_6ghz(struct cfg80211_registered_device *rdev)
 		 * interested with on the channel are collocated and thus there
 		 * is no need to perform the initial PSC channel listen.
 		 */
-		if (cfg80211_is_psc(chan) && !need_scan_psc)
+		if (cfg80211_channel_is_psc(chan) && !need_scan_psc)
 			scan_6ghz_params->psc_no_listen = true;
 
 		request->n_6ghz_params++;

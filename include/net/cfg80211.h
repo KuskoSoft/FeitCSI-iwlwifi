@@ -7919,21 +7919,6 @@ void cfg80211_update_owe_info_event(struct net_device *netdev,
 				    gfp_t gfp);
 
 /**
- * cfg80211_is_psc - Check if the channel is PSC
- * @chan: control channel to check
- *
- * The Preferred Scanning Channels (PSC) are defined in
- * Draft IEEE P802.11ax/D5.0, 26.17.2.3.3
- */
-static inline bool cfg80211_is_psc(struct ieee80211_channel *chan)
-{
-	int chan_num =
-		ieee80211_frequency_to_channel(chan->center_freq);
-
-	return chan->band == NL80211_BAND_6GHZ && chan_num % 16 == 5;
-}
-
-/**
  * cfg80211_bss_flush - resets all the scan entries
  * @wiphy: the wiphy
  */
