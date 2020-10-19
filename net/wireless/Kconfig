@@ -204,6 +204,7 @@ config LIB80211_CRYPT_WEP
 config LIB80211_CRYPT_CCMP
 	tristate
 	depends on m
+	depends on CRYPTO
 	depends on CRYPTO_AES
 	depends on CRYPTO_CCM
 
