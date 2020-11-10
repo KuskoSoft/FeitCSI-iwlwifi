@@ -5835,6 +5835,16 @@ enum nl80211_feature_flags {
  *	handshake with PSK in AP mode (PSK is passed as part of the start AP
  *	command).
  *
+ * @NL80211_EXT_FEATURE_SECURE_LTF: Device supports secure LTF measurement
+ *      exchange protocol.
+ *
+ * @NL80211_EXT_FEATURE_SECURE_RTT: Device supports secure RTT measurement
+ *      exchange protocol.
+ *
+ * @NL80211_EXT_FEATURE_PROT_RANGE_NEGO_AND_MEASURE: Device supports management frame
+ *      protection for all management frames exchanged during the negotiation
+ *      and range measurement procedure.
+ *
  * @NUM_NL80211_EXT_FEATURES: number of extended features.
  * @MAX_NL80211_EXT_FEATURES: highest extended feature index.
  */
@@ -5892,6 +5902,9 @@ enum nl80211_ext_feature_index {
 	NL80211_EXT_FEATURE_CONTROL_PORT_OVER_NL80211_TX_STATUS,
 	NL80211_EXT_FEATURE_OPERATING_CHANNEL_VALIDATION,
 	NL80211_EXT_FEATURE_4WAY_HANDSHAKE_AP_PSK,
+	NL80211_EXT_FEATURE_SECURE_LTF,
+	NL80211_EXT_FEATURE_SECURE_RTT,
+	NL80211_EXT_FEATURE_PROT_RANGE_NEGO_AND_MEASURE,
 
 	/* add new features before the definition below */
 	NUM_NL80211_EXT_FEATURES,
