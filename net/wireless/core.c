@@ -1270,15 +1270,6 @@ void cfg80211_init_wdev(struct wireless_dev *wdev)
 	INIT_WORK(&wdev->pmsr_free_wk, cfg80211_pmsr_free_wk);
 
 #ifdef CPTCFG_CFG80211_WEXT
-#ifdef CONFIG_WIRELESS_EXT
-	if (!dev->wireless_handlers)
-		dev->wireless_handlers = &cfg80211_wext_handler;
-#else
-	printk_once(KERN_WARNING "cfg80211: wext will not work because "
-		    "kernel was compiled with CONFIG_WIRELESS_EXT=n. "
-		    "Tools using wext interface, like iwconfig will "
-		    "not work.\n");
-#endif
 	wdev->wext.default_key = -1;
 	wdev->wext.default_mgmt_key = -1;
 	wdev->wext.connect.auth_type = NL80211_AUTHTYPE_AUTOMATIC;
@@ -1351,6 +1342,15 @@ static int cfg80211_netdev_notifier_call(struct notifier_block *nb,
 				      "phy80211")) {
 			pr_err("failed to add phy80211 symlink to netdev!\n");
 		}
+#if defined(CPTCFG_CFG80211_WEXT) && defined(CONFIG_WIRELESS_EXT)
+		if (!dev->wireless_handlers)
+			dev->wireless_handlers = &cfg80211_wext_handler;
+#else
+		printk_once(KERN_WARNING "cfg80211: wext will not work because "
+			    "kernel was compiled with CONFIG_WIRELESS_EXT=n. "
+			    "Tools using wext interface, like iwconfig will "
+			    "not work.\n");
+#endif
 
 		cfg80211_register_wdev(rdev, wdev);
 		break;
