@@ -458,6 +458,10 @@ iwl_mvm_ftm_put_target_common(struct iwl_mvm *mvm,
 	else if (peer->ftm.non_trigger_based)
 		FTM_PUT_FLAG(NON_TB);
 
+	if ((peer->ftm.trigger_based || peer->ftm.non_trigger_based) &&
+	    peer->ftm.lmr_feedback)
+		FTM_PUT_FLAG(LMR_FEEDBACK);
+
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	if (IWL_MVM_FTM_INITIATOR_MCSI_ENABLED)
 		FTM_PUT_FLAG(MCSI_REPORT);
