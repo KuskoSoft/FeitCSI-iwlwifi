@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2005-2014, 2018 Intel Corporation
+ * Copyright (C) 2005-2014, 2018, 2020 Intel Corporation
  * Copyright (C) 2015 Intel Mobile Communications GmbH
  */
 #ifndef __iwl_eeprom_parse_h__
@@ -44,6 +44,12 @@ struct iwl_nvm_data {
 	bool lar_enabled;
 	bool vht160_supported;
 	struct ieee80211_supported_band bands[NUM_NL80211_BANDS];
+
+	struct {
+		struct ieee80211_sband_iftype_data low[2];
+		struct ieee80211_sband_iftype_data high[2];
+	} iftd;
+
 	struct ieee80211_channel channels[];
 };
 
