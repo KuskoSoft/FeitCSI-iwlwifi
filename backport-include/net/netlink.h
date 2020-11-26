@@ -749,6 +749,8 @@ MIN_LEN_VALIDATION(42)
 	.validation_type = NLA_VALIDATE_FUNCTION,	\
 	.validate = nla_validate_min_len_ ## _min,	\
 }
+#else
+#define NLA_POLICY_BINARY_RANGE(_min, _max) NLA_POLICY_RANGE(NLA_BINARY, _min, _max)
 #endif /* < 5.10 */
 
 #endif /* __BACKPORT_NET_NETLINK_H */
