@@ -171,6 +171,9 @@ static int validate_nla(const struct nlattr *nla, int maxtype,
 	if (type <= 0 || type > maxtype)
 		return 0;
 
+	if (WARN_ON(!policy))
+		return -EINVAL;
+
 	pt = &policy[type];
 
 	BUG_ON(pt->type > NLA_TYPE_MAX);
@@ -364,6 +367,9 @@ static int __nla_validate_parse(const struct nlattr *head, int len, int maxtype,
 {
 	const struct nlattr *nla;
 	int rem;
+
+	if (!policy)
+		return 0;
 
 	if (tb)
 		memset(tb, 0, sizeof(struct nlattr *) * (maxtype + 1));
