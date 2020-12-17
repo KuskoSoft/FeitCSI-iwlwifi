@@ -4226,7 +4226,7 @@ done:
 static const struct genl_small_ops hwsim_ops[] = {
 #else
 static const struct genl_ops hwsim_ops[] = {
-#endif /* >= 5.10 */
+#endif
 	{
 		.cmd = HWSIM_CMD_REGISTER,
 		.validate = GENL_DONT_VALIDATE_STRICT | GENL_DONT_VALIDATE_DUMP,
@@ -4276,7 +4276,7 @@ static struct genl_family hwsim_genl_family __genl_ro_after_init = {
 #else
 	.ops = hwsim_ops,
 	.n_ops = ARRAY_SIZE(hwsim_ops),
-#endif /* >= 5.10 */
+#endif
 	.mcgrps = hwsim_mcgrps,
 	.n_mcgrps = ARRAY_SIZE(hwsim_mcgrps),
 };
