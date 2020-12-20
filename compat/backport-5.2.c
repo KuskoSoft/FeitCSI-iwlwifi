@@ -2,7 +2,7 @@
 /*
  * NETLINK      Netlink attributes
  *
- * Copyright (C) 2018 - 2019 Intel Corporation
+ * Copyright (C) 2018 - 2020 Intel Corporation
  *
  * 		Authors:	Thomas Graf <tgraf@suug.ch>
  * 				Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>
@@ -367,9 +367,6 @@ static int __nla_validate_parse(const struct nlattr *head, int len, int maxtype,
 {
 	const struct nlattr *nla;
 	int rem;
-
-	if (!policy)
-		return 0;
 
 	if (tb)
 		memset(tb, 0, sizeof(struct nlattr *) * (maxtype + 1));
