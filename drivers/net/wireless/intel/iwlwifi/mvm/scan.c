@@ -1631,9 +1631,9 @@ iwl_mvm_umac_scan_cfg_channels_v6(struct iwl_mvm *mvm,
 			iwl_mvm_scan_ch_n_aps_flag(vif_type,
 						   cfg->v2.channel_num);
 
+		cfg->flags = cpu_to_le32(flags | n_aps_flag);
 		cfg->v2.channel_num = channels[i]->hw_value;
 		cfg->v2.band = iwl_mvm_phy_band_from_nl80211(band);
-		cfg->flags = cpu_to_le32(flags | n_aps_flag);
 		cfg->v2.iter_count = 1;
 		cfg->v2.iter_interval = 0;
 	}
@@ -2109,7 +2109,7 @@ static int iwl_mvm_check_running_scans(struct iwl_mvm *mvm, int type)
 		/* Something is wrong if no scan was running but we
 		 * ran out of scans.
 		 */
-		/* fall through */
+		fallthrough;
 	default:
 		WARN_ON(1);
 		break;
