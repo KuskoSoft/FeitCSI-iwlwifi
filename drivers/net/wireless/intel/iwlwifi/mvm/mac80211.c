@@ -228,6 +228,7 @@ struct ieee80211_regdomain *iwl_mvm_get_regdomain(struct wiphy *wiphy,
 	if (IS_ERR_OR_NULL(resp)) {
 		IWL_DEBUG_LAR(mvm, "Could not get update from FW %d\n",
 			      PTR_ERR_OR_ZERO(resp));
+		resp = NULL;
 		goto out;
 	}
 
@@ -249,7 +250,6 @@ struct ieee80211_regdomain *iwl_mvm_get_regdomain(struct wiphy *wiphy,
 				      __le16_to_cpu(resp->cap), resp_ver);
 	/* Store the return source id */
 	src_id = resp->source_id;
-	kfree(resp);
 	if (IS_ERR_OR_NULL(regd)) {
 		IWL_DEBUG_LAR(mvm, "Could not get parse update from FW %d\n",
 			      PTR_ERR_OR_ZERO(regd));
@@ -264,6 +264,7 @@ struct ieee80211_regdomain *iwl_mvm_get_regdomain(struct wiphy *wiphy,
 	iwl_mei_set_country_code(__le16_to_cpu(resp->mcc));
 
 out:
+	kfree(resp);
 	return regd;
 }
 
