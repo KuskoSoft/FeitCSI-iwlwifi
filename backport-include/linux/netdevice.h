@@ -423,7 +423,7 @@ static inline void dev_sw_netstats_rx_add(struct net_device *dev, unsigned int l
 
 #endif /* < 5.10 */
 
-#if LINUX_VERSION_IS_LESS(5,10,0)
+#if LINUX_VERSION_IS_LESS(5,11,0)
 static inline void dev_sw_netstats_tx_add(struct net_device *dev,
 					  unsigned int packets,
 					  unsigned int len)
