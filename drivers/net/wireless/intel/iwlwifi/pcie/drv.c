@@ -1022,6 +1022,8 @@ static int iwl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		}
 	}
 
+#if IS_ENABLED(CPTCFG_IWLMVM)
+
 	/*
 	 * Workaround for problematic SnJ device: sometimes when
 	 * certain RF modules are connected to SnJ, the device ID
@@ -1032,7 +1034,6 @@ static int iwl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (CSR_HW_REV_TYPE(iwl_trans->hw_rev) == IWL_CFG_MAC_TYPE_SNJ)
 		iwl_trans->trans_cfg = &iwl_so_trans_cfg;
 
-#if IS_ENABLED(CPTCFG_IWLMVM)
 	/*
 	 * special-case 7265D, it has the same PCI IDs.
 	 *
