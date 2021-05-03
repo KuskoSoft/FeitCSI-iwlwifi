@@ -831,7 +831,6 @@ get_nvm_from_fw:
 	if (ret) {
 		mutex_unlock(&mvm->mutex);
 		wiphy_unlock(mvm->hw->wiphy);
-		rtnl_unlock(); // XXX separate bugfix
 		return ret;
 	}
 
