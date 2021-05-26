@@ -361,7 +361,7 @@ struct ieee80211_sta_he_cap {
 };
 
 /**
- * struct ieee80211_sband_iftype_data
+ * struct ieee80211_sband_iftype_data - sband data per interface type
  *
  * This structure encapsulates sband data that is relevant for the
  * interface types defined in @types_mask.  Each type in the
@@ -5636,7 +5636,7 @@ static inline bool cfg80211_channel_is_psc(struct ieee80211_channel *chan)
  * which is, for this function, given as a bitmap of indices of
  * rates in the band's bitrate table.
  */
-struct ieee80211_rate *
+const struct ieee80211_rate *
 ieee80211_get_response_rate(struct ieee80211_supported_band *sband,
 			    u32 basic_rates, int bitrate);
 
@@ -6663,7 +6663,7 @@ void cfg80211_notify_new_peer_candidate(struct net_device *dev,
  */
 
 /**
- * wiphy_rfkill_set_hw_state - notify cfg80211 about hw block state
+ * wiphy_rfkill_set_hw_state_reason - notify cfg80211 about hw block state
  * @wiphy: the wiphy
  * @blocked: block status
  * @reason: one of reasons in &enum rfkill_hard_block_reasons
@@ -6769,7 +6769,7 @@ cfg80211_vendor_cmd_alloc_reply_skb(struct wiphy *wiphy, int approxlen)
 int cfg80211_vendor_cmd_reply(struct sk_buff *skb);
 
 /**
- * cfg80211_vendor_cmd_get_sender
+ * cfg80211_vendor_cmd_get_sender - get the current sender netlink ID
  * @wiphy: the wiphy
  *
  * Return the current netlink port ID in a vendor command handler.
