@@ -539,8 +539,8 @@ static const u8 iwl_vendor_caps[] = {
 	0x00, 0x17, 0x35,	/* Intel OUI */
 	0x08,			/* type (Intel Capabilities) */
 	/* followed by 16 bits of capabilities */
-#define IWL_VENDOR_CAP_IMPROVED_BF_FDBK_160MHZ	BIT(0)
-	IWL_VENDOR_CAP_IMPROVED_BF_FDBK_160MHZ,
+#define IWL_VENDOR_CAP_IMPROVED_BF_FDBK_HE	BIT(0)
+	IWL_VENDOR_CAP_IMPROVED_BF_FDBK_HE,
 	0x00
 };
 
@@ -746,7 +746,7 @@ iwl_nvm_fixup_sband_iftd(struct iwl_trans *trans,
 		iftype_data->he_cap.he_cap_elem.mac_cap_info[2] |=
 			IEEE80211_HE_MAC_CAP2_BCAST_TWT;
 
-	if (trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_22000 &&
+	if (trans->trans_cfg->device_family == IWL_DEVICE_FAMILY_22000 &&
 	    !is_ap) {
 		iftype_data->vendor_elems.data = iwl_vendor_caps;
 		iftype_data->vendor_elems.len = ARRAY_SIZE(iwl_vendor_caps);
