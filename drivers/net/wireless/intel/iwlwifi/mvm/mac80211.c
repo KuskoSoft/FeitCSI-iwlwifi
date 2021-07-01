@@ -2111,7 +2111,7 @@ int iwl_mvm_configure_bcast_filter(struct iwl_mvm *mvm)
 				    sizeof(cmd), &cmd);
 }
 #else
-inline int iwl_mvm_configure_bcast_filter(struct iwl_mvm *mvm)
+int iwl_mvm_configure_bcast_filter(struct iwl_mvm *mvm)
 {
 	return 0;
 }
