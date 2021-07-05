@@ -5,6 +5,9 @@
  * Copyright (C) 2015-2017 Intel Deutschland GmbH
  */
 #include <linux/etherdevice.h>
+#ifdef CPTCFG_IWLWIFI_WIFI_6_SUPPORT
+#include <linux/crc32.h>
+#endif /* CPTCFG_IWLWIFI_WIFI_6_SUPPORT */
 #include <net/mac80211.h>
 #include "iwl-io.h"
 #include "iwl-prph.h"
@@ -966,7 +969,31 @@ static int iwl_mvm_mac_ctxt_send_beacon_v9(struct iwl_mvm *mvm,
 	struct iwl_mac_beacon_cmd beacon_cmd = {};
 	u8 rate = iwl_mvm_mac_ctxt_get_lowest_rate(info, vif);
 	u16 flags;
+#ifdef CPTCFG_IWLWIFI_WIFI_6_SUPPORT
+	struct ieee80211_chanctx_conf *ctx;
+	int channel;
+#endif /* CPTCFG_IWLWIFI_WIFI_6_SUPPORT */
 	flags = iwl_mvm_mac_ctxt_get_beacon_flags(mvm->fw, rate);
+
+#ifdef CPTCFG_IWLWIFI_WIFI_6_SUPPORT
+	/* Enable FILS on PSC channels only */
+	rcu_read_lock();
+	ctx = rcu_dereference(vif->chanctx_conf);
+	channel = ieee80211_frequency_to_channel(ctx->def.chan->center_freq);
+	WARN_ON(channel == 0);
+	if (cfg80211_channel_is_psc(ctx->def.chan) &&
+	    !IWL_MVM_DISABLE_AP_FILS) {
+		flags |= iwl_fw_lookup_cmd_ver(mvm->fw, LONG_GROUP,
+					       BEACON_TEMPLATE_CMD,
+					       0) > 10 ?
+			IWL_MAC_BEACON_FILS :
+			IWL_MAC_BEACON_FILS_V1;
+		beacon_cmd.short_ssid =
+			cpu_to_le32(~crc32_le(~0, vif->bss_conf.ssid,
+					      vif->bss_conf.ssid_len));
+	}
+	rcu_read_unlock();
+#endif /* CPTCFG_IWLWIFI_WIFI_6_SUPPORT */
 
 	beacon_cmd.flags = cpu_to_le16(flags);
 	beacon_cmd.byte_cnt = cpu_to_le16((u16)beacon->len);

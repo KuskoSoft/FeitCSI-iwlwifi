@@ -579,6 +579,9 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 
 	hw->wiphy->flags |= WIPHY_FLAG_AP_UAPSD;
 	hw->wiphy->flags |= WIPHY_FLAG_HAS_CHANNEL_SWITCH;
+#ifdef CPTCFG_IWLWIFI_WIFI_6_SUPPORT
+	hw->wiphy->flags |= WIPHY_FLAG_SPLIT_SCAN_6GHZ;
+#endif
 
 	if (fw_has_capa(&mvm->fw->ucode_capa,
 			IWL_UCODE_TLV_CAPA_NAN_SUPPORT)) {
@@ -650,6 +653,13 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 			hw->wiphy->bands[NL80211_BAND_5GHZ]->vht_cap.cap |=
 				IEEE80211_VHT_CAP_SU_BEAMFORMER_CAPABLE;
 	}
+#ifdef CPTCFG_IWLWIFI_WIFI_6_SUPPORT
+	if (fw_has_capa(&mvm->fw->ucode_capa,
+			IWL_UCODE_TLV_CAPA_PSC_CHAN_SUPPORT) &&
+	    mvm->nvm_data->bands[NL80211_BAND_6GHZ].n_channels)
+		hw->wiphy->bands[NL80211_BAND_6GHZ] =
+			&mvm->nvm_data->bands[NL80211_BAND_6GHZ];
+#endif
 
 	hw->wiphy->hw_version = mvm->trans->hw_id;
 
@@ -1220,6 +1230,10 @@ int __iwl_mvm_mac_start(struct iwl_mvm *mvm)
 			       NULL);
 	iwl_dbg_tlv_time_point(&mvm->fwrt, IWL_FW_INI_TIME_POINT_PERIODIC,
 			       NULL);
+
+#ifdef CPTCFG_IWLWIFI_WIFI_6_SUPPORT
+	mvm->last_reset_or_resume_time_jiffies = jiffies;
+#endif /* CPTCFG_IWLWIFI_WIFI_6_SUPPORT */
 
 	if (ret && test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
 		/* Something went wrong - we need to finish some cleanup

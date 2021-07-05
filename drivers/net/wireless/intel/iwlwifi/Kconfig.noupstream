@@ -103,3 +103,9 @@ config REJECT_NONUPSTREAM_NL80211
 	help
 	  Say Y to disable non-upstream commands.
 
+config IWLWIFI_WIFI_6_SUPPORT
+	bool "enable WiFi 6 code"
+	help
+	  The code that related to Wifi 6 is not intended to go upstream yet,
+	  still can enable it by this option
+
