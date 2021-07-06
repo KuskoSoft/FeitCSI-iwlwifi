@@ -1276,7 +1276,6 @@ static void iwl_mvm_lari_cfg(struct iwl_mvm *mvm)
 				   &iwl_guid, &value);
 	if (!ret)
 		cmd.oem_11ax_allow_bitmap = cpu_to_le32(value);
-	/* apply more config masks here */
 
 	ret = iwl_acpi_get_dsm_u32((&mvm->fwrt)->dev, 0,
 				   DSM_FUNC_ENABLE_UNII4_CHAN,
@@ -1290,7 +1289,14 @@ static void iwl_mvm_lari_cfg(struct iwl_mvm *mvm)
 	if (!ret)
 		cmd.chan_state_active_bitmap = cpu_to_le32(value);
 
+	ret = iwl_acpi_get_dsm_u32(mvm->fwrt.dev, 0,
+				   DSM_FUNC_ENABLE_6E,
+				   &iwl_guid, &value);
+	if (!ret)
+		cmd.oem_uhb_allow_bitmap = cpu_to_le32(value);
+
 	if (cmd.config_bitmap ||
+	    cmd.oem_uhb_allow_bitmap ||
 	    cmd.oem_11ax_allow_bitmap ||
 	    cmd.oem_unii4_allow_bitmap ||
 	    cmd.chan_state_active_bitmap) {
@@ -1318,6 +1324,9 @@ static void iwl_mvm_lari_cfg(struct iwl_mvm *mvm)
 				le32_to_cpu(cmd.oem_unii4_allow_bitmap),
 				le32_to_cpu(cmd.chan_state_active_bitmap),
 				cmd_ver);
+		IWL_DEBUG_RADIO(mvm,
+				"sending LARI_CONFIG_CHANGE, oem_uhb_allow_bitmap=0x%x\n",
+				le32_to_cpu(cmd.oem_uhb_allow_bitmap));
 		ret = iwl_mvm_send_cmd_pdu(mvm,
 					   WIDE_ID(REGULATORY_AND_NVM_GROUP,
 						   LARI_CONFIG_CHANGE),
