@@ -435,10 +435,9 @@ static int iwl_mei_send_sap_msg_payload(struct mei_cl_device *cldev,
 
 void iwl_mei_add_data_to_ring(struct sk_buff *skb, bool cb_tx)
 {
-	struct iwl_mei *mei =
-		mei_cldev_get_drvdata(iwl_mei_global_cldev);
 	struct iwl_sap_q_ctrl_blk *notif_q;
 	struct iwl_sap_dir *dir;
+	struct iwl_mei *mei;
 	size_t room_in_buf;
 	size_t tx_sz;
 	size_t hdr_sz;
@@ -446,6 +445,13 @@ void iwl_mei_add_data_to_ring(struct sk_buff *skb, bool cb_tx)
 	u32 rd;
 	u32 wr;
 	void *q_head;
+
+	if (!iwl_mei_global_cldev) {
+		dev_kfree_skb(skb);
+		return;
+	}
+
+	mei = mei_cldev_get_drvdata(iwl_mei_global_cldev);
 
 	/*
 	 * We access this path for Rx packets (the more common case)
