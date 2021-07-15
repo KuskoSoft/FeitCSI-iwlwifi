@@ -22,6 +22,7 @@
 #include <linux/if_ether.h>
 #include <linux/ieee80211.h>
 #include <linux/net.h>
+#include <linux/rfkill.h>
 #include <net/regulatory.h>
 #include <net/netlink.h>
 
@@ -1257,8 +1258,6 @@ struct cfg80211_csa_settings {
 	bool block_tx;
 	u8 count;
 };
-
-#define CFG80211_MAX_NUM_DIFFERENT_CHANNELS 10
 
 /**
  * struct iface_combination_params - input parameters for interface combinations
@@ -8198,6 +8197,8 @@ void cfg80211_assoc_comeback(struct net_device *netdev,
 	dev_notice(&(wiphy)->dev, format, ##args)
 #define wiphy_info(wiphy, format, args...)			\
 	dev_info(&(wiphy)->dev, format, ##args)
+#define wiphy_info_once(wiphy, format, args...)			\
+	dev_info_once(&(wiphy)->dev, format, ##args)
 
 #define wiphy_err_ratelimited(wiphy, format, args...)		\
 	dev_err_ratelimited(&(wiphy)->dev, format, ##args)
