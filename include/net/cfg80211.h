@@ -110,7 +110,12 @@ struct wiphy;
  *	on this channel.
  * @IEEE80211_CHAN_16MHZ: 16 MHz bandwidth is permitted
  *	on this channel.
- *
+ * @IEEE80211_CHAN_NO_320MHZ: If the driver supports 320 MHz on the band,
+ *	this flag indicates that an 320 MHz channel cannot use this
+ *	channel as the control or any of the secondary channels.
+ *	This may be due to the driver or due to regulatory bandwidth
+ *	restrictions.
+ * @IEEE80211_CHAN_NO_EHT: EHT operation is not permitted on this channel.
  */
 enum ieee80211_channel_flags {
 	IEEE80211_CHAN_DISABLED		= 1<<0,
@@ -132,6 +137,8 @@ enum ieee80211_channel_flags {
 	IEEE80211_CHAN_4MHZ		= 1<<16,
 	IEEE80211_CHAN_8MHZ		= 1<<17,
 	IEEE80211_CHAN_16MHZ		= 1<<18,
+	IEEE80211_CHAN_NO_320MHZ	= 1<<19,
+	IEEE80211_CHAN_NO_EHT		= 1<<20,
 };
 
 #define IEEE80211_CHAN_NO_HT40 \
@@ -1541,6 +1548,7 @@ enum rate_info_flags {
  * @RATE_INFO_BW_40: 40 MHz bandwidth
  * @RATE_INFO_BW_80: 80 MHz bandwidth
  * @RATE_INFO_BW_160: 160 MHz bandwidth
+ * @RATE_INFO_BW_320: 320 MHz bandwidth
  * @RATE_INFO_BW_HE_RU: bandwidth determined by HE RU allocation
  */
 enum rate_info_bw {
@@ -1550,6 +1558,7 @@ enum rate_info_bw {
 	RATE_INFO_BW_40,
 	RATE_INFO_BW_80,
 	RATE_INFO_BW_160,
+	RATE_INFO_BW_320,
 	RATE_INFO_BW_HE_RU,
 };
 

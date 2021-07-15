@@ -1147,6 +1147,12 @@ static int nl80211_msg_put_channel(struct sk_buff *msg, struct wiphy *wiphy,
 		if ((chan->flags & IEEE80211_CHAN_16MHZ) &&
 		    nla_put_flag(msg, NL80211_FREQUENCY_ATTR_16MHZ))
 			goto nla_put_failure;
+		if ((chan->flags & IEEE80211_CHAN_NO_320MHZ) &&
+		    nla_put_flag(msg, NL80211_FREQUENCY_ATTR_NO_320MHZ))
+			goto nla_put_failure;
+		if ((chan->flags & IEEE80211_CHAN_NO_EHT) &&
+		    nla_put_flag(msg, NL80211_FREQUENCY_ATTR_NO_EHT))
+			goto nla_put_failure;
 	}
 
 	if (nla_put_u32(msg, NL80211_FREQUENCY_ATTR_MAX_TX_POWER,
@@ -5744,6 +5750,9 @@ bool nl80211_put_sta_rate(struct sk_buff *msg, struct rate_info *info, int attr)
 		break;
 	case RATE_INFO_BW_160:
 		rate_flg = NL80211_RATE_INFO_160_MHZ_WIDTH;
+		break;
+	case RATE_INFO_BW_320:
+		rate_flg = NL80211_RATE_INFO_320_MHZ_WIDTH;
 		break;
 	case RATE_INFO_BW_HE_RU:
 		rate_flg = 0;
@@ -10380,6 +10389,8 @@ static int nl80211_join_ibss(struct sk_buff *skb, struct genl_info *info)
 					     NL80211_EXT_FEATURE_VHT_IBSS))
 			return -EINVAL;
 		break;
+	case NL80211_CHAN_WIDTH_320:
+		return -EINVAL;
 	default:
 		return -EINVAL;
 	}

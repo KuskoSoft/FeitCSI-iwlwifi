@@ -4,7 +4,7 @@
  * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2011, Javier Lopez <jlopex@gmail.com>
  * Copyright (c) 2016 - 2017 Intel Deutschland GmbH
- * Copyright (C) 2018 - 2020 Intel Corporation
+ * Copyright (C) 2018 - 2021 Intel Corporation
  */
 
 /*
@@ -841,6 +841,8 @@ static int hwsim_get_chanwidth(enum nl80211_chan_width bw)
 	case NL80211_CHAN_WIDTH_80P80:
 	case NL80211_CHAN_WIDTH_160:
 		return 160;
+	case NL80211_CHAN_WIDTH_320:
+		return 320;
 	case NL80211_CHAN_WIDTH_5:
 		return 5;
 	case NL80211_CHAN_WIDTH_10:
