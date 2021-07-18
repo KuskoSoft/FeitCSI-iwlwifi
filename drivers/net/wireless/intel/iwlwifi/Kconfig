@@ -94,7 +94,7 @@ config IWLMEI
 	depends on PM
 	depends on IWLMVM
 	depends on IWLMVM_VENDOR_CMDS
-	depends on WLAN_VENDOR_INTEL_MEI || !KERNEL_5_15
+	depends on WLAN_VENDOR_INTEL_MEI || !KERNEL_5_20
 	help
 	  Enable V-PRO. This allows to communicate with the CSME firmware.
 	  This is supported starting from Tiger Lake platforms and has been
