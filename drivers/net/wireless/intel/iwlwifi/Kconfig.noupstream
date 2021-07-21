@@ -103,3 +103,8 @@ config REJECT_NONUPSTREAM_NL80211
 	help
 	  Say Y to disable non-upstream commands.
 
+config IWLWIFI_DONT_DUMP_FIFOS
+	bool "do not dump FIFO contents"
+	help
+	  If enabled, instruct the driver to not dump FIFO regions as
+	  they may contain PII.
