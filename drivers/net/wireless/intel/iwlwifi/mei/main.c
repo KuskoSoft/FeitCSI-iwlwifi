@@ -446,10 +446,8 @@ void iwl_mei_add_data_to_ring(struct sk_buff *skb, bool cb_tx)
 	u32 wr;
 	void *q_head;
 
-	if (!iwl_mei_global_cldev) {
-		dev_kfree_skb(skb);
+	if (!iwl_mei_global_cldev)
 		return;
-	}
 
 	mei = mei_cldev_get_drvdata(iwl_mei_global_cldev);
 
@@ -464,7 +462,6 @@ void iwl_mei_add_data_to_ring(struct sk_buff *skb, bool cb_tx)
 
 	if (!iwl_mei_is_connected()) {
 		spin_unlock_bh(&mei->data_q_lock);
-		dev_kfree_skb(skb);
 		return;
 	}
 
