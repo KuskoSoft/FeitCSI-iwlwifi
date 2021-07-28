@@ -782,6 +782,9 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_RECONNECT_REQUESTED] = { .type = NLA_REJECT },
 	[NL80211_ATTR_SAR_SPEC] = NLA_POLICY_NESTED(sar_policy),
 	[NL80211_ATTR_DISABLE_HE] = { .type = NLA_FLAG },
+	[NL80211_ATTR_EHT_CAPABILITY] =
+		NLA_POLICY_BINARY_RANGE(NL80211_EHT_MIN_CAPABILITY_LEN,
+					NL80211_EHT_MAX_CAPABILITY_LEN),
 };
 
 /* policy for the key attributes */
@@ -6203,7 +6206,7 @@ int cfg80211_check_station_change(struct wiphy *wiphy,
 		if (params->supported_rates)
 			return -EINVAL;
 		if (params->ext_capab || params->ht_capa || params->vht_capa ||
-		    params->he_capa)
+		    params->he_capa || params->eht_capa)
 			return -EINVAL;
 	}
 
@@ -6406,6 +6409,13 @@ static int nl80211_set_station_tdls(struct genl_info *info,
 			nla_data(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
 		params->he_capa_len =
 			nla_len(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
+
+		if (info->attrs[NL80211_ATTR_EHT_CAPABILITY]) {
+			params->eht_capa =
+				nla_data(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
+			params->eht_capa_len =
+				nla_len(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
+		}
 	}
 	if (info->attrs[NL80211_ATTR_HE_6GHZ_CAPABILITY])
 		params->he_6ghz_capa =
@@ -6667,6 +6677,13 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 			nla_data(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
 		params.he_capa_len =
 			nla_len(info->attrs[NL80211_ATTR_HE_CAPABILITY]);
+
+		if (info->attrs[NL80211_ATTR_EHT_CAPABILITY]) {
+			params.eht_capa =
+				nla_data(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
+			params.eht_capa_len =
+				nla_len(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
+		}
 	}
 
 	if (info->attrs[NL80211_ATTR_HE_6GHZ_CAPABILITY])
