@@ -182,7 +182,7 @@ static const struct ieee80211_regdomain hwsim_world_regdom_custom_03 = {
 		REG_RULE(5150 - 10, 5240 + 10, 40, 0, 30, 0),
 		REG_RULE(5745 - 10, 5825 + 10, 40, 0, 30, 0),
 		REG_RULE(5855 - 10, 5925 + 10, 40, 0, 33, 0),
-		REG_RULE(5955 - 10, 7125 + 10, 160, 0, 33, 0),
+		REG_RULE(5955 - 10, 7125 + 10, 320, 0, 33, 0),
 	}
 };
 
