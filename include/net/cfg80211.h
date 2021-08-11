@@ -361,7 +361,11 @@ struct ieee80211_sta_he_cap {
 	u8 ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN];
 };
 
-#define IEEE80211_EHT_PPE_THRES_MAX_LEN		31
+/*
+ * (Max NSS * Max RU index * 6 bits for each entry) + header) / 8
+ * (16 * 5 * 6 + 9) / 8 = 61
+ */
+#define IEEE80211_EHT_PPE_THRES_MAX_LEN 61
 
 /**
  * struct ieee80211_sta_eht_cap - STA's EHT capabilities
