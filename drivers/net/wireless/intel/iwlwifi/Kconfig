@@ -104,12 +104,6 @@ config IWLMEI
 
 	  If unsure, say N.
 
-config IWLWIFI_DHC
-	bool "Enable debug host commands"
-	help
-	  This option enables the debug host command API.  It's used
-	  for debugging and validation purposes.
-
 menu "Debugging Options"
 
 config IWLWIFI_DEBUG
