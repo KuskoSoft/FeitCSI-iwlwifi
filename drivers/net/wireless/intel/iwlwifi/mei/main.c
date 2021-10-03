@@ -1928,14 +1928,21 @@ static void iwl_mei_remove(struct mei_cl_device *cldev)
 		struct net_device *dev;
 
 		/*
+		 * First take rtnl and only then the mutex to avoid an ABBA
+		 * with iwl_mei_set_netdev()
+		 */
+		rtnl_lock();
+		mutex_lock(&iwl_mei_mutex);
+
+		/*
 		 * If we are suspending and the wifi driver hasn't removed it's netdev
 		 * yet, do it now. In any case, don't change the cache.netdev pointer.
 		 */
 		dev = rcu_dereference_protected(iwl_mei_cache.netdev,
 						lockdep_is_held(&iwl_mei_mutex));
 
-		rtnl_lock();
 		netdev_rx_handler_unregister(dev);
+		mutex_unlock(&iwl_mei_mutex);
 		rtnl_unlock();
 	}
 
