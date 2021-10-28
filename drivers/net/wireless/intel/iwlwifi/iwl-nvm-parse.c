@@ -856,7 +856,7 @@ static void iwl_init_he_6ghz_capa(struct iwl_trans *trans,
 	IWL_DEBUG_EEPROM(trans->dev, "he_6ghz_capa=0x%x\n", he_6ghz_capa);
 
 	/* we know it's writable - we set it before ourselves */
-	iftype_data = (void *)sband->iftype_data;
+	iftype_data = (void *)(uintptr_t)sband->iftype_data;
 	for (i = 0; i < sband->n_iftype_data; i++)
 		iftype_data[i].he_6ghz_capa.capa = cpu_to_le16(he_6ghz_capa);
 }
@@ -1033,7 +1033,7 @@ static void iwl_init_he_override(struct iwl_trans *trans,
 
 	for (i = 0; i < sband->n_iftype_data; i++) {
 		/* we know it's writable - we set it before ourselves */
-		iftype_data = (void *)&sband->iftype_data[i];
+		iftype_data = (void *)(uintptr_t)&sband->iftype_data[i];
 
 		if (trans->dbg_cfg.rx_mcs_80) {
 			if (iwl_he_mcs_greater(trans->dbg_cfg.rx_mcs_80,
