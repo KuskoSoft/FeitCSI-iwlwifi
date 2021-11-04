@@ -790,7 +790,7 @@ static void iwl_mei_handle_nic_owner(struct mei_cl_device *cldev,
 	IWL_MEI_DEBUG(cldev, "Got NIC owner: %s is owner\n",
 		      dw->val == cpu_to_le32(SAP_NIC_OWNER_ME) ? "me" : "host");
 
-	mei->got_ownership = true;
+	mei->got_ownership = dw->val != cpu_to_le32(SAP_NIC_OWNER_ME);
 }
 
 static void iwl_mei_handle_can_release_ownership(struct mei_cl_device *cldev,
