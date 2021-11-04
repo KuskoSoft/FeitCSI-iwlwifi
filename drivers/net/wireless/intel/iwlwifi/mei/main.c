@@ -719,8 +719,7 @@ static void iwl_mei_set_init_conf(struct iwl_mei *mei)
 		.val = cpu_to_le32(iwl_mei_cache.rf_kill),
 	};
 
-	iwl_mei_send_sap_msg(mei->cldev,
-			     SAP_MSG_NOTIF_HOST_ASKS_FOR_NIC_OWNERSHIP);
+	iwl_mei_send_sap_msg(mei->cldev, SAP_MSG_NOTIF_WHO_OWNS_NIC);
 
 	if (iwl_mei_cache.conn_info) {
 		link_msg.conn_info = *iwl_mei_cache.conn_info;
@@ -786,8 +785,12 @@ out:
 static void iwl_mei_handle_nic_owner(struct mei_cl_device *cldev,
 				     const struct iwl_sap_msg_dw *dw)
 {
+	struct iwl_mei *mei = mei_cldev_get_drvdata(cldev);
+
 	IWL_MEI_DEBUG(cldev, "Got NIC owner: %s is owner\n",
 		      dw->val == cpu_to_le32(SAP_NIC_OWNER_ME) ? "me" : "host");
+
+	mei->got_ownership = true;
 }
 
 static void iwl_mei_handle_can_release_ownership(struct mei_cl_device *cldev,
@@ -1326,7 +1329,10 @@ int iwl_mei_get_ownership(void)
 		goto out;
 	}
 
-	mei->got_ownership = false;
+	if (mei->got_ownership) {
+		ret = 0;
+		goto out;
+	}
 
 	ret = iwl_mei_send_sap_msg(mei->cldev,
 				   SAP_MSG_NOTIF_HOST_ASKS_FOR_NIC_OWNERSHIP);
