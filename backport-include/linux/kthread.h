@@ -3,7 +3,8 @@
 #include_next <linux/kthread.h>
 
 #if LINUX_VERSION_IS_LESS(5,17,0)
-static inline void kthread_complete_and_exit(struct completion *c, long ret)
+static inline void __noreturn
+kthread_complete_and_exit(struct completion *c, long ret)
 {
 	complete_and_exit(c, ret);
 }
