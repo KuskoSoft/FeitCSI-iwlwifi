@@ -809,6 +809,12 @@ struct ptp_data {
 };
 #endif
 
+struct iwl_time_sync_data {
+	struct sk_buff_head frame_list;
+	u8 peer_addr[ETH_ALEN];
+	bool active;
+};
+
 struct iwl_mvm {
 	/* for logger access */
 	struct device *dev;
@@ -1192,6 +1198,8 @@ struct iwl_mvm {
 	unsigned long last_reset_or_resume_time_jiffies;
 
 	bool sta_remove_requires_queue_remove;
+
+	struct iwl_time_sync_data time_sync;
 };
 
 /* Extract MVM priv from op_mode and _hw */
