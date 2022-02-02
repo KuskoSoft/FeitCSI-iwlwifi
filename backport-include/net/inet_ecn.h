@@ -8,7 +8,12 @@
 #define skb_vlan_tag_present(__skb)       ((__skb)->vlan_present)
 #endif
 
-#if LINUX_VERSION_IS_LESS(5,8,0)
+#if LINUX_VERSION_IS_LESS(5,7,10) &&			\
+	!LINUX_VERSION_IN_RANGE(4,14,212, 4,15,0) &&	\
+	!LINUX_VERSION_IN_RANGE(4,19,134, 4,20,0) &&	\
+	!LINUX_VERSION_IN_RANGE(4,4,248, 4,5,0) &&	\
+	!LINUX_VERSION_IN_RANGE(4,9,248, 4,10,0) &&	\
+	!LINUX_VERSION_IN_RANGE(5,4,53, 5,5,0)
 /* A getter for the SKB protocol field which will handle VLAN tags consistently
  * whether VLAN acceleration is enabled or not.
  */
