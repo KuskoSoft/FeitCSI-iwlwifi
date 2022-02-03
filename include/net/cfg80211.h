@@ -7,7 +7,7 @@
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014 Intel Mobile Communications GmbH
  * Copyright 2015-2017	Intel Deutschland GmbH
- * Copyright (C) 2018-2021 Intel Corporation
+ * Copyright (C) 2018-2022 Intel Corporation
  */
 
 #include <linux/ethtool.h>
@@ -373,10 +373,10 @@ struct ieee80211_sta_he_cap {
 };
 
 /*
- * (Max NSS * Max RU index * 6 bits for each entry) + header) / 8
- * (16 * 5 * 6 + 9) / 8 = 61
+ * (header + Max NSS * Max RU index * 6 bits for each entry) + pad) / 8
+ * (9 + 8 * 5 * 6 + 7) / 8 = 32
  */
-#define IEEE80211_EHT_PPE_THRES_MAX_LEN 61
+#define IEEE80211_EHT_PPE_THRES_MAX_LEN 32
 
 /**
  * struct ieee80211_sta_eht_cap - STA's EHT capabilities
