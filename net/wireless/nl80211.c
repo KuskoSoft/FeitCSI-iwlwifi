@@ -286,6 +286,15 @@ static int validate_ie_attr(const struct nlattr *attr,
 	return -EINVAL;
 }
 
+static int validate_he_capa(const struct nlattr *attr,
+			    struct netlink_ext_ack *extack)
+{
+	if (!ieee80211_he_capa_size_ok(nla_data(attr), nla_len(attr)))
+		return -EINVAL;
+
+	return 0;
+}
+
 /* policy for the attributes */
 static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR];
 
@@ -749,13 +758,9 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_TXQ_LIMIT] = { .type = NLA_U32 },
 	[NL80211_ATTR_TXQ_MEMORY_LIMIT] = { .type = NLA_U32 },
 	[NL80211_ATTR_TXQ_QUANTUM] = { .type = NLA_U32 },
-#if LINUX_VERSION_IS_GEQ(5,10,0)
 	[NL80211_ATTR_HE_CAPABILITY] =
-		NLA_POLICY_BINARY_RANGE(NL80211_HE_MIN_CAPABILITY_LEN, NL80211_HE_MAX_CAPABILITY_LEN),
-#else
-	[NL80211_ATTR_HE_CAPABILITY] = { .type = NLA_BINARY,
-					 .len = NL80211_HE_MAX_CAPABILITY_LEN },
-#endif
+		NLA_POLICY_VALIDATE_FN(NLA_BINARY, validate_he_capa,
+				       NL80211_HE_MAX_CAPABILITY_LEN),
 	[NL80211_ATTR_FTM_RESPONDER] =
 		NLA_POLICY_NESTED(nl80211_ftm_responder_policy),
 	[NL80211_ATTR_TIMEOUT] = NLA_POLICY_MIN(NLA_U32, 1),
