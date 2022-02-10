@@ -1787,7 +1787,19 @@ nl80211_send_iftype_data(struct sk_buff *msg,
 			return -ENOBUFS;
 	}
 
-	if (eht_cap->has_eht) {
+	if (eht_cap->has_eht && he_cap->has_he) {
+		u8 mcs_nss_size, ppe_thresh_size;
+		u16 ppe_thres_hdr;
+
+		mcs_nss_size =
+			ieee80211_eht_mcs_nss_size(&he_cap->he_cap_elem,
+						   &eht_cap->eht_cap_elem);
+
+		ppe_thres_hdr = get_unaligned_le16(&eht_cap->eht_ppe_thres[0]);
+		ppe_thresh_size =
+			ieee80211_eht_ppe_size(ppe_thres_hdr,
+					       eht_cap->eht_cap_elem.phy_cap_info);
+
 		if (nla_put(msg, NL80211_BAND_IFTYPE_ATTR_EHT_CAP_MAC,
 			    sizeof(eht_cap->eht_cap_elem.mac_cap_info),
 			    eht_cap->eht_cap_elem.mac_cap_info) ||
@@ -1795,11 +1807,9 @@ nl80211_send_iftype_data(struct sk_buff *msg,
 			    sizeof(eht_cap->eht_cap_elem.phy_cap_info),
 			    eht_cap->eht_cap_elem.phy_cap_info) ||
 		    nla_put(msg, NL80211_BAND_IFTYPE_ATTR_EHT_CAP_MCS_SET,
-			    sizeof(eht_cap->eht_mcs_nss_supp),
-			    &eht_cap->eht_mcs_nss_supp) ||
+			    mcs_nss_size, &eht_cap->eht_mcs_nss_supp) ||
 		    nla_put(msg, NL80211_BAND_IFTYPE_ATTR_EHT_CAP_PPE,
-			    sizeof(eht_cap->eht_ppe_thres),
-			    eht_cap->eht_ppe_thres))
+			    ppe_thresh_size, eht_cap->eht_ppe_thres))
 			return -ENOBUFS;
 	}
 
@@ -5970,12 +5980,12 @@ bool nl80211_put_sta_rate(struct sk_buff *msg, struct rate_info *info, int attr)
 	case RATE_INFO_BW_160:
 		rate_flg = NL80211_RATE_INFO_160_MHZ_WIDTH;
 		break;
-	case RATE_INFO_BW_320:
-		rate_flg = NL80211_RATE_INFO_320_MHZ_WIDTH;
-		break;
 	case RATE_INFO_BW_HE_RU:
 		rate_flg = 0;
 		WARN_ON(!(info->flags & RATE_INFO_FLAGS_HE_MCS));
+		break;
+	case RATE_INFO_BW_320:
+		rate_flg = NL80211_RATE_INFO_320_MHZ_WIDTH;
 		break;
 	case RATE_INFO_BW_EHT_RU:
 		rate_flg = 0;
@@ -6647,6 +6657,11 @@ static int nl80211_set_station_tdls(struct genl_info *info,
 				nla_data(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
 			params->eht_capa_len =
 				nla_len(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
+
+			if (!ieee80211_eht_capa_size_ok((const u8 *)params->he_capa,
+							(const u8 *)params->eht_capa,
+							params->eht_capa_len))
+				return -EINVAL;
 		}
 	}
 	if (info->attrs[NL80211_ATTR_HE_6GHZ_CAPABILITY])
@@ -6914,6 +6929,11 @@ static int nl80211_new_station(struct sk_buff *skb, struct genl_info *info)
 				nla_data(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
 			params.eht_capa_len =
 				nla_len(info->attrs[NL80211_ATTR_EHT_CAPABILITY]);
+
+			if (!ieee80211_eht_capa_size_ok((const u8 *)params.he_capa,
+							(const u8 *)params.eht_capa,
+							params.eht_capa_len))
+				return -EINVAL;
 		}
 	}
 

@@ -115,7 +115,7 @@ struct wiphy;
  * @IEEE80211_CHAN_16MHZ: 16 MHz bandwidth is permitted
  *	on this channel.
  * @IEEE80211_CHAN_NO_320MHZ: If the driver supports 320 MHz on the band,
- *	this flag indicates that an 320 MHz channel cannot use this
+ *	this flag indicates that a 320 MHz channel cannot use this
  *	channel as the control or any of the secondary channels.
  *	This may be due to the driver or due to regulatory bandwidth
  *	restrictions.
@@ -372,11 +372,29 @@ struct ieee80211_sta_he_cap {
 	u8 ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN];
 };
 
-/*
- * (header + Max NSS * Max RU index * 6 bits for each entry) + pad) / 8
- * (9 + 8 * 5 * 6 + 7) / 8 = 32
+/**
+ * struct ieee80211_eht_mcs_nss_supp - EHT max supported NSS per MCS
+ *
+ * See P802.11be_D1.3 Table 9-401k - "Subfields of the Supported EHT-MCS
+ * and NSS Set field"
+ *
+ * @only_20mhz: MCS/NSS support for 20 MHz-only STA.
+ * @bw._80: MCS/NSS support for BW <= 80 MHz
+ * @bw._160: MCS/NSS support for BW = 160 MHz
+ * @bw._320: MCS/NSS support for BW = 320 MHz
  */
-#define IEEE80211_EHT_PPE_THRES_MAX_LEN 32
+struct ieee80211_eht_mcs_nss_supp {
+	union {
+		struct ieee80211_eht_mcs_nss_supp_20mhz_only only_20mhz;
+		struct {
+			struct ieee80211_eht_mcs_nss_supp_bw _80;
+			struct ieee80211_eht_mcs_nss_supp_bw _160;
+			struct ieee80211_eht_mcs_nss_supp_bw _320;
+		} __packed bw;
+	} __packed;
+} __packed;
+
+#define IEEE80211_EHT_PPE_THRES_MAX_LEN		32
 
 /**
  * struct ieee80211_sta_eht_cap - STA's EHT capabilities
@@ -384,7 +402,7 @@ struct ieee80211_sta_he_cap {
  * This structure describes most essential parameters needed
  * to describe 802.11be EHT capabilities for a STA.
  *
- * @has_he: true iff HE data is valid.
+ * @has_eht: true iff EHT data is valid.
  * @eht_cap_elem: Fixed portion of the eht capabilities element.
  * @eht_mcs_nss_supp: The supported NSS/MCS combinations.
  * @eht_ppe_thres: Holds the PPE Thresholds data.
@@ -1618,8 +1636,8 @@ enum rate_info_flags {
  * @RATE_INFO_BW_40: 40 MHz bandwidth
  * @RATE_INFO_BW_80: 80 MHz bandwidth
  * @RATE_INFO_BW_160: 160 MHz bandwidth
- * @RATE_INFO_BW_320: 320 MHz bandwidth
  * @RATE_INFO_BW_HE_RU: bandwidth determined by HE RU allocation
+ * @RATE_INFO_BW_320: 320 MHz bandwidth
  * @RATE_INFO_BW_EHT_RU: bandwidth determined by EHT RU allocation
  */
 enum rate_info_bw {
@@ -1629,8 +1647,8 @@ enum rate_info_bw {
 	RATE_INFO_BW_40,
 	RATE_INFO_BW_80,
 	RATE_INFO_BW_160,
-	RATE_INFO_BW_320,
 	RATE_INFO_BW_HE_RU,
+	RATE_INFO_BW_320,
 	RATE_INFO_BW_EHT_RU,
 };
 

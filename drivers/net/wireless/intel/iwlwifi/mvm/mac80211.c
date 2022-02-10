@@ -2083,16 +2083,16 @@ static void iwl_mvm_set_pkt_ext_from_nominal_padding(struct iwl_he_pkt_ext_v2 *p
 
 	/* all the macros are the same for EHT and HE */
 	switch (nominal_padding) {
-	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_0US:
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_0US:
 		low_th = IWL_HE_PKT_EXT_NONE;
 		high_th = IWL_HE_PKT_EXT_NONE;
 		break;
-	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_8US:
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_8US:
 		low_th = IWL_HE_PKT_EXT_BPSK;
 		high_th = IWL_HE_PKT_EXT_NONE;
 		break;
-	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_16US:
-	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_20US:
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_16US:
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_20US:
 		low_th = IWL_HE_PKT_EXT_NONE;
 		high_th = IWL_HE_PKT_EXT_BPSK;
 		break;
@@ -2128,11 +2128,11 @@ static void iwl_mvm_get_optimal_ppe_info(struct iwl_he_pkt_ext_v2 *pkt_ext,
 			u8 *qam_th = &pkt_ext->pkt_ext_qam_th[i][bw][0];
 
 			if (nominal_padding >
-			    IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_8US &&
+			    IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_8US &&
 			    qam_th[1] == IWL_HE_PKT_EXT_NONE)
 				qam_th[1] = IWL_HE_PKT_EXT_4096QAM;
 			else if (nominal_padding ==
-				 IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_8US &&
+				 IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_8US &&
 				 qam_th[0] == IWL_HE_PKT_EXT_NONE &&
 				 qam_th[1] == IWL_HE_PKT_EXT_NONE)
 				qam_th[0] = IWL_HE_PKT_EXT_4096QAM;
@@ -2256,7 +2256,7 @@ void iwl_mvm_cfg_he_sta(struct iwl_mvm *mvm,
 	if (sta->eht_cap.has_eht) {
 		nominal_padding =
 			u8_get_bits(sta->eht_cap.eht_cap_elem.phy_cap_info[5],
-				    IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL);
+				    IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_MASK);
 
 		/* If PPE Thresholds exists, parse them into a FW-familiar format. */
 		if (sta->eht_cap.eht_cap_elem.phy_cap_info[5] &
