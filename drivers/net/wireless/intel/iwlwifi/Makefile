@@ -42,8 +42,7 @@ subdir-ccflags-y += $(call cc-option,-Wimplicit-fallthrough)
 # for FreeBSD compatibility - they use most of our driver
 
 obj-$(CPTCFG_IWLMVM)	+= mvm/
-obj-$(CPTCFG_IWLXVT)	+= xvt/
-
 obj-$(CPTCFG_IWLMEI)	+= mei/
+obj-$(CPTCFG_IWLXVT)	+= xvt/
 
 CFLAGS_iwl-devtrace.o := -I$(src)

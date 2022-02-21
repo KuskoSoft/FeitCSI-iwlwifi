@@ -3387,7 +3387,7 @@ static void iwl_mvm_mei_host_associated(struct iwl_mvm *mvm,
 	default:
 		/* cipher not supported, don't send anything to iwlmei */
 		return;
-	};
+	}
 
 	switch (mvmvif->rekey_data.akm) {
 	case WLAN_AKM_SUITE_SAE & 0xff:

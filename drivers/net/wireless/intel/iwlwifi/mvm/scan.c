@@ -3107,7 +3107,7 @@ static int iwl_scan_req_umac_get_size(u8 scan_ver)
 	case 14:
 	case 15:
 		return sizeof(struct iwl_scan_req_umac_v15);
-	};
+	}
 
 	return 0;
 }
