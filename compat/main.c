@@ -71,8 +71,3 @@ static int __init backport_init(void)
         return 0;
 }
 subsys_initcall(backport_init);
-
-static void __exit backport_exit(void)
-{
-}
-module_exit(backport_exit);
