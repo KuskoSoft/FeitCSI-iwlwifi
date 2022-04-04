@@ -247,4 +247,21 @@ struct net_device_path_ctx {
 };
 #endif /* NET_DEVICE_PATH_STACK_MAX */
 
+#if LINUX_VERSION_IS_LESS(5,18,0)
+static inline int LINUX_BACKPORT(netif_rx)(struct sk_buff *skb)
+{
+	bool need_bh_off = !(hardirq_count() | softirq_count());
+	int ret;
+
+	if (need_bh_off)
+		local_bh_disable();
+	ret = netif_rx(skb);
+	if (need_bh_off)
+		local_bh_enable();
+
+	return ret;
+}
+#define netif_rx LINUX_BACKPORT(netif_rx)
+#endif /* < 5.18.0 */
+
 #endif /* __BACKPORT_NETDEVICE_H */
