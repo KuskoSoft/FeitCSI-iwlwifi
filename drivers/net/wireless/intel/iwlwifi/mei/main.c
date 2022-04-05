@@ -147,6 +147,8 @@ struct iwl_mei_filters {
  *	to send CSME_OWNERSHIP_CONFIRMED when the driver completes its down
  *	flow.
  * @link_prot_state: true when we are in link protection PASSIVE
+ * @device_down: true if the device is down. Used to remember to send
+ *	CSME_OWNERSHIP_CONFIRMED when the driver is already down.
  * @csa_throttle_end_wk: used when &csa_throttled is true
  * @data_q_lock: protects the access to the data queues which are
  *	accessed without the mutex.
@@ -167,6 +169,7 @@ struct iwl_mei {
 	bool csa_throttled;
 	bool csme_taking_ownership;
 	bool link_prot_state;
+	bool device_down;
 	struct delayed_work csa_throttle_end_wk;
 	spinlock_t data_q_lock;
 
@@ -799,14 +802,18 @@ static void iwl_mei_handle_csme_taking_ownership(struct mei_cl_device *cldev,
 
 	mei->got_ownership = false;
 
-	/*
-	 * Remember to send CSME_OWNERSHIP_CONFIRMED when the wifi driver
-	 * is finished taking the device down.
-	 */
-	mei->csme_taking_ownership = true;
+	if (iwl_mei_cache.ops && !mei->device_down) {
+		/*
+		 * Remember to send CSME_OWNERSHIP_CONFIRMED when the wifi
+		 * driver is finished taking the device down.
+		 */
+		mei->csme_taking_ownership = true;
 
-	if (iwl_mei_cache.ops)
 		iwl_mei_cache.ops->rfkill(iwl_mei_cache.priv, true, true);
+	} else {
+		iwl_mei_send_sap_msg(cldev,
+				     SAP_MSG_NOTIF_CSME_OWNERSHIP_CONFIRMED);
+	}
 }
 
 static void iwl_mei_handle_nvm(struct mei_cl_device *cldev,
@@ -1615,7 +1622,7 @@ out:
 }
 EXPORT_SYMBOL_GPL(iwl_mei_set_netdev);
 
-void iwl_mei_device_down(void)
+void iwl_mei_device_state(bool up)
 {
 	struct iwl_mei *mei;
 
@@ -1629,7 +1636,9 @@ void iwl_mei_device_down(void)
 	if (!mei)
 		goto out;
 
-	if (!mei->csme_taking_ownership)
+	mei->device_down = !up;
+
+	if (up || !mei->csme_taking_ownership)
 		goto out;
 
 	iwl_mei_send_sap_msg(mei->cldev,
@@ -1638,7 +1647,7 @@ void iwl_mei_device_down(void)
 out:
 	mutex_unlock(&iwl_mei_mutex);
 }
-EXPORT_SYMBOL_GPL(iwl_mei_device_down);
+EXPORT_SYMBOL_GPL(iwl_mei_device_state);
 
 int iwl_mei_register(void *priv, const struct iwl_mei_ops *ops)
 {
@@ -1820,6 +1829,7 @@ static int iwl_mei_probe(struct mei_cl_device *cldev,
 
 	mei_cldev_set_drvdata(cldev, mei);
 	mei->cldev = cldev;
+	mei->device_down = true;
 
 	do {
 		ret = iwl_mei_alloc_shared_mem(cldev);
