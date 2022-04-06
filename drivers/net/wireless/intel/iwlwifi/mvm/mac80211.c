@@ -1092,7 +1092,6 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 
 	ieee80211_wake_queues(mvm->hw);
 
-	mvm->vif_count = 0;
 	mvm->rx_ba_sessions = 0;
 	mvm->fwrt.dump.conf = FW_DBG_INVALID;
 	mvm->monitor_on = false;
@@ -1505,10 +1504,6 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_NAN)
 		goto out_unlock;
 
-	/* Counting number of interfaces is needed for legacy PM */
-	if (vif->type != NL80211_IFTYPE_P2P_DEVICE)
-		mvm->vif_count++;
-
 	/*
 	 * The AP binding flow can be done only after the beacon
 	 * template is configured (which happens only in the mac80211
@@ -1525,7 +1520,7 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 		ret = iwl_mvm_alloc_bcast_sta(mvm, vif);
 		if (ret) {
 			IWL_ERR(mvm, "Failed to allocate bcast sta\n");
-			goto out_release;
+			goto out_unlock;
 		}
 
 		/*
@@ -1536,7 +1531,7 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 					       0, vif->type,
 					       IWL_STA_MULTICAST);
 		if (ret)
-			goto out_release;
+			goto out_unlock;
 
 		iwl_mvm_vif_dbgfs_register(mvm, vif);
 		goto out_unlock;
@@ -1546,7 +1541,7 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 
 	ret = iwl_mvm_mac_ctxt_add(mvm, vif);
 	if (ret)
-		goto out_release;
+		goto out_unlock;
 
 	ret = iwl_mvm_power_update_mac(mvm);
 	if (ret)
@@ -1623,9 +1618,6 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
  out_remove_mac:
 	mvmvif->phy_ctxt = NULL;
 	iwl_mvm_mac_ctxt_remove(mvm, vif);
- out_release:
-	if (vif->type != NL80211_IFTYPE_P2P_DEVICE)
-		mvm->vif_count--;
  out_unlock:
 	mutex_unlock(&mvm->mutex);
 
@@ -1720,9 +1712,6 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 		iwl_mvm_phy_ctxt_unref(mvm, mvmvif->phy_ctxt);
 		mvmvif->phy_ctxt = NULL;
 	}
-
-	if (mvm->vif_count && vif->type != NL80211_IFTYPE_P2P_DEVICE)
-		mvm->vif_count--;
 
 	iwl_mvm_power_update_mac(mvm);
 	iwl_mvm_mac_ctxt_remove(mvm, vif);
