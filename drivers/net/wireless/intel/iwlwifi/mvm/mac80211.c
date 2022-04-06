@@ -1697,7 +1697,11 @@ static void iwl_mvm_prepare_mac_removal(struct iwl_mvm *mvm,
 	}
 }
 
-static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
+/* This function is doing the common part of removing the interface for
+ * both - MLD and non-MLD modes. Returns true if removing the interface
+ * is done
+ */
+bool iwl_mvm_mac_remove_interface_common(struct ieee80211_hw *hw,
 					 struct ieee80211_vif *vif)
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
@@ -1712,7 +1716,7 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 		if (wdev && WARN_ON(wdev_running(wdev)))
 			iwl_mvm_stop_nan(hw, vif);
 
-		return;
+		return true;
 	}
 
 	if (!(vif->type == NL80211_IFTYPE_AP ||
@@ -1755,15 +1759,26 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 			mvm->noa_duration = 0;
 		}
 #endif
-		iwl_mvm_dealloc_int_sta(mvm, &mvmvif->mcast_sta);
-		iwl_mvm_dealloc_bcast_sta(mvm, vif);
-		goto out_release;
+		return true;
 	}
 
 #ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
 	if (mvmvif == mvm->p2p_opps_test_wa_vif)
 		mvm->p2p_opps_test_wa_vif = NULL;
 #endif
+
+	iwl_mvm_power_update_mac(mvm);
+	return false;
+}
+
+static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
+					 struct ieee80211_vif *vif)
+{
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+	if (iwl_mvm_mac_remove_interface_common(hw, vif))
+		goto out;
 
 	if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
 		mvm->p2p_device_vif = NULL;
@@ -1773,7 +1788,6 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 		mvmvif->phy_ctxt = NULL;
 	}
 
-	iwl_mvm_power_update_mac(mvm);
 	iwl_mvm_mac_ctxt_remove(mvm, vif);
 
 	RCU_INIT_POINTER(mvm->vif_id_to_mac[mvmvif->id], NULL);
@@ -1785,7 +1799,13 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 	iwl_mvm_tdls_peer_cache_clear(mvm, vif);
 #endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
-out_release:
+out:
+	if (vif->type == NL80211_IFTYPE_AP ||
+	    vif->type == NL80211_IFTYPE_ADHOC) {
+		iwl_mvm_dealloc_int_sta(mvm, &mvmvif->mcast_sta);
+		iwl_mvm_dealloc_bcast_sta(mvm, vif);
+	}
+
 	mutex_unlock(&mvm->mutex);
 }
 
