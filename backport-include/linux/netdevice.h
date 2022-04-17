@@ -176,6 +176,13 @@ struct rtnl_link_stats64 *
 bp_dev_get_tstats64(struct net_device *dev, struct rtnl_link_stats64 *s);
 #endif /* < 4.11 */
 
+#if LINUX_VERSION_IN_RANGE(4,6,0, 5,15,0)
+#define get_user_ifreq LINUX_BACKPORT(get_user_ifreq)
+int get_user_ifreq(struct ifreq *ifr, void __user **ifrdata, void __user *arg);
+#define put_user_ifreq LINUX_BACKPORT(put_user_ifreq)
+int put_user_ifreq(struct ifreq *ifr, void __user *arg);
+#endif
+
 #if LINUX_VERSION_IS_LESS(5,15,0)
 static inline void backport_dev_put(struct net_device *dev)
 {
