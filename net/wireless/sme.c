@@ -1228,10 +1228,8 @@ int cfg80211_connect(struct cfg80211_registered_device *rdev,
 			 * If ciphers are not set (e.g. when going through
 			 * iwconfig), we have to set them appropriately here.
 			 */
-			if (connect->crypto.n_ciphers_group == 0) {
-				connect->crypto.n_ciphers_group = 1;
-				connect->crypto.ciphers_group[0] = cipher;
-			}
+			if (connect->crypto.cipher_group == 0)
+				connect->crypto.cipher_group = cipher;
 
 			if (connect->crypto.n_ciphers_pairwise == 0) {
 				connect->crypto.n_ciphers_pairwise = 1;

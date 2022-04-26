@@ -1071,8 +1071,7 @@ struct survey_info {
  * struct cfg80211_crypto_settings - Crypto settings
  * @wpa_versions: indicates which, if any, WPA versions are enabled
  *	(from enum nl80211_wpa_versions)
- * @n_ciphers_group: number of supported group ciphers
- * @ciphers_group: group key cipher suites
+ * @cipher_group: group key cipher suite (or 0 if unset)
  * @n_ciphers_pairwise: number of AP supported unicast ciphers
  * @ciphers_pairwise: unicast key cipher suites
  * @n_akm_suites: number of AKM suites
@@ -1114,8 +1113,7 @@ struct survey_info {
  */
 struct cfg80211_crypto_settings {
 	u32 wpa_versions;
-	int n_ciphers_group;
-	u32 ciphers_group[NL80211_MAX_NR_CIPHER_SUITES];
+	u32 cipher_group;
 	int n_ciphers_pairwise;
 	u32 ciphers_pairwise[NL80211_MAX_NR_CIPHER_SUITES];
 	int n_akm_suites;

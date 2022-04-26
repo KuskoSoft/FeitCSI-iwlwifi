@@ -1583,6 +1583,10 @@ enum nl80211_commands {
  * @NL80211_ATTR_KEY_DEFAULT: Flag attribute indicating the key is default key
  * @NL80211_ATTR_KEY_DEFAULT_MGMT: Flag attribute indicating the key is the
  *	default management key
+ * @NL80211_ATTR_CIPHER_SUITES_PAIRWISE: For crypto settings for connect or
+ *	other commands, indicates which pairwise cipher suites are used
+ * @NL80211_ATTR_CIPHER_SUITE_GROUP: For crypto settings for connect or
+ *	other commands, indicates which group cipher suite is used
  *
  * @NL80211_ATTR_BEACON_INTERVAL: beacon interval in TU
  * @NL80211_ATTR_DTIM_PERIOD: DTIM period for beaconing
@@ -1758,15 +1762,12 @@ enum nl80211_commands {
  *	that protected APs should be used. This is also used with NEW_BEACON to
  *	indicate that the BSS is to use protection.
  *
- * @NL80211_ATTR_CIPHER_SUITES_PAIRWISE: Used with CONNECT, ASSOCIATE, and
- *	NEW_BEACON to indicate which unicast key ciphers will be used with
- *	the connection (an array of u32).
- * @NL80211_ATTR_CIPHER_SUITES_GROUP: Used with CONNECT to indicate that the
- *	connection will use APs that use one of the specified cipher suites as
- *	the group cipher suite. (an array of u32).
- *	Also used with ASSOCIATE to indicate the group cipher suite that will be
- *	used for the association. It is also used with NEW_BEACON to indicate
- *	which group key cipher will be used by the AP. (u32).
+ * @NL80211_ATTR_CIPHERS_PAIRWISE: Used with CONNECT, ASSOCIATE, and NEW_BEACON
+ *	to indicate which unicast key ciphers will be used with the connection
+ *	(an array of u32).
+ * @NL80211_ATTR_CIPHER_GROUP: Used with CONNECT, ASSOCIATE, and NEW_BEACON to
+ *	indicate which group key cipher will be used with the connection (a
+ *	u32).
  * @NL80211_ATTR_WPA_VERSIONS: Used with CONNECT, ASSOCIATE, and NEW_BEACON to
  *	indicate which WPA version(s) the AP we want to associate with is using
  *	(a u32 with flags from &enum nl80211_wpa_versions).
@@ -2801,7 +2802,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_STATUS_CODE,
 
 	NL80211_ATTR_CIPHER_SUITES_PAIRWISE,
-	NL80211_ATTR_CIPHER_SUITES_GROUP,
+	NL80211_ATTR_CIPHER_SUITE_GROUP,
 	NL80211_ATTR_WPA_VERSIONS,
 	NL80211_ATTR_AKM_SUITES,
 
@@ -3233,7 +3234,7 @@ enum nl80211_attrs {
 #define NL80211_ATTR_AUTH_TYPE NL80211_ATTR_AUTH_TYPE
 #define NL80211_ATTR_REASON_CODE NL80211_ATTR_REASON_CODE
 #define NL80211_ATTR_CIPHER_SUITES_PAIRWISE NL80211_ATTR_CIPHER_SUITES_PAIRWISE
-#define NL80211_ATTR_CIPHER_SUITE_GROUP NL80211_ATTR_CIPHER_SUITES_GROUP
+#define NL80211_ATTR_CIPHER_SUITE_GROUP NL80211_ATTR_CIPHER_SUITE_GROUP
 #define NL80211_ATTR_WPA_VERSIONS NL80211_ATTR_WPA_VERSIONS
 #define NL80211_ATTR_AKM_SUITES NL80211_ATTR_AKM_SUITES
 #define NL80211_ATTR_KEY NL80211_ATTR_KEY

@@ -34,8 +34,7 @@
 static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 				   struct genl_info *info,
 				   struct cfg80211_crypto_settings *settings,
-				   int pairwise_cipher_limit,
-				   int group_cipher_limit);
+				   int cipher_limit);
 
 /* the netlink family */
 static struct genl_family nl80211_fam;
@@ -576,10 +575,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 			.type = NLA_BINARY,
 			.len = NL80211_MAX_NR_CIPHER_SUITES * sizeof(u32)
 	},
-	[NL80211_ATTR_CIPHER_SUITES_GROUP] = {
-			.type = NLA_BINARY,
-			.len = NL80211_MAX_NR_CIPHER_SUITES * sizeof(u32)
-	},
+	[NL80211_ATTR_CIPHER_SUITE_GROUP] = { .type = NLA_U32 },
 	[NL80211_ATTR_WPA_VERSIONS] = { .type = NLA_U32 },
 	[NL80211_ATTR_AKM_SUITES] = {
 			.type = NLA_BINARY,
@@ -5617,7 +5613,7 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 		params->auth_type = NL80211_AUTHTYPE_AUTOMATIC;
 
 	err = nl80211_crypto_settings(rdev, info, &params->crypto,
-				      NL80211_MAX_NR_CIPHER_SUITES, 1);
+				      NL80211_MAX_NR_CIPHER_SUITES);
 	if (err)
 		goto out;
 
@@ -10217,8 +10213,7 @@ static int validate_pae_over_nl80211(struct cfg80211_registered_device *rdev,
 static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 				   struct genl_info *info,
 				   struct cfg80211_crypto_settings *settings,
-				   int pairwise_cipher_limit,
-				   int group_cipher_limit)
+				   int cipher_limit)
 {
 	memset(settings, 0, sizeof(*settings));
 
@@ -10261,7 +10256,7 @@ static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 		if (len % sizeof(u32))
 			return -EINVAL;
 
-		if (settings->n_ciphers_pairwise > pairwise_cipher_limit)
+		if (settings->n_ciphers_pairwise > cipher_limit)
 			return -EINVAL;
 
 		memcpy(settings->ciphers_pairwise, data, len);
@@ -10273,27 +10268,12 @@ static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 				return -EINVAL;
 	}
 
-	if (info->attrs[NL80211_ATTR_CIPHER_SUITES_GROUP]) {
-		void *data;
-		int len, i;
-
-		data = nla_data(info->attrs[NL80211_ATTR_CIPHER_SUITES_GROUP]);
-		len = nla_len(info->attrs[NL80211_ATTR_CIPHER_SUITES_GROUP]);
-		settings->n_ciphers_group = len / sizeof(u32);
-
-		if (len % sizeof(u32))
+	if (info->attrs[NL80211_ATTR_CIPHER_SUITE_GROUP]) {
+		settings->cipher_group =
+			nla_get_u32(info->attrs[NL80211_ATTR_CIPHER_SUITE_GROUP]);
+		if (!cfg80211_supported_cipher_suite(&rdev->wiphy,
+						     settings->cipher_group))
 			return -EINVAL;
-
-		if (settings->n_ciphers_group > group_cipher_limit)
-			return -EINVAL;
-
-		memcpy(settings->ciphers_group, data, len);
-
-		for (i = 0; i < settings->n_ciphers_group; i++)
-			if (!cfg80211_supported_cipher_suite(
-					&rdev->wiphy,
-					settings->ciphers_group[i]))
-				return -EINVAL;
 	}
 
 	if (info->attrs[NL80211_ATTR_WPA_VERSIONS]) {
@@ -10478,7 +10458,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 		       sizeof(req.s1g_capa));
 	}
 
-	err = nl80211_crypto_settings(rdev, info, &req.crypto, 1, 1);
+	err = nl80211_crypto_settings(rdev, info, &req.crypto, 1);
 	if (!err) {
 		wdev_lock(dev->ieee80211_ptr);
 
@@ -11116,7 +11096,6 @@ static int nl80211_connect(struct sk_buff *skb, struct genl_info *info)
 	connect.want_1x = info->attrs[NL80211_ATTR_WANT_1X_4WAY_HS];
 
 	err = nl80211_crypto_settings(rdev, info, &connect.crypto,
-				      NL80211_MAX_NR_CIPHER_SUITES,
 				      NL80211_MAX_NR_CIPHER_SUITES);
 	if (err)
 		return err;
