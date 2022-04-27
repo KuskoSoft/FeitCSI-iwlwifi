@@ -14799,12 +14799,6 @@ static int nl80211_external_auth(struct sk_buff *skb, struct genl_info *info)
 	if (!info->attrs[NL80211_ATTR_STATUS_CODE])
 		return -EINVAL;
 
-	if ((info->attrs[NL80211_ATTR_PMK] &&
-	     !info->attrs[NL80211_ATTR_PMKID]) ||
-	    (info->attrs[NL80211_ATTR_PMKID] &&
-	     !info->attrs[NL80211_ATTR_PMK]))
-		return -EINVAL;
-
 	memset(&params, 0, sizeof(params));
 
 	if (info->attrs[NL80211_ATTR_SSID]) {
@@ -14821,11 +14815,8 @@ static int nl80211_external_auth(struct sk_buff *skb, struct genl_info *info)
 
 	params.status = nla_get_u16(info->attrs[NL80211_ATTR_STATUS_CODE]);
 
-	if (info->attrs[NL80211_ATTR_PMK] && info->attrs[NL80211_ATTR_PMKID]) {
-		params.pmk_len = nla_len(info->attrs[NL80211_ATTR_PMK]);
-		params.pmk = nla_data(info->attrs[NL80211_ATTR_PMK]);
+	if (info->attrs[NL80211_ATTR_PMKID])
 		params.pmkid = nla_data(info->attrs[NL80211_ATTR_PMKID]);
-	}
 
 	return rdev_external_auth(rdev, dev, &params);
 }
