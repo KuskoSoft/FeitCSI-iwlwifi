@@ -9168,6 +9168,19 @@ nl80211_parse_sched_scan(struct wiphy *wiphy, struct wireless_dev *wdev,
 				if (chan->flags & IEEE80211_CHAN_DISABLED)
 					continue;
 
+#ifdef CPTCFG_IWLWIFI_FPGA
+				/* Due to FPGA slowness, limit the default channels in scan request
+				 * as a WA for connection failure caused by scan timeout.
+				 */
+				if ((chan->band == NL80211_BAND_2GHZ &&
+				     chan->center_freq != 2412) ||
+				    (chan->band == NL80211_BAND_5GHZ &&
+				     chan->center_freq != 5180) ||
+				    (chan->band == NL80211_BAND_6GHZ &&
+				     chan->center_freq != 5975))
+					continue;
+#endif
+
 				request->channels[i] = chan;
 				i++;
 			}
