@@ -1509,7 +1509,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 	res = ieee80211_parse_ch_switch_ie(sdata, elems, current_band,
 					   bss->vht_cap_info,
 					   ifmgd->flags,
-					   ifmgd->associated->bssid, &csa_ie);
+					   ifmgd->bssid, &csa_ie);
 
 	if (!res) {
 		ch_switch.timestamp = timestamp;
@@ -1538,7 +1538,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 	    csa_ie.chandef.chan->band) {
 		sdata_info(sdata,
 			   "AP %pM switches to different band (%d MHz, width:%d, CF1/2: %d/%d MHz), disconnecting\n",
-			   ifmgd->associated->bssid,
+			   ifmgd->bssid,
 			   csa_ie.chandef.chan->center_freq,
 			   csa_ie.chandef.width, csa_ie.chandef.center_freq1,
 			   csa_ie.chandef.center_freq2);
@@ -1551,7 +1551,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 			   "AP %pM switches to unsupported channel "
 			   "(%d.%03d MHz, width:%d, CF1/2: %d.%03d/%d MHz), "
 			   "disconnecting\n",
-			   ifmgd->associated->bssid,
+			   ifmgd->bssid,
 			   csa_ie.chandef.chan->center_freq,
 			   csa_ie.chandef.chan->freq_offset,
 			   csa_ie.chandef.width, csa_ie.chandef.center_freq1,
@@ -1567,7 +1567,7 @@ ieee80211_sta_process_chanswitch(struct ieee80211_sub_if_data *sdata,
 			return;
 		sdata_info(sdata,
 			   "AP %pM tries to chanswitch to same channel, ignore\n",
-			   ifmgd->associated->bssid);
+			   ifmgd->bssid);
 		ifmgd->csa_ignored_same_chan = true;
 		return;
 	}
@@ -2725,7 +2725,7 @@ static void ieee80211_mgd_probe_ap_send(struct ieee80211_sub_if_data *sdata)
 {
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	const struct element *ssid;
-	u8 *dst = ifmgd->associated->bssid;
+	u8 *dst = ifmgd->bssid;
 	u8 unicast_limit = max(1, max_probe_tries - 3);
 	struct sta_info *sta;
 
@@ -3335,8 +3335,8 @@ static void ieee80211_rx_mgmt_deauth(struct ieee80211_sub_if_data *sdata,
 	}
 
 	if (ifmgd->associated &&
-	    ether_addr_equal(mgmt->bssid, ifmgd->associated->bssid)) {
-		const u8 *bssid = ifmgd->associated->bssid;
+	    ether_addr_equal(mgmt->bssid, ifmgd->bssid)) {
+		const u8 *bssid = ifmgd->bssid;
 
 		sdata_info(sdata, "deauthenticated from %pM (Reason: %u=%s)\n",
 			   bssid, reason_code,
@@ -3378,7 +3378,7 @@ static void ieee80211_rx_mgmt_disassoc(struct ieee80211_sub_if_data *sdata,
 		return;
 
 	if (!ifmgd->associated ||
-	    !ether_addr_equal(mgmt->bssid, ifmgd->associated->bssid))
+	    !ether_addr_equal(mgmt->bssid, ifmgd->bssid))
 		return;
 
 	reason_code = le16_to_cpu(mgmt->u.disassoc.reason_code);
@@ -4083,7 +4083,7 @@ static void ieee80211_rx_mgmt_probe_resp(struct ieee80211_sub_if_data *sdata,
 	ieee80211_rx_bss_info(sdata, mgmt, len, rx_status);
 
 	if (ifmgd->associated &&
-	    ether_addr_equal(mgmt->bssid, ifmgd->associated->bssid))
+	    ether_addr_equal(mgmt->bssid, ifmgd->bssid))
 		ieee80211_reset_ap_probe(sdata);
 }
 
@@ -4244,7 +4244,7 @@ static bool ieee80211_config_puncturing(struct ieee80211_sub_if_data *sdata,
 	if (!ieee80211_valid_disable_subchannel_bitmap(&bitmap, bw)) {
 		sdata_info(sdata,
 			   "Got an invalid disable subchannel bitmap from AP %pM: bitmap = 0x%x, bw = 0x%x. disconnect\n",
-			    sdata->u.mgd.associated->bssid, bitmap, bw);
+			    sdata->u.mgd.bssid, bitmap, bw);
 		return false;
 	}
 
@@ -4349,7 +4349,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_sub_if_data *sdata,
 	if (!ifmgd->associated ||
 	    !ieee80211_rx_our_beacon(bssid,  ifmgd->associated))
 		return;
-	bssid = ifmgd->associated->bssid;
+	bssid = ifmgd->bssid;
 
 	if (!(rx_status->flag & RX_FLAG_NO_SIGNAL_VAL))
 		ieee80211_handle_beacon_sig(sdata, ifmgd, bss_conf,
@@ -4914,7 +4914,7 @@ void ieee80211_sta_work(struct ieee80211_sub_if_data *sdata)
 		u8 bssid[ETH_ALEN];
 		int max_tries;
 
-		memcpy(bssid, ifmgd->associated->bssid, ETH_ALEN);
+		memcpy(bssid, ifmgd->bssid, ETH_ALEN);
 
 		if (ieee80211_hw_check(&local->hw, REPORTS_TX_ACK_STATUS))
 			max_tries = max_nullfunc_tries;
@@ -5095,7 +5095,7 @@ void ieee80211_mgd_quiesce(struct ieee80211_sub_if_data *sdata)
 			.bssid = bssid,
 		};
 
-		memcpy(bssid, ifmgd->associated->bssid, ETH_ALEN);
+		memcpy(bssid, ifmgd->bssid, ETH_ALEN);
 		ieee80211_mgd_deauth(sdata, &req);
 	}
 
@@ -5117,7 +5117,7 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 		sdata->flags &= ~IEEE80211_SDATA_DISCONNECT_RESUME;
 		mlme_dbg(sdata, "driver requested disconnect after resume\n");
 		ieee80211_sta_connection_lost(sdata,
-					      ifmgd->associated->bssid,
+					      ifmgd->bssid,
 					      WLAN_REASON_UNSPECIFIED,
 					      true);
 		sdata_unlock(sdata);
@@ -5128,7 +5128,7 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 		sdata->flags &= ~IEEE80211_SDATA_DISCONNECT_HW_RESTART;
 		mlme_dbg(sdata, "driver requested disconnect after hardware restart\n");
 		ieee80211_sta_connection_lost(sdata,
-					      ifmgd->associated->bssid,
+					      ifmgd->bssid,
 					      WLAN_REASON_UNSPECIFIED,
 					      true);
 		sdata_unlock(sdata);
@@ -6021,7 +6021,7 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 
 		sdata_info(sdata,
 			   "disconnect from AP %pM for new auth to %pM\n",
-			   ifmgd->associated->bssid, req->bss->bssid);
+			   ifmgd->bssid, req->bss->bssid);
 		ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH,
 				       WLAN_REASON_UNSPECIFIED,
 				       false, frame_buf);
@@ -6097,7 +6097,7 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 
 		sdata_info(sdata,
 			   "disconnect from AP %pM for new assoc to %pM\n",
-			   ifmgd->associated->bssid, req->bss->bssid);
+			   ifmgd->bssid, req->bss->bssid);
 		ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH,
 				       WLAN_REASON_UNSPECIFIED,
 				       false, frame_buf);
@@ -6484,7 +6484,7 @@ int ieee80211_mgd_deauth(struct ieee80211_sub_if_data *sdata,
 	}
 
 	if (ifmgd->associated &&
-	    ether_addr_equal(ifmgd->associated->bssid, req->bssid)) {
+	    ether_addr_equal(ifmgd->bssid, req->bssid)) {
 		sdata_info(sdata,
 			   "deauthenticating from %pM by local choice (Reason: %u=%s)\n",
 			   req->bssid, req->reason_code,
