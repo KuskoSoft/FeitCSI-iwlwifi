@@ -21,3 +21,7 @@ ccflags-y += -I$(src)/../
 iwlmvm-$(CPTCFG_IWLMVM_VENDOR_CMDS) += vendor-cmd.o
 ifeq ($(CPTCFG_IWLMVM_VENDOR_CMDS),y)
 endif
+
+ifeq ($(CPTCFG_IWLWIFI_SIMULATION),y)
+UBSAN_SANITIZE := y
+endif
