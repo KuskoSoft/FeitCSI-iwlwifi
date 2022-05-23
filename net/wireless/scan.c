@@ -5,7 +5,7 @@
  * Copyright 2008 Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
  * Copyright 2016	Intel Deutschland GmbH
- * Copyright (C) 2018-2021 Intel Corporation
+ * Copyright (C) 2018-2022 Intel Corporation
  */
 #include <linux/kernel.h>
 #include <linux/slab.h>
@@ -1820,9 +1820,7 @@ int cfg80211_get_ies_channel_number(const u8 *ie, size_t ielen,
 			if (!he_6ghz_oper)
 				return -1;
 
-			if (ftype != CFG80211_BSS_FTYPE_BEACON ||
-			    he_6ghz_oper->control & IEEE80211_HE_6GHZ_OPER_CTRL_DUP_BEACON)
-				return he_6ghz_oper->primary;
+			return he_6ghz_oper->primary;
 		}
 	} else if (band == NL80211_BAND_S1GHZ) {
 		tmp = cfg80211_find_elem(WLAN_EID_S1G_OPERATION, ie, ielen);
