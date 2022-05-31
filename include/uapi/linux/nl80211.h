@@ -2695,6 +2695,8 @@ enum nl80211_commands {
  *	various commands that need a link ID to operate.
  * @NL80211_ATTR_MLO_LINKS: A nested array of links, each containing some
  *	per-link information and a link ID.
+ * @NL80211_ATTR_MLD_ADDR: An MLD address, used with various commands such as
+ *	authenticate/associate.
  *
  * @NL80211_ATTR_TX_HW_TIMESTAMP: Hardware timestamp for TX operation in
  *	nanoseconds (u64). This is the device clock timestamp so it will
@@ -3225,6 +3227,7 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_MLO_LINKS,
 	NL80211_ATTR_MLO_LINK_ID,
+	NL80211_ATTR_MLD_ADDR,
 
 	/* add attributes here, update the policy in nl80211.c */
 
