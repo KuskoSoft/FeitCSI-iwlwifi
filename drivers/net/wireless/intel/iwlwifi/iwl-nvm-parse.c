@@ -1182,6 +1182,37 @@ static void iwl_init_eht_band_override(struct iwl_trans *trans,
 		/* we know it's writable - we set it before ourselves */
 		iftype_data = (void *)(uintptr_t)&sband->iftype_data[i];
 
+		if (trans->dbg_cfg.eht_ppe_thres.len) {
+			if (trans->dbg_cfg.eht_ppe_thres.len >
+			    sizeof(iftype_data->eht_cap.eht_ppe_thres)) {
+				IWL_ERR(trans,
+					"Wrong eht_ppe_thres len %u, should be max %zu\n",
+					trans->dbg_cfg.eht_ppe_thres.len,
+					sizeof(iftype_data->eht_cap.eht_ppe_thres));
+			} else {
+				/* clear any old values */
+				memset(iftype_data->eht_cap.eht_ppe_thres, 0,
+				       sizeof(iftype_data->eht_cap.eht_ppe_thres));
+
+				/* set new values */
+				memcpy(iftype_data->eht_cap.eht_ppe_thres,
+				       trans->dbg_cfg.eht_ppe_thres.data,
+				       trans->dbg_cfg.eht_ppe_thres.len);
+			}
+		}
+
+		if (trans->dbg_cfg.valid_ants &&
+		    (trans->dbg_cfg.valid_ants & ANT_AB) != ANT_AB) {
+			/* For all MCS and bandwidth, set 1 NSS for both Tx and
+			 * Rx - note we don't set the only_20mhz, but due to this
+			 * being a union, it gets set correctly anyway.
+			 */
+			struct ieee80211_eht_mcs_nss_supp *mcs_nss =
+				&iftype_data->eht_cap.eht_mcs_nss_supp;
+
+			memset(mcs_nss, 0x11, sizeof(*mcs_nss));
+		}
+
 		if (trans->dbg_cfg.eht_mac_cap.len) {
 			if (trans->dbg_cfg.eht_mac_cap.len !=
 			    sizeof(iftype_data->eht_cap.eht_cap_elem.mac_cap_info)) {
