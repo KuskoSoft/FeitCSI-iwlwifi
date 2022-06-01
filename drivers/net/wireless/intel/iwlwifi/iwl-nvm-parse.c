@@ -1171,6 +1171,54 @@ static void iwl_init_he_override(struct iwl_trans *trans,
 				~IEEE80211_HE_MAC_CAP5_HE_DYNAMIC_SM_PS;
 	}
 }
+
+static void iwl_init_eht_band_override(struct iwl_trans *trans,
+				       struct ieee80211_supported_band *sband)
+{
+	struct ieee80211_sband_iftype_data *iftype_data;
+	int i;
+
+	for (i = 0; i < sband->n_iftype_data; i++) {
+		/* we know it's writable - we set it before ourselves */
+		iftype_data = (void *)(uintptr_t)&sband->iftype_data[i];
+
+		if (trans->dbg_cfg.eht_mac_cap.len) {
+			if (trans->dbg_cfg.eht_mac_cap.len !=
+			    sizeof(iftype_data->eht_cap.eht_cap_elem.mac_cap_info)) {
+				IWL_ERR(trans,
+					"Wrong eht_mac_cap len %u, should be %zu\n",
+					trans->dbg_cfg.eht_mac_cap.len,
+					sizeof(iftype_data->eht_cap.eht_cap_elem.mac_cap_info));
+			} else {
+				memcpy(iftype_data->eht_cap.eht_cap_elem.mac_cap_info,
+				       trans->dbg_cfg.eht_mac_cap.data,
+				       trans->dbg_cfg.eht_mac_cap.len);
+			}
+		}
+		if (trans->dbg_cfg.eht_phy_cap.len) {
+			if (trans->dbg_cfg.eht_phy_cap.len !=
+			    sizeof(iftype_data->eht_cap.eht_cap_elem.phy_cap_info)) {
+				IWL_ERR(trans,
+					"Wrong eht_phy_cap len %u, should be %zu\n",
+					trans->dbg_cfg.eht_phy_cap.len,
+					sizeof(iftype_data->eht_cap.eht_cap_elem.phy_cap_info));
+			} else {
+				memcpy(iftype_data->eht_cap.eht_cap_elem.phy_cap_info,
+				       trans->dbg_cfg.eht_phy_cap.data,
+				       trans->dbg_cfg.eht_phy_cap.len);
+			}
+		}
+	}
+}
+
+static void iwl_init_eht_override(struct iwl_trans *trans,
+				  struct ieee80211_supported_band *sbands)
+{
+	int band_id;
+
+	for (band_id = 0; band_id < NUM_NL80211_BANDS; band_id++)
+		iwl_init_eht_band_override(trans, &sbands[band_id]);
+}
 #endif
 
 static void iwl_init_sbands(struct iwl_trans *trans,
@@ -1628,6 +1676,7 @@ iwl_parse_nvm_data(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_init_he_override(trans, &data->bands[NL80211_BAND_2GHZ]);
 	iwl_init_he_override(trans, &data->bands[NL80211_BAND_5GHZ]);
+	iwl_init_eht_override(trans, data->bands);
 #endif
 	return data;
 }
@@ -2180,6 +2229,7 @@ struct iwl_nvm_data *iwl_get_nvm(struct iwl_trans *trans,
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_init_he_override(trans, &nvm->bands[NL80211_BAND_2GHZ]);
 	iwl_init_he_override(trans, &nvm->bands[NL80211_BAND_5GHZ]);
+	iwl_init_eht_override(trans, nvm->bands);
 #endif
 	iwl_free_resp(&hcmd);
 	return nvm;
