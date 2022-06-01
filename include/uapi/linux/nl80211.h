@@ -2691,6 +2691,11 @@ enum nl80211_commands {
  *	association request when used with NL80211_CMD_NEW_STATION). Can be set
  *	only if %NL80211_STA_FLAG_WME is set.
  *
+ * @NL80211_ATTR_MLO_LINK_ID: A (u8) link ID for use with MLO, to be used with
+ *	various commands that need a link ID to operate.
+ * @NL80211_ATTR_MLO_LINKS: A nested array of links, each containing some
+ *	per-link information and a link ID.
+ *
  * @NL80211_ATTR_TX_HW_TIMESTAMP: Hardware timestamp for TX operation in
  *	nanoseconds (u64). This is the device clock timestamp so it will
  *	probably reset when the device is stopped or the firmware is reset.
