@@ -2607,6 +2607,8 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 	ethertype = (skb->data[12] << 8) | skb->data[13];
 	fc = cpu_to_le16(IEEE80211_FTYPE_DATA | IEEE80211_STYPE_DATA);
 
+	chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
+
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_AP_VLAN:
 		if (sdata->wdev.use_4addr) {
@@ -2620,31 +2622,20 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 			authorized = test_sta_flag(sta, WLAN_STA_AUTHORIZED);
 			wme_sta = sta->sta.wme;
 		}
+		/* override chanctx_conf from AP (we don't have one) */
 		ap_sdata = container_of(sdata->bss, struct ieee80211_sub_if_data,
 					u.ap);
 		chanctx_conf = rcu_dereference(ap_sdata->vif.bss_conf.chanctx_conf);
-		if (!chanctx_conf) {
-			ret = -ENOTCONN;
-			goto free;
-		}
-		band = chanctx_conf->def.chan->band;
 		if (sdata->wdev.use_4addr)
 			break;
 		fallthrough;
 	case NL80211_IFTYPE_AP:
-		if (sdata->vif.type == NL80211_IFTYPE_AP)
-			chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
-		if (!chanctx_conf) {
-			ret = -ENOTCONN;
-			goto free;
-		}
 		fc |= cpu_to_le16(IEEE80211_FCTL_FROMDS);
 		/* DA BSSID SA */
 		memcpy(hdr.addr1, skb->data, ETH_ALEN);
 		memcpy(hdr.addr2, sdata->vif.addr, ETH_ALEN);
 		memcpy(hdr.addr3, skb->data + ETH_ALEN, ETH_ALEN);
 		hdrlen = 24;
-		band = chanctx_conf->def.chan->band;
 		break;
 #ifdef CPTCFG_MAC80211_MESH
 	case NL80211_IFTYPE_MESH_POINT:
@@ -2712,12 +2703,6 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 						skb->data + ETH_ALEN);
 
 		}
-		chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
-		if (!chanctx_conf) {
-			ret = -ENOTCONN;
-			goto free;
-		}
-		band = chanctx_conf->def.chan->band;
 
 		/* For injected frames, fill RA right away as nexthop lookup
 		 * will be skipped.
@@ -2755,12 +2740,6 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 			memcpy(hdr.addr3, skb->data, ETH_ALEN);
 			hdrlen = 24;
 		}
-		chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
-		if (!chanctx_conf) {
-			ret = -ENOTCONN;
-			goto free;
-		}
-		band = chanctx_conf->def.chan->band;
 		break;
 	case NL80211_IFTYPE_OCB:
 		/* DA SA BSSID */
@@ -2768,12 +2747,6 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 		memcpy(hdr.addr2, skb->data + ETH_ALEN, ETH_ALEN);
 		eth_broadcast_addr(hdr.addr3);
 		hdrlen = 24;
-		chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
-		if (!chanctx_conf) {
-			ret = -ENOTCONN;
-			goto free;
-		}
-		band = chanctx_conf->def.chan->band;
 		break;
 	case NL80211_IFTYPE_ADHOC:
 		/* DA SA BSSID */
@@ -2781,17 +2754,17 @@ static struct sk_buff *ieee80211_build_hdr(struct ieee80211_sub_if_data *sdata,
 		memcpy(hdr.addr2, skb->data + ETH_ALEN, ETH_ALEN);
 		memcpy(hdr.addr3, sdata->u.ibss.bssid, ETH_ALEN);
 		hdrlen = 24;
-		chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
-		if (!chanctx_conf) {
-			ret = -ENOTCONN;
-			goto free;
-		}
-		band = chanctx_conf->def.chan->band;
 		break;
 	default:
 		ret = -EINVAL;
 		goto free;
 	}
+
+	if (!chanctx_conf) {
+		ret = -ENOTCONN;
+		goto free;
+	}
+	band = chanctx_conf->def.chan->band;
 
 	multicast = is_multicast_ether_addr(hdr.addr1);
 
