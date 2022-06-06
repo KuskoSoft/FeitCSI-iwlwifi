@@ -2103,13 +2103,12 @@ static void mac80211_hwsim_bcn_en_iter(void *data, u8 *mac,
 		(*count)++;
 }
 
-static void mac80211_hwsim_bss_info_changed(struct ieee80211_hw *hw,
+static void mac80211_hwsim_vif_info_changed(struct ieee80211_hw *hw,
 					    struct ieee80211_vif *vif,
-					    struct ieee80211_bss_conf *info,
 					    u64 changed)
 {
 	struct hwsim_vif_priv *vp = (void *)vif->drv_priv;
-	struct mac80211_hwsim_data *data = hw->priv;
+	struct ieee80211_bss_conf *info = &vif->bss_conf;
 
 	hwsim_check_magic(vif);
 
@@ -2128,6 +2127,21 @@ static void mac80211_hwsim_bss_info_changed(struct ieee80211_hw *hw,
 		vp->assoc = vif->cfg.assoc;
 		vp->aid = vif->cfg.aid;
 	}
+}
+
+static void mac80211_hwsim_link_info_changed(struct ieee80211_hw *hw,
+					     struct ieee80211_vif *vif,
+					     u32 link_id,
+					     u64 changed)
+{
+	struct hwsim_vif_priv *vp = (void *)vif->drv_priv;
+	struct mac80211_hwsim_data *data = hw->priv;
+	struct ieee80211_bss_conf *info = vif->link_conf[link_id];
+
+	hwsim_check_magic(vif);
+
+	wiphy_dbg(hw->wiphy, "%s(changed=0x%llx vif->addr=%pM)\n",
+		  __func__, (unsigned long long)changed, vif->addr);
 
 	if (changed & BSS_CHANGED_BEACON_ENABLED) {
 		wiphy_dbg(hw->wiphy, "  BCN EN: %d (BI=%u)\n",
@@ -2809,7 +2823,8 @@ static int mac80211_hwsim_tx_last_beacon(struct ieee80211_hw *hw)
 	.remove_interface = mac80211_hwsim_remove_interface,	\
 	.config = mac80211_hwsim_config,			\
 	.configure_filter = mac80211_hwsim_configure_filter,	\
-	.bss_info_changed = mac80211_hwsim_bss_info_changed,	\
+	.vif_cfg_changed = mac80211_hwsim_vif_info_changed,	\
+	.link_info_changed = mac80211_hwsim_link_info_changed,  \
 	.tx_last_beacon = mac80211_hwsim_tx_last_beacon,	\
 	.sta_add = mac80211_hwsim_sta_add,			\
 	.sta_remove = mac80211_hwsim_sta_remove,		\
