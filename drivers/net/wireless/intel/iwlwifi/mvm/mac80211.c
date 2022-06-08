@@ -2637,7 +2637,7 @@ void iwl_mvm_bss_info_changed_station_assoc(struct iwl_mvm *mvm,
 
 	iwl_mvm_bt_coex_vif_change(mvm);
 	iwl_mvm_update_smps(mvm, vif, IWL_MVM_SMPS_REQ_TT,
-			    IEEE80211_SMPS_AUTOMATIC);
+			    IEEE80211_SMPS_AUTOMATIC, 0);
 	if (fw_has_capa(&mvm->fw->ucode_capa,
 			IWL_UCODE_TLV_CAPA_UMAC_SCAN))
 		iwl_mvm_config_scan(mvm);
@@ -2646,6 +2646,7 @@ void iwl_mvm_bss_info_changed_station_assoc(struct iwl_mvm *mvm,
 /* Execute the common part for MLD and non-MLD modes */
 void iwl_mvm_bss_info_changed_station_common(struct iwl_mvm *mvm,
 					     struct ieee80211_vif *vif,
+					     struct ieee80211_bss_conf *link_conf,
 					     u64 changes)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
@@ -2686,7 +2687,7 @@ void iwl_mvm_bss_info_changed_station_common(struct iwl_mvm *mvm,
 	}
 
 	if (changes & BSS_CHANGED_BANDWIDTH)
-		iwl_mvm_apply_fw_smps_request(vif);
+		iwl_mvm_update_link_smps(vif, link_conf);
 }
 
 static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
@@ -2808,7 +2809,7 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 			if (vif->p2p) {
 				iwl_mvm_update_smps(mvm, vif,
 						    IWL_MVM_SMPS_REQ_PROT,
-						    IEEE80211_SMPS_DYNAMIC);
+						    IEEE80211_SMPS_DYNAMIC, 0);
 			}
 		} else if (mvmvif->deflink.ap_sta_id != IWL_MVM_INVALID_STA) {
 			iwl_mvm_mei_host_disassociated(mvm);
@@ -2864,7 +2865,7 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 		iwl_mvm_bss_info_changed_station_assoc(mvm, vif, changes);
 	}
 
-	iwl_mvm_bss_info_changed_station_common(mvm, vif, changes);
+	iwl_mvm_bss_info_changed_station_common(mvm, vif, &vif->bss_conf, changes);
 }
 
 bool iwl_mvm_start_ap_ibss_common(struct ieee80211_hw *hw,
@@ -3739,10 +3740,10 @@ int iwl_mvm_mac_sta_state_common(struct ieee80211_hw *hw,
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 		if (mvm->trans->dbg_cfg.ht_dynamic_smps)
 			iwl_mvm_update_smps(mvm, vif, IWL_MVM_SMPS_REQ_DBG,
-					    IEEE80211_SMPS_DYNAMIC);
+					    IEEE80211_SMPS_DYNAMIC, 0);
 		else if (mvm->trans->dbg_cfg.smps_disabled)
 			iwl_mvm_update_smps(mvm, vif, IWL_MVM_SMPS_REQ_DBG,
-					    IEEE80211_SMPS_OFF);
+					    IEEE80211_SMPS_OFF, 0);
 #endif
 	} else if (old_state == IEEE80211_STA_NONE &&
 		   new_state == IEEE80211_STA_AUTH) {
