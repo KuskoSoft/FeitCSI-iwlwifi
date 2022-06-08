@@ -1144,45 +1144,14 @@ static void iwl_init_he_override(struct iwl_trans *trans,
 				~IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD;
 
 		/* Check if any HE capabilities need to be set for debug */
-		if (trans->dbg_cfg.he_ppe_thres.len) {
-			u8 len = trans->dbg_cfg.he_ppe_thres.len;
-
-			if (len > sizeof(iftype_data->he_cap.ppe_thres))
-				len = sizeof(iftype_data->he_cap.ppe_thres);
-			memcpy(iftype_data->he_cap.ppe_thres,
-			       trans->dbg_cfg.he_ppe_thres.data, len);
-		}
+		IWL_COPY_BIN(he_ppe_thres, he_cap.ppe_thres);
 
 		if (trans->dbg_cfg.he_chan_width_dis)
 			iftype_data->he_cap.he_cap_elem.phy_cap_info[0] &=
 					~(trans->dbg_cfg.he_chan_width_dis << 1);
 
-		if (trans->dbg_cfg.he_mac_cap.len) {
-			if (trans->dbg_cfg.he_mac_cap.len !=
-			    sizeof(iftype_data->he_cap.he_cap_elem.mac_cap_info)) {
-				IWL_ERR(trans,
-					"Wrong he_mac_cap len %u, should be %zu\n",
-					trans->dbg_cfg.he_mac_cap.len,
-					sizeof(iftype_data->he_cap.he_cap_elem.mac_cap_info));
-			} else {
-				memcpy(iftype_data->he_cap.he_cap_elem.mac_cap_info,
-				       trans->dbg_cfg.he_mac_cap.data,
-				       trans->dbg_cfg.he_mac_cap.len);
-			}
-		}
-		if (trans->dbg_cfg.he_phy_cap.len) {
-			if (trans->dbg_cfg.he_phy_cap.len !=
-			    sizeof(iftype_data->he_cap.he_cap_elem.phy_cap_info)) {
-				IWL_ERR(trans,
-					"Wrong he_phy_cap len %u, should be %zu\n",
-					trans->dbg_cfg.he_phy_cap.len,
-					sizeof(iftype_data->he_cap.he_cap_elem.phy_cap_info));
-			} else {
-				memcpy(iftype_data->he_cap.he_cap_elem.phy_cap_info,
-				       trans->dbg_cfg.he_phy_cap.data,
-				       trans->dbg_cfg.he_phy_cap.len);
-			}
-		}
+		IWL_COPY_BIN(he_phy_cap, he_cap.he_cap_elem.phy_cap_info);
+		IWL_COPY_BIN(he_mac_cap, he_cap.he_cap_elem.mac_cap_info);
 
 		if (trans->dbg_cfg.he_smps_disabled)
 			iftype_data->he_cap.he_cap_elem.mac_cap_info[5] &=
@@ -1200,25 +1169,6 @@ static void iwl_init_eht_band_override(struct iwl_trans *trans,
 		/* we know it's writable - we set it before ourselves */
 		iftype_data = (void *)(uintptr_t)&sband->iftype_data[i];
 
-		if (trans->dbg_cfg.eht_ppe_thres.len) {
-			if (trans->dbg_cfg.eht_ppe_thres.len >
-			    sizeof(iftype_data->eht_cap.eht_ppe_thres)) {
-				IWL_ERR(trans,
-					"Wrong eht_ppe_thres len %u, should be max %zu\n",
-					trans->dbg_cfg.eht_ppe_thres.len,
-					sizeof(iftype_data->eht_cap.eht_ppe_thres));
-			} else {
-				/* clear any old values */
-				memset(iftype_data->eht_cap.eht_ppe_thres, 0,
-				       sizeof(iftype_data->eht_cap.eht_ppe_thres));
-
-				/* set new values */
-				memcpy(iftype_data->eht_cap.eht_ppe_thres,
-				       trans->dbg_cfg.eht_ppe_thres.data,
-				       trans->dbg_cfg.eht_ppe_thres.len);
-			}
-		}
-
 		if (trans->dbg_cfg.valid_ants &&
 		    (trans->dbg_cfg.valid_ants & ANT_AB) != ANT_AB) {
 			/* For all MCS and bandwidth, set 1 NSS for both Tx and
@@ -1231,32 +1181,9 @@ static void iwl_init_eht_band_override(struct iwl_trans *trans,
 			memset(mcs_nss, 0x11, sizeof(*mcs_nss));
 		}
 
-		if (trans->dbg_cfg.eht_mac_cap.len) {
-			if (trans->dbg_cfg.eht_mac_cap.len !=
-			    sizeof(iftype_data->eht_cap.eht_cap_elem.mac_cap_info)) {
-				IWL_ERR(trans,
-					"Wrong eht_mac_cap len %u, should be %zu\n",
-					trans->dbg_cfg.eht_mac_cap.len,
-					sizeof(iftype_data->eht_cap.eht_cap_elem.mac_cap_info));
-			} else {
-				memcpy(iftype_data->eht_cap.eht_cap_elem.mac_cap_info,
-				       trans->dbg_cfg.eht_mac_cap.data,
-				       trans->dbg_cfg.eht_mac_cap.len);
-			}
-		}
-		if (trans->dbg_cfg.eht_phy_cap.len) {
-			if (trans->dbg_cfg.eht_phy_cap.len !=
-			    sizeof(iftype_data->eht_cap.eht_cap_elem.phy_cap_info)) {
-				IWL_ERR(trans,
-					"Wrong eht_phy_cap len %u, should be %zu\n",
-					trans->dbg_cfg.eht_phy_cap.len,
-					sizeof(iftype_data->eht_cap.eht_cap_elem.phy_cap_info));
-			} else {
-				memcpy(iftype_data->eht_cap.eht_cap_elem.phy_cap_info,
-				       trans->dbg_cfg.eht_phy_cap.data,
-				       trans->dbg_cfg.eht_phy_cap.len);
-			}
-		}
+		IWL_COPY_BIN(eht_ppe_thres, eht_cap.eht_ppe_thres);
+		IWL_COPY_BIN(eht_mac_cap, eht_cap.eht_cap_elem.mac_cap_info);
+		IWL_COPY_BIN(eht_phy_cap, eht_cap.eht_cap_elem.phy_cap_info);
 
 		if (trans->dbg_cfg.eht_mcs_only_20Mhz.len) {
 			IWL_COPY_BIN(eht_mcs_only_20Mhz,
