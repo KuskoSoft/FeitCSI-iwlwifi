@@ -15609,6 +15609,7 @@ static int nl80211_add_link(struct sk_buff *skb, struct genl_info *info)
 	    !is_valid_ether_addr(nla_data(info->attrs[NL80211_ATTR_MAC])))
 		return -EINVAL;
 
+	wdev_lock(wdev);
 	wdev->valid_links |= BIT(link_id);
 	ether_addr_copy(wdev->links[link_id].addr,
 			nla_data(info->attrs[NL80211_ATTR_MAC]));
@@ -15618,6 +15619,7 @@ static int nl80211_add_link(struct sk_buff *skb, struct genl_info *info)
 		wdev->valid_links &= ~BIT(link_id);
 		eth_zero_addr(wdev->links[link_id].addr);
 	}
+	wdev_unlock(wdev);
 
 	return ret;
 }
@@ -15642,11 +15644,13 @@ static int nl80211_remove_link(struct sk_buff *skb, struct genl_info *info)
 
 	/* FIXME: stop the link operations first */
 
+	wdev_lock(wdev);
 	wdev->valid_links &= ~BIT(link_id);
 
 	rdev_del_intf_link(rdev, wdev, link_id);
 
 	eth_zero_addr(wdev->links[link_id].addr);
+	wdev_unlock(wdev);
 
 	return 0;
 }
