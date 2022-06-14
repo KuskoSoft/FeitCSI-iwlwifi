@@ -1480,15 +1480,28 @@ static void mac80211_hwsim_tx_iter(void *_data, u8 *addr,
 				   struct ieee80211_vif *vif)
 {
 	struct tx_iter_data *data = _data;
+	int i;
 
-	if (!vif->bss_conf.chanctx_conf)
+	if (!vif->link_conf)
 		return;
 
-	if (!hwsim_chans_compat(data->channel,
-				rcu_dereference(vif->bss_conf.chanctx_conf)->def.chan))
-		return;
+	for (i = 0; i < ARRAY_SIZE(vif->link_conf); i++) {
+		struct ieee80211_bss_conf *conf = vif->link_conf[i];
+		struct ieee80211_chanctx_conf *chanctx;
 
-	data->receive = true;
+		if (!conf)
+			continue;
+
+		chanctx = rcu_dereference(conf->chanctx_conf);
+		if (!chanctx)
+			return;
+
+		if (!hwsim_chans_compat(data->channel, chanctx->def.chan))
+			continue;
+
+		data->receive = true;
+		return;
+	}
 }
 
 static void mac80211_hwsim_add_vendor_rtap(struct sk_buff *skb)
