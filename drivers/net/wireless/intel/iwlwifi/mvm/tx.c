@@ -343,7 +343,7 @@ static u32 iwl_mvm_get_tx_rate(struct iwl_mvm *mvm,
 	 * For non 2 GHZ band, remap mac80211 rate
 	 * indices into driver indices
 	 */
-	if (info->band != NL80211_BAND_2GHZ)
+	if (info->band != NL80211_BAND_2GHZ || (info->flags & IEEE80211_TX_CTL_NO_CCK_RATE))
 		rate_idx += IWL_FIRST_OFDM_RATE;
 #ifdef CPTCFG_IWLWIFI_FORCE_OFDM_RATE
 	/* Force OFDM on each TX packet */
