@@ -2136,18 +2136,11 @@ static void mac80211_hwsim_vif_info_changed(struct ieee80211_hw *hw,
 					    u64 changed)
 {
 	struct hwsim_vif_priv *vp = (void *)vif->drv_priv;
-	struct ieee80211_bss_conf *info = &vif->bss_conf;
 
 	hwsim_check_magic(vif);
 
 	wiphy_dbg(hw->wiphy, "%s(changed=0x%llx vif->addr=%pM)\n",
 		  __func__, (unsigned long long)changed, vif->addr);
-
-	if (changed & BSS_CHANGED_BSSID) {
-		wiphy_dbg(hw->wiphy, "%s: BSSID changed: %pM\n",
-			  __func__, info->bssid);
-		memcpy(vp->bssid, info->bssid, ETH_ALEN);
-	}
 
 	if (changed & BSS_CHANGED_ASSOC) {
 		wiphy_dbg(hw->wiphy, "  ASSOC: assoc=%d aid=%d\n",
@@ -2171,6 +2164,12 @@ static void mac80211_hwsim_link_info_changed(struct ieee80211_hw *hw,
 
 	wiphy_dbg(hw->wiphy, "%s(changed=0x%llx vif->addr=%pM, link id %u)\n",
 		  __func__, (unsigned long long)changed, vif->addr, link_id);
+
+	if (changed & BSS_CHANGED_BSSID) {
+		wiphy_dbg(hw->wiphy, "%s: BSSID changed: %pM\n",
+			  __func__, info->bssid);
+		memcpy(vp->bssid, info->bssid, ETH_ALEN);
+	}
 
 	if (changed & BSS_CHANGED_BEACON_ENABLED) {
 		wiphy_dbg(hw->wiphy, "  BCN EN: %d (BI=%u)\n",
