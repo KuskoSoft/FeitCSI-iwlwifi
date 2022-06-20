@@ -1482,9 +1482,6 @@ static void mac80211_hwsim_tx_iter(void *_data, u8 *addr,
 	struct tx_iter_data *data = _data;
 	int i;
 
-	if (!vif->link_conf)
-		return;
-
 	for (i = 0; i < ARRAY_SIZE(vif->link_conf); i++) {
 		struct ieee80211_bss_conf *conf = vif->link_conf[i];
 		struct ieee80211_chanctx_conf *chanctx;
