@@ -1492,7 +1492,7 @@ static void mac80211_hwsim_tx_iter(void *_data, u8 *addr,
 
 		chanctx = rcu_dereference(conf->chanctx_conf);
 		if (!chanctx)
-			return;
+			continue;
 
 		if (!hwsim_chans_compat(data->channel, chanctx->def.chan))
 			continue;
