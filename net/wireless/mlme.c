@@ -57,6 +57,9 @@ void cfg80211_rx_assoc_resp(struct net_device *dev,
 					 offsetof(struct ieee80211_mgmt,
 						  u.s1g_assoc_resp.variable);
 		}
+
+		if (cr.ap_mld_addr)
+			cr.valid_links |= BIT(link_id);
 	}
 
 	trace_cfg80211_send_rx_assoc(dev, data);
