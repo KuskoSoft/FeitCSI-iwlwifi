@@ -276,7 +276,9 @@ static int ecw2cw(int ecw)
 }
 
 static ieee80211_conn_flags_t
-ieee80211_determine_chantype(struct ieee80211_link_data *link,
+ieee80211_determine_chantype(struct ieee80211_sub_if_data *sdata,
+			     struct ieee80211_link_data *link,
+			     ieee80211_conn_flags_t conn_flags,
 			     struct ieee80211_supported_band *sband,
 			     struct ieee80211_channel *channel,
 			     u32 vht_cap_info,
@@ -287,7 +289,6 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 			     const struct ieee80211_s1g_oper_ie *s1g_oper,
 			     struct cfg80211_chan_def *chandef, bool tracking)
 {
-	struct ieee80211_sub_if_data *sdata = link->sdata;
 	struct cfg80211_chan_def vht_chandef;
 	struct ieee80211_sta_ht_cap sta_ht_cap;
 	ieee80211_conn_flags_t ret;
@@ -382,7 +383,7 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 	}
 
 	vht_chandef = *chandef;
-	if (!(link->u.mgd.conn_flags & IEEE80211_CONN_DISABLE_HE) &&
+	if (!(conn_flags & IEEE80211_CONN_DISABLE_HE) &&
 	    he_oper &&
 	    (le32_to_cpu(he_oper->he_oper_params) &
 	     IEEE80211_HE_OPERATION_VHT_OPER_INFO)) {
@@ -398,7 +399,7 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 		if (!ieee80211_chandef_vht_oper(&sdata->local->hw, vht_cap_info,
 						&he_oper_vht_cap, ht_oper,
 						&vht_chandef)) {
-			if (!(link->u.mgd.conn_flags & IEEE80211_CONN_DISABLE_HE))
+			if (!(conn_flags & IEEE80211_CONN_DISABLE_HE))
 				sdata_info(sdata,
 					   "HE AP VHT information is invalid, disabling HE\n");
 			ret = IEEE80211_CONN_DISABLE_HE | IEEE80211_CONN_DISABLE_EHT;
@@ -408,7 +409,7 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 					       vht_cap_info,
 					       vht_oper, ht_oper,
 					       &vht_chandef)) {
-		if (!(link->u.mgd.conn_flags & IEEE80211_CONN_DISABLE_VHT))
+		if (!(conn_flags & IEEE80211_CONN_DISABLE_VHT))
 			sdata_info(sdata,
 				   "AP VHT information is invalid, disabling VHT\n");
 		ret = IEEE80211_CONN_DISABLE_VHT;
@@ -416,7 +417,7 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 	}
 
 	if (!cfg80211_chandef_valid(&vht_chandef)) {
-		if (!(link->u.mgd.conn_flags & IEEE80211_CONN_DISABLE_VHT))
+		if (!(conn_flags & IEEE80211_CONN_DISABLE_VHT))
 			sdata_info(sdata,
 				   "AP VHT information is invalid, disabling VHT\n");
 		ret = IEEE80211_CONN_DISABLE_VHT;
@@ -429,7 +430,7 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 	}
 
 	if (!cfg80211_chandef_compatible(chandef, &vht_chandef)) {
-		if (!(link->u.mgd.conn_flags & IEEE80211_CONN_DISABLE_VHT))
+		if (!(conn_flags & IEEE80211_CONN_DISABLE_VHT))
 			sdata_info(sdata,
 				   "AP VHT information doesn't match HT, disabling VHT\n");
 		ret = IEEE80211_CONN_DISABLE_VHT;
@@ -452,7 +453,7 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 					   false, &eht_chandef);
 
 		if (!cfg80211_chandef_valid(&eht_chandef)) {
-			if (!(link->u.mgd.conn_flags & IEEE80211_CONN_DISABLE_EHT))
+			if (!(conn_flags & IEEE80211_CONN_DISABLE_EHT))
 				sdata_info(sdata,
 					   "AP EHT information is invalid, disabling EHT\n");
 			ret = IEEE80211_CONN_DISABLE_EHT;
@@ -460,7 +461,7 @@ ieee80211_determine_chantype(struct ieee80211_link_data *link,
 		}
 
 		if (!cfg80211_chandef_compatible(chandef, &eht_chandef)) {
-			if (!(link->u.mgd.conn_flags & IEEE80211_CONN_DISABLE_EHT))
+			if (!(conn_flags & IEEE80211_CONN_DISABLE_EHT))
 				sdata_info(sdata,
 					   "AP EHT information is incompatible, disabling EHT\n");
 			ret = IEEE80211_CONN_DISABLE_EHT;
@@ -595,7 +596,9 @@ static int ieee80211_config_bw(struct ieee80211_link_data *link,
 		vht_cap_info = le32_to_cpu(vht_cap->vht_cap_info);
 
 	/* calculate new channel (type) based on HT/VHT/HE operation IEs */
-	flags = ieee80211_determine_chantype(link, sband, chan, vht_cap_info,
+	flags = ieee80211_determine_chantype(sdata, link,
+					     link->u.mgd.conn_flags,
+					     sband, chan, vht_cap_info,
 					     ht_oper, vht_oper,
 					     he_oper, eht_oper,
 					     s1g_oper, &chandef, true);
@@ -4145,8 +4148,9 @@ static int ieee80211_prep_channel(struct ieee80211_sub_if_data *sdata,
 	}
 
 	link->u.mgd.conn_flags |=
-		ieee80211_determine_chantype(link, sband,
-					     cbss->channel,
+		ieee80211_determine_chantype(sdata, link,
+					     link->u.mgd.conn_flags,
+					     sband, cbss->channel,
 					     bss->vht_cap_info,
 					     ht_oper, vht_oper,
 					     he_oper, eht_oper,
