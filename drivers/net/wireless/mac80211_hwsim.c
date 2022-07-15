@@ -1717,6 +1717,9 @@ mac80211_hwsim_select_tx_link(struct mac80211_hwsim_data *data,
 	struct hwsim_sta_priv *sp = (void *)sta->drv_priv;
 	int i;
 
+	if (!vif->valid_links)
+		return &vif->bss_conf;
+
 	/* FIXME: handle multicast TX properly */
 	if (is_multicast_ether_addr(hdr->addr1) || WARN_ON_ONCE(!sta)) {
 		unsigned int first_link = ffs(vif->valid_links) - 1;
