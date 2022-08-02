@@ -2591,7 +2591,10 @@ static int ieee80211_set_txq_params(struct wiphy *wiphy,
 {
 	struct ieee80211_local *local = wiphy_priv(wiphy);
 	struct ieee80211_sub_if_data *sdata = IEEE80211_DEV_TO_SUB_IF(dev);
-	struct ieee80211_link_data *link = &sdata->deflink;
+	struct ieee80211_link_data *link =
+		params->link_id >= 0 ?
+			sdata_dereference(sdata->link[params->link_id], sdata) :
+			&sdata->deflink;
 	struct ieee80211_tx_queue_params p;
 
 	if (!local->ops->conf_tx)
