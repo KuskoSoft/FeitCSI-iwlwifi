@@ -577,16 +577,8 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_CONTROL_PORT_OVER_NL80211] = { .type = NLA_FLAG },
 	[NL80211_ATTR_PRIVACY] = { .type = NLA_FLAG },
 	[NL80211_ATTR_STATUS_CODE] = { .type = NLA_U16 },
-	[NL80211_ATTR_CIPHER_SUITES_PAIRWISE] = {
-			.type = NLA_BINARY,
-			.len = NL80211_MAX_NR_CIPHER_SUITES * sizeof(u32)
-	},
 	[NL80211_ATTR_CIPHER_SUITE_GROUP] = { .type = NLA_U32 },
 	[NL80211_ATTR_WPA_VERSIONS] = { .type = NLA_U32 },
-	[NL80211_ATTR_AKM_SUITES] = {
-			.type = NLA_BINARY,
-			.len = NL80211_MAX_NR_AKM_SUITES * sizeof(u32)
-	},
 	[NL80211_ATTR_PID] = { .type = NLA_U32 },
 	[NL80211_ATTR_4ADDR] = { .type = NLA_U8 },
 	[NL80211_ATTR_PMKID] = NLA_POLICY_EXACT_LEN_WARN(WLAN_PMKID_LEN),
@@ -813,8 +805,8 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_RADAR_BACKGROUND] = { .type = NLA_FLAG },
 	[NL80211_ATTR_AP_SETTINGS_FLAGS] = { .type = NLA_U32 },
 	[NL80211_ATTR_EHT_CAPABILITY] =
-		NLA_POLICY_BINARY_RANGE(NL80211_EHT_MIN_CAPABILITY_LEN,
-					NL80211_EHT_MAX_CAPABILITY_LEN),
+		NLA_POLICY_BINARY_RANGE(NL80211_EHT_MIN_CAPABILITY_LEN, NL80211_EHT_MAX_CAPABILITY_LEN),
+	[NL80211_ATTR_DISABLE_EHT] = { .type = NLA_FLAG },
 	[NL80211_ATTR_MLO_LINKS] =
 		NLA_POLICY_NESTED_ARRAY(nl80211_policy),
 	[NL80211_ATTR_MLO_LINK_ID] =
@@ -823,6 +815,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_MLO_SUPPORT] = { .type = NLA_FLAG },
 	[NL80211_ATTR_MAX_HW_TIMESTAMP_PEERS] = { .type = NLA_U16 },
 	[NL80211_ATTR_HW_TIMESTAMP_ENABLED] = { .type = NLA_FLAG },
+	[NL80211_ATTR_MAX_NUM_AKM_SUITES] = { .type = NLA_REJECT },
 };
 
 /* policy for the key attributes */
@@ -2971,6 +2964,10 @@ static int nl80211_send_wiphy(struct cfg80211_registered_device *rdev,
 				rdev->wiphy.hw_timestamp_max_peers))
 			goto nla_put_failure;
 
+		if (nla_put_u16(msg, NL80211_ATTR_MAX_NUM_AKM_SUITES,
+				rdev->wiphy.max_num_akm_suites))
+			goto nla_put_failure;
+
 		if (rdev->wiphy.flags & WIPHY_FLAG_SUPPORTS_MLO)
 			nla_put_flag(msg, NL80211_ATTR_MLO_SUPPORT);
 
@@ -3257,6 +3254,15 @@ int nl80211_parse_chandef(struct cfg80211_registered_device *rdev,
 	} else if (attrs[NL80211_ATTR_CHANNEL_WIDTH]) {
 		chandef->width =
 			nla_get_u32(attrs[NL80211_ATTR_CHANNEL_WIDTH]);
+		if (chandef->chan->band == NL80211_BAND_S1GHZ) {
+			/* User input error for channel width doesn't match channel  */
+			if (chandef->width != ieee80211_s1g_channel_width(chandef->chan)) {
+				NL_SET_ERR_MSG_ATTR(extack,
+						    attrs[NL80211_ATTR_CHANNEL_WIDTH],
+						    "bad channel width");
+				return -EINVAL;
+			}
+		}
 		if (attrs[NL80211_ATTR_CENTER_FREQ1]) {
 			chandef->center_freq1 =
 				nla_get_u32(attrs[NL80211_ATTR_CENTER_FREQ1]);
@@ -5321,6 +5327,30 @@ nl80211_parse_mbssid_elems(struct wiphy *wiphy, struct nlattr *attrs)
 	return elems;
 }
 
+static int nl80211_parse_he_bss_color(struct nlattr *attrs,
+				      struct cfg80211_he_bss_color *he_bss_color)
+{
+	struct nlattr *tb[NL80211_HE_BSS_COLOR_ATTR_MAX + 1];
+	int err;
+
+	err = nla_parse_nested(tb, NL80211_HE_BSS_COLOR_ATTR_MAX, attrs,
+			       he_bss_color_policy, NULL);
+	if (err)
+		return err;
+
+	if (!tb[NL80211_HE_BSS_COLOR_ATTR_COLOR])
+		return -EINVAL;
+
+	he_bss_color->color =
+		nla_get_u8(tb[NL80211_HE_BSS_COLOR_ATTR_COLOR]);
+	he_bss_color->enabled =
+		!nla_get_flag(tb[NL80211_HE_BSS_COLOR_ATTR_DISABLED]);
+	he_bss_color->partial =
+		nla_get_flag(tb[NL80211_HE_BSS_COLOR_ATTR_PARTIAL]);
+
+	return 0;
+}
+
 static int nl80211_parse_beacon(struct cfg80211_registered_device *rdev,
 				struct nlattr *attrs[],
 				struct cfg80211_beacon_data *bcn)
@@ -5403,6 +5433,14 @@ static int nl80211_parse_beacon(struct cfg80211_registered_device *rdev,
 		bcn->ftm_responder = -1;
 	}
 
+	if (attrs[NL80211_ATTR_HE_BSS_COLOR]) {
+		err = nl80211_parse_he_bss_color(attrs[NL80211_ATTR_HE_BSS_COLOR],
+						 &bcn->he_bss_color);
+		if (err)
+			return err;
+		bcn->he_bss_color_valid = true;
+	}
+
 	if (attrs[NL80211_ATTR_MBSSID_ELEMS]) {
 		struct cfg80211_mbssid_elems *mbssid =
 			nl80211_parse_mbssid_elems(&rdev->wiphy,
@@ -5457,30 +5495,6 @@ static int nl80211_parse_he_obss_pd(struct nlattr *attrs,
 		       sizeof(he_obss_pd->partial_bssid_bitmap));
 
 	he_obss_pd->enable = true;
-
-	return 0;
-}
-
-static int nl80211_parse_he_bss_color(struct nlattr *attrs,
-				      struct cfg80211_he_bss_color *he_bss_color)
-{
-	struct nlattr *tb[NL80211_HE_BSS_COLOR_ATTR_MAX + 1];
-	int err;
-
-	err = nla_parse_nested(tb, NL80211_HE_BSS_COLOR_ATTR_MAX, attrs,
-			       he_bss_color_policy, NULL);
-	if (err)
-		return err;
-
-	if (!tb[NL80211_HE_BSS_COLOR_ATTR_COLOR])
-		return -EINVAL;
-
-	he_bss_color->color =
-		nla_get_u8(tb[NL80211_HE_BSS_COLOR_ATTR_COLOR]);
-	he_bss_color->enabled =
-		!nla_get_flag(tb[NL80211_HE_BSS_COLOR_ATTR_DISABLED]);
-	he_bss_color->partial =
-		nla_get_flag(tb[NL80211_HE_BSS_COLOR_ATTR_PARTIAL]);
 
 	return 0;
 }
@@ -5569,7 +5583,7 @@ static void nl80211_check_ap_rate_selectors(struct cfg80211_ap_settings *params,
  * HT/VHT requirements/capabilities, we parse them out of the IEs for the
  * benefit of drivers that rebuild IEs in the firmware.
  */
-static void nl80211_calculate_ap_params(struct cfg80211_ap_settings *params)
+static int nl80211_calculate_ap_params(struct cfg80211_ap_settings *params)
 {
 	const struct cfg80211_beacon_data *bcn = &params->beacon;
 	size_t ies_len = bcn->tail_len;
@@ -5595,6 +5609,26 @@ static void nl80211_calculate_ap_params(struct cfg80211_ap_settings *params)
 	cap = cfg80211_find_ext_elem(WLAN_EID_EXT_HE_OPERATION, ies, ies_len);
 	if (cap && cap->datalen >= sizeof(*params->he_oper) + 1)
 		params->he_oper = (void *)(cap->data + 1);
+	cap = cfg80211_find_ext_elem(WLAN_EID_EXT_EHT_CAPABILITY, ies, ies_len);
+	if (cap) {
+		if (!cap->datalen)
+			return -EINVAL;
+		params->eht_cap = (void *)(cap->data + 1);
+		if (!ieee80211_eht_capa_size_ok((const u8 *)params->he_cap,
+						(const u8 *)params->eht_cap,
+						cap->datalen - 1))
+			return -EINVAL;
+	}
+	cap = cfg80211_find_ext_elem(WLAN_EID_EXT_EHT_OPERATION, ies, ies_len);
+	if (cap) {
+		if (!cap->datalen)
+			return -EINVAL;
+		params->eht_oper = (void *)(cap->data + 1);
+		if (!ieee80211_eht_oper_size_ok((const u8 *)params->eht_oper,
+						cap->datalen - 1))
+			return -EINVAL;
+	}
+	return 0;
 }
 
 static bool nl80211_get_ap_channel(struct cfg80211_registered_device *rdev,
@@ -5893,14 +5927,6 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 			goto out_unlock;
 	}
 
-	if (info->attrs[NL80211_ATTR_HE_BSS_COLOR]) {
-		err = nl80211_parse_he_bss_color(
-					info->attrs[NL80211_ATTR_HE_BSS_COLOR],
-					&params->he_bss_color);
-		if (err)
-			goto out_unlock;
-	}
-
 	if (info->attrs[NL80211_ATTR_FILS_DISCOVERY]) {
 		err = nl80211_parse_fils_discovery(rdev,
 						   info->attrs[NL80211_ATTR_FILS_DISCOVERY],
@@ -5928,7 +5954,9 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 			goto out_unlock;
 	}
 
-	nl80211_calculate_ap_params(params);
+	err = nl80211_calculate_ap_params(params);
+	if (err)
+		goto out_unlock;
 
 	if (info->attrs[NL80211_ATTR_AP_SETTINGS_FLAGS])
 		params->flags = nla_get_u32(
@@ -10589,7 +10617,7 @@ static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 		if (len % sizeof(u32))
 			return -EINVAL;
 
-		if (settings->n_akm_suites > NL80211_MAX_NR_AKM_SUITES)
+		if (settings->n_akm_suites > rdev->wiphy.max_num_akm_suites)
 			return -EINVAL;
 
 		memcpy(settings->akm_suites, data, len);
@@ -10733,6 +10761,9 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 
 	if (nla_get_flag(info->attrs[NL80211_ATTR_DISABLE_HE]))
 		req.flags |= ASSOC_REQ_DISABLE_HE;
+
+	if (nla_get_flag(info->attrs[NL80211_ATTR_DISABLE_EHT]))
+		req.flags |= ASSOC_REQ_DISABLE_EHT;
 
 	if (info->attrs[NL80211_ATTR_VHT_CAPABILITY_MASK])
 		memcpy(&req.vht_capa_mask,
@@ -11628,6 +11659,9 @@ static int nl80211_connect(struct sk_buff *skb, struct genl_info *info)
 
 	if (nla_get_flag(info->attrs[NL80211_ATTR_DISABLE_HE]))
 		connect.flags |= ASSOC_REQ_DISABLE_HE;
+
+	if (nla_get_flag(info->attrs[NL80211_ATTR_DISABLE_EHT]))
+		connect.flags |= ASSOC_REQ_DISABLE_EHT;
 
 	if (info->attrs[NL80211_ATTR_VHT_CAPABILITY_MASK])
 		memcpy(&connect.vht_capa_mask,

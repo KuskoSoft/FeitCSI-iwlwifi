@@ -171,6 +171,7 @@ static int cfg80211_conn_do_work(struct wireless_dev *wdev,
 		auth_req.key = params->key;
 		auth_req.key_len = params->key_len;
 		auth_req.key_idx = params->key_idx;
+		auth_req.auth_type = params->auth_type;
 		auth_req.bss = cfg80211_get_bss(&rdev->wiphy, params->channel,
 						params->bssid,
 						params->ssid, params->ssid_len,
@@ -722,7 +723,7 @@ void __cfg80211_connect_result(struct net_device *dev,
 			       bool wextev)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
-	const struct element *country_elem;
+	const struct element *country_elem = NULL;
 	const u8 *country_data;
 	u8 country_datalen;
 #ifdef CPTCFG_CFG80211_WEXT
@@ -781,9 +782,11 @@ void __cfg80211_connect_result(struct net_device *dev,
 #endif
 
 	if (cr->status == WLAN_STATUS_SUCCESS) {
-		for_each_valid_link(cr, link) {
-			if (WARN_ON_ONCE(!cr->links[link].bss))
-				break;
+		if (!wiphy_to_rdev(wdev->wiphy)->ops->connect) {
+			for_each_valid_link(cr, link) {
+				if (WARN_ON_ONCE(!cr->links[link].bss))
+					break;
+			}
 		}
 
 		for_each_valid_link(cr, link) {
@@ -1235,7 +1238,8 @@ void __cfg80211_port_authorized(struct wireless_dev *wdev, const u8 *bssid)
 {
 	ASSERT_WDEV_LOCK(wdev);
 
-	if (WARN_ON(wdev->iftype != NL80211_IFTYPE_STATION))
+	if (WARN_ON(wdev->iftype != NL80211_IFTYPE_STATION &&
+		    wdev->iftype != NL80211_IFTYPE_P2P_CLIENT))
 		return;
 
 	if (WARN_ON(!wdev->connected) ||

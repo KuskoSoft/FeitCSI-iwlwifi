@@ -1056,7 +1056,7 @@ int ieee80211_start_mesh(struct ieee80211_sub_if_data *sdata)
 	}
 
 	ieee80211_recalc_dtim(local, sdata);
-	ieee80211_link_info_change_notify(sdata, 0, changed);
+	ieee80211_link_info_change_notify(sdata, &sdata->deflink, changed);
 
 	netif_carrier_on(sdata->dev);
 	return 0;
@@ -1080,7 +1080,8 @@ void ieee80211_stop_mesh(struct ieee80211_sub_if_data *sdata)
 	sdata->vif.bss_conf.enable_beacon = false;
 	sdata->beacon_rate_set = false;
 	clear_bit(SDATA_STATE_OFFCHANNEL_BEACON_STOPPED, &sdata->state);
-	ieee80211_link_info_change_notify(sdata, 0, BSS_CHANGED_BEACON_ENABLED);
+	ieee80211_link_info_change_notify(sdata, &sdata->deflink,
+					  BSS_CHANGED_BEACON_ENABLED);
 
 	/* remove beacon */
 	bcn = sdata_dereference(ifmsh->beacon, sdata);
@@ -1128,7 +1129,8 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_if_mesh *ifmsh = &sdata->u.mesh;
 	struct ieee80211_supported_band *sband;
 	int err;
-	u32 sta_flags, vht_cap_info = 0;
+	ieee80211_conn_flags_t conn_flags = 0;
+	u32 vht_cap_info = 0;
 
 	sdata_assert_lock(sdata);
 
@@ -1136,16 +1138,15 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
 	if (!sband)
 		return false;
 
-	sta_flags = 0;
 	switch (sdata->vif.bss_conf.chandef.width) {
 	case NL80211_CHAN_WIDTH_20_NOHT:
-		sta_flags |= IEEE80211_STA_DISABLE_HT;
+		conn_flags |= IEEE80211_CONN_DISABLE_HT;
 		fallthrough;
 	case NL80211_CHAN_WIDTH_20:
-		sta_flags |= IEEE80211_STA_DISABLE_40MHZ;
+		conn_flags |= IEEE80211_CONN_DISABLE_40MHZ;
 		fallthrough;
 	case NL80211_CHAN_WIDTH_40:
-		sta_flags |= IEEE80211_STA_DISABLE_VHT;
+		conn_flags |= IEEE80211_CONN_DISABLE_VHT;
 		break;
 	default:
 		break;
@@ -1158,7 +1159,7 @@ ieee80211_mesh_process_chnswitch(struct ieee80211_sub_if_data *sdata,
 	memset(&params, 0, sizeof(params));
 	err = ieee80211_parse_ch_switch_ie(sdata, elems, sband->band,
 					   vht_cap_info,
-					   sta_flags, sdata->vif.addr,
+					   conn_flags, sdata->vif.addr,
 					   &csa_ie);
 	if (err < 0)
 		return false;
@@ -1255,8 +1256,7 @@ ieee80211_mesh_rx_probe_req(struct ieee80211_sub_if_data *sdata,
 	if (baselen > len)
 		return;
 
-	elems = ieee802_11_parse_elems(pos, len - baselen, false, mgmt->bssid,
-				       NULL);
+	elems = ieee802_11_parse_elems(pos, len - baselen, false, NULL);
 	if (!elems)
 		return;
 
@@ -1325,7 +1325,7 @@ static void ieee80211_mesh_rx_bcn_presp(struct ieee80211_sub_if_data *sdata,
 
 	elems = ieee802_11_parse_elems(mgmt->u.probe_resp.variable,
 				       len - baselen,
-				       false, mgmt->bssid, NULL);
+				       false, NULL);
 	if (!elems)
 		return;
 
@@ -1467,8 +1467,7 @@ static void mesh_rx_csa_frame(struct ieee80211_sub_if_data *sdata,
 	pos = mgmt->u.action.u.chan_switch.variable;
 	baselen = offsetof(struct ieee80211_mgmt,
 			   u.action.u.chan_switch.variable);
-	elems = ieee802_11_parse_elems(pos, len - baselen, true,
-				       mgmt->bssid, NULL);
+	elems = ieee802_11_parse_elems(pos, len - baselen, true, NULL);
 	if (!elems)
 		return;
 
@@ -1578,7 +1577,7 @@ static void mesh_bss_info_changed(struct ieee80211_sub_if_data *sdata)
 		if (ieee80211_mesh_rebuild_beacon(sdata))
 			return;
 
-	ieee80211_link_info_change_notify(sdata, 0, changed);
+	ieee80211_link_info_change_notify(sdata, &sdata->deflink, changed);
 }
 
 void ieee80211_mesh_work(struct ieee80211_sub_if_data *sdata)

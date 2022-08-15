@@ -2753,6 +2753,13 @@ enum nl80211_commands {
  *	connection. Used with %NL80211_CMD_CONNECT. If this attribute is not
  *	included in NL80211_CMD_CONNECT drivers must not perform MLO connection.
  *
+ * @NL80211_ATTR_MAX_NUM_AKM_SUITES: U16 attribute. Indicates maximum number of
+ *	AKM suites allowed for %NL80211_CMD_CONNECT, %NL80211_CMD_ASSOCIATE and
+ *	%NL80211_CMD_START_AP in %NL80211_CMD_GET_WIPHY response. If this
+ *	attribute is not present userspace shall consider maximum number of AKM
+ *	suites allowed as %NL80211_MAX_NR_AKM_SUITES which is the legacy maximum
+ *	number prior to the introduction of this attribute.
+ *
  * @NL80211_ATTR_EML_CAPABILITY: EML Capability information (u16)
  * @NL80211_ATTR_MLD_CAPA_AND_OPS: MLD Capabilities and Operations (u16)
  *
@@ -3268,6 +3275,8 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_EHT_CAPABILITY,
 
+	NL80211_ATTR_DISABLE_EHT,
+
 	NL80211_ATTR_TX_HW_TIMESTAMP,
 	NL80211_ATTR_RX_HW_TIMESTAMP,
 
@@ -3279,6 +3288,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_HW_TIMESTAMP_ENABLED,
 
 	NL80211_ATTR_MLO_SUPPORT,
+
+	NL80211_ATTR_MAX_NUM_AKM_SUITES,
 
 	NL80211_ATTR_EML_CAPABILITY,
 	NL80211_ATTR_MLD_CAPA_AND_OPS,
@@ -3337,6 +3348,11 @@ enum nl80211_attrs {
 #define NL80211_HE_MIN_CAPABILITY_LEN           16
 #define NL80211_HE_MAX_CAPABILITY_LEN           54
 #define NL80211_MAX_NR_CIPHER_SUITES		5
+
+/*
+ * NL80211_MAX_NR_AKM_SUITES is obsolete when %NL80211_ATTR_MAX_NUM_AKM_SUITES
+ * present in %NL80211_CMD_GET_WIPHY response.
+ */
 #define NL80211_MAX_NR_AKM_SUITES		2
 #define NL80211_EHT_MIN_CAPABILITY_LEN          13
 #define NL80211_EHT_MAX_CAPABILITY_LEN          51
@@ -5982,7 +5998,7 @@ enum nl80211_ap_sme_features {
  * @NL80211_FEATURE_INACTIVITY_TIMER: This driver takes care of freeing up
  *	the connected inactive stations in AP mode.
  * @NL80211_FEATURE_CELL_BASE_REG_HINTS: This driver has been tested
- *	to work properly to suppport receiving regulatory hints from
+ *	to work properly to support receiving regulatory hints from
  *	cellular base stations.
  * @NL80211_FEATURE_P2P_DEVICE_NEEDS_CHANNEL: (no longer available, only
  *	here to reserve the value for API/ABI compatibility)
