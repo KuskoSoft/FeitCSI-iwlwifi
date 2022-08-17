@@ -3501,7 +3501,7 @@ static int nl80211_set_wiphy(struct sk_buff *skb, struct genl_info *info)
 			      BIT(txq_params.link_id)))
 				result = -ENOLINK;
 			else if (txq_params.link_id >= 0 &&
-				 netdev->ieee80211_ptr->valid_links)
+				 !netdev->ieee80211_ptr->valid_links)
 				result = -EINVAL;
 			else
 				result = rdev_set_txq_params(rdev, netdev,
