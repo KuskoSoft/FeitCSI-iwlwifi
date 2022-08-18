@@ -3844,6 +3844,9 @@ iwl_mvm_sta_state_notexist_to_none(struct iwl_mvm *mvm,
 
 	sta->max_rc_amsdu_len = 1;
 
+	if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
+		mvmvif->ap_sta = sta;
+
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	if (mvm->trans->dbg_cfg.ht_dynamic_smps)
 		smps_mode = IEEE80211_SMPS_DYNAMIC;
@@ -3858,9 +3861,6 @@ iwl_mvm_sta_state_notexist_to_none(struct iwl_mvm *mvm,
 				    i);
 	}
 #endif
-
-	if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
-		mvmvif->ap_sta = sta;
 
 	return 0;
 }
