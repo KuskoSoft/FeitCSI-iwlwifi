@@ -1379,6 +1379,11 @@ int iwl_mei_pldr_req(void)
 		goto out;
 	}
 
+	if (!mei->amt_enabled) {
+		ret = 0;
+		goto out;
+	}
+
 	for (i = 0; i < IWL_MEI_PLDR_NUM_RETRIES; i++) {
 		ret = iwl_mei_send_sap_msg_payload(mei->cldev, &msg.hdr);
 		mutex_unlock(&iwl_mei_mutex);
