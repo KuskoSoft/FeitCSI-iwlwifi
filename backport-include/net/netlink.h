@@ -519,7 +519,6 @@ static inline int nla_put_u64_64bit(struct sk_buff *skb, int attrtype,
         return nla_put_64bit(skb, attrtype, sizeof(u64), &value, padattr);
 }
 
-#define nla_put_u64 DONT_USE_nla_put_u64
 
 /**
  * nla_put_s64 - Add a s64 netlink attribute to a socket buffer and align it
