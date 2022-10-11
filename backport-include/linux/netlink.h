@@ -42,9 +42,6 @@ struct netlink_ext_ack {
 } while (0)
 #endif
 
-/* this is for patches we apply */
-#define netlink_notify_portid(__notify) (__notify->portid)
-#define NETLINK_CB_PORTID(__skb) NETLINK_CB(__skb).portid
 
 #ifndef NL_SET_BAD_ATTR
 #define NL_SET_BAD_ATTR(extack, attr) do {		\
