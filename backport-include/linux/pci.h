@@ -14,20 +14,6 @@ struct msix_entry {
 };
 #endif
 
-#ifndef module_pci_driver
-/**
- * module_pci_driver() - Helper macro for registering a PCI driver
- * @__pci_driver: pci_driver struct
- *
- * Helper macro for PCI drivers which do not do anything special in module
- * init/exit. This eliminates a lot of boilerplate. Each module may only
- * use this macro once, and calling it replaces module_init() and module_exit()
- */
-#define module_pci_driver(__pci_driver) \
-	module_driver(__pci_driver, pci_register_driver, \
-		       pci_unregister_driver)
-#endif
-
 
 #if LINUX_VERSION_IS_LESS(4,8,0)
 #define pci_alloc_irq_vectors LINUX_BACKPORT(pci_alloc_irq_vectors)
