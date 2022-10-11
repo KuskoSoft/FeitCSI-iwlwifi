@@ -29,7 +29,6 @@ static inline void guid_copy(guid_t *dst, const guid_t *src)
 {
 	memcpy(dst, src, sizeof(guid_t));
 }
-
 #endif
 
 #endif /* __BACKPORT_LINUX_UUID_H_ */
