@@ -2,8 +2,6 @@
 /*
  * NETLINK      Netlink attributes
  *
- * Copyright (C) 2018 - 2020 Intel Corporation
- *
  * 		Authors:	Thomas Graf <tgraf@suug.ch>
  * 				Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>
  */
@@ -170,9 +168,6 @@ static int validate_nla(const struct nlattr *nla, int maxtype,
 
 	if (type <= 0 || type > maxtype)
 		return 0;
-
-	if (WARN_ON(!policy))
-		return -EINVAL;
 
 	pt = &policy[type];
 
