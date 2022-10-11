@@ -7,12 +7,6 @@
 #include <linux/pci-aspm.h>
 #endif
 
-#ifndef CONFIG_PCI
-struct msix_entry {
-	u32 vector;
-	u16 entry;
-};
-#endif
 
 
 #if LINUX_VERSION_IS_LESS(4,8,0)
