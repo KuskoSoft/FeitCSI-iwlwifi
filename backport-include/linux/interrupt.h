@@ -16,12 +16,6 @@ backport_hrtimer_forward(struct hrtimer *timer, ktime_t now, s64 interval)
 }
 #define hrtimer_forward LINUX_BACKPORT(hrtimer_forward)
 
-static inline bool backport_ktime_before(const s64 cmp1, const s64 cmp2)
-{
-	return cmp1 < cmp2;
-}
-#define ktime_before LINUX_BACKPORT(ktime_before)
-
 static inline u64
 backport_hrtimer_forward_now(struct hrtimer *timer, s64 interval)
 {
