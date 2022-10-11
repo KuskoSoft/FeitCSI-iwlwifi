@@ -4,12 +4,6 @@
 #include <linux/version.h>
 
 
-#if LINUX_VERSION_IS_LESS(5,2,0)
-#define skb_xmit_more(skb) ((skb)->xmit_more)
-#else
-#define skb_xmit_more(skb) netdev_xmit_more()
-#endif
-
 #if LINUX_VERSION_IS_LESS(4,2,0) && \
 	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
 static inline void skb_free_frag(void *data)
