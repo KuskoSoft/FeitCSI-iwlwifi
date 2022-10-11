@@ -6,11 +6,6 @@
 
 #if LINUX_VERSION_IS_LESS(4,2,0) && \
 	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
-static inline void skb_free_frag(void *data)
-{
-	put_page(virt_to_head_page(data));
-}
-
 #include <net/flow_keys.h>
 #include <linux/jhash.h>
 
