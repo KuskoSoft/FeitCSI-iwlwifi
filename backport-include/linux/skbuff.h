@@ -19,7 +19,6 @@ static inline void skb_postpush_rcsum(struct sk_buff *skb,
 {
 	__skb_postpush_rcsum(skb, start, len, 0);
 }
-
 #endif /* LINUX_VERSION_IS_LESS(4,4,10) */
 
 #if LINUX_VERSION_IS_LESS(4,13,0) && \
