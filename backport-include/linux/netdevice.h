@@ -23,27 +23,27 @@ static inline bool backport_napi_complete(struct napi_struct *n)
 #define napi_complete LINUX_BACKPORT(napi_complete)
 #endif /* < 4.10 */
 
-#if LINUX_VERSION_IS_LESS(4,5,0)
-#define netif_tx_napi_add LINUX_BACKPORT(netif_tx_napi_add)
-/**
- *	netif_tx_napi_add - initialize a napi context
- *	@dev:  network device
- *	@napi: napi context
- *	@poll: polling function
- *	@weight: default weight
- *
- * This variant of netif_napi_add() should be used from drivers using NAPI
- * to exclusively poll a TX queue.
- * This will avoid we add it into napi_hash[], thus polluting this hash table.
- */
-static inline void netif_tx_napi_add(struct net_device *dev,
-				     struct napi_struct *napi,
-				     int (*poll)(struct napi_struct *, int),
-				     int weight)
+#if LINUX_VERSION_IS_LESS(6,1,0)
+static inline void backport_netif_napi_add(struct net_device *dev,
+					   struct napi_struct *napi,
+					   int (*poll)(struct napi_struct *, int))
 {
-	netif_napi_add(dev, napi, poll, weight);
+	netif_napi_add(dev, napi, poll, NAPI_POLL_WEIGHT);
 }
-#endif /* < 4.5 */
+#define netif_napi_add LINUX_BACKPORT(netif_napi_add)
+
+static inline void backport_netif_napi_add_tx(struct net_device *dev,
+					      struct napi_struct *napi,
+					      int (*poll)(struct napi_struct *, int))
+{
+#if LINUX_VERSION_IS_LESS(4,5,0)
+	netif_napi_add(dev, napi, poll);
+#else
+	netif_tx_napi_add(dev, napi, poll, NAPI_POLL_WEIGHT);
+#endif
+}
+#define netif_napi_add_tx LINUX_BACKPORT(netif_napi_add_tx)
+#endif /* < 6.1 */
 
 #ifndef NETIF_F_CSUM_MASK
 #define NETIF_F_CSUM_MASK NETIF_F_ALL_CSUM
@@ -253,6 +253,17 @@ struct net_device_path_ctx {
 	} vlan[NET_DEVICE_PATH_VLAN_MAX];
 };
 #endif /* NET_DEVICE_PATH_STACK_MAX */
+
+#if LINUX_VERSION_IS_LESS(5,17,0)
+static inline void backport_txq_trans_cond_update(struct netdev_queue *txq)
+{
+	unsigned long now = jiffies;
+
+	if (READ_ONCE(txq->trans_start) != now)
+		WRITE_ONCE(txq->trans_start, now);
+}
+#define txq_trans_cond_update LINUX_BACKPORT(txq_trans_cond_update)
+#endif /* < 5.17 */
 
 #if LINUX_VERSION_IS_LESS(5,18,0)
 static inline int LINUX_BACKPORT(netif_rx)(struct sk_buff *skb)
