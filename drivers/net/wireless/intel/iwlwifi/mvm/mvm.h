@@ -1248,6 +1248,7 @@ struct iwl_mvm {
 
 	struct iwl_time_sync_data time_sync;
 
+	bool pldr_sync;
 };
 
 /* Extract MVM priv from op_mode and _hw */
