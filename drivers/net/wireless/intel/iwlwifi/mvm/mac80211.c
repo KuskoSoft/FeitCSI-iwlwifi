@@ -290,12 +290,16 @@ static const struct wiphy_iftype_ext_capab add_iftypes_ext_capa[] = {
 		.extended_capabilities = he_if_types_ext_capa_sta,
 		.extended_capabilities_mask = he_if_types_ext_capa_sta,
 		.extended_capabilities_len = sizeof(he_if_types_ext_capa_sta),
+		/* relevant only if EHT is supported */
+		.eml_capabilities = IEEE80211_EML_CAP_EMLSR_SUPP,
 	},
 	{
 		.iftype = NL80211_IFTYPE_STATION,
 		.extended_capabilities = tm_if_types_ext_capa_sta,
 		.extended_capabilities_mask = tm_if_types_ext_capa_sta,
 		.extended_capabilities_len = sizeof(tm_if_types_ext_capa_sta),
+		/* relevant only if EHT is supported */
+		.eml_capabilities = IEEE80211_EML_CAP_EMLSR_SUPP,
 	},
 };
 
