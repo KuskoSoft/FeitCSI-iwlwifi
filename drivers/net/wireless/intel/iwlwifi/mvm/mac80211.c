@@ -262,6 +262,7 @@ int iwl_mvm_init_fw_regd(struct iwl_mvm *mvm)
 	return ret;
 }
 
+/* Each capability added here should also be add to tm_if_types_ext_capa_sta */
 static const u8 he_if_types_ext_capa_sta[] = {
 	 [0] = WLAN_EXT_CAPA1_EXT_CHANNEL_SWITCHING,
 	 [2] = WLAN_EXT_CAPA3_MULTI_BSSID_SUPPORT,
@@ -698,13 +699,16 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	if (iwl_fw_lookup_cmd_ver(mvm->fw,
 				  WIDE_ID(DATA_PATH_GROUP,
 					  WNM_80211V_TIMING_MEASUREMENT_CONFIG_CMD),
-				  IWL_FW_CMD_VER_UNKNOWN) == 1) {
+				  IWL_FW_CMD_VER_UNKNOWN) >= 1) {
 		IWL_DEBUG_INFO(mvm->trans, "Timing measurement supported\n");
 
-		hw->wiphy->iftype_ext_capab = add_iftypes_ext_capa + 1;
-		if (!hw->wiphy->iftype_ext_capab)
-			hw->wiphy->num_iftype_ext_capab =
-				hw->wiphy->num_iftype_ext_capab + 1;
+		if (!hw->wiphy->iftype_ext_capab) {
+			hw->wiphy->num_iftype_ext_capab = 1;
+			hw->wiphy->iftype_ext_capab = add_iftypes_ext_capa +
+				ARRAY_SIZE(add_iftypes_ext_capa) - 1;
+		} else {
+			hw->wiphy->iftype_ext_capab = add_iftypes_ext_capa + 1;
+		}
 	}
 
 	if (iwl_fw_lookup_cmd_ver(mvm->fw, WIDE_ID(LOCATION_GROUP,
