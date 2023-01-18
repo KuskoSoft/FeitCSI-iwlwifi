@@ -42,6 +42,12 @@ config IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	depends on IWLWIFI
 	bool "enable default value override (for debugging)"
 
+config IWLWIFI_FW_MISBEHAVE_NMI_DEFAULT
+	depends on IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	int "NMI the firmware on unexpected behaviour"
+	range 0 1
+	default 1
+
 config IWLWIFI_FORCE_OFDM_RATE
 	bool "force transmit to OFDM low rate"
 	depends on IWLMVM
