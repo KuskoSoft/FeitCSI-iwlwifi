@@ -11,7 +11,7 @@
  * Copyright 2008 Jouni Malinen <jouni.malinen@atheros.com>
  * Copyright 2008 Colin McCabe <colin@cozybit.com>
  * Copyright 2015-2017	Intel Deutschland GmbH
- * Copyright (C) 2018-2022 Intel Corporation
+ * Copyright (C) 2018-2023 Intel Corporation
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2771,6 +2771,9 @@ enum nl80211_commands {
  * @NL80211_ATTR_EML_CAPABILITY: EML Capability information (u16)
  * @NL80211_ATTR_MLD_CAPA_AND_OPS: MLD Capabilities and Operations (u16)
  *
+ * @NL80211_ATTR_MLO_LINK_DISABLED: Flag attribute indicating that the link is
+ *	disabled.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -3301,6 +3304,8 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_EML_CAPABILITY,
 	NL80211_ATTR_MLD_CAPA_AND_OPS,
+
+	NL80211_ATTR_MLO_LINK_DISABLED,
 
 	/* add attributes here, update the policy in nl80211.c */
 
