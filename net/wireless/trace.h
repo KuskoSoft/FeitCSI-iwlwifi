@@ -1179,6 +1179,23 @@ TRACE_EVENT(rdev_change_bss,
 		  __entry->ap_isolate, __entry->ht_opmode)
 );
 
+TRACE_EVENT(rdev_inform_bss,
+	TP_PROTO(struct wiphy *wiphy, struct cfg80211_bss *bss),
+	TP_ARGS(wiphy, bss),
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		MAC_ENTRY(bssid)
+		CHAN_ENTRY
+	),
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		MAC_ASSIGN(bssid, bss->bssid);
+		CHAN_ASSIGN(bss->channel);
+	),
+	TP_printk(WIPHY_PR_FMT ", " MAC_PR_FMT ", " CHAN_PR_FMT,
+		  WIPHY_PR_ARG, MAC_PR_ARG(bssid), CHAN_PR_ARG)
+);
+
 TRACE_EVENT(rdev_set_txq_params,
 	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
 		 struct ieee80211_txq_params *params),
