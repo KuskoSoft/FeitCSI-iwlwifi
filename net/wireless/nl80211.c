@@ -16225,7 +16225,13 @@ static u32 nl80211_internal_flags[] = {
 #undef SELECTOR
 };
 
-static int nl80211_pre_doit(const struct genl_ops *ops, struct sk_buff *skb,
+static int nl80211_pre_doit(
+#if LINUX_VERSION_IS_GEQ(6,2,0)
+			    const struct genl_split_ops *ops,
+#else
+			    const struct genl_ops *ops,
+#endif
+			     struct sk_buff *skb,
 			    struct genl_info *info)
 {
 	struct cfg80211_registered_device *rdev = NULL;
@@ -16331,7 +16337,13 @@ out_unlock:
 	return err;
 }
 
-static void nl80211_post_doit(const struct genl_ops *ops, struct sk_buff *skb,
+static void nl80211_post_doit(
+#if LINUX_VERSION_IS_GEQ(6,2,0)
+			      const struct genl_split_ops *ops,
+#else
+			      const struct genl_ops *ops,
+#endif
+			       struct sk_buff *skb,
 			      struct genl_info *info)
 {
 	u32 internal_flags = nl80211_internal_flags[ops->internal_flags];
