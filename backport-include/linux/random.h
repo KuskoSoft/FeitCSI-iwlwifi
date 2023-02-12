@@ -18,7 +18,7 @@ static inline u16 get_random_u16(void)
 }
 #endif
 
-#if LINUX_VERSION_IS_LESS(6,2,0)
+#if LINUX_VERSION_IS_LESS(6,1,4)
 static inline u32 get_random_u32_below(u32 ceil)
 {
 	return prandom_u32_max(ceil);

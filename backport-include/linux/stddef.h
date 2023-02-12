@@ -23,7 +23,7 @@
 	(offsetof(TYPE, MEMBER)	+ sizeof_field(TYPE, MEMBER))
 #endif
 
-#ifndef DECLARE_FLEX_ARRAY
+#ifndef __DECLARE_FLEX_ARRAY
 /**
  * __DECLARE_FLEX_ARRAY() - Declare a flexible array usable in a union
  *
@@ -33,13 +33,15 @@
  * In order to have a flexible array member in a union or alone in a
  * struct, it needs to be wrapped in an anonymous struct with at least 1
  * named member, but that member can be empty.
-+ */
-#define __DECLARE_FLEX_ARRAY(TYPE, NAME)       \
-	struct {			       \
-		struct { } __empty_ ## NAME;   \
-		TYPE NAME[];		       \
+ */
+#define __DECLARE_FLEX_ARRAY(TYPE, NAME)	\
+	struct { \
+		struct { } __empty_ ## NAME; \
+		TYPE NAME[]; \
 	}
+#endif
 
+#ifndef DECLARE_FLEX_ARRAY
 /**
  * DECLARE_FLEX_ARRAY() - Declare a flexible array usable in a union
  *
