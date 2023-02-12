@@ -18953,6 +18953,49 @@ void cfg80211_cqm_beacon_loss_notify(struct net_device *dev, gfp_t gfp)
 }
 EXPORT_SYMBOL(cfg80211_cqm_beacon_loss_notify);
 
+void cfg80211_cqm_links_state_change_notify(struct net_device *dev,
+					    u16 removed_links)
+{
+	struct wireless_dev *wdev = dev->ieee80211_ptr;
+	struct sk_buff *msg;
+	unsigned long removed = removed_links;
+	u8 link_id;
+
+	ASSERT_WDEV_LOCK(wdev);
+
+	trace_cfg80211_cqm_links_state_change_notify(dev, removed_links);
+
+	if (!removed_links)
+		return;
+
+	WARN_ON((wdev->valid_links & removed_links) != removed_links);
+	wdev->valid_links &= ~removed_links;
+
+	for_each_set_bit(link_id, &removed, IEEE80211_MLD_MAX_NUM_LINKS) {
+		if (!wdev->links[link_id].client.current_bss)
+			continue;
+
+		cfg80211_unhold_bss(wdev->links[link_id].client.current_bss);
+		cfg80211_put_bss(wdev->wiphy,
+				 &wdev->links[link_id].client.current_bss->pub);
+		wdev->links[link_id].client.current_bss = NULL;
+	}
+
+	msg = cfg80211_prepare_cqm(dev, NULL, GFP_KERNEL);
+	if (!msg)
+		return;
+
+	if (nla_put_u16(msg, NL80211_ATTR_CQM_REMOVED_LINKS, removed_links))
+		goto nla_put_failure;
+
+	cfg80211_send_cqm(msg, GFP_KERNEL);
+	return;
+
+ nla_put_failure:
+	nlmsg_free(msg);
+}
+EXPORT_SYMBOL(cfg80211_cqm_links_state_change_notify);
+
 static void nl80211_gtk_rekey_notify(struct cfg80211_registered_device *rdev,
 				     struct net_device *netdev, const u8 *bssid,
 				     const u8 *replay_ctr, gfp_t gfp)

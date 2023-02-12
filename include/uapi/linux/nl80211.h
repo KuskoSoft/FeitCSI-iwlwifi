@@ -5294,6 +5294,8 @@ enum nl80211_ps_state {
  *	loss event
  * @NL80211_ATTR_CQM_RSSI_LEVEL: the RSSI value in dBm that triggered the
  *	RSSI threshold event.
+ * @NL80211_ATTR_CQM_REMOVED_LINKS: bitmap of links on which connection was
+ *	removed due to links being removed by the AP MLD.
  * @__NL80211_ATTR_CQM_AFTER_LAST: internal
  * @NL80211_ATTR_CQM_MAX: highest key attribute
  */
@@ -5308,6 +5310,7 @@ enum nl80211_attr_cqm {
 	NL80211_ATTR_CQM_TXE_INTVL,
 	NL80211_ATTR_CQM_BEACON_LOSS_EVENT,
 	NL80211_ATTR_CQM_RSSI_LEVEL,
+	NL80211_ATTR_CQM_REMOVED_LINKS,
 
 	/* keep last */
 	__NL80211_ATTR_CQM_AFTER_LAST,
