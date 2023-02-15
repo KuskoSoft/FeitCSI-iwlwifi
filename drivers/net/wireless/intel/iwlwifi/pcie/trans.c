@@ -2240,6 +2240,9 @@ bool __iwl_trans_pcie_grab_nic_access(struct iwl_trans *trans)
 	ret = iwl_poll_bit(trans, CSR_GP_CNTRL, poll, mask, 15000);
 	if (unlikely(ret < 0)) {
 		u32 cntrl = iwl_read32(trans, CSR_GP_CNTRL);
+		bool ma_integrated = (CSR_HW_REV_TYPE(trans->hw_rev) ==
+				      IWL_CFG_MAC_TYPE_MA) &&
+				     trans->trans_cfg->integrated;
 
 		WARN_ONCE(1,
 			  "Timeout waiting for hardware access (CSR_GP_CNTRL 0x%08x)\n",
@@ -2247,8 +2250,9 @@ bool __iwl_trans_pcie_grab_nic_access(struct iwl_trans *trans)
 
 		iwl_trans_pcie_dump_regs(trans);
 
-		if (iwlwifi_mod_params.remove_when_gone && cntrl == ~0U)
-			iwl_trans_pcie_remove(trans, false);
+		if ((iwlwifi_mod_params.remove_when_gone || ma_integrated) &&
+		    cntrl == ~0U)
+			iwl_trans_pcie_remove(trans, ma_integrated);
 		else
 			iwl_write32(trans, CSR_RESET,
 				    CSR_RESET_REG_FLAG_FORCE_NMI);
