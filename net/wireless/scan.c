@@ -669,7 +669,8 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 			break;
 
 		if (u8_get_bits(ap_info->tbtt_info_hdr,
-				IEEE80211_AP_INFO_TBTT_HDR_TYPE) != 0)
+				IEEE80211_AP_INFO_TBTT_HDR_TYPE) !=
+		    IEEE80211_TBTT_INFO_TYPE_TBTT)
 			continue;
 
 		/*
