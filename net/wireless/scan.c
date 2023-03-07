@@ -1954,12 +1954,12 @@ cfg80211_get_bss_channel(struct wiphy *wiphy, const u8 *ie, size_t ielen,
 	alt_channel = ieee80211_get_channel_khz(wiphy, freq);
 	if (!alt_channel) {
 		if (channel->band == NL80211_BAND_2GHZ ||
-		    channel->band == NL80211_BAND_60GHZ) {
+		    channel->band == NL80211_BAND_6GHZ) {
 			/*
 			 * Better not allow unexpected channels when that could
 			 * be going beyond the 1-11 range (e.g., discovering
 			 * BSS on channel 12 when radio is configured for
-			 * channel 11) or beyond the 6G channel range.
+			 * channel 11) or beyond the 6 GHz channel range.
 			 */
 			return NULL;
 		}
