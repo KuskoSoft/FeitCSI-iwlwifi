@@ -1948,7 +1948,7 @@ cfg80211_get_bss_channel(struct wiphy *wiphy, const u8 *ie, size_t ielen,
 	/* Frame info (beacon/prob res) is the same as resieved channel, no need
 	 * for forther process.
 	 */
-	if (freq == channel->center_freq)
+	if (freq == ieee80211_channel_to_khz(channel))
 		return channel;
 
 	alt_channel = ieee80211_get_channel_khz(wiphy, freq);
