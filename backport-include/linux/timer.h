@@ -67,4 +67,11 @@ static inline void timer_setup(struct timer_list *timer,
 		__TIMER_INITIALIZER(_function, 0, 0, 0)
 #endif
 
+#if LINUX_VERSION_IS_LESS(6,2,0)
+static inline int timer_shutdown(struct timer_list *t)
+{
+	return del_timer(t);
+}
+#endif
+
 #endif /* _BACKPORT_TIMER_H */
