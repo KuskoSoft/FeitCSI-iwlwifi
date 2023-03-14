@@ -2518,16 +2518,15 @@ cfg80211_tbtt_info_for_mld_ap(const u8 *ie, size_t ielen, u8 mld_id, u8 link_id,
 			type = u8_get_bits(info->tbtt_info_hdr,
 					   IEEE80211_AP_INFO_TBTT_HDR_TYPE);
 
-			/* MLD information is at offset 13 or at start */
+			/* Only accept full TBTT information. NSTR mobile APs
+			 * use the shortened version, but we ignore them here.
+			 */
 			if (type == IEEE80211_TBTT_INFO_TYPE_TBTT &&
 			    length >=
 			    offsetofend(struct ieee80211_tbtt_info_ge_11,
 					mld_params)) {
 				mld_params_offset =
 					offsetof(struct ieee80211_tbtt_info_ge_11, mld_params);
-			} else if (type == IEEE80211_TBTT_INFO_TYPE_MLD &&
-				   length >= sizeof(*mld_params)) {
-				mld_params_offset = 0;
 			} else {
 				pos += count * length;
 				continue;
