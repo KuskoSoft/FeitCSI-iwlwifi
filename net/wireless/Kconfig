@@ -188,7 +188,7 @@ config CFG80211_WEXT_EXPORT
 config CFG80211_KUNIT_TEST
 	tristate "KUnit tests for cfg80211" if !KUNIT_ALL_TESTS
 	depends on KUNIT
-	default KUNIT_ALL_TESTS
+	default KUNIT_ALL_TESTS || IWLWIFI_SIMULATION
 	depends on !KERNEL_6_2
 	help
 	  Enable this option to test cfg80211 functions with kunit.
