@@ -92,6 +92,7 @@ mrproper:
 		kvers="$$kvers $$(seq 0 19 | sed 's/^/3./')"				;\
 		kvers="$$kvers $$(seq 0 20 | sed 's/^/4./')"				;\
 		kvers="$$kvers $$(seq 0 99 | sed 's/^/5./')"				;\
+		kvers="$$kvers $$(seq 0 99 | sed 's/^/6./')"				;\
 		print=0									;\
 		for v in $$kvers ; do							\
 			if [ "$$print" = "1" ] ; then					\
