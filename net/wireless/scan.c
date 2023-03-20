@@ -680,8 +680,10 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 
 		if (u8_get_bits(ap_info->tbtt_info_hdr,
 				IEEE80211_AP_INFO_TBTT_HDR_TYPE) !=
-		    IEEE80211_TBTT_INFO_TYPE_TBTT)
+		    IEEE80211_TBTT_INFO_TYPE_TBTT) {
+			pos += count * length;
 			continue;
+		}
 
 		/*
 		 * TBTT info must include bss param + BSSID +
