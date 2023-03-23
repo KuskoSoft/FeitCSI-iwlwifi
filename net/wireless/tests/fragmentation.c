@@ -23,15 +23,13 @@ static void defragment_0(struct kunit *test)
 	};
 	u8 *data = kunit_kzalloc(test, sizeof(input), GFP_KERNEL);
 
-	KUNIT_EXPECT_NOT_NULL(test, data);
-	if (!data)
-		return;
+	KUNIT_ASSERT_NOT_NULL(test, data);
 
 	ret = cfg80211_defragment_element((void *)input,
 					  input, sizeof(input),
 					  data, sizeof(input),
 					  WLAN_EID_FRAGMENT);
-	KUNIT_ASSERT_EQ(test, ret, 253);
+	KUNIT_EXPECT_EQ(test, ret, 253);
 	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 253);
 }
 
@@ -55,9 +53,7 @@ static void defragment_1(struct kunit *test)
 	const struct element *elem;
 	int count = 0;
 
-	KUNIT_EXPECT_NOT_NULL(test, data);
-	if (!data)
-		return;
+	KUNIT_ASSERT_NOT_NULL(test, data);
 
 	for_each_element(elem, input, sizeof(input))
 		count++;
@@ -70,7 +66,7 @@ static void defragment_1(struct kunit *test)
 					  data, sizeof(input),
 					  WLAN_EID_FRAGMENT);
 	/* this means the last fragment was not used */
-	KUNIT_ASSERT_EQ(test, ret, 254 + 7);
+	KUNIT_EXPECT_EQ(test, ret, 254 + 7);
 	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 254);
 	KUNIT_EXPECT_MEMEQ(test, data + 254, input + 255 + 4, 7);
 }
@@ -100,9 +96,7 @@ static void defragment_2(struct kunit *test)
 	const struct element *elem;
 	int count = 0;
 
-	KUNIT_EXPECT_NOT_NULL(test, data);
-	if (!data)
-		return;
+	KUNIT_ASSERT_NOT_NULL(test, data);
 
 	for_each_element(elem, input, sizeof(input))
 		count++;
@@ -115,7 +109,7 @@ static void defragment_2(struct kunit *test)
 					  data, sizeof(input),
 					  WLAN_EID_FRAGMENT);
 	/* this means the last fragment was not used */
-	KUNIT_ASSERT_EQ(test, ret, 254 + 255 + 1);
+	KUNIT_EXPECT_EQ(test, ret, 254 + 255 + 1);
 	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 254);
 	KUNIT_EXPECT_MEMEQ(test, data + 254, input + 257 + 2, 255);
 	KUNIT_EXPECT_MEMEQ(test, data + 254 + 255, input + 2 * 257 + 2, 1);
@@ -136,15 +130,13 @@ static void defragment_at_end(struct kunit *test)
 	};
 	u8 *data = kunit_kzalloc(test, sizeof(input), GFP_KERNEL);
 
-	KUNIT_EXPECT_NOT_NULL(test, data);
-	if (!data)
-		return;
+	KUNIT_ASSERT_NOT_NULL(test, data);
 
 	ret = cfg80211_defragment_element((void *)input,
 					  input, sizeof(input),
 					  data, sizeof(input),
 					  WLAN_EID_FRAGMENT);
-	KUNIT_ASSERT_EQ(test, ret, 254 + 7);
+	KUNIT_EXPECT_EQ(test, ret, 254 + 7);
 	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 253);
 	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 253);
 }
