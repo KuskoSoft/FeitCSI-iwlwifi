@@ -2048,7 +2048,10 @@ cfg80211_inform_single_bss_data(struct wiphy *wiphy,
 	memcpy(tmp.pub.bssid, data->bssid, ETH_ALEN);
 	tmp.pub.channel = channel;
 	tmp.pub.scan_width = drv_data->scan_width;
-	tmp.pub.signal = drv_data->signal;
+	if (data->bss_source != BSS_SOURCE_STA_PROFILE)
+		tmp.pub.signal = drv_data->signal;
+	else
+		tmp.pub.signal = 0;
 	tmp.pub.beacon_interval = data->beacon_interval;
 	tmp.pub.capability = data->capability;
 	tmp.ts_boottime = drv_data->boottime_ns;
