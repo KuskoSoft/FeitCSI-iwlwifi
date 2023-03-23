@@ -137,8 +137,8 @@ static void defragment_at_end(struct kunit *test)
 					  data, sizeof(input),
 					  WLAN_EID_FRAGMENT);
 	KUNIT_EXPECT_EQ(test, ret, 254 + 7);
-	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 253);
-	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 253);
+	KUNIT_EXPECT_MEMEQ(test, data, input + 3, 254);
+	KUNIT_EXPECT_MEMEQ(test, data + 254, input + 255 + 4, 7);
 }
 
 static struct kunit_case element_fragmentation_test_cases[] = {
