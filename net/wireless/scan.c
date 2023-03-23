@@ -2414,7 +2414,8 @@ cfg80211_defrag_mle(const struct element *mle, const u8 *ie, size_t ielen,
 {
 	const struct element *elem;
 	struct cfg80211_mle *res;
-	size_t buf_len, mle_len;
+	size_t buf_len;
+	ssize_t mle_len;
 	u8 common_size, idx;
 
 	if (!mle || !ieee80211_mle_size_ok(mle->data + 1, mle->datalen - 1))
