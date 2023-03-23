@@ -2176,7 +2176,7 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 
 		ndev = alloc_netdev_mqs(size + txq_size,
 					name, name_assign_type,
-					ieee80211_if_setup, 1, 1);
+					ieee80211_if_setup, num_txqs, 1);
 		if (!ndev)
 			return -ENOMEM;
 
