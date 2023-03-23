@@ -2475,7 +2475,7 @@ cfg80211_defrag_mle(const struct element *mle, const u8 *ie, size_t ielen,
 						    (u8 *)elem, buf_len,
 						    (u8 *)res->sta_prof[idx],
 						    buf_len,
-						    IEEE80211_MLE_SUBELEM_PER_STA_PROFILE);
+						    IEEE80211_MLE_SUBELEM_FRAGMENT);
 		if (res->sta_prof_len[idx] < 0)
 			goto error;
 	}
