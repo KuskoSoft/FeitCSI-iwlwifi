@@ -2674,9 +2674,8 @@ static void cfg80211_parse_ml_sta_data(struct wiphy *wiphy,
 		/* sta_info_len counts itself */
 		profile = mle->sta_prof[i]->variable +
 			  mle->sta_prof[i]->sta_info_len - 1;
-		profile_len = mle->sta_prof_len[i] -
-			      sizeof(mle->sta_prof[i]) -
-			      mle->sta_prof[i]->sta_info_len + 1;
+		profile_len = (u8 *)mle->sta_prof[i] + mle->sta_prof_len[i] -
+			      profile;
 
 		if (profile_len < 2)
 			continue;
