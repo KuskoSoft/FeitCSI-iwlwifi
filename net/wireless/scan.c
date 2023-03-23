@@ -366,11 +366,10 @@ static size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 				return 0;
 
 			sub = cfg80211_find_elem_match(id,
-						       sub->data +
-						       sub->datalen + 2,
+						       sub->data + sub->datalen,
 						       subie_len + subie -
 						       (sub->data +
-							sub->datalen + 2),
+							sub->datalen),
 						       &ext_id, match_len, 0);
 		}
 	}
