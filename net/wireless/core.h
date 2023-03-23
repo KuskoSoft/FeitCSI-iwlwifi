@@ -4,7 +4,7 @@
  *
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2015-2016	Intel Deutschland GmbH
- * Copyright (C) 2018-2022 Intel Corporation
+ * Copyright (C) 2018-2023 Intel Corporation
  */
 #ifndef __NET_WIRELESS_CORE_H
 #define __NET_WIRELESS_CORE_H
@@ -570,5 +570,11 @@ void cfg80211_remove_link(struct wireless_dev *wdev, unsigned int link_id);
 void cfg80211_remove_links(struct wireless_dev *wdev);
 int cfg80211_remove_virtual_intf(struct cfg80211_registered_device *rdev,
 				 struct wireless_dev *wdev);
+
+#if IS_ENABLED(CPTCFG_CFG80211_KUNIT_TEST)
+size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
+			   const u8 *subie, size_t subie_len,
+			   u8 *new_ie, size_t new_ie_len);
+#endif /* IS_ENABLED(CPTCFG_CFG80211_KUNIT_TEST) */
 
 #endif /* __NET_WIRELESS_CORE_H */
