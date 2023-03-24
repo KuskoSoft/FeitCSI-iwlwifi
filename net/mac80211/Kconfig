@@ -61,6 +61,7 @@ comment "Some wireless drivers require a rate control algorithm"
 config MAC80211_KUNIT_TEST
 	tristate "KUnit tests for mac80211" if !KUNIT_ALL_TESTS
 	depends on KUNIT
+	depends on MAC80211
 	default KUNIT_ALL_TESTS || IWLWIFI_SIMULATION
 	depends on !KERNEL_6_2
 	help
