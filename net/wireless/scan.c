@@ -325,7 +325,7 @@ static size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 			continue;
 
 		if (parent->id == WLAN_EID_EXTENSION) {
-			if (parent->datalen < 2)
+			if (parent->datalen < 1)
 				continue;
 
 			id = WLAN_EID_EXTENSION;
@@ -387,7 +387,7 @@ static size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 			continue;
 
 		if (sub->id == WLAN_EID_EXTENSION) {
-			if (sub->datalen < 2)
+			if (sub->datalen < 1)
 				continue;
 
 			id = WLAN_EID_EXTENSION;
