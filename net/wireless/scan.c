@@ -2602,7 +2602,7 @@ static void cfg80211_parse_ml_sta_data(struct wiphy *wiphy,
 		return;
 
 	/* length + MLD MAC address + link ID info + BSS Params Change Count */
-	pos = elem->data + 1 + 6 + 1 + 1;
+	pos = ml_elem->variable + 1 + 6 + 1 + 1;
 
 	if (u16_get_bits(control, IEEE80211_MLC_BASIC_PRES_MED_SYNC_DELAY))
 		pos += 2;
