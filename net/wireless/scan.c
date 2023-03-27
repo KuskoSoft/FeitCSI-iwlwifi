@@ -377,7 +377,7 @@ static size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 	/*
 	 * The above misses elements that are included in subie but not in the
 	 * parent, so do a pass over subie and append those.
-	 * Skip the non-tx BSSID caps.
+	 * Skip the non-tx BSSID caps and non-inheritance element.
 	 */
 	for_each_element(sub, subie, subie_len) {
 		if (sub->id == WLAN_EID_NON_TX_BSSID_CAP)
@@ -393,6 +393,9 @@ static size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 			id = WLAN_EID_EXTENSION;
 			ext_id = sub->data[0];
 			match_len = 1;
+
+			if (ext_id == WLAN_EID_EXT_NON_INHERITANCE)
+				continue;
 		} else {
 			id = sub->id;
 			match_len = 0;
