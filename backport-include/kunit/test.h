@@ -23,6 +23,26 @@
 		}										\
 		return NULL;									\
 	}
+
+typedef void (*kunit_cleanup_t)(const void *);
+
+/**
+ * kunit_add_cleanup() - Add post-test cleanup action.
+ * @test: The test case to which the resource belongs.
+ * @cleanup_func: function to call at end of test.
+ * @data: data to pass to @free_func.
+ * @internal_gfp: gfp to use for internal allocations, if unsure, use GFP_KERNEL
+ *
+ * This adds a cleanup action to be executed after the test completes.
+ * Internally this is handled using a *test managed resource*.
+ *
+ * This function will abort the test on failure.
+ *
+ * Note: KUnit needs to allocate memory for a kunit_resource object. You must
+ * specify an @internal_gfp that is compatible with the current context.
+ */
+void kunit_add_cleanup(struct kunit *test, kunit_cleanup_t cleanup_func,
+		       const void *data, gfp_t internal_gfp);
 #endif /* LINUX_VERSION_IS_LESS(6,4,0) */
 
 #endif /* __BP_KUNIT_TEST_H */
