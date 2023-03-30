@@ -512,11 +512,7 @@ static void mesh_path_free_rcu(struct mesh_table *tbl,
 	mpath->flags |= MESH_PATH_RESOLVING | MESH_PATH_DELETED;
 	mesh_gate_del(tbl, mpath);
 	spin_unlock_bh(&mpath->state_lock);
-#if LINUX_VERSION_IS_GEQ(6,2,1)
 	timer_shutdown_sync(&mpath->timer);
-#else
-	del_timer_sync(&mpath->timer);
-#endif
 	atomic_dec(&sdata->u.mesh.mpaths);
 	atomic_dec(&tbl->entries);
 	mesh_path_flush_pending(mpath);

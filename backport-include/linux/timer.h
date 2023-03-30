@@ -72,6 +72,11 @@ static inline int timer_shutdown(struct timer_list *t)
 {
 	return del_timer(t);
 }
+
+static inline int timer_shutdown_sync(struct timer_list *t)
+{
+	return del_timer_sync(t);
+}
 #endif
 
 #endif /* _BACKPORT_TIMER_H */
