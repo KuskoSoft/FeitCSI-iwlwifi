@@ -354,7 +354,7 @@ static size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 
 		/* Already copied if an earlier element had the same type */
 		if (cfg80211_find_elem_match(id, ie, (u8 *)parent - ie,
-					     &ext_id, 0, match_len))
+					     &ext_id, match_len, 0))
 			continue;
 
 		/* Not inheriting, copy all similar elements from subie */
