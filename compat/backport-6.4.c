@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 
+#if LINUX_VERSION_IS_GEQ(6,2,0)
 #include <kunit/test.h>
 
-#if LINUX_VERSION_IS_GEQ(6,2,0)
 struct kunit_auto_cleanup {
 	struct kunit_resource resource;
 	kunit_cleanup_t cleanup_func;
