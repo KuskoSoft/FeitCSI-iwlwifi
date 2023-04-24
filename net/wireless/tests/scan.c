@@ -234,6 +234,11 @@ static void test_gen_new_ie(struct kunit *test)
 	size_t len;
 	int i;
 
+	KUNIT_ASSERT_NOT_NULL(test, parent);
+	KUNIT_ASSERT_NOT_NULL(test, child);
+	KUNIT_ASSERT_NOT_NULL(test, reference);
+	KUNIT_ASSERT_NOT_NULL(test, out);
+
 	for (i = 0; i < ARRAY_SIZE(params->parent_ies); i++) {
 		if (params->parent_ies[i].len != 0) {
 			skb_put_u8(parent, params->parent_ies[i].id);
@@ -284,6 +289,9 @@ static void test_gen_new_ie_malformed(struct kunit *test)
 	struct sk_buff *malformed = kunit_zalloc_skb(test, 1024, GFP_KERNEL);
 	u8 *out = kunit_kzalloc(test, IEEE80211_MAX_DATA_LEN, GFP_KERNEL);
 	size_t len;
+
+	KUNIT_ASSERT_NOT_NULL(test, malformed);
+	KUNIT_ASSERT_NOT_NULL(test, out);
 
 	skb_put_u8(malformed, WLAN_EID_SSID);
 	skb_put_u8(malformed, 3);
@@ -495,6 +503,8 @@ static void test_inform_bss_ml_sta(struct kunit *test)
 		.tsf_offset = cpu_to_le64(-123ll),
 		.capabilities = cpu_to_le16(0xdead),
 	};
+
+	KUNIT_ASSERT_NOT_NULL(test, input);
 
 	w_priv->ops->inform_bss = inform_bss_inc_counter;
 
