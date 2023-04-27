@@ -190,7 +190,7 @@ config CFG80211_KUNIT_TEST
 	depends on KUNIT
 	depends on CFG80211
 	default KUNIT_ALL_TESTS || IWLWIFI_SIMULATION
-	depends on !KERNEL_6_2
+	depends on !KERNEL_6_3
 	help
 	  Enable this option to test cfg80211 functions with kunit.
 
