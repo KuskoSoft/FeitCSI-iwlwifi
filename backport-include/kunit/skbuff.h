@@ -2,7 +2,7 @@
 #define __BP_KUNIT_SKBUFF_H
 #include <linux/version.h>
 
-#if LINUX_VERSION_IS_LESS(6,4,0)
+#if LINUX_VERSION_IS_LESS(6,5,0)
 #include <kunit/test.h>
 #include <linux/skbuff.h>
 

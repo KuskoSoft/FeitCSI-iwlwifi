@@ -24,7 +24,7 @@ compat-$(CPTCFG_KERNEL_5_11) += backport-5.11.o
 compat-$(CPTCFG_KERNEL_5_13) += backport-5.13.o
 compat-$(CPTCFG_KERNEL_5_15) += backport-5.15.o
 compat-$(CPTCFG_KERNEL_6_0) += backport-6.0.o
-compat-$(CPTCFG_KERNEL_6_4) += backport-6.4.o
+compat-$(CPTCFG_KERNEL_6_5) += backport-6.5.o
 
 compat-$(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) += verification/verify.o
 compat-$(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) += verification/pkcs7.asn1.o

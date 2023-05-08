@@ -4,7 +4,7 @@
 
 #include_next <kunit/test.h>
 
-#if LINUX_VERSION_IS_LESS(6,4,0)
+#if LINUX_VERSION_IS_LESS(6,5,0)
 /**
  * KUNIT_ARRAY_PARAM_DESC() - Define test parameter generator from an array.
  * @name:  prefix for the test parameter generator function.
