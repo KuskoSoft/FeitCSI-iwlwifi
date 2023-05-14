@@ -202,21 +202,6 @@ config BACKPORTED_MAC80211_STA_HASH_MAX_SIZE
 config BACKPORTED_WLAN
 	tristate
 	default WLAN
-config BACKPORTED_PCMCIA_RAYCS
-	tristate
-	default PCMCIA_RAYCS
-config BACKPORTED_PCMCIA_WL3501
-	tristate
-	default PCMCIA_WL3501
-config BACKPORTED_MAC80211_HWSIM
-	tristate
-	default MAC80211_HWSIM
-config BACKPORTED_USB_NET_RNDIS_WLAN
-	tristate
-	default USB_NET_RNDIS_WLAN
-config BACKPORTED_VIRT_WIFI
-	tristate
-	default VIRT_WIFI
 config BACKPORTED_WLAN_VENDOR_INTEL
 	tristate
 	default WLAN_VENDOR_INTEL
@@ -247,3 +232,9 @@ config BACKPORTED_IWLWIFI_DEVICE_TRACING
 config BACKPORTED_IWLMEI
 	tristate
 	default IWLMEI
+config BACKPORTED_MAC80211_HWSIM
+	tristate
+	default MAC80211_HWSIM
+config BACKPORTED_VIRT_WIFI
+	tristate
+	default VIRT_WIFI

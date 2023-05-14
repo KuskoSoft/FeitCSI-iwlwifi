@@ -157,4 +157,11 @@ static inline u64 skb_get_kcov_handle(struct sk_buff *skb)
 }
 #endif
 
+#if LINUX_VERSION_IS_LESS(5,17,0)
+static inline void kfree_skb_reason(struct sk_buff *skb, u32 reason)
+{
+	dev_kfree_skb(skb);
+}
+#endif
+
 #endif /* __BACKPORT_SKBUFF_H */

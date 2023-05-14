@@ -697,7 +697,8 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	if (mvm->nvm_data->sku_cap_11ax_enable &&
 	    !iwlwifi_mod_params.disable_11ax) {
 		hw->wiphy->iftype_ext_capab = add_iftypes_ext_capa;
-		hw->wiphy->num_iftype_ext_capab = ARRAY_SIZE(add_iftypes_ext_capa) - 1;
+		hw->wiphy->num_iftype_ext_capab =
+			ARRAY_SIZE(add_iftypes_ext_capa) - 1;
 
 		ieee80211_hw_set(hw, SUPPORTS_MULTI_BSSID);
 		ieee80211_hw_set(hw, SUPPORTS_ONLY_HE_MULTI_BSSID);
@@ -1727,7 +1728,8 @@ static int iwl_mvm_mac_add_interface(struct ieee80211_hw *hw,
 
 	if (vif->type == NL80211_IFTYPE_MONITOR) {
 		mvm->monitor_on = true;
-		mvm->monitor_p80 = iwl_mvm_chandef_get_primary_80(&vif->bss_conf.chandef);
+		mvm->monitor_p80 =
+			iwl_mvm_chandef_get_primary_80(&vif->bss_conf.chandef);
 	}
 
 	iwl_mvm_vif_dbgfs_register(mvm, vif);
@@ -2946,7 +2948,8 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 		iwl_mvm_bss_info_changed_station_assoc(mvm, vif, changes);
 	}
 
-	iwl_mvm_bss_info_changed_station_common(mvm, vif, &vif->bss_conf, changes);
+	iwl_mvm_bss_info_changed_station_common(mvm, vif, &vif->bss_conf,
+						changes);
 }
 
 bool iwl_mvm_start_ap_ibss_common(struct ieee80211_hw *hw,

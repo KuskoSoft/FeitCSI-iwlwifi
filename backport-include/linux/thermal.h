@@ -8,11 +8,57 @@
 static inline int thermal_zone_device_enable(struct thermal_zone_device *tz)
 { return 0; }
 #endif /* < 5.9.0 */
+
+#if LINUX_VERSION_IS_LESS(6,0,0) && LINUX_VERSION_IS_GEQ(5,10,0)
+struct thermal_trip {
+	int temperature;
+	int hysteresis;
+	enum thermal_trip_type type;
+};
+#endif
+
+#if LINUX_VERSION_IS_LESS(6,0,0)
+struct thermal_zone_device *
+thermal_zone_device_register_with_trips(const char *type,
+					struct thermal_trip *trips,
+					int num_trips, int mask, void *devdata,
+					struct thermal_zone_device_ops *ops,
+					struct thermal_zone_params *tzp,
+					int passive_delay,
+					int polling_delay);
+#endif /* <6,0,0 */
+
+#if LINUX_VERSION_IS_LESS(6,4,0)
+void *thermal_zone_device_priv(struct thermal_zone_device *tzd);
+#endif /* < 6.4.0 */
 #else /* CONFIG_THERMAL */
 #if LINUX_VERSION_IS_LESS(5,9,0)
 static inline int thermal_zone_device_enable(struct thermal_zone_device *tz)
 { return -ENODEV; }
 #endif /* < 5.9.0 */
+
+#if LINUX_VERSION_IS_LESS(6,0,0)
+#define thermal_zone_device_register_with_trips LINUX_BACKPORT(thermal_zone_device_register_with_trips)
+static inline struct thermal_zone_device *
+thermal_zone_device_register_with_trips(const char *type,
+					struct thermal_trip *trips,
+					int num_trips, int mask, void *devdata,
+					struct thermal_zone_device_ops *ops,
+					struct thermal_zone_params *tzp,
+					int passive_delay,
+					int polling_delay)
+{
+	return NULL;
+}
+#endif
+
+#if LINUX_VERSION_IS_LESS(6,4,0)
+#define thermal_zone_device_priv LINUX_BACKPORT(thermal_zone_device_priv)
+static inline void *thermal_zone_device_priv(struct thermal_zone_device *tzd)
+{
+	return NULL;
+}
+#endif /* < 6.4.0 */
 #endif /* CONFIG_THERMAL */
 
 #if LINUX_VERSION_IS_LESS(5,9,0)

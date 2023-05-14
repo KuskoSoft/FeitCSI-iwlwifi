@@ -493,7 +493,8 @@ static int iwl_mvm_wowlan_config_rsc_tsc(struct iwl_mvm *mvm,
 
 		if (ver == 4) {
 			size = sizeof(*data.rsc_tsc);
-			data.rsc_tsc->sta_id = cpu_to_le32(mvmvif->deflink.ap_sta_id);
+			data.rsc_tsc->sta_id =
+				cpu_to_le32(mvmvif->deflink.ap_sta_id);
 		} else {
 			/* ver == 2 || ver == IWL_FW_CMD_VER_UNKNOWN */
 			size = sizeof(data.rsc_tsc->params);
@@ -2739,7 +2740,8 @@ iwl_mvm_choose_query_wakeup_reasons(struct iwl_mvm *mvm,
 	/* if FW uses status notification, status shouldn't be NULL here */
 	if (!d3_data->status) {
 		struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
-		u8 sta_id = mvm->net_detect ? IWL_MVM_INVALID_STA : mvmvif->deflink.ap_sta_id;
+		u8 sta_id = mvm->net_detect ? IWL_MVM_INVALID_STA :
+					      mvmvif->deflink.ap_sta_id;
 
 		d3_data->status = iwl_mvm_send_wowlan_get_status(mvm, sta_id);
 	}
@@ -2866,7 +2868,8 @@ static bool iwl_mvm_wait_d3_notif(struct iwl_notif_wait_data *notif_wait,
 	struct iwl_d3_data *d3_data = data;
 	u32 len;
 	int ret;
-	int wowlan_info_ver = iwl_fw_lookup_notif_ver(mvm->fw, PROT_OFFLOAD_GROUP,
+	int wowlan_info_ver = iwl_fw_lookup_notif_ver(mvm->fw,
+						      PROT_OFFLOAD_GROUP,
 						      WOWLAN_INFO_NOTIFICATION,
 						      IWL_FW_CMD_VER_UNKNOWN);
 
@@ -2887,7 +2890,8 @@ static bool iwl_mvm_wait_d3_notif(struct iwl_notif_wait_data *notif_wait,
 
 			notif = kmemdup(notif_v1,
 					offsetofend(struct iwl_wowlan_info_notif,
-						    received_beacons), GFP_ATOMIC);
+						    received_beacons),
+					GFP_ATOMIC);
 
 			if (!notif)
 				return false;

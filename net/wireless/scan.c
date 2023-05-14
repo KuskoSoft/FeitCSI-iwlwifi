@@ -1965,8 +1965,9 @@ cfg80211_get_bss_channel(struct wiphy *wiphy, const u8 *ie, size_t ielen,
 
 	freq = ieee80211_channel_to_freq_khz(channel_number, channel->band);
 
-	/* Frame info (beacon/prob res) is the same as resieved channel, no need
-	 * for forther process.
+	/*
+	 * Frame info (beacon/prob res) is the same as received channel,
+	 * no need for further processing.
 	 */
 	if (freq == ieee80211_channel_to_khz(channel))
 		return channel;
