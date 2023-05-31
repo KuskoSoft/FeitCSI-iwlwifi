@@ -307,6 +307,8 @@ enum skb_drop_reason {
 void drop_reasons_register_subsys(enum skb_drop_reason_subsys subsys,
 				  const struct drop_reason_list *list);
 void drop_reasons_unregister_subsys(enum skb_drop_reason_subsys subsys);
+#else
+#include_next <net/dropreason.h>
 #endif
 #endif
 
