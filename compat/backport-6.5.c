@@ -3,7 +3,7 @@
 #include <linux/types.h>
 #include <linux/netdevice.h>
 
-#if LINUX_VERSION_IS_GEQ(6,2,0) && defined(CONFIG_KUNIT)
+#if LINUX_VERSION_IS_GEQ(6,2,0) && IS_ENABLED(CONFIG_KUNIT)
 #include <kunit/test.h>
 
 struct kunit_auto_cleanup {
