@@ -29,7 +29,11 @@ thermal_zone_device_register_with_trips(const char *type,
 #endif /* <6,0,0 */
 
 #if LINUX_VERSION_IS_LESS(6,4,0)
-void *thermal_zone_device_priv(struct thermal_zone_device *tzd);
+#define thermal_zone_device_priv LINUX_BACKPORT(thermal_zone_device_priv)
+static inline void *thermal_zone_device_priv(struct thermal_zone_device *tzd)
+{
+	return tzd->devdata;
+}
 #endif /* < 6.4.0 */
 #else /* CONFIG_THERMAL */
 #if LINUX_VERSION_IS_LESS(5,9,0)
