@@ -2439,7 +2439,7 @@ static void ieee80211_reconfig_stations(struct ieee80211_sub_if_data *sdata)
 	struct sta_info *sta;
 
 	/* add STAs back */
-	mutex_lock(&local->sta_mtx);
+	lockdep_assert_wiphy(local->hw.wiphy);
 	list_for_each_entry(sta, &local->sta_list, list) {
 		enum ieee80211_sta_state state;
 
@@ -2451,7 +2451,6 @@ static void ieee80211_reconfig_stations(struct ieee80211_sub_if_data *sdata)
 			WARN_ON(drv_sta_state(local, sta->sdata, sta, state,
 					      state + 1));
 	}
-	mutex_unlock(&local->sta_mtx);
 }
 
 static int ieee80211_reconfig_nan(struct ieee80211_sub_if_data *sdata)
@@ -2930,7 +2929,7 @@ int ieee80211_reconfig(struct ieee80211_local *local)
 	 * are active. This is really a workaround though.
 	 */
 	if (ieee80211_hw_check(hw, AMPDU_AGGREGATION)) {
-		mutex_lock(&local->sta_mtx);
+		lockdep_assert_wiphy(local->hw.wiphy);
 
 		list_for_each_entry(sta, &local->sta_list, list) {
 			if (!local->resuming)
@@ -2938,8 +2937,6 @@ int ieee80211_reconfig(struct ieee80211_local *local)
 						sta, AGG_STOP_LOCAL_REQUEST);
 			clear_sta_flag(sta, WLAN_STA_BLOCK_BA);
 		}
-
-		mutex_unlock(&local->sta_mtx);
 	}
 
 	/*
