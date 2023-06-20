@@ -366,13 +366,10 @@ static void ieee80211_restart_work(struct work_struct *work)
 			 */
 			wiphy_work_cancel(local->hw.wiphy,
 					  &sdata->u.mgd.csa_connection_drop_work);
-			if (sdata->vif.bss_conf.csa_active) {
-				sdata_lock(sdata);
+			if (sdata->vif.bss_conf.csa_active)
 				ieee80211_sta_connection_lost(sdata,
 							      WLAN_REASON_UNSPECIFIED,
 							      false);
-				sdata_unlock(sdata);
-			}
 		}
 		wiphy_delayed_work_flush(local->hw.wiphy,
 					 &sdata->dec_tailroom_needed_wk);
@@ -474,7 +471,6 @@ static int ieee80211_ifa_changed(struct notifier_block *nb,
 	 */
 	mutex_lock_nested(&local->hw.wiphy->mtx, 1);
 	__acquire(&local->hw.wiphy->mtx);
-	sdata_lock(sdata);
 
 	/* Copy the addresses to the vif config list */
 	ifa = rtnl_dereference(idev->ifa_list);
@@ -491,7 +487,6 @@ static int ieee80211_ifa_changed(struct notifier_block *nb,
 	if (ifmgd->associated)
 		ieee80211_vif_cfg_change_notify(sdata, BSS_CHANGED_ARP_FILTER);
 
-	sdata_unlock(sdata);
 	wiphy_unlock(local->hw.wiphy);
 
 	return NOTIFY_OK;

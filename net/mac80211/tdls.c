@@ -1462,22 +1462,18 @@ int ieee80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 	/* protect possible bss_conf changes and avoid concurrency in
 	 * ieee80211_bss_info_change_notify()
 	 */
-	sdata_lock(sdata);
 	tdls_dbg(sdata, "TDLS oper %d peer %pM\n", oper, peer);
 
 	switch (oper) {
 	case NL80211_TDLS_ENABLE_LINK:
 		if (sdata->vif.bss_conf.csa_active) {
 			tdls_dbg(sdata, "TDLS: disallow link during CSA\n");
-			ret = -EBUSY;
-			break;
+			return -EBUSY;
 		}
 
 		sta = sta_info_get(sdata, peer);
-		if (!sta) {
-			ret = -ENOLINK;
-			break;
-		}
+		if (!sta)
+			return -ENOLINK;
 
 		iee80211_tdls_recalc_chanctx(sdata, sta);
 		iee80211_tdls_recalc_ht_protection(sdata, sta);
@@ -1486,7 +1482,6 @@ int ieee80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 
 		WARN_ON_ONCE(is_zero_ether_addr(sdata->u.mgd.tdls_peer) ||
 			     !ether_addr_equal(sdata->u.mgd.tdls_peer, peer));
-		ret = 0;
 		break;
 	case NL80211_TDLS_DISABLE_LINK:
 		/*
@@ -1508,24 +1503,23 @@ int ieee80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 		iee80211_tdls_recalc_ht_protection(sdata, NULL);
 
 		iee80211_tdls_recalc_chanctx(sdata, NULL);
+		if (ret)
+			return ret;
 		break;
 	default:
-		ret = -ENOTSUPP;
-		break;
+		return -ENOTSUPP;
 	}
 
-	if (ret == 0 && ether_addr_equal(sdata->u.mgd.tdls_peer, peer)) {
+	if (ether_addr_equal(sdata->u.mgd.tdls_peer, peer)) {
 		wiphy_delayed_work_cancel(sdata->local->hw.wiphy,
 					  &sdata->u.mgd.tdls_peer_del_work);
 		eth_zero_addr(sdata->u.mgd.tdls_peer);
 	}
 
-	if (ret == 0)
-		wiphy_work_queue(sdata->local->hw.wiphy,
-				 &sdata->deflink.u.mgd.request_smps_work);
+	wiphy_work_queue(sdata->local->hw.wiphy,
+			 &sdata->deflink.u.mgd.request_smps_work);
 
-	sdata_unlock(sdata);
-	return ret;
+	return 0;
 }
 
 void ieee80211_tdls_oper_request(struct ieee80211_vif *vif, const u8 *peer,

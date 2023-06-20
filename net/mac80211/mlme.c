@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-only
 /*
  * BSS client mode implementation
  * Copyright 2003-2008, Jouni Malinen <j@w1.fi>
@@ -176,7 +175,7 @@ ieee80211_handle_puncturing_bitmap(struct ieee80211_link_data *link,
 static void run_again(struct ieee80211_sub_if_data *sdata,
 		      unsigned long timeout)
 {
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (!timer_pending(&sdata->u.mgd.timer) ||
 	    time_before(timeout, sdata->u.mgd.timer.expires))
@@ -1403,7 +1402,7 @@ static int ieee80211_send_assoc(struct ieee80211_sub_if_data *sdata)
 						      assoc_data->ie,
 						      assoc_data->ie_len);
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	size = local->hw.extra_tx_headroom +
 	       sizeof(*mgmt) + /* bit too much but doesn't matter */
@@ -1692,14 +1691,13 @@ static void ieee80211_chswitch_work(struct wiphy *wiphy,
 	if (!ieee80211_sdata_running(sdata))
 		return;
 
-	sdata_lock(sdata);
 	lockdep_assert_wiphy(local->hw.wiphy);
 
 	if (!ifmgd->associated)
-		goto out;
+		return;
 
 	if (!link->conf->csa_active)
-		goto out;
+		return;
 
 	/*
 	 * using reservation isn't immediate as it may be deferred until later
@@ -1715,7 +1713,7 @@ static void ieee80211_chswitch_work(struct wiphy *wiphy,
 		 * reservations
 		 */
 		if (link->reserved_ready)
-			goto out;
+			return;
 
 		ret = ieee80211_link_use_reserved_context(link);
 		if (ret) {
@@ -1724,10 +1722,8 @@ static void ieee80211_chswitch_work(struct wiphy *wiphy,
 				   ret);
 			wiphy_work_queue(sdata->local->hw.wiphy,
 					 &ifmgd->csa_connection_drop_work);
-			goto out;
 		}
-
-		goto out;
+		return;
 	}
 
 	if (!cfg80211_chandef_identical(&link->conf->chandef,
@@ -1736,16 +1732,13 @@ static void ieee80211_chswitch_work(struct wiphy *wiphy,
 			   "failed to finalize channel switch, disconnecting\n");
 		wiphy_work_queue(sdata->local->hw.wiphy,
 				 &ifmgd->csa_connection_drop_work);
-		goto out;
+		return;
 	}
 
 	link->u.mgd.csa_waiting_bcn = true;
 
 	ieee80211_sta_reset_beacon_monitor(sdata);
 	ieee80211_sta_reset_conn_monitor(sdata);
-
-out:
-	sdata_unlock(sdata);
 }
 
 static void ieee80211_chswitch_post_beacon(struct ieee80211_link_data *link)
@@ -1755,7 +1748,7 @@ static void ieee80211_chswitch_post_beacon(struct ieee80211_link_data *link)
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	int ret;
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	WARN_ON(!link->conf->csa_active);
 
@@ -1861,7 +1854,6 @@ ieee80211_sta_process_chanswitch(struct ieee80211_link_data *link,
 	unsigned long timeout;
 	int res;
 
-	sdata_assert_lock(sdata);
 	lockdep_assert_wiphy(local->hw.wiphy);
 
 	if (!cbss)
@@ -2906,7 +2898,6 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 		.subtype = stype,
 	};
 
-	sdata_assert_lock(sdata);
 	lockdep_assert_wiphy(local->hw.wiphy);
 
 	if (WARN_ON_ONCE(tx && !frame_buf))
@@ -3261,19 +3252,16 @@ static void ieee80211_mgd_probe_ap(struct ieee80211_sub_if_data *sdata,
 	if (!ieee80211_sdata_running(sdata))
 		return;
 
-	sdata_lock(sdata);
-
 	if (!ifmgd->associated)
-		goto out;
+		return;
 
-	if (sdata->local->tmp_channel || sdata->local->scanning) {
-		goto out;
-	}
+	if (sdata->local->tmp_channel || sdata->local->scanning)
+		return;
 
 	if (sdata->local->suspending) {
 		/* reschedule after resume */
 		ieee80211_reset_ap_probe(sdata);
-		goto out;
+		return;
 	}
 
 	if (beacon) {
@@ -3301,14 +3289,12 @@ static void ieee80211_mgd_probe_ap(struct ieee80211_sub_if_data *sdata,
 	ifmgd->flags |= IEEE80211_STA_CONNECTION_POLL;
 
 	if (already)
-		goto out;
+		return;
 
 	ieee80211_recalc_ps(sdata->local);
 
 	ifmgd->probe_send_count = 0;
 	ieee80211_mgd_probe_ap_send(sdata);
- out:
-	sdata_unlock(sdata);
 }
 
 struct sk_buff *ieee80211_ap_probereq_get(struct ieee80211_hw *hw,
@@ -3321,11 +3307,11 @@ struct sk_buff *ieee80211_ap_probereq_get(struct ieee80211_hw *hw,
 	const struct element *ssid;
 	int ssid_len;
 
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
+
 	if (WARN_ON(sdata->vif.type != NL80211_IFTYPE_STATION ||
 		    ieee80211_vif_is_mld(&sdata->vif)))
 		return NULL;
-
-	sdata_assert_lock(sdata);
 
 	if (ifmgd->associated)
 		cbss = sdata->deflink.u.mgd.bss;
@@ -3373,7 +3359,7 @@ static void ieee80211_report_disconnect(struct ieee80211_sub_if_data *sdata,
 	drv_event_callback(sdata->local, sdata, &event);
 }
 
-static void ___ieee80211_disconnect(struct ieee80211_sub_if_data *sdata)
+static void __ieee80211_disconnect(struct ieee80211_sub_if_data *sdata)
 {
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
@@ -3430,13 +3416,6 @@ static void ___ieee80211_disconnect(struct ieee80211_sub_if_data *sdata)
 				    WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY,
 				    ifmgd->reconnect);
 	ifmgd->reconnect = false;
-}
-
-static void __ieee80211_disconnect(struct ieee80211_sub_if_data *sdata)
-{
-	sdata_lock(sdata);
-	___ieee80211_disconnect(sdata);
-	sdata_unlock(sdata);
 }
 
 static void ieee80211_beacon_connection_loss_work(struct wiphy *wiphy,
@@ -3520,7 +3499,6 @@ static void ieee80211_destroy_auth_data(struct ieee80211_sub_if_data *sdata,
 {
 	struct ieee80211_mgd_auth_data *auth_data = sdata->u.mgd.auth_data;
 
-	sdata_assert_lock(sdata);
 	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (!assoc) {
@@ -3560,7 +3538,6 @@ static void ieee80211_destroy_assoc_data(struct ieee80211_sub_if_data *sdata,
 {
 	struct ieee80211_mgd_assoc_data *assoc_data = sdata->u.mgd.assoc_data;
 
-	sdata_assert_lock(sdata);
 	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (status != ASSOC_SUCCESS) {
@@ -3677,7 +3654,7 @@ static void ieee80211_rx_mgmt_auth(struct ieee80211_sub_if_data *sdata,
 		.subtype = IEEE80211_STYPE_AUTH,
 	};
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (len < 24 + 6)
 		return;
@@ -3835,7 +3812,7 @@ static void ieee80211_rx_mgmt_deauth(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	u16 reason_code = le16_to_cpu(mgmt->u.deauth.reason_code);
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (len < 24 + 2)
 		return;
@@ -3879,7 +3856,7 @@ static void ieee80211_rx_mgmt_disassoc(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	u16 reason_code;
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (len < 24 + 2)
 		return;
@@ -5324,7 +5301,7 @@ static void ieee80211_rx_mgmt_assoc_resp(struct ieee80211_sub_if_data *sdata,
 	u8 ap_mld_addr[ETH_ALEN] __aligned(2);
 	unsigned int link_id;
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (!assoc_data)
 		return;
@@ -5524,7 +5501,7 @@ static void ieee80211_rx_bss_info(struct ieee80211_link_data *link,
 	struct ieee80211_bss *bss;
 	struct ieee80211_channel *channel;
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	channel = ieee80211_get_channel_khz(local->hw.wiphy,
 					ieee80211_rx_status_to_khz(rx_status));
@@ -5551,7 +5528,7 @@ static void ieee80211_rx_mgmt_probe_resp(struct ieee80211_link_data *link,
 
 	ifmgd = &sdata->u.mgd;
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	/*
 	 * According to Draft P802.11ax D6.0 clause 26.17.2.3.2:
@@ -5762,21 +5739,16 @@ static void ieee80211_ml_reconf_work(struct wiphy *wiphy,
 	u16 new_valid_links, new_active_links, new_dormant_links;
 	int ret;
 
-	sdata_lock(sdata);
-	if (!sdata->u.mgd.removed_links) {
-		sdata_unlock(sdata);
+	if (!sdata->u.mgd.removed_links)
 		return;
-	}
 
 	sdata_info(sdata,
 		   "MLO Reconfiguration: work: valid=0x%x, removed=0x%x\n",
 		   sdata->vif.valid_links, sdata->u.mgd.removed_links);
 
 	new_valid_links = sdata->vif.valid_links & ~sdata->u.mgd.removed_links;
-	if (new_valid_links == sdata->vif.valid_links) {
-		sdata_unlock(sdata);
+	if (new_valid_links == sdata->vif.valid_links)
 		return;
-	}
 
 	if (!new_valid_links ||
 	    !(new_valid_links & ~sdata->vif.dormant_links)) {
@@ -5792,8 +5764,7 @@ static void ieee80211_ml_reconf_work(struct wiphy *wiphy,
 				BIT(ffs(new_valid_links &
 					~sdata->vif.dormant_links) - 1);
 
-		ret = __ieee80211_set_active_links(&sdata->vif,
-						   new_active_links);
+		ret = ieee80211_set_active_links(&sdata->vif, new_active_links);
 		if (ret) {
 			sdata_info(sdata,
 				   "Failed setting active links\n");
@@ -5815,11 +5786,9 @@ out:
 		cfg80211_cqm_links_state_change_notify(sdata->dev,
 						       sdata->u.mgd.removed_links);
 	else
-		___ieee80211_disconnect(sdata);
+		__ieee80211_disconnect(sdata);
 
 	sdata->u.mgd.removed_links = 0;
-
-	sdata_unlock(sdata);
 }
 
 static void ieee80211_ml_reconfiguration(struct ieee80211_sub_if_data *sdata,
@@ -5939,18 +5908,15 @@ static void ieee80211_tid_to_link_map_work(struct wiphy *wiphy,
 		return;
 	}
 
-	sdata_lock(sdata);
-
 	ieee80211_vif_set_links(sdata, sdata->vif.valid_links, 0);
 	new_active_links = BIT(ffs(new_active_links) - 1);
-	__ieee80211_set_active_links(&sdata->vif, new_active_links);
+	ieee80211_set_active_links(&sdata->vif, new_active_links);
 
 	ret = ieee80211_vif_set_links(sdata, sdata->vif.valid_links,
 				      new_dormant_links);
 
 	sdata->u.mgd.t2l_map_info.active = true;
 	sdata->u.mgd.t2l_map_info.switch_time = 0;
-	sdata_unlock(sdata);
 
 	if (!ret)
 		ieee80211_vif_cfg_change_notify(sdata,
@@ -6046,8 +6012,6 @@ static void ieee80211_process_adv_t2l_map(struct ieee80211_sub_if_data *sdata,
 	u8 i;
 	int ret;
 
-	sdata_assert_lock(sdata);
-
 	if (!ieee80211_vif_is_mld(&sdata->vif))
 		return;
 
@@ -6142,7 +6106,6 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_link_data *link,
 		.from_ap = true,
 	};
 
-	sdata_assert_lock(sdata);
 	lockdep_assert_wiphy(local->hw.wiphy);
 
 	/* Process beacon from the current BSS */
@@ -6454,17 +6417,17 @@ void ieee80211_sta_rx_queued_ext(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_hdr *hdr;
 	u16 fc;
 
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
+
 	rx_status = (struct ieee80211_rx_status *) skb->cb;
 	hdr = (struct ieee80211_hdr *) skb->data;
 	fc = le16_to_cpu(hdr->frame_control);
 
-	sdata_lock(sdata);
 	switch (fc & IEEE80211_FCTL_STYPE) {
 	case IEEE80211_STYPE_S1G_BEACON:
 		ieee80211_rx_mgmt_beacon(link, hdr, skb->len, rx_status);
 		break;
 	}
-	sdata_unlock(sdata);
 }
 
 void ieee80211_sta_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
@@ -6476,17 +6439,17 @@ void ieee80211_sta_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
 	u16 fc;
 	int ies_len;
 
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
+
 	rx_status = (struct ieee80211_rx_status *) skb->cb;
 	mgmt = (struct ieee80211_mgmt *) skb->data;
 	fc = le16_to_cpu(mgmt->frame_control);
-
-	sdata_lock(sdata);
 
 	if (rx_status->link_valid) {
 		link = sdata_dereference(sdata->link[rx_status->link_id],
 					 sdata);
 		if (!link)
-			goto out;
+			return;
 	}
 
 	switch (fc & IEEE80211_FCTL_STYPE) {
@@ -6569,8 +6532,6 @@ void ieee80211_sta_rx_queued_mgmt(struct ieee80211_sub_if_data *sdata,
 		}
 		break;
 	}
-out:
-	sdata_unlock(sdata);
 }
 
 static void ieee80211_sta_timer(struct timer_list *t)
@@ -6605,7 +6566,7 @@ static int ieee80211_auth(struct ieee80211_sub_if_data *sdata)
 		.subtype = IEEE80211_STYPE_AUTH,
 	};
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (WARN_ON_ONCE(!auth_data))
 		return -EINVAL;
@@ -6675,7 +6636,7 @@ static int ieee80211_do_assoc(struct ieee80211_sub_if_data *sdata)
 	struct ieee80211_local *local = sdata->local;
 	int ret;
 
-	sdata_assert_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	assoc_data->tries++;
 	if (assoc_data->tries > IEEE80211_ASSOC_MAX_TRIES) {
@@ -6731,7 +6692,7 @@ void ieee80211_sta_work(struct ieee80211_sub_if_data *sdata)
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 
-	sdata_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (ifmgd->status_received) {
 		__le16 fc = ifmgd->status_fc;
@@ -6866,8 +6827,6 @@ void ieee80211_sta_work(struct ieee80211_sub_if_data *sdata)
 				WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY, false);
 		}
 	}
-
-	sdata_unlock(sdata);
 }
 
 static void ieee80211_sta_bcn_mon_timer(struct timer_list *t)
@@ -6954,7 +6913,7 @@ void ieee80211_mgd_quiesce(struct ieee80211_sub_if_data *sdata)
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 	u8 frame_buf[IEEE80211_DEAUTH_FRAME_LEN];
 
-	sdata_lock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	if (ifmgd->auth_data || ifmgd->assoc_data) {
 		const u8 *ap_addr = ifmgd->auth_data ?
@@ -7006,8 +6965,6 @@ void ieee80211_mgd_quiesce(struct ieee80211_sub_if_data *sdata)
 		memcpy(bssid, sdata->vif.cfg.ap_addr, ETH_ALEN);
 		ieee80211_mgd_deauth(sdata, &req);
 	}
-
-	sdata_unlock(sdata);
 }
 #endif
 
@@ -7015,11 +6972,10 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 {
 	struct ieee80211_if_managed *ifmgd = &sdata->u.mgd;
 
-	sdata_lock(sdata);
-	if (!ifmgd->associated) {
-		sdata_unlock(sdata);
+	lockdep_assert_wiphy(sdata->local->hw.wiphy);
+
+	if (!ifmgd->associated)
 		return;
-	}
 
 	if (sdata->flags & IEEE80211_SDATA_DISCONNECT_RESUME) {
 		sdata->flags &= ~IEEE80211_SDATA_DISCONNECT_RESUME;
@@ -7027,7 +6983,6 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 		ieee80211_sta_connection_lost(sdata,
 					      WLAN_REASON_UNSPECIFIED,
 					      true);
-		sdata_unlock(sdata);
 		return;
 	}
 
@@ -7037,11 +6992,8 @@ void ieee80211_sta_restart(struct ieee80211_sub_if_data *sdata)
 		ieee80211_sta_connection_lost(sdata,
 					      WLAN_REASON_UNSPECIFIED,
 					      true);
-		sdata_unlock(sdata);
 		return;
 	}
-
-	sdata_unlock(sdata);
 
 	ieee80211_send_nullfunc(sdata->local, sdata, false);
 }
@@ -7053,10 +7005,8 @@ static void ieee80211_request_smps_mgd_work(struct wiphy *wiphy,
 		container_of(work, struct ieee80211_link_data,
 			     u.mgd.request_smps_work);
 
-	sdata_lock(link->sdata);
 	__ieee80211_request_smps_mgd(link->sdata, link,
 				     link->u.mgd.driver_smps_mode);
-	sdata_unlock(link->sdata);
 }
 
 /* interface setup */
@@ -8173,7 +8123,6 @@ void ieee80211_mgd_stop(struct ieee80211_sub_if_data *sdata)
 				  &ifmgd->ml_reconf_work);
 	wiphy_delayed_work_cancel(sdata->local->hw.wiphy, &ifmgd->t2l_map_work);
 
-	sdata_lock(sdata);
 	if (ifmgd->assoc_data)
 		ieee80211_destroy_assoc_data(sdata, ASSOC_TIMEOUT);
 	if (ifmgd->auth_data)
@@ -8189,7 +8138,6 @@ void ieee80211_mgd_stop(struct ieee80211_sub_if_data *sdata)
 	ifmgd->assoc_req_ies_len = 0;
 	spin_unlock_bh(&ifmgd->teardown_lock);
 	del_timer_sync(&ifmgd->timer);
-	sdata_unlock(sdata);
 }
 
 void ieee80211_cqm_rssi_notify(struct ieee80211_vif *vif,
