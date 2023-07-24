@@ -986,7 +986,53 @@ unsigned int cfg80211_classify8021d(struct sk_buff *skb,
 		}
 	}
 
+	/* The default mapping as defined in RFC8325 */
 	ret = dscp >> 5;
+
+	/* Handle specific DSCP values for which the default mapping doesn't
+	 * adhere to the intended usage of the DSCP value. See section 4 in
+	 * RFC8325.
+	 */
+	switch (dscp >> 2) {
+	case 10:
+	case 12:
+	case 14:
+		/* High throughput data: AF11, AF12, AF13 */
+		ret = 0;
+		break;
+	case 16:
+		/* Operations, Administration, and Maintenance and Provisioning:
+		 * CS2
+		 */
+		ret = 0;
+		break;
+	case 18:
+	case 20:
+	case 22:
+		/* Low latency data: AF21, AF22, AF23 */
+		ret = 3;
+		break;
+	case 24:
+		/* Broadcasting video: CS23 */
+		ret = 4;
+		break;
+	case 40:
+		/* Signaling: CS5 */
+		ret = 5;
+		break;
+	case 44:
+		/* Voice Admit */
+		ret = 6;
+		break;
+	case 46:
+		/* Telephony traffic: EF */
+		ret = 6;
+		break;
+	case 48:
+		/* Network Control Traffic: CS6 */
+		ret = 7;
+		break;
+	}
 out:
 	return array_index_nospec(ret, IEEE80211_NUM_TIDS);
 }
