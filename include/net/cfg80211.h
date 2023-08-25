@@ -8448,20 +8448,6 @@ void cfg80211_cqm_txe_notify(struct net_device *dev, const u8 *peer,
 void cfg80211_cqm_beacon_loss_notify(struct net_device *dev, gfp_t gfp);
 
 /**
- * cfg80211_cqm_links_state_change_notify - inform CQM of change in AP MLD
- *	links
- *
- * @vif: &struct ieee80211_vif pointer from the add_interface callback.
- * @removed_links: bitmap of links on which connection was removed due to links
- *	being removed by the AP MLD.
- *
- * Caller must hold wiphy mutex, therefore must only be called from sleepable
- * driver context!
- */
-void cfg80211_cqm_links_state_change_notify(struct net_device *dev,
-					    u16 removed_links);
-
-/**
  * __cfg80211_radar_event - radar detection event
  * @wiphy: the wiphy
  * @chandef: chandef for the current channel

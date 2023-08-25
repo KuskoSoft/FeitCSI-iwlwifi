@@ -3982,22 +3982,6 @@ TRACE_EVENT(rdev_del_link_station,
 		  __entry->link_id)
 );
 
-TRACE_EVENT(cfg80211_cqm_links_state_change_notify,
-	TP_PROTO(struct net_device *netdev,
-		 u16 removed_links),
-	TP_ARGS(netdev, removed_links),
-	TP_STRUCT__entry(
-		NETDEV_ENTRY
-		__field(u16, removed_links)
-	),
-	TP_fast_assign(
-		NETDEV_ASSIGN;
-		__entry->removed_links = removed_links;
-	),
-	TP_printk(NETDEV_PR_FMT ", removed_links=0x%x",
-		  NETDEV_PR_ARG, __entry->removed_links)
-);
-
 TRACE_EVENT(cfg80211_links_removed,
 	TP_PROTO(struct net_device *netdev, u16 link_mask),
 	TP_ARGS(netdev, link_mask),
