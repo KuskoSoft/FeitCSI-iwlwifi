@@ -453,6 +453,9 @@ int cfg80211_scan(struct cfg80211_registered_device *rdev);
 
 extern struct work_struct cfg80211_disconnect_work;
 
+#define NL80211_BSS_USE_FOR_ALL	(NL80211_BSS_USE_FOR_NORMAL | \
+				 NL80211_BSS_USE_FOR_MLD_LINK)
+
 /**
  * cfg80211_chandef_dfs_usable - checks if chandef is DFS usable
  * @wiphy: the wiphy to validate against
