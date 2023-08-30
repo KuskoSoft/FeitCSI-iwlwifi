@@ -2,6 +2,7 @@
 
 #include <linux/types.h>
 #include <linux/netdevice.h>
+#include <net/gso.h>
 
 #if LINUX_VERSION_IS_GEQ(6,2,0) && IS_ENABLED(CONFIG_KUNIT)
 #include <kunit/test.h>

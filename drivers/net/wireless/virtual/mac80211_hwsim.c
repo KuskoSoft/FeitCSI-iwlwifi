@@ -5991,12 +5991,11 @@ static int hwsim_new_radio_nl(struct sk_buff *msg, struct genl_info *info)
 			ret = -ENOMEM;
 			goto out_free;
 		}
-		ret = parse_pmsr_capa(info->attrs[HWSIM_ATTR_PMSR_SUPPORT], pmsr_capa, info);
-		if (ret) {
-			kfree(pmsr_capa);
-			goto out_free;
-		}
 		param.pmsr_capa = pmsr_capa;
+
+		ret = parse_pmsr_capa(info->attrs[HWSIM_ATTR_PMSR_SUPPORT], pmsr_capa, info);
+		if (ret)
+			goto out_free;
 	}
 
 	ret = mac80211_hwsim_new_radio(info, &param);

@@ -1760,6 +1760,7 @@ int cfg80211_check_station_change(struct wiphy *wiphy,
  * @RATE_INFO_FLAGS_EDMG: 60GHz MCS in EDMG mode
  * @RATE_INFO_FLAGS_EXTENDED_SC_DMG: 60GHz extended SC MCS
  * @RATE_INFO_FLAGS_EHT_MCS: EHT MCS information
+ * @RATE_INFO_FLAGS_S1G_MCS: MCS field filled with S1G MCS
  */
 enum rate_info_flags {
 	RATE_INFO_FLAGS_MCS			= BIT(0),
@@ -1770,6 +1771,7 @@ enum rate_info_flags {
 	RATE_INFO_FLAGS_EDMG			= BIT(5),
 	RATE_INFO_FLAGS_EXTENDED_SC_DMG		= BIT(6),
 	RATE_INFO_FLAGS_EHT_MCS			= BIT(7),
+	RATE_INFO_FLAGS_S1G_MCS			= BIT(8),
 };
 
 /**
@@ -1786,6 +1788,11 @@ enum rate_info_flags {
  * @RATE_INFO_BW_HE_RU: bandwidth determined by HE RU allocation
  * @RATE_INFO_BW_320: 320 MHz bandwidth
  * @RATE_INFO_BW_EHT_RU: bandwidth determined by EHT RU allocation
+ * @RATE_INFO_BW_1: 1 MHz bandwidth
+ * @RATE_INFO_BW_2: 2 MHz bandwidth
+ * @RATE_INFO_BW_4: 4 MHz bandwidth
+ * @RATE_INFO_BW_8: 8 MHz bandwidth
+ * @RATE_INFO_BW_16: 16 MHz bandwidth
  */
 enum rate_info_bw {
 	RATE_INFO_BW_20 = 0,
@@ -1797,6 +1804,11 @@ enum rate_info_bw {
 	RATE_INFO_BW_HE_RU,
 	RATE_INFO_BW_320,
 	RATE_INFO_BW_EHT_RU,
+	RATE_INFO_BW_1,
+	RATE_INFO_BW_2,
+	RATE_INFO_BW_4,
+	RATE_INFO_BW_8,
+	RATE_INFO_BW_16,
 };
 
 /**
@@ -1805,8 +1817,8 @@ enum rate_info_bw {
  * Information about a receiving or transmitting bitrate
  *
  * @flags: bitflag of flags from &enum rate_info_flags
- * @mcs: mcs index if struct describes an HT/VHT/HE rate
  * @legacy: bitrate in 100kbit/s for 802.11abg
+ * @mcs: mcs index if struct describes an HT/VHT/HE/EHT/S1G rate
  * @nss: number of streams (VHT & HE only)
  * @bw: bandwidth (from &enum rate_info_bw)
  * @he_gi: HE guard interval (from &enum nl80211_he_gi)
@@ -1819,9 +1831,9 @@ enum rate_info_bw {
  *	only valid if bw is %RATE_INFO_BW_EHT_RU)
  */
 struct rate_info {
-	u8 flags;
-	u8 mcs;
+	u16 flags;
 	u16 legacy;
+	u8 mcs;
 	u8 nss;
 	u8 bw;
 	u8 he_gi;
@@ -6752,7 +6764,7 @@ cfg80211_find_vendor_ie(unsigned int oui, int oui_type,
  *
  * @elem: the element to defragment
  * @ies: elements where @elem is contained
- * @ies_len: length of @ies
+ * @ieslen: length of @ies
  * @data: buffer to store element data
  * @data_len: length of @data
  * @frag_id: the element ID of fragments
@@ -9301,5 +9313,18 @@ static inline int cfg80211_color_change_notify(struct net_device *dev)
  */
 bool cfg80211_valid_disable_subchannel_bitmap(u16 *bitmap,
 					      const struct cfg80211_chan_def *chandef);
+
+/**
+ * cfg80211_links_removed - Notify about removed STA MLD setup links.
+ * @dev: network device.
+ * @link_mask: BIT mask of removed STA MLD setup link IDs.
+ *
+ * Inform cfg80211 and the userspace about removed STA MLD setup links due to
+ * AP MLD removing the corresponding affiliated APs with Multi-Link
+ * reconfiguration. Note that it's not valid to remove all links, in this
+ * case disconnect instead.
+ * Also note that the wdev mutex must be held.
+ */
+void cfg80211_links_removed(struct net_device *dev, u16 link_mask);
 
 #endif /* __NET_CFG80211_H */

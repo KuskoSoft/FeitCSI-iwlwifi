@@ -28,7 +28,7 @@
 
 #define MAXNAME		32
 #define WIPHY_ENTRY	__array(char, wiphy_name, 32)
-#define WIPHY_ASSIGN	strlcpy(__entry->wiphy_name, wiphy_name(wiphy), MAXNAME)
+#define WIPHY_ASSIGN	strscpy(__entry->wiphy_name, wiphy_name(wiphy), MAXNAME)
 #define WIPHY_PR_FMT	"%s"
 #define WIPHY_PR_ARG	__entry->wiphy_name
 
@@ -3996,6 +3996,21 @@ TRACE_EVENT(cfg80211_cqm_links_state_change_notify,
 	),
 	TP_printk(NETDEV_PR_FMT ", removed_links=0x%x",
 		  NETDEV_PR_ARG, __entry->removed_links)
+);
+
+TRACE_EVENT(cfg80211_links_removed,
+	TP_PROTO(struct net_device *netdev, u16 link_mask),
+	TP_ARGS(netdev, link_mask),
+	TP_STRUCT__entry(
+		NETDEV_ENTRY
+		__field(u16, link_mask)
+	),
+	TP_fast_assign(
+		NETDEV_ASSIGN;
+		__entry->link_mask = link_mask;
+	),
+	TP_printk(NETDEV_PR_FMT ", link_mask:%u", NETDEV_PR_ARG,
+		  __entry->link_mask)
 );
 
 #endif /* !__RDEV_OPS_TRACE || TRACE_HEADER_MULTI_READ */

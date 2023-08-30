@@ -316,8 +316,7 @@ VISIBLE_IF_KUNIT size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 	non_inherit_elem = cfg80211_find_ext_elem(WLAN_EID_EXT_NON_INHERITANCE,
 						  subie, subie_len);
 
-	/*
-	 * We copy the elements one by one from the parent to the generated
+	/* We copy the elements one by one from the parent to the generated
 	 * elements.
 	 * If they are not inherited (included in subie or in the non
 	 * inheritance element), then we copy all occurrences the first time
@@ -377,8 +376,7 @@ VISIBLE_IF_KUNIT size_t cfg80211_gen_new_ie(const u8 *ie, size_t ielen,
 		}
 	}
 
-	/*
-	 * The above misses elements that are included in subie but not in the
+	/* The above misses elements that are included in subie but not in the
 	 * parent, so do a pass over subie and append those.
 	 * Skip the non-tx BSSID caps and non-inheritance element.
 	 */
@@ -626,8 +624,7 @@ static int cfg80211_parse_ap_info(struct cfg80211_colocated_ap *entry,
 	if (!cfg80211_parse_bss_param(bss_params, entry))
 		return -EINVAL;
 
-	/*
-	 * no information about the short ssid. Consider the entry valid
+	/* no information about the short ssid. Consider the entry valid
 	 * for now. It would later be dropped in case there are explicit
 	 * SSIDs that need to be matched
 	 */
@@ -699,8 +696,7 @@ static int cfg80211_parse_colocated_ap(const struct cfg80211_bss_ies *ies,
 				continue;
 			}
 
-			/*
-			 * TBTT info must include bss param + BSSID +
+			/* TBTT info must include bss param + BSSID +
 			 * (short SSID or same_ssid bit to be set).
 			 * ignore other options, and move to the
 			 * next AP info
