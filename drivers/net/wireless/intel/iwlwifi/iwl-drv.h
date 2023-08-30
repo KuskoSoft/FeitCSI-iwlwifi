@@ -7,6 +7,7 @@
 #define __iwl_drv_h__
 #include <linux/export.h>
 #include <linux/device.h>
+#include <kunit/visibility.h>
 
 /* for all modules */
 #define DRV_NAME        "iwlwifi"
@@ -102,6 +103,14 @@ int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name);
 #define IWL_EXPORT_SYMBOL(sym)	EXPORT_SYMBOL_NS_GPL(sym, IWLWIFI)
 #else
 #define IWL_EXPORT_SYMBOL(sym)
+#endif
+
+#if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)
+#define EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(sym)	EXPORT_SYMBOL_IF_KUNIT(sym)
+#define VISIBLE_IF_IWLWIFI_KUNIT
+#else
+#define EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(sym)
+#define VISIBLE_IF_IWLWIFI_KUNIT static
 #endif
 
 /* max retry for init flow */

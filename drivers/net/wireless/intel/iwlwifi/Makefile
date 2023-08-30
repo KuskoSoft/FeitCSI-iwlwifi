@@ -46,6 +46,8 @@ obj-$(CPTCFG_IWLMVM)	+= mvm/
 obj-$(CPTCFG_IWLMEI)	+= mei/
 obj-$(CPTCFG_IWLXVT)	+= xvt/
 
+obj-$(CPTCFG_IWLWIFI_KUNIT_TESTS) += tests/
+
 CFLAGS_iwl-devtrace.o := -I$(src)
 
 ifeq ($(CPTCFG_IWLWIFI_SIMULATION),y)
