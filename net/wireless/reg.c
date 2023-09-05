@@ -1596,6 +1596,10 @@ static u32 map_regdom_flags(u32 rd_flags)
 		channel_flags |= IEEE80211_CHAN_NO_EHT;
 	if (rd_flags & NL80211_RRF_DFS_CONCURRENT)
 		channel_flags |= IEEE80211_CHAN_DFS_CONCURRENT;
+	if (rd_flags & NL80211_RRF_NO_UHB_VLP_CLIENT)
+		channel_flags |= IEEE80211_CHAN_NO_UHB_VLP_CLIENT;
+	if (rd_flags & NL80211_RRF_NO_UHB_AFC_CLIENT)
+		channel_flags |= IEEE80211_CHAN_NO_UHB_AFC_CLIENT;
 
 	return channel_flags;
 }
