@@ -826,6 +826,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_PUNCT_BITMAP] =
 		NLA_POLICY_FULL_RANGE(NLA_U32, &nl80211_punct_bitmap_range),
 #else
+	[NL80211_ATTR_PUNCT_BITMAP] =
 		NLA_POLICY_RANGE(NLA_U32, 0, 0xffff),
 #endif
 
