@@ -1779,7 +1779,7 @@ static inline u8 iwl_mvm_get_valid_rx_ant(struct iwl_mvm *mvm)
 		rx_ant &= mvm->nvm_data->valid_tx_ant;
 
 	if (mvm->set_rx_ant)
-		rx_ant &= mvm->set_tx_ant;
+		rx_ant &= mvm->set_rx_ant;
 
 	return rx_ant;
 
