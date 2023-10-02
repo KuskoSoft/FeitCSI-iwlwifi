@@ -580,11 +580,18 @@ static void test_inform_bss_ml_sta(struct kunit *test)
 	ies = rcu_dereference(link_bss->ies);
 	KUNIT_EXPECT_NOT_NULL(test, ies);
 	KUNIT_EXPECT_EQ(test, ies->tsf, tsf + le64_to_cpu(sta_prof.tsf_offset));
-	/* SSID (inherited) + RNR (inherited) + vendor element(s) */
+	/* Resulting length should be:
+	 * SSID (inherited) + RNR (inherited) + vendor element(s) +
+	 * MLE common info + MLE header and control
+	 */
 	if (params->sta_prof_vendor_elems)
-		KUNIT_EXPECT_EQ(test, ies->len, 6 + 2 + sizeof(rnr) + 4 + 160 + 165);
+		KUNIT_EXPECT_EQ(test, ies->len,
+				6 + 2 + sizeof(rnr) + 2 + 160 + 2 + 165 +
+				mle_basic_common_info.var_len + 5);
 	else
-		KUNIT_EXPECT_EQ(test, ies->len, 6 + 2 + sizeof(rnr) + 2 + 155);
+		KUNIT_EXPECT_EQ(test, ies->len,
+				6 + 2 + sizeof(rnr) + 2 + 155 +
+				mle_basic_common_info.var_len + 5);
 	rcu_read_unlock();
 
 	cfg80211_put_bss(wiphy, link_bss);
