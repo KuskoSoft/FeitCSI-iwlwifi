@@ -594,6 +594,7 @@ static void test_inform_bss_ml_sta(struct kunit *test)
 				mle_basic_common_info.var_len + 5);
 	rcu_read_unlock();
 
+	cfg80211_put_bss(wiphy, bss);
 	cfg80211_put_bss(wiphy, link_bss);
 }
 
