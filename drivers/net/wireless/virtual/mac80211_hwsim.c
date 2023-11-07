@@ -665,6 +665,8 @@ struct mac80211_hwsim_data {
 	struct ieee80211_iface_limit if_limits[3];
 	int n_if_limits;
 
+	struct wiphy_iftype_ext_capab ext_capa[1];
+
 	u32 ciphers[ARRAY_SIZE(hwsim_ciphers)];
 
 	struct mac_address addresses[2];
@@ -5247,6 +5249,19 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 			      NL80211_EXT_FEATURE_SCAN_MIN_PREQ_CONTENT);
 
 	hw->wiphy->interface_modes = param->iftypes;
+
+	data->ext_capa[0].iftype = NL80211_IFTYPE_AP;
+	data->ext_capa[0].eml_capabilities = IEEE80211_EML_CAP_EMLSR_SUPP |
+					     IEEE80211_EML_CAP_EMLMR_SUPPORT;
+	data->ext_capa[0].extended_capabilities =
+		hw->wiphy->extended_capabilities;
+	data->ext_capa[0].extended_capabilities_mask =
+		hw->wiphy->extended_capabilities_mask;
+	data->ext_capa[0].extended_capabilities_len =
+		hw->wiphy->extended_capabilities_len;
+
+	hw->wiphy->iftype_ext_capab = data->ext_capa;
+	hw->wiphy->num_iftype_ext_capab = ARRAY_SIZE(data->ext_capa);
 
 	/* ask mac80211 to reserve space for magic */
 	hw->vif_data_size = sizeof(struct hwsim_vif_priv);
