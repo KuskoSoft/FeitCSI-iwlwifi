@@ -5253,6 +5253,9 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 	data->ext_capa[0].iftype = NL80211_IFTYPE_AP;
 	data->ext_capa[0].eml_capabilities = IEEE80211_EML_CAP_EMLSR_SUPP |
 					     IEEE80211_EML_CAP_EMLMR_SUPPORT;
+	data->ext_capa[0].mld_capa_and_ops =
+		u16_encode_bits(IEEE80211_MLD_MAX_NUM_LINKS - 1,
+				IEEE80211_MLD_CAP_OP_MAX_SIMUL_LINKS);
 	data->ext_capa[0].extended_capabilities =
 		hw->wiphy->extended_capabilities;
 	data->ext_capa[0].extended_capabilities_mask =
