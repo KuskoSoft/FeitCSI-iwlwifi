@@ -139,3 +139,7 @@ config BPAUTO_BUILD_CRYPTO_LIB_ARC4
 	depends on !(CRYPTO_LIB_ARC4=y || CRYPTO_LIB_ARC4=m)
 	#h-file crypto/arc4.h
 	#c-file lib/crypto/arc4.c
+
+# Only in kernel >= 5.14; the dependency is always met, so just set it to y
+config PTP_1588_CLOCK_OPTIONAL
+	def_bool y
