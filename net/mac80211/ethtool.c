@@ -23,11 +23,16 @@ static int ieee80211_set_ringparam(struct net_device *dev,
 				   )
 {
 	struct ieee80211_local *local = wiphy_priv(dev->ieee80211_ptr->wiphy);
+	int ret;
 
 	if (rp->rx_mini_pending != 0 || rp->rx_jumbo_pending != 0)
 		return -EINVAL;
 
-	return drv_set_ringparam(local, rp->tx_pending, rp->rx_pending);
+	wiphy_lock(local->hw.wiphy);
+	ret = drv_set_ringparam(local, rp->tx_pending, rp->rx_pending);
+	wiphy_unlock(local->hw.wiphy);
+
+	return ret;
 }
 
 static void ieee80211_get_ringparam(struct net_device *dev,
@@ -43,8 +48,10 @@ static void ieee80211_get_ringparam(struct net_device *dev,
 
 	memset(rp, 0, sizeof(*rp));
 
+	wiphy_lock(local->hw.wiphy);
 	drv_get_ringparam(local, &rp->tx_pending, &rp->tx_max_pending,
 			  &rp->rx_pending, &rp->rx_max_pending);
+	wiphy_unlock(local->hw.wiphy);
 }
 
 static const char ieee80211_gstrings_sta_stats[][ETH_GSTRING_LEN] = {

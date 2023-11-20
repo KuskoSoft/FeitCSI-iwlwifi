@@ -467,10 +467,17 @@ nl80211_sta_wme_policy[NL80211_STA_WME_MAX + 1] = {
 };
 
 #if LINUX_VERSION_IS_GEQ(5,10,0)
+#if LINUX_VERSION_IS_GEQ(6,7,0)
+static const struct netlink_range_validation nl80211_punct_bitmap_range = {
+	.min = 0,
+	.max = 0xffff,
+};
+#else
 static struct netlink_range_validation nl80211_punct_bitmap_range = {
 	.min = 0,
 	.max = 0xffff,
 };
+#endif
 #endif
 
 static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
@@ -1132,6 +1139,10 @@ static int nl80211_msg_put_channel(struct sk_buff *msg, struct wiphy *wiphy,
 		goto nla_put_failure;
 
 	if (nla_put_u32(msg, NL80211_FREQUENCY_ATTR_OFFSET, chan->freq_offset))
+		goto nla_put_failure;
+
+	if ((chan->flags & IEEE80211_CHAN_PSD) &&
+	    nla_put_s8(msg, NL80211_FREQUENCY_ATTR_PSD, chan->psd))
 		goto nla_put_failure;
 
 	if ((chan->flags & IEEE80211_CHAN_DISABLED) &&
@@ -5665,11 +5676,10 @@ static int nl80211_parse_he_obss_pd(struct nlattr *attrs,
 
 static int nl80211_parse_fils_discovery(struct cfg80211_registered_device *rdev,
 					struct nlattr *attrs,
-					struct cfg80211_ap_settings *params)
+					struct cfg80211_fils_discovery *fd)
 {
 	struct nlattr *tb[NL80211_FILS_DISCOVERY_ATTR_MAX + 1];
 	int ret;
-	struct cfg80211_fils_discovery *fd = &params->fils_discovery;
 
 	if (!wiphy_ext_feature_isset(&rdev->wiphy,
 				     NL80211_EXT_FEATURE_FILS_DISCOVERY))
@@ -5680,6 +5690,13 @@ static int nl80211_parse_fils_discovery(struct cfg80211_registered_device *rdev,
 	if (ret)
 		return ret;
 
+	if (!tb[NL80211_FILS_DISCOVERY_ATTR_INT_MIN] &&
+	    !tb[NL80211_FILS_DISCOVERY_ATTR_INT_MAX] &&
+	    !tb[NL80211_FILS_DISCOVERY_ATTR_TMPL]) {
+		fd->update = true;
+		return 0;
+	}
+
 	if (!tb[NL80211_FILS_DISCOVERY_ATTR_INT_MIN] ||
 	    !tb[NL80211_FILS_DISCOVERY_ATTR_INT_MAX] ||
 	    !tb[NL80211_FILS_DISCOVERY_ATTR_TMPL])
@@ -5689,19 +5706,17 @@ static int nl80211_parse_fils_discovery(struct cfg80211_registered_device *rdev,
 	fd->tmpl = nla_data(tb[NL80211_FILS_DISCOVERY_ATTR_TMPL]);
 	fd->min_interval = nla_get_u32(tb[NL80211_FILS_DISCOVERY_ATTR_INT_MIN]);
 	fd->max_interval = nla_get_u32(tb[NL80211_FILS_DISCOVERY_ATTR_INT_MAX]);
-
+	fd->update = true;
 	return 0;
 }
 
 static int
 nl80211_parse_unsol_bcast_probe_resp(struct cfg80211_registered_device *rdev,
 				     struct nlattr *attrs,
-				     struct cfg80211_ap_settings *params)
+				     struct cfg80211_unsol_bcast_probe_resp *presp)
 {
 	struct nlattr *tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_MAX + 1];
 	int ret;
-	struct cfg80211_unsol_bcast_probe_resp *presp =
-					&params->unsol_bcast_probe_resp;
 
 	if (!wiphy_ext_feature_isset(&rdev->wiphy,
 				     NL80211_EXT_FEATURE_UNSOL_BCAST_PROBE_RESP))
@@ -5712,6 +5727,12 @@ nl80211_parse_unsol_bcast_probe_resp(struct cfg80211_registered_device *rdev,
 	if (ret)
 		return ret;
 
+	if (!tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_INT] &&
+	    !tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_TMPL]) {
+		presp->update = true;
+		return 0;
+	}
+
 	if (!tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_INT] ||
 	    !tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_TMPL])
 		return -EINVAL;
@@ -5719,6 +5740,7 @@ nl80211_parse_unsol_bcast_probe_resp(struct cfg80211_registered_device *rdev,
 	presp->tmpl = nla_data(tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_TMPL]);
 	presp->tmpl_len = nla_len(tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_TMPL]);
 	presp->interval = nla_get_u32(tb[NL80211_UNSOL_BCAST_PROBE_RESP_ATTR_INT]);
+	presp->update = true;
 	return 0;
 }
 
@@ -6152,7 +6174,7 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 	if (info->attrs[NL80211_ATTR_FILS_DISCOVERY]) {
 		err = nl80211_parse_fils_discovery(rdev,
 						   info->attrs[NL80211_ATTR_FILS_DISCOVERY],
-						   params);
+						   &params->fils_discovery);
 		if (err)
 			goto out;
 	}
@@ -6160,7 +6182,7 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 	if (info->attrs[NL80211_ATTR_UNSOL_BCAST_PROBE_RESP]) {
 		err = nl80211_parse_unsol_bcast_probe_resp(
 			rdev, info->attrs[NL80211_ATTR_UNSOL_BCAST_PROBE_RESP],
-			params);
+			&params->unsol_bcast_probe_resp);
 		if (err)
 			goto out;
 	}
@@ -6236,7 +6258,8 @@ static int nl80211_set_beacon(struct sk_buff *skb, struct genl_info *info)
 	unsigned int link_id = nl80211_link_id(info->attrs);
 	struct net_device *dev = info->user_ptr[1];
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
-	struct cfg80211_beacon_data params;
+	struct cfg80211_ap_update *params;
+	struct nlattr *attr;
 	int err;
 
 	if (dev->ieee80211_ptr->iftype != NL80211_IFTYPE_AP &&
@@ -6249,16 +6272,37 @@ static int nl80211_set_beacon(struct sk_buff *skb, struct genl_info *info)
 	if (!wdev->links[link_id].ap.beacon_interval)
 		return -EINVAL;
 
-	err = nl80211_parse_beacon(rdev, info->attrs, &params,
+	params = kzalloc(sizeof(*params), GFP_KERNEL);
+	if (!params)
+		return -ENOMEM;
+
+	err = nl80211_parse_beacon(rdev, info->attrs, &params->beacon,
 				   genl_info_extack(info));
 	if (err)
 		goto out;
 
-	err = rdev_change_beacon(rdev, dev, &params);
+	attr = info->attrs[NL80211_ATTR_FILS_DISCOVERY];
+	if (attr) {
+		err = nl80211_parse_fils_discovery(rdev, attr,
+						   &params->fils_discovery);
+		if (err)
+			goto out;
+	}
+
+	attr = info->attrs[NL80211_ATTR_UNSOL_BCAST_PROBE_RESP];
+	if (attr) {
+		err = nl80211_parse_unsol_bcast_probe_resp(rdev, attr,
+							   &params->unsol_bcast_probe_resp);
+		if (err)
+			goto out;
+	}
+
+	err = rdev_change_beacon(rdev, dev, params);
 
 out:
-	kfree(params.mbssid_ies);
-	kfree(params.rnr_ies);
+	kfree(params->beacon.mbssid_ies);
+	kfree(params->beacon.rnr_ies);
+	kfree(params);
 	return err;
 }
 
@@ -8550,6 +8594,11 @@ static int nl80211_put_regdom(const struct ieee80211_regdomain *regdom,
 				reg_rule->dfs_cac_ms))
 			goto nla_put_failure;
 
+		if ((reg_rule->flags & NL80211_RRF_PSD) &&
+		    nla_put_s8(msg, NL80211_ATTR_POWER_RULE_PSD,
+			       reg_rule->psd))
+			goto nla_put_failure;
+
 		nla_nest_end(msg, nl_reg_rule);
 	}
 
@@ -10366,7 +10415,6 @@ static int nl80211_send_bss(struct sk_buff *msg, struct netlink_callback *cb,
 	    nla_put_u32(msg, NL80211_BSS_FREQUENCY, res->channel->center_freq) ||
 	    nla_put_u32(msg, NL80211_BSS_FREQUENCY_OFFSET,
 			res->channel->freq_offset) ||
-	    nla_put_u32(msg, NL80211_BSS_CHAN_WIDTH, res->scan_width) ||
 	    nla_put_u32(msg, NL80211_BSS_SEEN_MS_AGO,
 			jiffies_to_msecs(jiffies - intbss->ts)))
 		goto nla_put_failure;
@@ -17923,7 +17971,7 @@ void nl80211_send_rx_auth(struct cfg80211_registered_device *rdev,
 
 void nl80211_send_rx_assoc(struct cfg80211_registered_device *rdev,
 			   struct net_device *netdev,
-			   struct cfg80211_rx_assoc_resp *data)
+			   struct cfg80211_rx_assoc_resp_data *data)
 {
 	nl80211_send_mlme_event(rdev, netdev, data->buf, data->len,
 				NL80211_CMD_ASSOCIATE, GFP_KERNEL,
@@ -18248,7 +18296,7 @@ void nl80211_send_roamed(struct cfg80211_registered_device *rdev,
 }
 
 void nl80211_send_port_authorized(struct cfg80211_registered_device *rdev,
-				  struct net_device *netdev, const u8 *bssid,
+				  struct net_device *netdev, const u8 *peer_addr,
 				  const u8 *td_bitmap, u8 td_bitmap_len)
 {
 	struct sk_buff *msg;
@@ -18266,7 +18314,7 @@ void nl80211_send_port_authorized(struct cfg80211_registered_device *rdev,
 
 	if (nla_put_u32(msg, NL80211_ATTR_WIPHY, rdev->wiphy_idx) ||
 	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, netdev->ifindex) ||
-	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, bssid))
+	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, peer_addr))
 		goto nla_put_failure;
 
 	if ((td_bitmap_len > 0) && td_bitmap)

@@ -271,7 +271,7 @@ struct cfg80211_event {
 			struct ieee80211_channel *channel;
 		} ij;
 		struct {
-			u8 bssid[ETH_ALEN];
+			u8 peer_addr[ETH_ALEN];
 			const u8 *td_bitmap;
 			u8 td_bitmap_len;
 		} pa;
@@ -406,7 +406,7 @@ int cfg80211_disconnect(struct cfg80211_registered_device *rdev,
 			bool wextev);
 void __cfg80211_roamed(struct wireless_dev *wdev,
 		       struct cfg80211_roam_info *info);
-void __cfg80211_port_authorized(struct wireless_dev *wdev, const u8 *bssid,
+void __cfg80211_port_authorized(struct wireless_dev *wdev, const u8 *peer_addr,
 				const u8 *td_bitmap, u8 td_bitmap_len);
 int cfg80211_mgd_wext_connect(struct cfg80211_registered_device *rdev,
 			      struct wireless_dev *wdev);
@@ -462,28 +462,11 @@ extern struct work_struct cfg80211_disconnect_work;
 #define NL80211_BSS_USE_FOR_ALL	(NL80211_BSS_USE_FOR_NORMAL | \
 				 NL80211_BSS_USE_FOR_MLD_LINK)
 
-/**
- * cfg80211_chandef_dfs_usable - checks if chandef is DFS usable
- * @wiphy: the wiphy to validate against
- * @chandef: the channel definition to check
- *
- * Checks if chandef is usable and we can/need start CAC on such channel.
- *
- * Return: true if all channels available and at least
- *	   one channel requires CAC (NL80211_DFS_USABLE)
- */
-bool cfg80211_chandef_dfs_usable(struct wiphy *wiphy,
-				 const struct cfg80211_chan_def *chandef);
-
 void cfg80211_set_dfs_state(struct wiphy *wiphy,
 			    const struct cfg80211_chan_def *chandef,
 			    enum nl80211_dfs_state dfs_state);
 
 void cfg80211_dfs_channels_update_work(struct work_struct *work);
-
-unsigned int
-cfg80211_chandef_dfs_cac_time(struct wiphy *wiphy,
-			      const struct cfg80211_chan_def *chandef);
 
 void cfg80211_sched_dfs_chan_update(struct cfg80211_registered_device *rdev);
 

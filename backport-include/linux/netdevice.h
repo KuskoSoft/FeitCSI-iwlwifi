@@ -282,4 +282,27 @@ static inline int LINUX_BACKPORT(netif_rx)(struct sk_buff *skb)
 #define netif_rx LINUX_BACKPORT(netif_rx)
 #endif /* < 5.18.0 */
 
+#if LINUX_VERSION_IS_LESS(6,7,0)
+/**
+ *	napi_schedule - schedule NAPI poll
+ *	@n: NAPI context
+ *
+ * Schedule NAPI poll routine to be called if it is not already
+ * running.
+ * Return true if we schedule a NAPI or false if not.
+ * Refer to napi_schedule_prep() for additional reason on why
+ * a NAPI might not be scheduled.
+ */
+static inline bool LINUX_BACKPORT(napi_schedule)(struct napi_struct *n)
+{
+	if (napi_schedule_prep(n)) {
+		__napi_schedule(n);
+		return true;
+	}
+
+	return false;
+}
+#define napi_schedule LINUX_BACKPORT(napi_schedule)
+#endif /* < 6.7.0 */
+
 #endif /* __BACKPORT_NETDEVICE_H */
