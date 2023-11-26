@@ -19534,7 +19534,7 @@ void cfg80211_ch_switch_notify(struct net_device *dev,
 		break;
 	}
 
-	cfg80211_schedule_channels_check(dev);
+	cfg80211_schedule_channels_check(wdev);
 	cfg80211_sched_dfs_chan_update(rdev);
 
 	nl80211_ch_switch_notify(rdev, dev, link_id, chandef, GFP_KERNEL,
@@ -20292,9 +20292,8 @@ nla_put_failure:
 }
 EXPORT_SYMBOL(cfg80211_update_owe_info_event);
 
-void cfg80211_schedule_channels_check(struct net_device *netdev)
+void cfg80211_schedule_channels_check(struct wireless_dev *wdev)
 {
-	struct wireless_dev *wdev = netdev->ieee80211_ptr;
 	struct wiphy *wiphy = wdev->wiphy;
 
 	/* Schedule channels check if NO_IR or DFS relaxations are supported */

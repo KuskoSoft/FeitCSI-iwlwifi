@@ -1396,7 +1396,7 @@ void __cfg80211_disconnected(struct net_device *dev, const u8 *ie,
 
 	schedule_work(&cfg80211_disconnect_work);
 
-	cfg80211_schedule_channels_check(dev);
+	cfg80211_schedule_channels_check(wdev);
 }
 
 void cfg80211_disconnected(struct net_device *dev, u16 reason,
