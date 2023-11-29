@@ -665,8 +665,6 @@ struct mac80211_hwsim_data {
 	struct ieee80211_iface_limit if_limits[3];
 	int n_if_limits;
 
-	struct wiphy_iftype_ext_capab ext_capa[1];
-
 	u32 ciphers[ARRAY_SIZE(hwsim_ciphers)];
 
 	struct mac_address addresses[2];
@@ -5003,9 +5001,11 @@ static const u8 iftypes_ext_capa_ap[] = {
 	 [9] = WLAN_EXT_CAPA10_TWT_RESPONDER_SUPPORT,
 };
 
-#define MAC80211_HWSIM_MLD_CAPA_OPS FIELD_PREP_CONST( \
-	IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP, \
-	IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP_SAME)
+#define MAC80211_HWSIM_MLD_CAPA_OPS				\
+	FIELD_PREP_CONST(IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP, \
+			 IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP_SAME) | \
+	FIELD_PREP_CONST(IEEE80211_MLD_CAP_OP_MAX_SIMUL_LINKS, \
+			 IEEE80211_MLD_MAX_NUM_LINKS - 1)
 
 static const struct wiphy_iftype_ext_capab mac80211_hwsim_iftypes_ext_capa[] = {
 	{
@@ -5013,6 +5013,8 @@ static const struct wiphy_iftype_ext_capab mac80211_hwsim_iftypes_ext_capa[] = {
 		.extended_capabilities = iftypes_ext_capa_ap,
 		.extended_capabilities_mask = iftypes_ext_capa_ap,
 		.extended_capabilities_len = sizeof(iftypes_ext_capa_ap),
+		.eml_capabilities = IEEE80211_EML_CAP_EMLSR_SUPP |
+				    IEEE80211_EML_CAP_EMLMR_SUPPORT,
 		.mld_capa_and_ops = MAC80211_HWSIM_MLD_CAPA_OPS,
 	},
 };
@@ -5249,22 +5251,6 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 			      NL80211_EXT_FEATURE_SCAN_MIN_PREQ_CONTENT);
 
 	hw->wiphy->interface_modes = param->iftypes;
-
-	data->ext_capa[0].iftype = NL80211_IFTYPE_AP;
-	data->ext_capa[0].eml_capabilities = IEEE80211_EML_CAP_EMLSR_SUPP |
-					     IEEE80211_EML_CAP_EMLMR_SUPPORT;
-	data->ext_capa[0].mld_capa_and_ops =
-		u16_encode_bits(IEEE80211_MLD_MAX_NUM_LINKS - 1,
-				IEEE80211_MLD_CAP_OP_MAX_SIMUL_LINKS);
-	data->ext_capa[0].extended_capabilities =
-		hw->wiphy->extended_capabilities;
-	data->ext_capa[0].extended_capabilities_mask =
-		hw->wiphy->extended_capabilities_mask;
-	data->ext_capa[0].extended_capabilities_len =
-		hw->wiphy->extended_capabilities_len;
-
-	hw->wiphy->iftype_ext_capab = data->ext_capa;
-	hw->wiphy->num_iftype_ext_capab = ARRAY_SIZE(data->ext_capa);
 
 	/* ask mac80211 to reserve space for magic */
 	hw->vif_data_size = sizeof(struct hwsim_vif_priv);
