@@ -866,7 +866,7 @@ free:
 
 static int ieee80211_config_bw(struct ieee80211_link_data *link,
 			       struct ieee802_11_elems *elems,
-			       u64 *changed)
+			       bool update, u64 *changed)
 {
 	struct ieee80211_channel *channel = link->conf->chanreq.oper.chan;
 	struct ieee80211_sub_if_data *sdata = link->sdata;
@@ -939,6 +939,11 @@ static int ieee80211_config_bw(struct ieee80211_link_data *link,
 			   "AP %pM changed caps/bw in a way we can't support - disconnect\n",
 			   link->u.mgd.bssid);
 		return -EINVAL;
+	}
+
+	if (!update) {
+		link->conf->chanreq = chanreq;
+		return 0;
 	}
 
 	/*
@@ -4511,6 +4516,8 @@ static bool ieee80211_assoc_config_link(struct ieee80211_link_data *link,
 	/*
 	 * We previously checked these in the beacon/probe response, so
 	 * they should be present here. This is just a safety net.
+	 * Note that the ieee80211_config_bw() below would also check
+	 * for this (and more), but this has better error reporting.
 	 */
 	if (!is_6ghz && link->u.mgd.conn.mode >= IEEE80211_CONN_MODE_HT &&
 	    (!elems->wmm_param || !elems->ht_cap_elem || !elems->ht_operation)) {
@@ -4524,6 +4531,14 @@ static bool ieee80211_assoc_config_link(struct ieee80211_link_data *link,
 	    (!elems->vht_cap_elem || !elems->vht_operation)) {
 		sdata_info(sdata,
 			   "VHT AP is missing VHT capability/operation\n");
+		ret = false;
+		goto out;
+	}
+
+	/* check/update if AP changed anything in assoc response vs. scan */
+	if (ieee80211_config_bw(link, elems,
+				link_id == assoc_data->assoc_link_id,
+				changed)) {
 		ret = false;
 		goto out;
 	}
@@ -6577,7 +6592,7 @@ static void ieee80211_rx_mgmt_beacon(struct ieee80211_link_data *link,
 
 	changed |= ieee80211_recalc_twt_req(sdata, sband, link, link_sta, elems);
 
-	if (ieee80211_config_bw(link, elems, &changed)) {
+	if (ieee80211_config_bw(link, elems, true, &changed)) {
 		ieee80211_set_disassoc(sdata, IEEE80211_STYPE_DEAUTH,
 				       WLAN_REASON_DEAUTH_LEAVING,
 				       true, deauth_buf);
