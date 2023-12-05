@@ -498,6 +498,7 @@
 #define  PCI_EXP_DEVCAP_PWR_VAL	0x03fc0000 /* Slot Power Limit Value */
 #define  PCI_EXP_DEVCAP_PWR_SCL	0x0c000000 /* Slot Power Limit Scale */
 #define  PCI_EXP_DEVCAP_FLR     0x10000000 /* Function Level Reset */
+#define  PCI_EXP_DEVCAP_TEE_IO	0x40000000 /* TEE IO */
 #define PCI_EXP_DEVCTL		0x08	/* Device Control */
 #define  PCI_EXP_DEVCTL_CERE	0x0001	/* Correctable Error Reporting En. */
 #define  PCI_EXP_DEVCTL_NFERE	0x0002	/* Non-Fatal Error Reporting Enable */
@@ -676,6 +677,7 @@
 #define PCI_EXP_DEVSTA2		0x2a	/* Device Status 2 */
 #define PCI_CAP_EXP_RC_ENDPOINT_SIZEOF_V2 0x2c	/* end of v2 EPs w/o link */
 #define PCI_EXP_LNKCAP2		0x2c	/* Link Capabilities 2 */
+#define  PCI_EXP_LNKCAP2_SLS		0x000000fe /* Supported Link Speeds Vector */
 #define  PCI_EXP_LNKCAP2_SLS_2_5GB	0x00000002 /* Supported Speed 2.5GT/s */
 #define  PCI_EXP_LNKCAP2_SLS_5_0GB	0x00000004 /* Supported Speed 5GT/s */
 #define  PCI_EXP_LNKCAP2_SLS_8_0GB	0x00000008 /* Supported Speed 8GT/s */
@@ -742,7 +744,8 @@
 #define PCI_EXT_CAP_ID_PL_16GT	0x26	/* Physical Layer 16.0 GT/s */
 #define PCI_EXT_CAP_ID_PL_32GT  0x2A    /* Physical Layer 32.0 GT/s */
 #define PCI_EXT_CAP_ID_DOE	0x2E	/* Data Object Exchange */
-#define PCI_EXT_CAP_ID_MAX	PCI_EXT_CAP_ID_DOE
+#define PCI_EXT_CAP_ID_IDE	0x30	/* Integrity and Data Encryption */
+#define PCI_EXT_CAP_ID_MAX	PCI_EXT_CAP_ID_IDE
 
 #define PCI_EXT_CAP_DSN_SIZEOF	12
 #define PCI_EXT_CAP_MCAST_ENDPOINT_SIZEOF 40
@@ -1147,5 +1150,58 @@
 #define PCI_DOE_DATA_OBJECT_DISC_RSP_3_VID		0x0000ffff
 #define PCI_DOE_DATA_OBJECT_DISC_RSP_3_PROTOCOL		0x00ff0000
 #define PCI_DOE_DATA_OBJECT_DISC_RSP_3_NEXT_INDEX	0xff000000
+
+/* Integrity and Data Encryption */
+#define PCI_IDE_CAP		0x04
+#define  PCI_IDE_CAP_LNK	0x00000001	/* Link IDE Stream Supported */
+#define  PCI_IDE_CAP_SEL	0x00000002	/* Selective IDE Stream Supported */
+#define  PCI_IDE_CAP_KM		0x00000040	/* KM in responder role */
+#define  PCI_IDE_CAP_CONF_REQ	0x00000080	/* Selective IDE Configuration Requests Supported */
+#define  PCI_IDE_CAP_LNK_NUM	0x0000E000	/* Number of TCs Supported for Link IDE */
+#define  PCI_IDE_CAP_SEL_NUM	0x00FF0000	/* Number of Selective IDE Streams Supported */
+#define PCI_IDE_CTRL		0x08
+/* IDE Link IDE Register Block */
+#define PCI_IDE_LNK_CTRL	0x00
+#define  PCI_IDE_LNK_CTRL_ENABLE	0x00000001	/* Link IDE Stream Enable */
+#define  PCI_IDE_LNK_CTRL_NPR_AGG	0x0000000C	/* Tx Aggregation Mode NPR */
+#define  PCI_IDE_LNK_CTRL_PR_AGG	0x00000030	/* Tx Aggregation Mode PR */
+#define  PCI_IDE_LNK_CTRL_CPL_AGG	0x000000C0	/* Tx Aggregation Mode CPL */
+#define  PCI_IDE_LNK_CTRL_PCRC		0x00000100	/* PCRC Enable */
+#define  PCI_IDE_LNK_CTRL_ALGO		0x0007C000	/* Selected Algorithm */
+#define  PCI_IDE_LNK_CTRL_TC		0x00380000	/* TC */
+#define  PCI_IDE_LNK_CTRL_STREAM_ID	0xFF000000	/* Stream ID */
+#define PCI_IDE_LNK_STATUS	0x04
+/* IDE Selective IDE Register Block */
+#define PCI_IDE_SEL_CAP		0x00
+#define  PCI_IDE_SEL_CAP_NUM_ASSOC_BLK	0x0000000F	/* Address Association Register Blocks */
+#define PCI_IDE_SEL_CTRL	0x04
+#define  PCI_IDE_SEL_CTRL_ENABLE	0x00000001	/* Selective IDE Stream Enable */
+#define  PCI_IDE_SEL_CTRL_NPR_AGG	0x0000000C	/* Tx Aggregation Mode NPR */
+#define  PCI_IDE_SEL_CTRL_PR_AGG	0x00000030	/* Tx Aggregation Mode PR */
+#define  PCI_IDE_SEL_CTRL_CPL_AGG	0x000000C0	/* Tx Aggregation Mode CPL */
+#define  PCI_IDE_SEL_CTRL_PCRC		0x00000100	/* PCRC Enable */
+#define  PCI_IDE_SEL_CTRL_CONF_REQ	0x00000200	/* Configuration Requests Enable */
+#define  PCI_IDE_SEL_CTRL_PHE		0x00003C00	/* Partial Header Encryption Mode */
+#define  PCI_IDE_SEL_CTRL_ALGO		0x0007C000	/* Selected Algorithm */
+#define  PCI_IDE_SEL_CTRL_TC		0x00380000	/* TC */
+#define  PCI_IDE_SEL_CTRL_DEFAULT	0x00400000	/* Default Stream */
+#define  PCI_IDE_SEL_CTRL_STREAM_ID	0xFF000000	/* Stream ID */
+#define PCI_IDE_SEL_STATUS	0x08
+#define  PCI_IDE_SEL_CHECK_FAIL_MSG	0x80000000	/* Received Integrity Check Fail Message */
+#define  PCI_IDE_SEL_STREAM_STATE	0x0000000F	/* Selective IDE Stream State */
+#define PCI_IDE_RID_ASSOC1	0x0c
+#define  PCI_IDE_RID_ASSOC1_LIMIT	0x00FFFF00	/* RID Limit */
+#define PCI_IDE_RID_ASSOC2	0x10
+#define  PCI_IDE_RID_ASSOC2_VALID	0x00000001	/* Valid */
+#define  PCI_IDE_RID_ASSOC2_BASE	0x00FFFF00	/* RID Base */
+/* IDE Address Association Register Block */
+#define PCI_IDE_ADDR_ASSOC1	0x00
+#define  PCI_IDE_ADDR_ASSOC1_VALID		0x00000001	/* Valid */
+#define  PCI_IDE_ADDR_ASSOC1_MEM_BASE_LOWER	0x000FFF00	/* Memory Base Lower */
+#define  PCI_IDE_ADDR_ASSOC1_MEM_LIMIT_LOWER	0xFFF00000	/* Memory Limit Lower */
+#define PCI_IDE_ADDR_ASSOC2	0x04
+#define  PCI_IDE_ADDR_ASSOC2_MEM_LIMIT_UPPER	0xFFFFFFFF	/* Memory Limit Upper */
+#define PCI_IDE_ADDR_ASSOC3	0x08
+#define  PCI_IDE_ADDR_ASSOC3_MEM_BASE_UPPER	0xFFFFFFFF	/* Memory Base Upper */
 
 #endif /* LINUX_PCI_REGS_H */
