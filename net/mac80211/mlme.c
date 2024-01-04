@@ -5035,6 +5035,38 @@ out:
 			 20 * (1 << conn->bw_limit));
 }
 
+static void
+ieee80211_determine_our_sta_mode_auth(struct ieee80211_sub_if_data *sdata,
+				      struct ieee80211_supported_band *sband,
+				      struct cfg80211_auth_request *req,
+				      bool wmm_used,
+				      struct ieee80211_conn_settings *conn)
+{
+	ieee80211_determine_our_sta_mode(sdata, sband, NULL, wmm_used,
+					 req->link_id > 0 ? req->link_id : 0,
+					 conn);
+}
+
+static void
+ieee80211_determine_our_sta_mode_assoc(struct ieee80211_sub_if_data *sdata,
+				       struct ieee80211_supported_band *sband,
+				       struct cfg80211_assoc_request *req,
+				       bool wmm_used, int link_id,
+				       struct ieee80211_conn_settings *conn)
+{
+	struct ieee80211_conn_settings tmp;
+
+	WARN_ON(!req);
+
+	ieee80211_determine_our_sta_mode(sdata, sband, req, wmm_used, link_id,
+					 &tmp);
+
+	conn->mode = min_t(enum ieee80211_conn_mode,
+			   conn->mode, tmp.mode);
+	conn->bw_limit = min_t(enum ieee80211_conn_bw_limit,
+			       conn->bw_limit, tmp.bw_limit);
+}
+
 static int ieee80211_prep_channel(struct ieee80211_sub_if_data *sdata,
 				  struct ieee80211_link_data *link,
 				  int link_id,
@@ -7899,9 +7931,8 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 
 	sband = local->hw.wiphy->bands[req->bss->channel->band];
 
-	ieee80211_determine_our_sta_mode(sdata, sband, NULL, wmm_used,
-					 req->link_id > 0 ? req->link_id : 0,
-					 &conn);
+	ieee80211_determine_our_sta_mode_auth(sdata, sband, req, wmm_used,
+					      &conn);
 
 	err = ieee80211_prep_connection(sdata, req->bss, req->link_id,
 					req->ap_mld_addr, cont_auth,
@@ -8075,6 +8106,7 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_link_data *link;
 	struct cfg80211_bss *cbss;
 	bool override, uapsd_supported;
+	bool match_auth;
 	int i, err;
 	size_t size = sizeof(*assoc_data) + req->ie_len;
 
@@ -8150,6 +8182,12 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 	memcpy(&ifmgd->s1g_capa_mask, &req->s1g_capa_mask,
 	       sizeof(ifmgd->s1g_capa_mask));
 
+	/* keep some setup (AP STA, channel, ...) if matching */
+	if (ifmgd->auth_data)
+		match_auth = ether_addr_equal(ifmgd->auth_data->ap_addr,
+					      assoc_data->ap_addr) &&
+			     ifmgd->auth_data->link_id == req->link_id;
+
 	if (req->ap_mld_addr) {
 		uapsd_supported = true;
 
@@ -8189,8 +8227,14 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 				eth_random_addr(assoc_data->link[i].addr);
 			sband = local->hw.wiphy->bands[link_cbss->channel->band];
 
-			ieee80211_determine_our_sta_mode(sdata, sband, req, true, i,
-							 &assoc_data->link[i].conn);
+			if (match_auth && i == assoc_link_id)
+				assoc_data->link[i].conn = link->u.mgd.conn;
+			else
+				assoc_data->link[i].conn =
+					ieee80211_conn_settings_unlimited;
+			ieee80211_determine_our_sta_mode_assoc(sdata, sband,
+							       req, true, i,
+							       &assoc_data->link[i].conn);
 			assoc_data->link[i].bss = link_cbss;
 			assoc_data->link[i].disabled = req->links[i].disabled;
 
@@ -8227,9 +8271,14 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 
 		assoc_data->link[0].bss = cbss;
 
-		ieee80211_determine_our_sta_mode(sdata, sband, req,
-						 assoc_data->wmm, 0,
-						 &assoc_data->link[0].conn);
+		if (match_auth)
+			assoc_data->link[0].conn = sdata->deflink.u.mgd.conn;
+		else
+			assoc_data->link[0].conn =
+				ieee80211_conn_settings_unlimited;
+		ieee80211_determine_our_sta_mode_assoc(sdata, sband, req,
+						       assoc_data->wmm, 0,
+						       &assoc_data->link[0].conn);
 
 		uapsd_supported = bss->uapsd_supported;
 	}
@@ -8246,18 +8295,9 @@ int ieee80211_mgd_assoc(struct ieee80211_sub_if_data *sdata,
 		goto err_free;
 	}
 
-	if (ifmgd->auth_data) {
-		bool match;
-
-		/* keep sta info, bssid if matching */
-		match = ether_addr_equal(ifmgd->auth_data->ap_addr,
-					 assoc_data->ap_addr) &&
-			ifmgd->auth_data->link_id == req->link_id;
-
-		/* Cleanup is delayed if auth_data matches */
-		if (!match)
-			ieee80211_destroy_auth_data(sdata, false);
-	}
+	/* Cleanup is delayed if auth_data matches */
+	if (ifmgd->auth_data && !match_auth)
+		ieee80211_destroy_auth_data(sdata, false);
 
 	if (req->ie && req->ie_len) {
 		memcpy(assoc_data->ie, req->ie, req->ie_len);
