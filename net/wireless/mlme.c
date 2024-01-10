@@ -4,7 +4,7 @@
  *
  * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2015		Intel Deutschland GmbH
- * Copyright (C) 2019-2020, 2022-2023 Intel Corporation
+ * Copyright (C) 2019-2020, 2022-2024 Intel Corporation
  */
 
 #include <linux/kernel.h>
@@ -452,6 +452,9 @@ int cfg80211_mlme_assoc(struct cfg80211_registered_device *rdev,
 	lockdep_assert_wiphy(wdev->wiphy);
 
 	err = cfg80211_mlme_check_mlo(dev, req, extack);
+	if (err)
+		return err;
+
 	if (wdev->connected &&
 	    (!req->prev_bssid ||
 	     !ether_addr_equal(wdev->u.client.connected_addr, req->prev_bssid)))
