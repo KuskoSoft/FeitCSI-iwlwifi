@@ -4,7 +4,7 @@
  *
  * Copyright 2006-2010	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2015-2016	Intel Deutschland GmbH
- * Copyright (C) 2018-2023 Intel Corporation
+ * Copyright (C) 2018-2024 Intel Corporation
  */
 #ifndef __NET_WIRELESS_CORE_H
 #define __NET_WIRELESS_CORE_H
@@ -493,6 +493,9 @@ bool cfg80211_is_sub_chan(struct cfg80211_chan_def *chandef,
 bool cfg80211_wdev_on_sub_chan(struct wireless_dev *wdev,
 			       struct ieee80211_channel *chan,
 			       bool primary_only);
+bool _cfg80211_chandef_usable(struct wiphy *wiphy,
+			      const struct cfg80211_chan_def *chandef,
+			      u32 prohibited_flags, bool monitor);
 
 static inline unsigned int elapsed_jiffies_msecs(unsigned long start)
 {
