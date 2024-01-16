@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2005-2014, 2018-2023 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -370,9 +370,9 @@ static u32 iwl_get_channel_flags(u8 ch_num, int ch_idx, enum nl80211_band band,
 
 	/* Set the AP type for the UHB case. */
 	if (!(nvm_flags & NVM_CHANNEL_VLP))
-		flags |= IEEE80211_CHAN_NO_UHB_VLP_CLIENT;
+		flags |= IEEE80211_CHAN_NO_6GHZ_VLP_CLIENT;
 	if (!(nvm_flags & NVM_CHANNEL_AFC))
-		flags |= IEEE80211_CHAN_NO_UHB_AFC_CLIENT;
+		flags |= IEEE80211_CHAN_NO_6GHZ_AFC_CLIENT;
 
 	return flags;
 }
@@ -1920,10 +1920,10 @@ static u32 iwl_nvm_get_regdom_bw_flags(const u16 *nvm_chan,
 	/* Set the AP type for the UHB case. */
 	if (uats_enabled) {
 		if (!(nvm_flags & NVM_CHANNEL_VLP))
-			flags |= NL80211_RRF_NO_UHB_VLP_CLIENT;
+			flags |= NL80211_RRF_NO_6GHZ_VLP_CLIENT;
 
 		if (!(nvm_flags & NVM_CHANNEL_AFC))
-			flags |= NL80211_RRF_NO_UHB_AFC_CLIENT;
+			flags |= NL80211_RRF_NO_6GHZ_AFC_CLIENT;
 	}
 
 	/*
