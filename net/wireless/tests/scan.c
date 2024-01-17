@@ -2,7 +2,7 @@
 /*
  * KUnit tests for inform_bss functions
  *
- * Copyright (C) 2023 Intel Corporation
+ * Copyright (C) 2023-2024 Intel Corporation
  */
 #include <linux/ieee80211.h>
 #include <net/cfg80211.h>
@@ -658,13 +658,13 @@ static void test_inform_bss_ml_sta(struct kunit *test)
 		KUNIT_EXPECT_EQ(test, ies->len,
 				6 + 2 + rnr_len + 2 + 160 + 2 + 165 +
 				(params->include_oper_class ? 3 : 0) +
-				(!params->mld_id && !params->nstr ? 21 : 0) +
+				(!params->mld_id && !params->nstr ? 22 : 0) +
 				mle_basic_common_info.var_len + 5);
 	else
 		KUNIT_EXPECT_EQ(test, ies->len,
 				6 + 2 + rnr_len + 2 + 155 +
 				(params->include_oper_class ? 3 : 0) +
-				(!params->mld_id && !params->nstr ? 21 : 0) +
+				(!params->mld_id && !params->nstr ? 22 : 0) +
 				mle_basic_common_info.var_len + 5);
 	rcu_read_unlock();
 

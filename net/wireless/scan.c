@@ -2883,13 +2883,14 @@ cfg80211_parse_ml_elem_sta_data(struct wiphy *wiphy,
 		data.ielen += sizeof(*ml_elem) + ml_common_len;
 
 		if (reporter_rnr && (use_for & NL80211_BSS_USE_FOR_NORMAL)) {
-			if (data.ielen + 1 + reporter_rnr->datalen >
-			    IEEE80211_MAX_DATA_LEN)
+			if (data.ielen + sizeof(struct element) +
+			    reporter_rnr->datalen > IEEE80211_MAX_DATA_LEN)
 				continue;
 
 			memcpy(new_ie + data.ielen, reporter_rnr,
-			       1 + reporter_rnr->datalen);
-			data.ielen += 1 + reporter_rnr->datalen;
+			       sizeof(struct element) + reporter_rnr->datalen);
+			data.ielen += sizeof(struct element) +
+				      reporter_rnr->datalen;
 		}
 
 		bss = cfg80211_inform_single_bss_data(wiphy, &data, gfp);
