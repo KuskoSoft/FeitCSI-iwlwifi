@@ -1007,7 +1007,7 @@ unsigned int cfg80211_classify8021d(struct sk_buff *skb,
 		ret = 3;
 		break;
 	case 24:
-		/* Broadcasting video: CS23 */
+		/* Broadcasting video: CS3 */
 		ret = 4;
 		break;
 	case 40:
@@ -1015,7 +1015,7 @@ unsigned int cfg80211_classify8021d(struct sk_buff *skb,
 		ret = 5;
 		break;
 	case 44:
-		/* Voice Admit */
+		/* Voice Admit: VA */
 		ret = 6;
 		break;
 	case 46:

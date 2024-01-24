@@ -26,7 +26,7 @@ ifneq ($(CPTCFG_CFG80211_EXTRA_REGDB_KEYDIR),)
 cfg80211-y += extra-certs.o
 endif
 
-$(obj)/shipped-certs.c: $(wildcard $(src)/certs/*.hex)
+$(obj)/shipped-certs.c: $(sort $(wildcard $(src)/certs/*.hex))
 	@$(kecho) "  GEN     $@"
 	$(Q)(echo '#include "reg.h"'; \
 	  echo 'const u8 shipped_regdb_certs[] = {'; \
@@ -36,7 +36,7 @@ $(obj)/shipped-certs.c: $(wildcard $(src)/certs/*.hex)
 	 ) > $@
 
 $(obj)/extra-certs.c: $(CPTCFG_CFG80211_EXTRA_REGDB_KEYDIR:"%"=%) \
-		      $(wildcard $(CPTCFG_CFG80211_EXTRA_REGDB_KEYDIR:"%"=%)/*.x509)
+		      $(sort $(wildcard $(CPTCFG_CFG80211_EXTRA_REGDB_KEYDIR:"%"=%)/*.x509))
 	@$(kecho) "  GEN     $@"
 	$(Q)(set -e; \
 	  allf=""; \
