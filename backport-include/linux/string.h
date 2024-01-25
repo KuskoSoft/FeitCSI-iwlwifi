@@ -32,4 +32,9 @@ int match_string(const char * const *array, size_t n, const char *string);
 })
 #endif
 
+#if LINUX_VERSION_IS_LESS(5,2,0)
+#define strscpy_pad LINUX_BACKPORT(strscpy_pad)
+ssize_t strscpy_pad(char *dest, const char *src, size_t count);
+#endif
+
 #endif /* __BACKPORT_LINUX_STRING_H */
