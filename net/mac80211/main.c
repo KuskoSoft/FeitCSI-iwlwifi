@@ -459,8 +459,8 @@ static void ieee80211_restart_work(struct work_struct *work)
 
 	flush_workqueue(local->workqueue);
 
-	/* we might do interface manipulations, so need both */
 	rtnl_lock();
+	/* we might do interface manipulations, so need both */
 	wiphy_lock(local->hw.wiphy);
 	wiphy_work_flush(local->hw.wiphy, NULL);
 
