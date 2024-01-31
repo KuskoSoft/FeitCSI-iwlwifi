@@ -4,7 +4,6 @@
  * Copyright(c) 2016-2017 Intel Deutschland GmbH
  * Copyright (C) 2018, 2020-2024 Intel Corporation
  */
-
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM cfg80211
 
@@ -3853,31 +3852,6 @@ TRACE_EVENT(cfg80211_assoc_comeback,
 		  WDEV_PR_ARG, __entry->ap_addr, __entry->timeout)
 );
 
-TRACE_EVENT(rdev_set_hw_timestamp,
-	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
-		 struct cfg80211_set_hw_timestamp *hwts),
-
-	TP_ARGS(wiphy, netdev, hwts),
-
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		NETDEV_ENTRY
-		MAC_ENTRY(macaddr)
-		__field(bool, enable)
-	),
-
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		NETDEV_ASSIGN;
-		MAC_ASSIGN(macaddr, hwts->macaddr);
-		__entry->enable = hwts->enable;
-	),
-
-	TP_printk(WIPHY_PR_FMT ", " NETDEV_PR_FMT ", mac %pM, enable: %u",
-		  WIPHY_PR_ARG, NETDEV_PR_ARG, __entry->macaddr,
-		  __entry->enable)
-);
-
 DECLARE_EVENT_CLASS(link_station_add_mod,
 	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
 		 struct link_station_parameters *params),
@@ -3973,6 +3947,31 @@ TRACE_EVENT(rdev_del_link_station,
 		  ", link id: %u",
 		  WIPHY_PR_ARG, NETDEV_PR_ARG, __entry->mld_mac,
 		  __entry->link_id)
+);
+
+TRACE_EVENT(rdev_set_hw_timestamp,
+	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
+		 struct cfg80211_set_hw_timestamp *hwts),
+
+	TP_ARGS(wiphy, netdev, hwts),
+
+	TP_STRUCT__entry(
+		WIPHY_ENTRY
+		NETDEV_ENTRY
+		MAC_ENTRY(macaddr)
+		__field(bool, enable)
+	),
+
+	TP_fast_assign(
+		WIPHY_ASSIGN;
+		NETDEV_ASSIGN;
+		MAC_ASSIGN(macaddr, hwts->macaddr);
+		__entry->enable = hwts->enable;
+	),
+
+	TP_printk(WIPHY_PR_FMT ", " NETDEV_PR_FMT ", mac %pM, enable: %u",
+		  WIPHY_PR_ARG, NETDEV_PR_ARG, __entry->macaddr,
+		  __entry->enable)
 );
 
 TRACE_EVENT(cfg80211_links_removed,

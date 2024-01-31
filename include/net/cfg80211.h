@@ -4574,7 +4574,6 @@ struct mgmt_frame_regs {
  *	radar channel.
  *	The caller is expected to set chandef pointer to NULL in order to
  *	disable background CAC/radar detection.
- *
  * @add_link_station: Add a link to a station.
  * @mod_link_station: Modify a link of a station.
  * @del_link_station: Remove a link of a station.
@@ -4998,8 +4997,6 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_SUPPORTS_EXT_KCK_32: The device supports 32-byte KCK keys.
  * @WIPHY_FLAG_NOTIFY_REGDOM_BY_DRIVER: The device could handle reg notify for
  *	NL80211_REGDOM_SET_BY_DRIVER.
- * @WIPHY_FLAG_SUPPORTS_NSTR_NONPRIMARY: support connection to non-primary link
- *	of an NSTR mobile AP MLD.
  * @WIPHY_FLAG_CHANNEL_CHANGE_ON_BEACON: reg_call_notifier() is called if driver
  *	set this flag to update channels on beacon hints.
  * @WIPHY_FLAG_SUPPORTS_NSTR_NONPRIMARY: support connection to non-primary link
@@ -5772,7 +5769,6 @@ struct wiphy {
 
 	u8 mbssid_max_interfaces;
 	u8 ema_max_profile_periodicity;
-
 	u16 max_num_akm_suites;
 
 	u16 hw_timestamp_max_peers;
@@ -9421,7 +9417,6 @@ static inline int cfg80211_color_change_notify(struct net_device *dev)
  * case disconnect instead.
  * Also note that the wdev mutex must be held.
  */
-
 void cfg80211_links_removed(struct net_device *dev, u16 link_mask);
 
 /**

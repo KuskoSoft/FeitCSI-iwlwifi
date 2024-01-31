@@ -73,7 +73,7 @@
 static int bss_entries_limit = 1000;
 module_param(bss_entries_limit, int, 0644);
 MODULE_PARM_DESC(bss_entries_limit,
-		 "limit to number of scan BSS entries (per wiphy, default 1000)");
+                 "limit to number of scan BSS entries (per wiphy, default 1000)");
 
 #define IEEE80211_SCAN_RESULT_EXPIRE	(CPTCFG_IWL_TIMEOUT_FACTOR * 30 * HZ)
 
@@ -2535,7 +2535,7 @@ cfg80211_defrag_mle(const struct element *mle, const u8 *ie, size_t ielen,
 		goto error;
 
 	/* Defragment sta_info in-place */
-	for (idx = 0; res->sta_prof[idx] && idx < IEEE80211_MLD_MAX_NUM_LINKS;
+	for (idx = 0; idx < IEEE80211_MLD_MAX_NUM_LINKS && res->sta_prof[idx];
 	     idx++) {
 		if (res->sta_prof_len[idx] < 255)
 			continue;
@@ -2766,7 +2766,8 @@ cfg80211_parse_ml_elem_sta_data(struct wiphy *wiphy,
 
 	ml_elem = (void *)elem->data + 1;
 	control = le16_to_cpu(ml_elem->control);
-	if (u16_get_bits(control, IEEE80211_ML_CONTROL_TYPE) != IEEE80211_ML_CONTROL_TYPE_BASIC)
+	if (u16_get_bits(control, IEEE80211_ML_CONTROL_TYPE) !=
+	    IEEE80211_ML_CONTROL_TYPE_BASIC)
 		return;
 
 	/* Must be present when transmitted by an AP (in a probe response) */
