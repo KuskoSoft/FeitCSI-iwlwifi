@@ -13,6 +13,12 @@ usb_find_common_endpoints(struct usb_host_interface *alt,
 		struct usb_endpoint_descriptor **int_out);
 #endif /* < 4.12 */
 
+#if LINUX_VERSION_IS_LESS(5,15,0)
+#define usb_check_bulk_endpoints LINUX_BACKPORT(usb_check_bulk_endpoints)
+bool usb_check_bulk_endpoints(
+		const struct usb_interface *intf, const u8 *ep_addrs);
+#endif /* < 5.15 */
+
 #if LINUX_VERSION_IS_LESS(5,19,0)
 static inline u16 backport_usb_maxpacket(struct usb_device *udev, int pipe)
 {
