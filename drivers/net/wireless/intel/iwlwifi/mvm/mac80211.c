@@ -851,8 +851,9 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/* do this late so we don't need to worry about many error paths */
-	if (mvm->trans->dbg_cfg.eml_capa_override >= 0 &&
-	    hw->wiphy->iftype_ext_capab) {
+	if (hw->wiphy->iftype_ext_capab &&
+	    (mvm->trans->dbg_cfg.eml_capa_override >= 0 ||
+	     mvm->trans->dbg_cfg.disable_eml)) {
 		struct wiphy_iftype_ext_capab *capa;
 
 		capa = kmemdup(hw->wiphy->iftype_ext_capab,
@@ -861,9 +862,13 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		if (!capa)
 			return -ENOMEM;
 
-		for (i = 0; i < hw->wiphy->num_iftype_ext_capab; i++)
-			capa[i].eml_capabilities =
-				mvm->trans->dbg_cfg.eml_capa_override;
+		for (i = 0; i < hw->wiphy->num_iftype_ext_capab; i++) {
+			if (mvm->trans->dbg_cfg.eml_capa_override)
+				capa[i].eml_capabilities =
+					mvm->trans->dbg_cfg.eml_capa_override;
+			if (mvm->trans->dbg_cfg.disable_eml)
+				capa[i].eml_capabilities = 0;
+		}
 
 		hw->wiphy->iftype_ext_capab = capa;
 	}
