@@ -525,6 +525,9 @@ _ieee802_11_parse_elems_full(struct ieee80211_elems_parse_params *params,
 			}
 			elems->pwr_constr_elem = pos;
 			break;
+#if 0
+#error "For drivers we (Intel) ship, we want to disable"
+#error "this reverse-engineered part of CCX."
 		case WLAN_EID_CISCO_VENDOR_SPECIFIC:
 			/* Lots of different options exist, but we only care
 			 * about the Dynamic Transmit Power Control element.
@@ -552,6 +555,7 @@ _ieee802_11_parse_elems_full(struct ieee80211_elems_parse_params *params,
 
 			elems->cisco_dtpc_elem = pos;
 			break;
+#endif
 		case WLAN_EID_ADDBA_EXT:
 			if (elen < sizeof(struct ieee80211_addba_ext_ie)) {
 				elem_parse_failed =
