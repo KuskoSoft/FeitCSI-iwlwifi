@@ -2477,7 +2477,7 @@ static void mac80211_hwsim_vif_info_changed(struct ieee80211_hw *hw,
 	hwsim_check_magic(vif);
 
 	wiphy_dbg(hw->wiphy, "%s(changed=0x%llx vif->addr=%pM)\n",
-		  __func__, (unsigned long long)changed, vif->addr);
+		  __func__, changed, vif->addr);
 
 	if (changed & BSS_CHANGED_ASSOC) {
 		wiphy_dbg(hw->wiphy, "  ASSOC: assoc=%d aid=%d\n",
@@ -3434,7 +3434,7 @@ static int mac80211_hwsim_send_pmsr_request(struct sk_buff *msg,
 					    struct cfg80211_pmsr_request *request)
 {
 	struct nlattr *pmsr;
-	int i, err;
+	int err;
 
 	pmsr = nla_nest_start(msg, NL80211_ATTR_PEER_MEASUREMENTS);
 	if (!pmsr)
@@ -3450,7 +3450,7 @@ static int mac80211_hwsim_send_pmsr_request(struct sk_buff *msg,
 			return -ENOBUFS;
 	}
 
-	for (i = 0; i < request->n_peers; i++) {
+	for (int i = 0; i < request->n_peers; i++) {
 		err = mac80211_hwsim_send_pmsr_request_peer(msg, &request->peers[i]);
 		if (err)
 			return err;
@@ -5210,14 +5210,10 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 	}
 
 	if (param->ciphers) {
-		int ciphers_len = param->n_ciphers * sizeof(data->ciphers[0]);
-
-		if (WARN_ON_ONCE(ciphers_len > sizeof(data->ciphers)))
-			ciphers_len = sizeof(data->ciphers);
-
-		memcpy(data->ciphers, param->ciphers, ciphers_len);
+		memcpy(data->ciphers, param->ciphers,
+		       param->n_ciphers * sizeof(u32));
 		hw->wiphy->cipher_suites = data->ciphers;
-		hw->wiphy->n_cipher_suites = ciphers_len / sizeof(data->ciphers[0]);
+		hw->wiphy->n_cipher_suites = param->n_ciphers;
 	}
 
 	hw->wiphy->mbssid_max_interfaces = 8;
@@ -5296,7 +5292,7 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 	memcpy(data->channels_5ghz, hwsim_channels_5ghz,
 		sizeof(hwsim_channels_5ghz));
 	memcpy(data->channels_6ghz, hwsim_channels_6ghz,
-	       sizeof(hwsim_channels_6ghz));
+		sizeof(hwsim_channels_6ghz));
 	memcpy(data->channels_s1g, hwsim_channels_s1g,
 	       sizeof(hwsim_channels_s1g));
 	memcpy(data->rates, hwsim_rates, sizeof(hwsim_rates));
@@ -5405,6 +5401,7 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 		schedule_timeout_interruptible(1);
 	}
 
+	/* TODO: Add param */
 	wiphy_ext_feature_set(hw->wiphy,
 			      NL80211_EXT_FEATURE_DFS_CONCURRENT);
 
