@@ -359,11 +359,14 @@ static u32 iwl_mvm_get_inject_tx_rate(struct iwl_mvm *mvm,
 		result = iwl_mvm_convert_rate_idx(mvm, info, rate_idx);
 	}
 
-	if (info->control.antennas)
-		result |= u32_encode_bits(info->control.antennas,
-					  RATE_MCS_ANT_AB_MSK);
-	else
-		result |= iwl_mvm_get_tx_ant(mvm, info, sta, fc);
+	if (!(rate->flags & IEEE80211_TX_CUSTOM))
+	{
+		if (info->control.antennas)
+			result |= u32_encode_bits(info->control.antennas,
+									  RATE_MCS_ANT_AB_MSK);
+		else
+			result |= iwl_mvm_get_tx_ant(mvm, info, sta, fc);
+	}
 	return result;
 }
 
