@@ -164,7 +164,7 @@ static void setup_link_conf(struct kunit *test)
 
 	link_conf.vif = vif;
 	link_conf.chanreq.oper = params->chandef;
-	bss.signal = params->signal;
+	bss.signal = DBM_TO_MBM(params->signal);
 
 	ies = kunit_kzalloc(test, ies_size, GFP_KERNEL);
 	KUNIT_ASSERT_NOT_NULL(test, ies);
