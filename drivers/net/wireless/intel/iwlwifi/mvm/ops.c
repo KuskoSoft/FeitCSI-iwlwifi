@@ -1734,6 +1734,9 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	kfree(mvm->iwl_prev_rfi_config_cmd);
 	mvm->iwl_prev_rfi_config_cmd = NULL;
 
+	kfree(mvm->iwl_rfi_subset_table);
+	mvm->iwl_rfi_subset_table = NULL;
+
 	kfree(mvm->scan_cmd);
 	kfree(mvm->mcast_filter_cmd);
 	mvm->mcast_filter_cmd = NULL;

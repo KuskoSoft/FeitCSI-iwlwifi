@@ -371,6 +371,7 @@ struct iwl_mvm_vif_link_info {
  * @IWL_MVM_ESR_EXIT_BANDWIDTH: Bandwidths of primary and secondry links
  *	preventing the enablement of EMLSR
  * @IWL_MVM_ESR_EXIT_CSA: CSA happened, so exit EMLSR
+ * @IWL_MVM_ESR_EXIT_RFI: EMLSR not allowed due to RFI
  */
 enum iwl_mvm_esr_state {
 	IWL_MVM_ESR_BLOCKED_PREVENTION	= 0x1,
@@ -383,6 +384,7 @@ enum iwl_mvm_esr_state {
 	IWL_MVM_ESR_EXIT_COEX		= 0x40000,
 	IWL_MVM_ESR_EXIT_BANDWIDTH	= 0x80000,
 	IWL_MVM_ESR_EXIT_CSA		= 0x100000,
+	IWL_MVM_ESR_EXIT_RFI		= 0x200000,
 };
 
 #define IWL_MVM_BLOCK_ESR_REASONS 0xffff
@@ -1334,6 +1336,7 @@ struct iwl_mvm {
 	bool statistics_clear;
 	struct iwl_rfi_config_cmd *iwl_prev_rfi_config_cmd;
 	bool bios_enable_rfi;
+	void *iwl_rfi_subset_table;
 };
 
 /* Extract MVM priv from op_mode and _hw */
@@ -2616,6 +2619,10 @@ int iwl_rfi_send_config_cmd(struct iwl_mvm *mvm,
 			    struct iwl_rfi_ddr_lut_entry *rfi_table,
 			    bool is_set_master_cmd, bool force_send_table);
 void *iwl_rfi_get_freq_table(struct iwl_mvm *mvm);
+u32
+iwl_mvm_rfi_esr_state_link_pair(struct ieee80211_vif *vif,
+				const struct iwl_mvm_link_sel_data *a,
+				const struct iwl_mvm_link_sel_data *b);
 void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
 				   struct iwl_rx_cmd_buffer *rxb);
 

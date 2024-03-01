@@ -365,6 +365,169 @@ void *iwl_rfi_get_freq_table(struct iwl_mvm *mvm)
 	return resp;
 }
 
+static bool
+iwl_mvm_rfi_ddr_esr_accept_link_pair(struct iwl_mvm *mvm, u8 channel_a,
+				     u8 band_a, u8 channel_b, u8 band_b)
+{
+	bool rfi_ddr_support = iwl_rfi_supported(mvm, mvm->force_enable_rfi,
+						 true);
+	struct iwl_rfi_freq_table_resp_cmd_v1 *iwl_rfi_subset_table;
+	bool channel_a_has_interference = false;
+	bool channel_b_has_interference = false;
+	u8 ddr_interference_freq_count = 0;
+	int i, j;
+
+	if (!rfi_ddr_support)
+		return true;
+
+	iwl_rfi_subset_table = mvm->iwl_rfi_subset_table;
+
+	for (i = 0; i < ARRAY_SIZE(iwl_rfi_subset_table->ddr_table); i++) {
+		struct iwl_rfi_ddr_lut_entry *ddr_table_entry =
+			&iwl_rfi_subset_table->ddr_table[i];
+		bool channel_a_interference_entry = false;
+		bool channel_b_interference_entry = false;
+
+		/* freq 0 means empty row */
+		if (!ddr_table_entry->freq)
+			continue;
+
+		for (j = 0; j < ARRAY_SIZE(ddr_table_entry->channels); j++) {
+			/* channel 0 means empty entry */
+			if (!ddr_table_entry->channels[j])
+				continue;
+
+			if (ddr_table_entry->channels[j] == channel_a &&
+			    ddr_table_entry->bands[j] == band_a) {
+				channel_a_interference_entry = true;
+				channel_a_has_interference = true;
+			}
+			if (ddr_table_entry->channels[j] == channel_b &&
+			    ddr_table_entry->bands[j] == band_b) {
+				channel_b_interference_entry = true;
+				channel_b_has_interference = true;
+			}
+
+			if (channel_a_interference_entry &&
+			    channel_b_interference_entry)
+				break;
+		}
+
+		if (channel_a_interference_entry ||
+		    channel_b_interference_entry)
+			ddr_interference_freq_count++;
+	}
+
+	/* Wifi firmware request PMC firmware not to operate on given DDR freq.
+	 * so if there is only one interfering freq at most, we can ask PMC not
+	 * to operate on it, hence EMLSR is allowed
+	 */
+	if (ddr_interference_freq_count < 2)
+		return true;
+
+	return !(channel_a_has_interference && channel_b_has_interference);
+}
+
+static bool
+iwl_mvm_rfi_dlvr_esr_accept_link_pair(struct iwl_mvm *mvm, u8 channel_a,
+				      u8 band_a, u8 channel_b, u8 band_b)
+{
+	bool rfi_dlvr_support = iwl_rfi_supported(mvm, mvm->force_enable_rfi,
+						  false);
+	u8 notif_ver = iwl_fw_lookup_notif_ver(mvm->fw, SYSTEM_GROUP,
+					       RFI_GET_FREQ_TABLE_CMD, 0);
+	struct iwl_rfi_freq_table_resp_cmd *iwl_rfi_subset_table;
+	bool channel_a_has_interference = false;
+	bool channel_b_has_interference = false;
+	int i, j;
+
+	if (notif_ver < 2 || !rfi_dlvr_support)
+		return true;
+
+	iwl_rfi_subset_table = mvm->iwl_rfi_subset_table;
+	for (i = 0; i < ARRAY_SIZE(iwl_rfi_subset_table->dlvr_table); i++) {
+		struct iwl_rfi_dlvr_lut_entry *dlvr_table_entry =
+			&iwl_rfi_subset_table->dlvr_table[i];
+		bool channel_a_interference_entry = false;
+		bool channel_b_interference_entry = false;
+
+		/* freq 0 means empty row */
+		if (!dlvr_table_entry->freq)
+			continue;
+
+		for (j = 0; j < ARRAY_SIZE(dlvr_table_entry->channels); j++) {
+			/* channel 0 means empty entry */
+			if (!dlvr_table_entry->channels[j])
+				continue;
+
+			if (dlvr_table_entry->channels[j] == channel_a &&
+			    dlvr_table_entry->bands[j] == band_a) {
+				channel_a_interference_entry = true;
+				channel_a_has_interference = true;
+			}
+			if (dlvr_table_entry->channels[j] == channel_b &&
+			    dlvr_table_entry->bands[j] == band_b) {
+				channel_b_interference_entry = true;
+				channel_b_has_interference = true;
+			}
+
+			if (channel_a_interference_entry &&
+			    channel_b_interference_entry)
+				break;
+		}
+
+		/* Wifi firmware request PMC firmware to operate on given
+		 * DLVR freq. Found free DLVR entry, hence allow EMLSR
+		 */
+		if (!(channel_a_interference_entry ||
+		      channel_b_interference_entry))
+			return true;
+	}
+
+	return !(channel_a_has_interference && channel_b_has_interference);
+}
+
+u32
+iwl_mvm_rfi_esr_state_link_pair(struct ieee80211_vif *vif,
+				const struct iwl_mvm_link_sel_data *a,
+				const struct iwl_mvm_link_sel_data *b)
+{
+	u8 channel_a = ieee80211_frequency_to_channel(a->chandef->center_freq1);
+	u8 channel_b = ieee80211_frequency_to_channel(b->chandef->center_freq1);
+	u8 band_a = iwl_mvm_phy_band_from_nl80211(a->chandef->chan->band);
+	u8 band_b = iwl_mvm_phy_band_from_nl80211(b->chandef->chan->band);
+	struct iwl_mvm *mvm = iwl_mvm_vif_from_mac80211(vif)->mvm;
+
+	lockdep_assert_held(&mvm->mutex);
+	if (mvm->fw_rfi_state != IWL_RFI_DDR_SUBSET_TABLE_READY ||
+	    !mvm->iwl_rfi_subset_table)
+		return 0;
+
+	if (iwl_mvm_rfi_ddr_esr_accept_link_pair(mvm, channel_a, band_a,
+						 channel_b, band_b) &&
+	    iwl_mvm_rfi_dlvr_esr_accept_link_pair(mvm, channel_a, band_a,
+						  channel_b, band_b))
+		return 0;
+
+	return IWL_MVM_ESR_EXIT_RFI;
+}
+
+static void iwl_rfi_update_mvm_rfi_tables(struct iwl_mvm *mvm)
+{
+	void *iwl_rfi_subset_table;
+
+	iwl_rfi_subset_table = iwl_rfi_get_freq_table(mvm);
+	mutex_lock(&mvm->mutex);
+	kfree(mvm->iwl_rfi_subset_table);
+	if (IS_ERR(iwl_rfi_subset_table)) {
+		mvm->iwl_rfi_subset_table = NULL;
+		IWL_DEBUG_FW(mvm, "RFIm, tables read fail\n");
+	} else {
+		mvm->iwl_rfi_subset_table = iwl_rfi_subset_table;
+	}
+	mutex_unlock(&mvm->mutex);
+}
+
 void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
 				   struct iwl_rx_cmd_buffer *rxb)
 {
@@ -375,6 +538,7 @@ void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
 	switch (mvm->fw_rfi_state) {
 	case IWL_RFI_DDR_SUBSET_TABLE_READY:
 		IWL_DEBUG_FW(mvm, "RFIm, DDR subset table ready\n");
+		iwl_rfi_update_mvm_rfi_tables(mvm);
 		break;
 	case IWL_RFI_PMC_SUPPORTED:
 		IWL_DEBUG_FW(mvm, "RFIm, PMC supported\n");

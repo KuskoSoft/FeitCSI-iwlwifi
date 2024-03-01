@@ -15,7 +15,8 @@
 	HOW(EXIT_LOW_RSSI)		\
 	HOW(EXIT_COEX)			\
 	HOW(EXIT_BANDWIDTH)		\
-	HOW(EXIT_CSA)
+	HOW(EXIT_CSA)			\
+	HOW(EXIT_RFI)
 
 static const char *const iwl_mvm_esr_states_names[] = {
 #define NAME_ENTRY(x) [ilog2(IWL_MVM_ESR_##x)] = #x,
@@ -747,6 +748,9 @@ bool iwl_mvm_mld_valid_link_pair(struct ieee80211_vif *vif,
 	      b->chandef->chan->band == NL80211_BAND_5GHZ))
 		ret |= IWL_MVM_ESR_EXIT_BANDWIDTH;
 
+	/* RFI considerations */
+	ret |= iwl_mvm_rfi_esr_state_link_pair(vif, a, b);
+
 	if (ret) {
 		IWL_DEBUG_INFO(mvm,
 			       "Links %d and %d are not a valid pair for EMLSR\n",
@@ -756,7 +760,6 @@ bool iwl_mvm_mld_valid_link_pair(struct ieee80211_vif *vif,
 	}
 
 	return true;
-
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mvm_mld_valid_link_pair);
 

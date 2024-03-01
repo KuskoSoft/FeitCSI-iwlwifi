@@ -412,8 +412,11 @@ static void test_valid_link_pair(struct kunit *test)
 	conf->chanreq.oper = chandef_b;
 	vif->link_conf[link_b.link_id] = (void __rcu *)conf;
 
+	mutex_init(&mvm.mutex);
 	wiphy_lock(&wiphy);
+	mutex_lock(&mvm.mutex);
 	result = iwl_mvm_mld_valid_link_pair(vif, &link_a, &link_b);
+	mutex_unlock(&mvm.mutex);
 	wiphy_unlock(&wiphy);
 
 	KUNIT_EXPECT_EQ(test, result, params->valid);
