@@ -4091,7 +4091,8 @@ out_err:
 
 static const struct ieee80211_sband_iftype_data sband_capa_2ghz[] = {
 	{
-		.types_mask = BIT(NL80211_IFTYPE_STATION),
+		.types_mask = BIT(NL80211_IFTYPE_STATION) |
+			      BIT(NL80211_IFTYPE_P2P_CLIENT),
 		.he_cap = {
 			.has_he = true,
 			.he_cap_elem = {
@@ -4198,7 +4199,8 @@ static const struct ieee80211_sband_iftype_data sband_capa_2ghz[] = {
 		},
 	},
 	{
-		.types_mask = BIT(NL80211_IFTYPE_AP),
+		.types_mask = BIT(NL80211_IFTYPE_AP) |
+			      BIT(NL80211_IFTYPE_P2P_GO),
 		.he_cap = {
 			.has_he = true,
 			.he_cap_elem = {
@@ -4349,8 +4351,8 @@ static const struct ieee80211_sband_iftype_data sband_capa_2ghz[] = {
 
 static const struct ieee80211_sband_iftype_data sband_capa_5ghz[] = {
 	{
-		/* TODO: should we support other types, e.g., P2P? */
-		.types_mask = BIT(NL80211_IFTYPE_STATION),
+		.types_mask = BIT(NL80211_IFTYPE_STATION) |
+			      BIT(NL80211_IFTYPE_P2P_CLIENT),
 		.he_cap = {
 			.has_he = true,
 			.he_cap_elem = {
@@ -4474,7 +4476,8 @@ static const struct ieee80211_sband_iftype_data sband_capa_5ghz[] = {
 		},
 	},
 	{
-		.types_mask = BIT(NL80211_IFTYPE_AP),
+		.types_mask = BIT(NL80211_IFTYPE_AP) |
+			      BIT(NL80211_IFTYPE_P2P_GO),
 		.he_cap = {
 			.has_he = true,
 			.he_cap_elem = {
@@ -4645,8 +4648,8 @@ static const struct ieee80211_sband_iftype_data sband_capa_5ghz[] = {
 
 static const struct ieee80211_sband_iftype_data sband_capa_6ghz[] = {
 	{
-		/* TODO: should we support other types, e.g., P2P? */
-		.types_mask = BIT(NL80211_IFTYPE_STATION),
+		.types_mask = BIT(NL80211_IFTYPE_STATION) |
+			      BIT(NL80211_IFTYPE_P2P_CLIENT),
 		.he_6ghz_capa = {
 			.capa = cpu_to_le16(IEEE80211_HE_6GHZ_CAP_MIN_MPDU_START |
 					    IEEE80211_HE_6GHZ_CAP_MAX_AMPDU_LEN_EXP |
@@ -4791,7 +4794,8 @@ static const struct ieee80211_sband_iftype_data sband_capa_6ghz[] = {
 		},
 	},
 	{
-		.types_mask = BIT(NL80211_IFTYPE_AP),
+		.types_mask = BIT(NL80211_IFTYPE_AP) |
+			      BIT(NL80211_IFTYPE_P2P_GO),
 		.he_6ghz_capa = {
 			.capa = cpu_to_le16(IEEE80211_HE_6GHZ_CAP_MIN_MPDU_START |
 					    IEEE80211_HE_6GHZ_CAP_MAX_AMPDU_LEN_EXP |
