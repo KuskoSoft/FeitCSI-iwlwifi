@@ -935,9 +935,9 @@ static int iwl_xvt_sar_geo_init(struct iwl_xvt *xvt)
 
 void iwl_xvt_lari_cfg(struct iwl_xvt *xvt)
 {
-	int ret;
+	struct iwl_lari_config_change_cmd cmd;
 	size_t cmd_size;
-	struct iwl_lari_config_change_cmd_v7 cmd;
+	int ret;
 
 	ret = iwl_fill_lari_config(&xvt->fwrt, &cmd, &cmd_size);
 	if (!ret) {
