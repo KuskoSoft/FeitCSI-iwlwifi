@@ -130,7 +130,7 @@ static void iwl_mvm_mld_mac_remove_interface(struct ieee80211_hw *hw,
 		if (wdev && WARN_ON(wdev_running(wdev)))
 			iwl_mvm_stop_nan(hw, vif);
 
-		goto out;
+		return;
 	}
 
 	if (!(vif->type == NL80211_IFTYPE_AP ||
@@ -211,7 +211,6 @@ static void iwl_mvm_mld_mac_remove_interface(struct ieee80211_hw *hw,
 	iwl_mvm_tdls_peer_cache_clear(mvm, vif);
 #endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
-out:
 	mutex_unlock(&mvm->mutex);
 }
 
