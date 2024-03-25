@@ -98,4 +98,8 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 #define data_race(expr)	(expr)
 #endif
 
+#ifndef __cleanup
+#define __cleanup(func) __attribute__((__cleanup__(func)))
+#endif
+
 #endif /* __BACKPORT_LINUX_COMPILER_H */
