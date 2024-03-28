@@ -722,8 +722,8 @@ static int iwl_mvm_ftm_start_v8(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 }
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-static void iwl_mvm_ftm_set_calib(struct iwl_mvm *mvm,
-				  struct iwl_tof_range_req_ap_entry_v6 *target)
+static void iwl_mvm_ftm_set_calib(struct iwl_mvm *mvm, __le16 *calib,
+				  __le32 *flags)
 {
 	if (IWL_MVM_FTM_INITIATOR_COMMON_CALIB) {
 		int j;
@@ -735,10 +735,10 @@ static void iwl_mvm_ftm_set_calib(struct iwl_mvm *mvm,
 		 * values.
 		 */
 		for (j = 0; j < IWL_TOF_BW_NUM; j++)
-			target->calib[j] =
+			calib[j] =
 				cpu_to_le16(IWL_MVM_FTM_INITIATOR_COMMON_CALIB);
 
-		FTM_PUT_FLAG(USE_CALIB);
+		FTM_SET_FLAG(USE_CALIB);
 	}
 }
 #endif
@@ -767,7 +767,8 @@ static int iwl_mvm_ftm_start_v9(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 			return err;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-		iwl_mvm_ftm_set_calib(mvm, target);
+		iwl_mvm_ftm_set_calib(mvm, target->calib,
+				      &target->initiator_ap_flags);
 #endif
 	}
 
@@ -851,7 +852,7 @@ iwl_mvm_ftm_put_target_v7(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		return err;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-	iwl_mvm_ftm_set_calib(mvm, (void *)target);
+	iwl_mvm_ftm_set_calib(mvm, target->calib, &target->initiator_ap_flags);
 #endif
 
 	iwl_mvm_ftm_set_secured_ranging(mvm, vif, target);
