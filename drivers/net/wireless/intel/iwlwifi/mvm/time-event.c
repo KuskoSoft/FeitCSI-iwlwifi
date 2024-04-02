@@ -108,6 +108,7 @@ static void iwl_mvm_cleanup_roc(struct iwl_mvm *mvm)
 
 		if (mvm->mld_api_is_used) {
 			iwl_mvm_mld_rm_aux_sta(mvm);
+			mutex_unlock(&mvm->mutex);
 			return;
 		}
 
