@@ -226,6 +226,14 @@ iwl_mvm_scan_type _iwl_mvm_get_scan_type(struct iwl_mvm *mvm,
 		.global_cnt = 0,
 	};
 
+	/*
+	 * A scanning AP interface probably wants to generate a survey to do
+	 * ACS (automatic channel selection).
+	 * Force a non-fragmented scan in that case.
+	 */
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
+		return IWL_SCAN_TYPE_WILD;
+
 	ieee80211_iterate_active_interfaces_atomic(mvm->hw,
 						   IEEE80211_IFACE_ITER_NORMAL,
 						   iwl_mvm_scan_iterator,
