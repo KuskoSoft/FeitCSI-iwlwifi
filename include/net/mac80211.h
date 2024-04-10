@@ -2790,6 +2790,7 @@ struct ieee80211_txq {
  *
  * @IEEE80211_HW_DISALLOW_PUNCTURING: HW requires disabling puncturing in EHT
  *	and connecting with a lower bandwidth instead
+ *
  * @IEEE80211_HW_DISALLOW_PUNCTURING_5GHZ: HW requires disabling puncturing in
  *	EHT in 5 GHz and connecting with a lower bandwidth instead
  *
@@ -5615,10 +5616,12 @@ void ieee80211_csa_finish(struct ieee80211_vif *vif, unsigned int link_id);
 /**
  * ieee80211_beacon_cntdwn_is_complete - find out if countdown reached 1
  * @vif: &struct ieee80211_vif pointer from the add_interface callback.
+ * @link_id: valid link_id during MLO or 0 for non-MLO
  *
  * This function returns whether the countdown reached zero.
  */
-bool ieee80211_beacon_cntdwn_is_complete(struct ieee80211_vif *vif);
+bool ieee80211_beacon_cntdwn_is_complete(struct ieee80211_vif *vif,
+					 unsigned int link_id);
 
 /**
  * ieee80211_color_change_finish - notify mac80211 about color change
@@ -7541,11 +7544,10 @@ ieee80211_get_unsol_bcast_probe_resp_tmpl(struct ieee80211_hw *hw,
  * @vif: &struct ieee80211_vif pointer from the add_interface callback.
  * @color_bitmap: a 64 bit bitmap representing the colors that the local BSS is
  *	aware of.
- * @gfp: allocation flags
  */
 void
 ieee80211_obss_color_collision_notify(struct ieee80211_vif *vif,
-				      u64 color_bitmap, gfp_t gfp);
+				      u64 color_bitmap);
 
 /**
  * ieee80211_is_tx_data - check if frame is a data frame

@@ -3056,8 +3056,7 @@ TRACE_EVENT(api_request_smps,
 	TP_fast_assign(
 		LOCAL_ASSIGN;
 		VIF_ASSIGN;
-		__entry->link_id =
-			ieee80211_vif_is_mld(&sdata->vif) ? link->link_id : -1;
+		__entry->link_id = link->link_id,
 		__entry->smps_mode = smps_mode;
 	),
 

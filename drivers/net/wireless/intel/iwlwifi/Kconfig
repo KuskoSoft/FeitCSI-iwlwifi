@@ -52,6 +52,7 @@ config IWLWIFI_KUNIT_TESTS
 	depends on KUNIT
 	default KUNIT_ALL_TESTS || IWLWIFI_SIMULATION
 	depends on !KERNEL_6_3
+	depends on m
 	help
 	  Enable this option for iwlwifi kunit tests.
 

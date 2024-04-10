@@ -2943,7 +2943,6 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	int ret;
 	int i;
-	bool send_he_cmd = false;
 
 	/*
 	 * Re-calculate the tsf id, as the leader-follower relations depend
@@ -2953,7 +2952,7 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 	if (changes & BSS_CHANGED_ASSOC && vif->cfg.assoc) {
 		if ((vif->bss_conf.he_support &&
 		     !iwlwifi_mod_params.disable_11ax))
-			send_he_cmd = true;
+			iwl_mvm_cfg_he_sta(mvm, vif, mvmvif->deflink.ap_sta_id);
 
 		iwl_mvm_mac_ctxt_recalc_tsf_id(mvm, vif);
 	}
@@ -2962,9 +2961,6 @@ static void iwl_mvm_bss_info_changed_station(struct iwl_mvm *mvm,
 	if (changes & BSS_CHANGED_QOS && mvmvif->associated &&
 	    vif->cfg.assoc &&
 	    (vif->bss_conf.he_support && !iwlwifi_mod_params.disable_11ax))
-		send_he_cmd = true;
-
-	if (send_he_cmd)
 		iwl_mvm_cfg_he_sta(mvm, vif, mvmvif->deflink.ap_sta_id);
 
 	/*

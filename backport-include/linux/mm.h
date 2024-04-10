@@ -52,8 +52,8 @@ static inline void *kvcalloc(size_t n, size_t size, gfp_t flags)
 	return kvmalloc_array(n, size, flags | __GFP_ZERO);
 }
 #endif /* < 4.18 */
-
 #if LINUX_VERSION_IS_LESS(6,3,0)
+
 #define kvmemdup LINUX_BACKPORT(kvmemdup)
 static inline void *kvmemdup(const void *src, size_t len, gfp_t gfp)
 {

@@ -2027,9 +2027,9 @@ static void iwl_trans_pcie_configure(struct iwl_trans *trans,
 		iwl_trans_get_rb_size_order(trans_pcie->rx_buf_size);
 	trans_pcie->rx_buf_bytes =
 		iwl_trans_get_rb_size(trans_pcie->rx_buf_size);
-	trans_pcie->supported_dma_mask = DMA_BIT_MASK(12);
+	trans_pcie->supported_dma_mask = (u32) DMA_BIT_MASK(12);
 	if (trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_AX210)
-		trans_pcie->supported_dma_mask = DMA_BIT_MASK(11);
+		trans_pcie->supported_dma_mask = (u32) DMA_BIT_MASK(11);
 
 	trans->txqs.bc_table_dword = trans_cfg->bc_table_dword;
 	trans_pcie->scd_set_active = trans_cfg->scd_set_active;

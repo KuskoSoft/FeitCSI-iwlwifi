@@ -563,10 +563,8 @@ int iwl_uefi_get_tas_table(struct iwl_fw_runtime *fwrt,
 	struct uefi_cnv_var_wtas *uefi_tas;
 	int ret = 0, enabled, i;
 
-	uefi_tas = iwl_uefi_get_verified_variable(fwrt->trans,
-						  IWL_UEFI_WTAS_NAME,
-						  "WTAS", sizeof(*uefi_tas),
-						  NULL);
+	uefi_tas = iwl_uefi_get_verified_variable(fwrt->trans, IWL_UEFI_WTAS_NAME,
+						  "WTAS", sizeof(*uefi_tas), NULL);
 	if (IS_ERR(uefi_tas))
 		return -EINVAL;
 

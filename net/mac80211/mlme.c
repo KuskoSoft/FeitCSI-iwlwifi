@@ -3359,7 +3359,7 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	sdata->vif.cfg.ssid_len = 0;
 
 	/* remove AP and TDLS peers */
-	sta_info_flush(sdata);
+	sta_info_flush(sdata, -1);
 
 	/* finally reset all BSS / config parameters */
 	if (!ieee80211_vif_is_mld(&sdata->vif))
@@ -4432,7 +4432,7 @@ static bool ieee80211_assoc_config_link(struct ieee80211_link_data *link,
 			int bss_param_ch_cnt =
 				ieee80211_mle_get_bss_param_ch_cnt((const void *)elems->ml_basic);
 
-			if (bss_param_ch_cnt < 0 ) {
+			if (bss_param_ch_cnt < 0) {
 				ret = false;
 				goto out;
 			}
