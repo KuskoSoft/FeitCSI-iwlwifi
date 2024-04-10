@@ -860,11 +860,13 @@ static inline bool iwl_mvm_scan_use_ebs(struct iwl_mvm *mvm,
 	 *	4. it's not a p2p find operation.
 	 *	5. we are not in low latency mode,
 	 *	   or if fragmented ebs is supported by the FW
+	 *	6. the VIF is not an AP interface (scan wants survey results)
 	 */
 	return ((capa->flags & IWL_UCODE_TLV_FLAGS_EBS_SUPPORT) &&
 		mvm->last_ebs_successful && IWL_MVM_ENABLE_EBS &&
 		vif->type != NL80211_IFTYPE_P2P_DEVICE &&
-		(!low_latency || iwl_mvm_is_frag_ebs_supported(mvm)));
+		(!low_latency || iwl_mvm_is_frag_ebs_supported(mvm)) &&
+		ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP);
 }
 
 static inline bool iwl_mvm_is_regular_scan(struct iwl_mvm_scan_params *params)
