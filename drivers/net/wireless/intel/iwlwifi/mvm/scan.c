@@ -2167,7 +2167,9 @@ static u8 iwl_mvm_scan_umac_flags2(struct iwl_mvm *mvm,
 
 	/* Passive and AP interface -> ACS (automatic channel selection) */
 	if (gen_flags & IWL_UMAC_SCAN_GEN_FLAGS_V2_FORCE_PASSIVE &&
-	    ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
+	    ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP &&
+	    iwl_fw_lookup_notif_ver(mvm->fw, SCAN_GROUP, CHANNEL_SURVEY_NOTIF,
+				    0) >= 1)
 		flags |= IWL_UMAC_SCAN_GEN_FLAGS2_COLLECT_CHANNEL_STATS;
 
 	return flags;
