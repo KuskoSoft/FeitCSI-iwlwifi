@@ -4480,6 +4480,8 @@ void iwl_mvm_count_mpdu(struct iwl_mvm_sta *mvm_sta, u8 fw_sta_id, u32 count,
 		memset(queue_counter->per_link, 0,
 		       sizeof(queue_counter->per_link));
 		queue_counter->window_start = jiffies;
+
+		IWL_DEBUG_STATS(mvm, "MPDU counters are cleared\n");
 	}
 
 	for (int i = 0; i < IWL_MVM_FW_MAX_LINK_ID; i++)
