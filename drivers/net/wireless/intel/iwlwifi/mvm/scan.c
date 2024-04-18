@@ -2524,8 +2524,6 @@ static int iwl_mvm_scan_umac_v14_and_above(struct iwl_mvm *mvm,
 	u8 gen_flags2;
 	u32 bitmap_ssid = 0;
 
-	mvm->scan_uid_status[uid] = type;
-
 	cmd->ooc_priority = cpu_to_le32(iwl_mvm_scan_umac_ooc_priority(type));
 	cmd->uid = cpu_to_le32(uid);
 
