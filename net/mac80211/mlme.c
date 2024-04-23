@@ -3450,8 +3450,7 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 
 	sdata->vif.bss_conf.power_type = IEEE80211_REG_UNSET_AP;
 	sdata->vif.bss_conf.pwr_reduction = 0;
-	memset(sdata->vif.bss_conf.tx_pwr_env_len, 0,
-	       sizeof(sdata->vif.bss_conf.tx_pwr_env_len));
+	sdata->vif.bss_conf.tx_pwr_env_num = 0;
 	memset(sdata->vif.bss_conf.tx_pwr_env, 0,
 	       sizeof(sdata->vif.bss_conf.tx_pwr_env));
 
@@ -5228,7 +5227,7 @@ static int ieee80211_prep_channel(struct ieee80211_sub_if_data *sdata,
 	if (link && is_6ghz && conn->mode >= IEEE80211_CONN_MODE_HE) {
 		const struct ieee80211_he_6ghz_oper *he_6ghz_oper;
 		struct ieee80211_bss_conf *bss_conf;
-		u8 j;
+		u8 j = 0;
 
 		bss_conf = link->conf;
 
@@ -5238,19 +5237,14 @@ static int ieee80211_prep_channel(struct ieee80211_sub_if_data *sdata,
 		BUILD_BUG_ON(ARRAY_SIZE(bss_conf->tx_pwr_env) !=
 			     ARRAY_SIZE(elems->tx_pwr_env));
 
-		for (i = 0; i < IEEE80211_TPE_MAX_INTER_COUNT; i++) {
-			for (j = 0; j < IEEE80211_TPE_MAX_CAT_COUNT; j++) {
-				if (!elems->tx_pwr_env[i][j]) {
-					bss_conf->tx_pwr_env_len[i][j] = 0;
-					continue;
-				}
-				bss_conf->tx_pwr_env_len[i][j] =
-					min_t(u8, elems->tx_pwr_env_len[i][j],
-					      sizeof(bss_conf->tx_pwr_env_len[i][j]));
-				memcpy(&bss_conf->tx_pwr_env[i][j],
-				       elems->tx_pwr_env[i][j],
-				       bss_conf->tx_pwr_env_len[i][j]);
-			}
+		for (i = 0; i < elems->tx_pwr_env_num; i++) {
+			if (elems->tx_pwr_env_len[i] > sizeof(bss_conf->tx_pwr_env[j]))
+				continue;
+
+			bss_conf->tx_pwr_env_num++;
+			memcpy(&bss_conf->tx_pwr_env[j], elems->tx_pwr_env[i],
+			       elems->tx_pwr_env_len[i]);
+			j++;
 		}
 
 		he_6ghz_oper = ieee80211_he_6ghz_oper(elems->he_operation);
