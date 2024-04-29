@@ -9,7 +9,7 @@
  * Copyright 2007, Michael Wu <flamingice@sourmilk.net>
  * Copyright 2007-2008, Intel Corporation
  * Copyright 2008, Johannes Berg <johannes@sipsolutions.net>
- * Copyright (C) 2018, 2020, 2022-2023 Intel Corporation
+ * Copyright (C) 2018, 2020, 2022-2024 Intel Corporation
  */
 
 #include <linux/ieee80211.h>
@@ -348,6 +348,10 @@ int ieee80211_parse_ch_switch_ie(struct ieee80211_sub_if_data *sdata,
 		new_chandef = csa_ie->chanreq.oper;
 		/* and update the width accordingly */
 		ieee80211_chandef_eht_oper(&bwi->info, &new_chandef);
+		/* and new puncturing data if present */
+		if (bwi->params & IEEE80211_BW_IND_DIS_SUBCH_PRESENT)
+			new_chandef.punctured =
+				get_unaligned_le16(bwi->info.optional);
 	} else if (!wide_bw_chansw_ie || !wbcs_elem_to_chandef(wide_bw_chansw_ie,
 							       &new_chandef)) {
 		if (!ieee80211_operating_class_to_chandef(new_op_class, new_chan,
@@ -361,6 +365,9 @@ int ieee80211_parse_ch_switch_ie(struct ieee80211_sub_if_data *sdata,
 	else
 		validate_chandef_by_ht_vht_oper(sdata, conn, vht_cap_info,
 						&new_chandef);
+
+	/* capture the AP chandef before (potential) downgrading */
+	csa_ie->chanreq.ap = new_chandef;
 
 	/* if data is there validate the bandwidth & use it */
 	if (new_chandef.chan) {
