@@ -48,6 +48,7 @@ config IWLWIFI
 if IWLWIFI
 
 config IWLWIFI_KUNIT_TESTS
+	depends on !KERNEL_6_3
 	tristate
 	depends on KUNIT
 	default KUNIT_ALL_TESTS || IWLWIFI_SIMULATION

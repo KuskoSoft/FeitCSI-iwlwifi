@@ -1329,7 +1329,7 @@ static int nl80211_parse_key_new(struct genl_info *info, struct nlattr *key,
 	struct nlattr *tb[NL80211_KEY_MAX + 1];
 	int err = nla_parse_nested_deprecated(tb, NL80211_KEY_MAX, key,
 					      nl80211_key_policy,
-					      genl_info_extack(info));
+					      info->extack);
 	if (err)
 		return err;
 
@@ -1370,7 +1370,7 @@ static int nl80211_parse_key_new(struct genl_info *info, struct nlattr *key,
 						  NUM_NL80211_KEY_DEFAULT_TYPES - 1,
 						  tb[NL80211_KEY_DEFAULT_TYPES],
 						  nl80211_key_default_policy,
-						  genl_info_extack(info));
+						  info->extack);
 		if (err)
 			return err;
 
@@ -1421,7 +1421,7 @@ static int nl80211_parse_key_old(struct genl_info *info, struct key_parse *k)
 						      NUM_NL80211_KEY_DEFAULT_TYPES - 1,
 						      info->attrs[NL80211_ATTR_KEY_DEFAULT_TYPES],
 						      nl80211_key_default_policy,
-						      genl_info_extack(info));
+						      info->extack);
 		if (err)
 			return err;
 
@@ -3245,7 +3245,7 @@ static int _nl80211_parse_chandef(struct cfg80211_registered_device *rdev,
 				  struct genl_info *info, bool monitor,
 				  struct cfg80211_chan_def *chandef)
 {
-	struct netlink_ext_ack *extack = genl_info_extack(info);
+	struct netlink_ext_ack *extack = info->extack;
 	struct nlattr **attrs = info->attrs;
 	u32 control_freq;
 
@@ -3561,7 +3561,7 @@ static int nl80211_set_wiphy(struct sk_buff *skb, struct genl_info *info)
 							     NL80211_TXQ_ATTR_MAX,
 							     nl_txq_params,
 							     txq_params_policy,
-							     genl_info_extack(info));
+							     info->extack);
 			if (result)
 				goto out;
 			result = parse_txq_params(tb, &txq_params);
@@ -5212,7 +5212,7 @@ static int nl80211_parse_tx_bitrate_mask(struct genl_info *info,
 		err = nla_parse_nested_deprecated(tb, NL80211_TXRATE_MAX,
 						  tx_rates,
 						  nl80211_txattr_policy,
-						  genl_info_extack(info));
+						  info->extack);
 		if (err)
 			return err;
 		if (tb[NL80211_TXRATE_LEGACY]) {
@@ -5977,7 +5977,7 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 		return -ENOMEM;
 
 	err = nl80211_parse_beacon(rdev, info->attrs, &params->beacon,
-				   genl_info_extack(info));
+				   info->extack);
 	if (err)
 		goto out;
 
@@ -6276,7 +6276,7 @@ static int nl80211_set_beacon(struct sk_buff *skb, struct genl_info *info)
 		return -ENOMEM;
 
 	err = nl80211_parse_beacon(rdev, info->attrs, &params->beacon,
-				   genl_info_extack(info));
+				   info->extack);
 	if (err)
 		goto out;
 
@@ -6355,7 +6355,7 @@ static int parse_station_flags(struct genl_info *info,
 	if (!nla)
 		return 0;
 
-	if (nla_parse_nested_deprecated(flags, NL80211_STA_FLAG_MAX, nla, sta_flags_policy, genl_info_extack(info)))
+	if (nla_parse_nested_deprecated(flags, NL80211_STA_FLAG_MAX, nla, sta_flags_policy, info->extack))
 		return -EINVAL;
 
 	/*
@@ -7088,7 +7088,7 @@ static int nl80211_parse_sta_wme(struct genl_info *info,
 	nla = info->attrs[NL80211_ATTR_STA_WME];
 	err = nla_parse_nested_deprecated(tb, NL80211_STA_WME_MAX, nla,
 					  nl80211_sta_wme_policy,
-					  genl_info_extack(info));
+					  info->extack);
 	if (err)
 		return err;
 
@@ -8351,7 +8351,7 @@ do {									\
 
 	if (!info->attrs[NL80211_ATTR_MESH_CONFIG])
 		return -EINVAL;
-	if (nla_parse_nested_deprecated(tb, NL80211_MESHCONF_ATTR_MAX, info->attrs[NL80211_ATTR_MESH_CONFIG], nl80211_meshconf_params_policy, genl_info_extack(info)))
+	if (nla_parse_nested_deprecated(tb, NL80211_MESHCONF_ATTR_MAX, info->attrs[NL80211_ATTR_MESH_CONFIG], nl80211_meshconf_params_policy, info->extack))
 		return -EINVAL;
 
 	/* This makes sure that there aren't more than 32 mesh config
@@ -8489,7 +8489,7 @@ static int nl80211_parse_mesh_setup(struct genl_info *info,
 
 	if (!info->attrs[NL80211_ATTR_MESH_SETUP])
 		return -EINVAL;
-	if (nla_parse_nested_deprecated(tb, NL80211_MESH_SETUP_ATTR_MAX, info->attrs[NL80211_ATTR_MESH_SETUP], nl80211_mesh_setup_params_policy, genl_info_extack(info)))
+	if (nla_parse_nested_deprecated(tb, NL80211_MESH_SETUP_ATTR_MAX, info->attrs[NL80211_ATTR_MESH_SETUP], nl80211_mesh_setup_params_policy, info->extack))
 		return -EINVAL;
 
 	if (tb[NL80211_MESH_SETUP_ENABLE_VENDOR_SYNC])
@@ -8890,7 +8890,7 @@ static int nl80211_set_reg(struct sk_buff *skb, struct genl_info *info)
 			    rem_reg_rules) {
 		r = nla_parse_nested_deprecated(tb, NL80211_REG_RULE_ATTR_MAX,
 						nl_reg_rule, reg_rule_policy,
-						genl_info_extack(info));
+						info->extack);
 		if (r)
 			goto bad_reg;
 		r = parse_reg_rule(tb, &rd->reg_rules[rule_idx]);
@@ -10215,7 +10215,7 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 		goto skip_beacons;
 
 	err = nl80211_parse_beacon(rdev, info->attrs, &params.beacon_after,
-				   genl_info_extack(info));
+				   info->extack);
 	if (err)
 		goto free;
 
@@ -10228,13 +10228,12 @@ static int nl80211_channel_switch(struct sk_buff *skb, struct genl_info *info)
 
 	err = nla_parse_nested_deprecated(csa_attrs, NL80211_ATTR_MAX,
 					  info->attrs[NL80211_ATTR_CSA_IES],
-					  nl80211_policy,
-					  genl_info_extack(info));
+					  nl80211_policy, info->extack);
 	if (err)
 		goto free;
 
 	err = nl80211_parse_beacon(rdev, csa_attrs, &params.beacon_csa,
-				   genl_info_extack(info));
+				   info->extack);
 	if (err)
 		goto free;
 
@@ -11013,7 +11012,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 
 		if (cfg80211_find_ext_elem(WLAN_EID_EXT_NON_INHERITANCE,
 					   req.ie, req.ie_len)) {
-			NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+			NL_SET_ERR_MSG_ATTR(info->extack,
 					    info->attrs[NL80211_ATTR_IE],
 					    "non-inheritance makes no sense");
 			return -EINVAL;
@@ -11149,7 +11148,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 
 			if (!attrs[NL80211_ATTR_MLO_LINK_ID]) {
 				err = -EINVAL;
-				NL_SET_BAD_ATTR(genl_info_extack(info), link);
+				NL_SET_BAD_ATTR(info->extack, link);
 				goto free;
 			}
 
@@ -11157,7 +11156,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 			/* cannot use the same link ID again */
 			if (req.links[link_id].bss) {
 				err = -EINVAL;
-				NL_SET_BAD_ATTR(genl_info_extack(info), link);
+				NL_SET_BAD_ATTR(info->extack, link);
 				goto free;
 			}
 			req.links[link_id].bss =
@@ -11166,7 +11165,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 			if (IS_ERR(req.links[link_id].bss)) {
 				err = PTR_ERR(req.links[link_id].bss);
 				req.links[link_id].bss = NULL;
-				NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+				NL_SET_ERR_MSG_ATTR(info->extack,
 						    link, "Error fetching BSS for link");
 				goto free;
 			}
@@ -11180,7 +11179,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 				if (cfg80211_find_elem(WLAN_EID_FRAGMENT,
 						       req.links[link_id].elems,
 						       req.links[link_id].elems_len)) {
-					NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+					NL_SET_ERR_MSG_ATTR(info->extack,
 							    attrs[NL80211_ATTR_IE],
 							    "cannot deal with fragmentation");
 					err = -EINVAL;
@@ -11190,7 +11189,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 				if (cfg80211_find_ext_elem(WLAN_EID_EXT_NON_INHERITANCE,
 							   req.links[link_id].elems,
 							   req.links[link_id].elems_len)) {
-					NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+					NL_SET_ERR_MSG_ATTR(info->extack,
 							    attrs[NL80211_ATTR_IE],
 							    "cannot deal with non-inheritance");
 					err = -EINVAL;
@@ -11240,7 +11239,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 		int rem = 0;
 
 		err = cfg80211_mlme_assoc(rdev, dev, &req,
-					  genl_info_extack(info));
+					  info->extack);
 
 		if (!err && info->attrs[NL80211_ATTR_SOCKET_OWNER]) {
 			dev->ieee80211_ptr->conn_owner_nlportid =
@@ -11271,7 +11270,7 @@ static int nl80211_associate(struct sk_buff *skb, struct genl_info *info)
 
 				WARN_ON(err >= 0);
 
-				NL_SET_BAD_ATTR(genl_info_extack(info), link);
+				NL_SET_BAD_ATTR(info->extack, link);
 				err = req.links[link_id].error;
 				break;
 			}
@@ -12592,7 +12591,7 @@ static int nl80211_register_mgmt(struct sk_buff *skb, struct genl_info *info)
 					   nla_data(info->attrs[NL80211_ATTR_FRAME_MATCH]),
 					   nla_len(info->attrs[NL80211_ATTR_FRAME_MATCH]),
 					   info->attrs[NL80211_ATTR_RECEIVE_MULTICAST],
-					   genl_info_extack(info));
+					   info->extack);
 }
 
 static int nl80211_tx_mgmt(struct sk_buff *skb, struct genl_info *info)
@@ -13028,7 +13027,7 @@ static int nl80211_set_cqm(struct sk_buff *skb, struct genl_info *info)
 
 	err = nla_parse_nested_deprecated(attrs, NL80211_ATTR_CQM_MAX, cqm,
 					  nl80211_attr_cqm_policy,
-					  genl_info_extack(info));
+					  info->extack);
 	if (err)
 		return err;
 
@@ -13653,8 +13652,7 @@ static int nl80211_set_wowlan(struct sk_buff *skb, struct genl_info *info)
 
 	err = nla_parse_nested_deprecated(tb, MAX_NL80211_WOWLAN_TRIG,
 					  info->attrs[NL80211_ATTR_WOWLAN_TRIGGERS],
-					  nl80211_wowlan_policy,
-					  genl_info_extack(info));
+					  nl80211_wowlan_policy, info->extack);
 	if (err)
 		return err;
 
@@ -13740,7 +13738,7 @@ static int nl80211_set_wowlan(struct sk_buff *skb, struct genl_info *info)
 							  MAX_NL80211_PKTPAT,
 							  pat,
 							  nl80211_packet_pattern_policy,
-							  genl_info_extack(info));
+							  info->extack);
 			if (err)
 				goto error;
 
@@ -14102,8 +14100,7 @@ static int nl80211_set_rekey_data(struct sk_buff *skb, struct genl_info *info)
 
 	err = nla_parse_nested_deprecated(tb, MAX_NL80211_REKEY_DATA,
 					  info->attrs[NL80211_ATTR_REKEY_DATA],
-					  nl80211_rekey_policy,
-					  genl_info_extack(info));
+					  nl80211_rekey_policy, info->extack);
 	if (err)
 		return err;
 
@@ -14430,7 +14427,7 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 	err = nla_parse_nested_deprecated(tb, NL80211_NAN_FUNC_ATTR_MAX,
 					  info->attrs[NL80211_ATTR_NAN_FUNC],
 					  nl80211_nan_func_policy,
-					  genl_info_extack(info));
+					  info->extack);
 	if (err)
 		return err;
 
@@ -14529,7 +14526,7 @@ static int nl80211_nan_add_func(struct sk_buff *skb,
 						  NL80211_NAN_SRF_ATTR_MAX,
 						  tb[NL80211_NAN_FUNC_SRF],
 						  nl80211_nan_srf_policy,
-						  genl_info_extack(info));
+						  info->extack);
 		if (err)
 			goto out;
 
@@ -15037,7 +15034,7 @@ static int nl80211_vendor_cmd(struct sk_buff *skb, struct genl_info *info)
 
 			err = nl80211_vendor_check_policy(vcmd,
 					info->attrs[NL80211_ATTR_VENDOR_DATA],
-					genl_info_extack(info));
+					info->extack);
 			if (err)
 				return err;
 		}
@@ -15683,7 +15680,7 @@ static int nl80211_tx_control_port(struct sk_buff *skb, struct genl_info *info)
 				   dest, cpu_to_be16(proto), noencrypt, link_id,
 				   dont_wait_for_ack ? NULL : &cookie);
 	if (!err && !dont_wait_for_ack)
-		nl_set_extack_cookie_u64(genl_info_extack(info), cookie);
+		nl_set_extack_cookie_u64(info->extack, cookie);
 	return err;
 }
 
@@ -15834,7 +15831,7 @@ static int parse_tid_conf(struct cfg80211_registered_device *rdev,
 			  struct genl_info *info, const u8 *peer,
 			  unsigned int link_id)
 {
-	struct netlink_ext_ack *extack = genl_info_extack(info);
+	struct netlink_ext_ack *extack = info->extack;
 	u64 mask;
 	int err;
 
@@ -16015,7 +16012,7 @@ static int nl80211_color_change(struct sk_buff *skb, struct genl_info *info)
 	params.color = nla_get_u8(info->attrs[NL80211_ATTR_COLOR_CHANGE_COLOR]);
 
 	err = nl80211_parse_beacon(rdev, info->attrs, &params.beacon_next,
-				   genl_info_extack(info));
+				   info->extack);
 	if (err)
 		return err;
 
@@ -16025,12 +16022,12 @@ static int nl80211_color_change(struct sk_buff *skb, struct genl_info *info)
 
 	err = nla_parse_nested(tb, NL80211_ATTR_MAX,
 			       info->attrs[NL80211_ATTR_COLOR_CHANGE_ELEMS],
-			       nl80211_policy, genl_info_extack(info));
+			       nl80211_policy, info->extack);
 	if (err)
 		goto out;
 
 	err = nl80211_parse_beacon(rdev, tb, &params.beacon_color_change,
-				   genl_info_extack(info));
+				   info->extack);
 	if (err)
 		goto out;
 
@@ -17555,7 +17552,7 @@ static const struct genl_small_ops nl80211_small_ops[] = {
 	},
 };
 
-static struct genl_family nl80211_fam __genl_ro_after_init = {
+static struct genl_family nl80211_fam __ro_after_init = {
 	.name = NL80211_GENL_NAME,	/* have users key off the name instead */
 	.hdrsize = 0,			/* no private header */
 	.version = 1,			/* no particular meaning now */

@@ -7,13 +7,6 @@ endif
 compat-y += main.o
 
 # Kernel backport compatibility code
-compat-$(CPTCFG_KERNEL_4_5) += backport-4.5.o
-compat-$(CPTCFG_KERNEL_4_6) += backport-4.6.o
-compat-$(CPTCFG_KERNEL_4_7) += backport-4.7.o
-compat-$(CPTCFG_KERNEL_4_8) += backport-4.8.o
-compat-$(CPTCFG_KERNEL_4_10) += backport-4.10.o
-compat-$(CPTCFG_KERNEL_4_11) += backport-4.11.o
-compat-$(CPTCFG_KERNEL_4_12) += backport-4.12.o
 compat-$(CPTCFG_KERNEL_4_18) += backport-4.18.o
 compat-$(CPTCFG_KERNEL_5_2) += backport-5.2.o backport-genetlink.o
 compat-$(CPTCFG_KERNEL_5_3) += backport-5.3.o
@@ -59,8 +52,6 @@ quiet_cmd_build_OID_registry = GEN     $@
 compat-$(CPTCFG_BPAUTO_ASN1_DECODER) += lib-asn1_decoder.o
 compat-$(CPTCFG_BPAUTO_PUBLIC_KEY) += 
 compat-$(CPTCFG_BPAUTO_REFCOUNT) += lib-refcount.o
-compat-$(CPTCFG_BPAUTO_RHASHTABLE) += lib-rhashtable.o
 compat-$(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) += lib-oid_registry.o
-compat-$(CPTCFG_BPAUTO_BUCKET_LOCKS) += lib-bucket_locks.o
 compat-$(CPTCFG_BPAUTO_PKCS7) += 
 compat-$(CPTCFG_BPAUTO_BUILD_CRYPTO_LIB_ARC4) += lib-crypto-arc4.o

@@ -1,7 +1,7 @@
 #ifndef __BP_VERIFICATION_H
 #define __BP_VERIFICATION_H
 #include <linux/version.h>
-#if (LINUX_VERSION_IS_GEQ(4,7,0) && !defined(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION)) && \
+#if !defined(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) && \
 	defined(CONFIG_CRYPTO_HASH_INFO)
 #include_next <linux/verification.h>
 #else
@@ -25,5 +25,5 @@ extern int verify_pkcs7_signature(const void *data, size_t len,
 						      const void *data, size_t len,
 						      size_t asn1hdrlen),
 				  void *ctx);
-#endif /* LINUX_VERSION_IS_GEQ(4,7,0) && !defined(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) */
+#endif /* !defined(CPTCFG_BPAUTO_BUILD_SYSTEM_DATA_VERIFICATION) */
 #endif /* __BP_VERIFICATION_H */

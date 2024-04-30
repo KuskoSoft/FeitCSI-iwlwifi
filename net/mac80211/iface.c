@@ -826,17 +826,6 @@ ieee80211_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
 {
 	dev_fetch_sw_netstats(stats, dev->tstats);
 }
-#if LINUX_VERSION_IS_LESS(4,11,0)
-/* Just declare it here to keep sparse happy */
-struct rtnl_link_stats64 *bp_ieee80211_get_stats64(struct net_device *dev,
-						   struct rtnl_link_stats64 *stats);
-struct rtnl_link_stats64 *
-bp_ieee80211_get_stats64(struct net_device *dev,
-			 struct rtnl_link_stats64 *stats){
-	ieee80211_get_stats64(dev, stats);
-	return stats;
-}
-#endif
 
 static int ieee80211_netdev_setup_tc(struct net_device *dev,
 				     enum tc_setup_type type, void *type_data)
@@ -847,40 +836,18 @@ static int ieee80211_netdev_setup_tc(struct net_device *dev,
 	return drv_net_setup_tc(local, sdata, dev, type, type_data);
 }
 
-#if LINUX_VERSION_IS_LESS(4,10,0)
-static int __change_mtu(struct net_device *ndev, int new_mtu){
-	if (new_mtu < 0 || new_mtu > 0)
-		return -EINVAL;
-	ndev->mtu = new_mtu;
-	return 0;
-}
-#endif
-
 static const struct net_device_ops ieee80211_dataif_ops = {
-#if LINUX_VERSION_IS_LESS(4,10,0)
-	.ndo_change_mtu = __change_mtu,
-#endif
-
 	.ndo_open		= ieee80211_open,
 	.ndo_stop		= ieee80211_stop,
 	.ndo_uninit		= ieee80211_uninit,
 	.ndo_start_xmit		= ieee80211_subif_start_xmit,
 	.ndo_set_rx_mode	= ieee80211_set_multicast_list,
 	.ndo_set_mac_address 	= ieee80211_change_mac,
-#if LINUX_VERSION_IS_GEQ(4,11,0)
 	.ndo_get_stats64	= ieee80211_get_stats64,
-#else
-	.ndo_get_stats64 = bp_ieee80211_get_stats64,
-#endif
-	
 	.ndo_setup_tc		= ieee80211_netdev_setup_tc,
 };
 
 static const struct net_device_ops ieee80211_dataif_ops_itxq = {
-#if LINUX_VERSION_IS_LESS(4,10,0)
-	.ndo_change_mtu = __change_mtu,
-#endif
-
 	.ndo_open		= ieee80211_open,
 	.ndo_stop		= ieee80211_stop,
 	.ndo_uninit		= ieee80211_uninit,
@@ -936,10 +903,6 @@ static u16 ieee80211_monitor_select_queue(struct net_device *dev,
 }
 
 static const struct net_device_ops ieee80211_monitorif_ops = {
-#if LINUX_VERSION_IS_LESS(4,10,0)
-	.ndo_change_mtu = __change_mtu,
-#endif
-
 	.ndo_open		= ieee80211_open,
 	.ndo_stop		= ieee80211_stop,
 	.ndo_uninit		= ieee80211_uninit,
@@ -947,12 +910,7 @@ static const struct net_device_ops ieee80211_monitorif_ops = {
 	.ndo_set_rx_mode	= ieee80211_set_multicast_list,
 	.ndo_set_mac_address 	= ieee80211_change_mac,
 	.ndo_select_queue	= ieee80211_monitor_select_queue,
-#if LINUX_VERSION_IS_GEQ(4,11,0)
 	.ndo_get_stats64	= ieee80211_get_stats64,
-#else
-	.ndo_get_stats64 = bp_ieee80211_get_stats64,
-#endif
-
 };
 
 #if LINUX_VERSION_IS_GEQ(5,13,0)
@@ -1016,22 +974,13 @@ out:
 #endif /* LINUX_VERSION_IS_GEQ(5,13,0) */
 
 static const struct net_device_ops ieee80211_dataif_8023_ops = {
-#if LINUX_VERSION_IS_LESS(4,10,0)
-	.ndo_change_mtu = __change_mtu,
-#endif
-
 	.ndo_open		= ieee80211_open,
 	.ndo_stop		= ieee80211_stop,
 	.ndo_uninit		= ieee80211_uninit,
 	.ndo_start_xmit		= ieee80211_subif_start_xmit_8023,
 	.ndo_set_rx_mode	= ieee80211_set_multicast_list,
 	.ndo_set_mac_address	= ieee80211_change_mac,
-#if LINUX_VERSION_IS_GEQ(4,11,0)
 	.ndo_get_stats64	= ieee80211_get_stats64,
-#else
-	.ndo_get_stats64 = bp_ieee80211_get_stats64,
-#endif
-
 #if LINUX_VERSION_IS_GEQ(5,13,0)
 	.ndo_fill_forward_path	= ieee80211_netdev_fill_forward_path,
 #endif
@@ -1551,20 +1500,14 @@ static void ieee80211_if_free(struct net_device *dev)
 	free_percpu(dev->tstats);
 }
 
-#if LINUX_VERSION_IS_LESS(4,12,0)
-static void __ieee80211_if_free(struct net_device *ndev){
-	ieee80211_if_free(ndev);
-	free_netdev(ndev);
-}
-#endif
-
 static void ieee80211_if_setup(struct net_device *dev)
 {
 	ether_setup(dev);
 	dev->priv_flags &= ~IFF_TX_SKB_SHARING;
 	dev->priv_flags |= IFF_NO_QUEUE;
 	dev->netdev_ops = &ieee80211_dataif_ops;
-	netdev_set_priv_destructor(dev, ieee80211_if_free);
+	dev->needs_free_netdev = true;
+	dev->priv_destructor = ieee80211_if_free;
 }
 
 static void ieee80211_iface_process_skb(struct ieee80211_local *local,
@@ -2305,22 +2248,11 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 		 * MPDU and A-MSDU frames which may be much larger so we do
 		 * not impose an upper limit in that case.
 		 */
-#if LINUX_VERSION_IS_GEQ(4,10,0)
 		ndev->min_mtu = 256;
-#endif
-		if (type == NL80211_IFTYPE_MONITOR) {
-#if LINUX_VERSION_IS_GEQ(4,10,0)
-			ndev->min_mtu = 0;
-#endif
-#if LINUX_VERSION_IS_GEQ(4,10,0)
+		if (type == NL80211_IFTYPE_MONITOR)
 			ndev->max_mtu = 0;
-#endif
-		}
-		else {
-#if LINUX_VERSION_IS_GEQ(4,10,0)
+		else
 			ndev->max_mtu = local->hw.max_mtu;
-#endif
-		}
 
 		ret = cfg80211_register_netdevice(ndev);
 		if (ret) {

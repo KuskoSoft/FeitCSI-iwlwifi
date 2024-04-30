@@ -3,77 +3,6 @@
 #include_next <linux/skbuff.h>
 #include <linux/version.h>
 
-
-#if LINUX_VERSION_IS_LESS(4,4,10)
-static __always_inline void
-__skb_postpush_rcsum(struct sk_buff *skb, const void *start, unsigned int len,
-		     unsigned int off)
-{
-	if (skb->ip_summed == CHECKSUM_COMPLETE)
-		skb->csum = csum_block_add(skb->csum,
-					   csum_partial(start, len, 0), off);
-}
-
-static inline void skb_postpush_rcsum(struct sk_buff *skb,
-				      const void *start, unsigned int len)
-{
-	__skb_postpush_rcsum(skb, start, len, 0);
-}
-#endif /* LINUX_VERSION_IS_LESS(4,4,10) */
-
-#if LINUX_VERSION_IS_LESS(4,13,0) && \
-	RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,6)
-static inline void *backport_skb_put(struct sk_buff *skb, unsigned int len)
-{
-	return skb_put(skb, len);
-}
-#define skb_put LINUX_BACKPORT(skb_put)
-
-static inline void *backport_skb_push(struct sk_buff *skb, unsigned int len)
-{
-	return skb_push(skb, len);
-}
-#define skb_push LINUX_BACKPORT(skb_push)
-
-static inline void *backport___skb_push(struct sk_buff *skb, unsigned int len)
-{
-	return __skb_push(skb, len);
-}
-#define __skb_push LINUX_BACKPORT(__skb_push)
-
-static inline void *__skb_put_zero(struct sk_buff *skb, unsigned int len)
-{
-	void *tmp = __skb_put(skb, len);
-
-	memset(tmp, 0, len);
-	return tmp;
-}
-
-static inline void *skb_put_zero(struct sk_buff *skb, unsigned int len)
-{
-	void *tmp = skb_put(skb, len);
-
-	memset(tmp, 0, len);
-
-	return tmp;
-}
-
-static inline void *skb_put_data(struct sk_buff *skb, const void *data,
-				 unsigned int len)
-{
-	void *tmp = skb_put(skb, len);
-
-	memcpy(tmp, data, len);
-
-	return tmp;
-}
-
-static inline void skb_put_u8(struct sk_buff *skb, u8 val)
-{
-	*(u8 *)skb_put(skb, 1) = val;
-}
-#endif
-
 #if LINUX_VERSION_IS_LESS(4,20,0)
 static inline struct sk_buff *__skb_peek(const struct sk_buff_head *list_)
 {
@@ -96,14 +25,6 @@ static inline void skb_list_del_init(struct sk_buff *skb)
 }
 #endif /* 4.19.10 <= x < 4.20 */
 #endif /* < 4.20 */
-
-#if LINUX_VERSION_IS_LESS(4,11,0)
-#define skb_mac_offset LINUX_BACKPORT(skb_mac_offset)
-static inline int skb_mac_offset(const struct sk_buff *skb)
-{
-	return skb_mac_header(skb) - skb->data;
-}
-#endif
 
 #if LINUX_VERSION_IS_LESS(5,4,0)
 /**
@@ -132,9 +53,7 @@ static inline void nf_reset_ct(struct sk_buff *skb)
 #if LINUX_VERSION_IS_LESS(5,6,0) &&			\
 	!LINUX_VERSION_IN_RANGE(5,4,69, 5,5,0) &&	\
 	!LINUX_VERSION_IN_RANGE(4,19,149, 4,20,0) &&	\
-	!LINUX_VERSION_IN_RANGE(4,14,200, 4,15,0) &&	\
-	!LINUX_VERSION_IN_RANGE(4,9,238, 4,10,0) &&	\
-	!LINUX_VERSION_IN_RANGE(4,4,238, 4,5,0)
+	!LINUX_VERSION_IN_RANGE(4,14,200, 4,15,0)
 /**
  *	skb_queue_len_lockless	- get queue length
  *	@list_: list to measure

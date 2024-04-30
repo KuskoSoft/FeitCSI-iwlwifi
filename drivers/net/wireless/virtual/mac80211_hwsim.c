@@ -3641,8 +3641,7 @@ static int mac80211_hwsim_parse_rate_info(struct nlattr *rateattr,
 	int ret;
 
 	ret = nla_parse_nested(tb, HWSIM_RATE_INFO_ATTR_MAX,
-			       rateattr, hwsim_rate_info_policy,
-			       genl_info_extack(info));
+			       rateattr, hwsim_rate_info_policy, info->extack);
 	if (ret)
 		return ret;
 
@@ -3691,8 +3690,7 @@ static int mac80211_hwsim_parse_ftm_result(struct nlattr *ftm,
 	int ret;
 
 	ret = nla_parse_nested(tb, NL80211_PMSR_FTM_RESP_ATTR_MAX,
-			       ftm, hwsim_ftm_result_policy,
-			       genl_info_extack(info));
+			       ftm, hwsim_ftm_result_policy, info->extack);
 	if (ret)
 		return ret;
 
@@ -3807,7 +3805,7 @@ static int mac80211_hwsim_parse_pmsr_resp(struct nlattr *resp,
 	int ret;
 
 	ret = nla_parse_nested(tb, NL80211_PMSR_RESP_ATTR_MAX, resp, hwsim_pmsr_resp_policy,
-			       genl_info_extack(info));
+			       info->extack);
 	if (ret)
 		return ret;
 
@@ -3836,8 +3834,7 @@ static int mac80211_hwsim_parse_pmsr_resp(struct nlattr *resp,
 				return ret;
 			break;
 		default:
-			NL_SET_ERR_MSG_ATTR(genl_info_extack(info), pmsr,
-					    "Unknown pmsr resp type");
+			NL_SET_ERR_MSG_ATTR(info->extack, pmsr, "Unknown pmsr resp type");
 			return -EINVAL;
 		}
 	}
@@ -3856,8 +3853,7 @@ static int mac80211_hwsim_parse_pmsr_result(struct nlattr *peer,
 		return -EINVAL;
 
 	ret = nla_parse_nested(tb, NL80211_PMSR_PEER_ATTR_MAX, peer,
-			       hwsim_pmsr_peer_result_policy,
-			       genl_info_extack(info));
+			       hwsim_pmsr_peer_result_policy, info->extack);
 	if (ret)
 		return ret;
 
@@ -5503,7 +5499,7 @@ static int mac80211_hwsim_new_radio(struct genl_info *info,
 	if (err < 0) {
 		if (info) {
 			GENL_SET_ERR_MSG(info, "perm addr already present");
-			NL_SET_BAD_ATTR(genl_info_extack(info),
+			NL_SET_BAD_ATTR(info->extack,
 					info->attrs[HWSIM_ATTR_PERM_ADDR]);
 		}
 		spin_unlock_bh(&hwsim_radio_lock);
@@ -5649,7 +5645,7 @@ static void hwsim_mon_setup(struct net_device *dev)
 	u8 addr[ETH_ALEN];
 
 	dev->netdev_ops = &hwsim_netdev_ops;
-	netdev_set_def_destructor(dev);
+	dev->needs_free_netdev = true;
 	ether_setup(dev);
 	dev->priv_flags |= IFF_NO_QUEUE;
 	dev->type = ARPHRD_IEEE80211_RADIOTAP;
@@ -5948,8 +5944,7 @@ static int parse_ftm_capa(const struct nlattr *ftm_capa, struct cfg80211_pmsr_ca
 	ret = nla_parse_nested(tb, NL80211_PMSR_FTM_CAPA_ATTR_MAX, ftm_capa, hwsim_ftm_capa_policy,
 			       NULL);
 	if (ret) {
-		NL_SET_ERR_MSG_ATTR(genl_info_extack(info), ftm_capa,
-				    "malformed FTM capability");
+		NL_SET_ERR_MSG_ATTR(info->extack, ftm_capa, "malformed FTM capability");
 		return -EINVAL;
 	}
 
@@ -5984,8 +5979,7 @@ static int parse_pmsr_capa(const struct nlattr *pmsr_capa, struct cfg80211_pmsr_
 
 	ret = nla_parse_nested(tb, NL80211_PMSR_ATTR_MAX, pmsr_capa, hwsim_pmsr_capa_policy, NULL);
 	if (ret) {
-		NL_SET_ERR_MSG_ATTR(genl_info_extack(info), pmsr_capa,
-				    "malformed PMSR capability");
+		NL_SET_ERR_MSG_ATTR(info->extack, pmsr_capa, "malformed PMSR capability");
 		return -EINVAL;
 	}
 
@@ -5995,8 +5989,7 @@ static int parse_pmsr_capa(const struct nlattr *pmsr_capa, struct cfg80211_pmsr_
 	out->randomize_mac_addr = !!tb[NL80211_PMSR_ATTR_RANDOMIZE_MAC_ADDR];
 
 	if (!tb[NL80211_PMSR_ATTR_TYPE_CAPA]) {
-		NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
-				    tb[NL80211_PMSR_ATTR_TYPE_CAPA],
+		NL_SET_ERR_MSG_ATTR(info->extack, tb[NL80211_PMSR_ATTR_TYPE_CAPA],
 				    "malformed PMSR type");
 		return -EINVAL;
 	}
@@ -6007,8 +6000,7 @@ static int parse_pmsr_capa(const struct nlattr *pmsr_capa, struct cfg80211_pmsr_
 			parse_ftm_capa(nla, out, info);
 			break;
 		default:
-			NL_SET_ERR_MSG_ATTR(genl_info_extack(info), nla,
-					    "unsupported measurement type");
+			NL_SET_ERR_MSG_ATTR(info->extack, nla, "unsupported measurement type");
 			return -EINVAL;
 		}
 	}
@@ -6063,7 +6055,7 @@ static int hwsim_new_radio_nl(struct sk_buff *msg, struct genl_info *info)
 		if (!is_valid_ether_addr(
 				nla_data(info->attrs[HWSIM_ATTR_PERM_ADDR]))) {
 			GENL_SET_ERR_MSG(info,"MAC is no valid source addr");
-			NL_SET_BAD_ATTR(genl_info_extack(info),
+			NL_SET_BAD_ATTR(info->extack,
 					info->attrs[HWSIM_ATTR_PERM_ADDR]);
 			return -EINVAL;
 		}
@@ -6076,7 +6068,7 @@ static int hwsim_new_radio_nl(struct sk_buff *msg, struct genl_info *info)
 			nla_get_u32(info->attrs[HWSIM_ATTR_IFTYPE_SUPPORT]);
 
 		if (param.iftypes & ~HWSIM_IFTYPE_SUPPORT_MASK) {
-			NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+			NL_SET_ERR_MSG_ATTR(info->extack,
 					    info->attrs[HWSIM_ATTR_IFTYPE_SUPPORT],
 					    "cannot support more iftypes than kernel");
 			return -EINVAL;
@@ -6099,7 +6091,7 @@ static int hwsim_new_radio_nl(struct sk_buff *msg, struct genl_info *info)
 			nla_data(info->attrs[HWSIM_ATTR_CIPHER_SUPPORT]);
 
 		if (len % sizeof(u32)) {
-			NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+			NL_SET_ERR_MSG_ATTR(info->extack,
 					    info->attrs[HWSIM_ATTR_CIPHER_SUPPORT],
 					    "bad cipher list length");
 			return -EINVAL;
@@ -6108,14 +6100,14 @@ static int hwsim_new_radio_nl(struct sk_buff *msg, struct genl_info *info)
 		param.n_ciphers = len / sizeof(u32);
 
 		if (param.n_ciphers > ARRAY_SIZE(hwsim_ciphers)) {
-			NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+			NL_SET_ERR_MSG_ATTR(info->extack,
 					    info->attrs[HWSIM_ATTR_CIPHER_SUPPORT],
 					    "too many ciphers specified");
 			return -EINVAL;
 		}
 
 		if (!hwsim_known_ciphers(param.ciphers, param.n_ciphers)) {
-			NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+			NL_SET_ERR_MSG_ATTR(info->extack,
 					    info->attrs[HWSIM_ATTR_CIPHER_SUPPORT],
 					    "unsupported ciphers specified");
 			return -EINVAL;

@@ -79,24 +79,6 @@ config BPAUTO_USERSEL_BUILD_ALL
 config BPAUTO_WANT_DEV_COREDUMP
 	bool
 
-config BPAUTO_RHASHTABLE
-	bool
-	# current API of rhashtable was introduced in version 4.9
-	# (the one including rhltable)
-	depends on KERNEL_4_9
-	# not very nice - but better than always having it
-	default y if BACKPORTED_MAC80211
-	#h-file linux/rhashtable.h
-	#h-file linux/rhashtable-types.h
-	#c-file lib/rhashtable.c
-
-config BPAUTO_BUCKET_LOCKS
-	bool
-	# the API of bucket_locks that we need was introduced in version 4.16
-	depends on KERNEL_4_16
-	default y if BPAUTO_RHASHTABLE
-	#c-file lib/bucket_locks.c
-
 config BPAUTO_REFCOUNT
 	bool
 	default y

@@ -7,56 +7,6 @@
 #include <linux/pci-aspm.h>
 #endif
 
-
-
-#if LINUX_VERSION_IS_LESS(4,8,0)
-#define pci_alloc_irq_vectors LINUX_BACKPORT(pci_alloc_irq_vectors)
-#ifdef CONFIG_PCI_MSI
-int pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
-		unsigned int max_vecs, unsigned int flags);
-#else
-static inline int pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
-		unsigned int max_vecs, unsigned int flags)
-{ return -ENOSYS; }
-#endif
-#endif
-
-#if LINUX_VERSION_IS_LESS(4,8,0)
-#define pci_free_irq_vectors LINUX_BACKPORT(pci_free_irq_vectors)
-static inline void pci_free_irq_vectors(struct pci_dev *dev)
-{
-}
-#endif
-
-
-#if LINUX_VERSION_IS_LESS(4,9,0) &&			\
-	!LINUX_VERSION_IN_RANGE(4,4,37, 4,5,0) &&	\
-	!LINUX_VERSION_IN_RANGE(4,8,13, 4,9,0)
-
-static inline struct pci_dev *pcie_find_root_port(struct pci_dev *dev)
-{
-	while (1) {
-		if (!pci_is_pcie(dev))
-			break;
-		if (pci_pcie_type(dev) == PCI_EXP_TYPE_ROOT_PORT)
-			return dev;
-		if (!dev->bus->self)
-			break;
-		dev = dev->bus->self;
-	}
-	return NULL;
-}
-
-#endif/* <4.9.0 but not >= 4.4.37, 4.8.13 */
-
-#ifndef PCI_IRQ_LEGACY
-#define PCI_IRQ_LEGACY		(1 << 0) /* Allow legacy interrupts */
-#define PCI_IRQ_MSI		(1 << 1) /* Allow MSI interrupts */
-#define PCI_IRQ_MSIX		(1 << 2) /* Allow MSI-X interrupts */
-#define PCI_IRQ_ALL_TYPES \
-	(PCI_IRQ_LEGACY | PCI_IRQ_MSI | PCI_IRQ_MSIX)
-#endif
-
 #if defined(CONFIG_PCI)
 #if LINUX_VERSION_IS_LESS(5,3,0)
 static inline int

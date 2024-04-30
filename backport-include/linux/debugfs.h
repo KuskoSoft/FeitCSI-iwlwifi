@@ -4,20 +4,6 @@
 #include <linux/version.h>
 #include <linux/device.h>
 
-#if LINUX_VERSION_IS_LESS(4,9,0) && \
-    !LINUX_VERSION_IN_RANGE(4,8,4, 4,9,0) && \
-    !LINUX_VERSION_IN_RANGE(4,7,10, 4,8,0)
-static inline const struct file_operations *
-debugfs_real_fops(const struct file *filp)
-{
-	/*
-	 * Neither the pointer to the struct file_operations, nor its
-	 * contents ever change -- srcu_dereference() is not needed here.
-	 */
-	return filp->f_path.dentry->d_fsdata;
-}
-#endif /* <4.9.0 but not >= 4.8.4, 4.7.10 */
-
 #ifndef DEFINE_DEBUGFS_ATTRIBUTE
 #define DEFINE_DEBUGFS_ATTRIBUTE(__fops, __get, __set, __fmt) \
 	DEFINE_SIMPLE_ATTRIBUTE(__fops, __get, __set, __fmt)
