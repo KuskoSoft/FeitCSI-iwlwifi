@@ -473,6 +473,94 @@ free:
 	return err;
 }
 
+static int
+iwl_vendor_cmd_fill_links_info(struct ieee80211_vif *vif, struct sk_buff *skb)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	unsigned int link_id;
+	int ret = 0;
+
+	rcu_read_lock();
+
+	for_each_mvm_vif_valid_link(mvmvif, link_id) {
+		const struct cfg80211_chan_def *chandef;
+		struct ieee80211_bss_conf *link_conf;
+		u8 channel;
+		u8 phy_band;
+
+		link_conf = rcu_dereference(vif->link_conf[link_id]);
+		if (WARN_ON_ONCE(!link_conf))
+			continue;
+
+		chandef = &link_conf->chanreq.oper;
+		channel = ieee80211_frequency_to_channel(chandef->center_freq1);
+		phy_band = iwl_mvm_phy_band_from_nl80211(chandef->chan->band);
+		if (nla_put_u8(skb, IWL_MVM_VENDOR_ATTR_CHANNEL, channel) ||
+		    nla_put_u8(skb, IWL_MVM_VENDOR_ATTR_PHY_BAND, phy_band) ||
+		    nla_put_u8(skb, IWL_MVM_VENDOR_ATTR_RSSI,
+			       link_conf->bss->signal) ||
+		    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_WIPHY_FREQ,
+				chandef->chan->center_freq) ||
+		    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_CHANNEL_WIDTH,
+				chandef->width) ||
+		    nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_CENTER_FREQ1,
+				chandef->center_freq1) ||
+		    (chandef->center_freq2 &&
+		     nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_CENTER_FREQ2,
+				 chandef->center_freq2))) {
+			ret = -ENOBUFS;
+			break;
+		}
+	}
+
+	rcu_read_unlock();
+	return ret;
+}
+
+/*
+ * Calculate the response size based on the maximum number of active links.
+ * Each link requires 47 bytes, plus 4 bytes for the attribute header and an
+ * additional 20 bytes for potential future use.
+ */
+#define links_info_response_size(max_active_liks) ((max_active_liks) * 47 +\
+						   4 + 20)
+
+static int iwl_vendor_get_links_info(struct wiphy *wiphy,
+				     struct wireless_dev *wdev,
+				     const void *data, int data_len)
+{
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct nlattr *link_info_attr;
+	struct sk_buff *skb = NULL;
+	int resp_size;
+	int ret;
+
+	resp_size = links_info_response_size(iwl_mvm_max_active_links(mvm,
+								      vif));
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, resp_size);
+	if (!skb)
+		return -ENOMEM;
+
+	link_info_attr = nla_nest_start(skb, IWL_MVM_VENDOR_ATTR_LINKS_INFO);
+	if (!link_info_attr) {
+		ret = -ENOBUFS;
+		goto err;
+	}
+
+	ret = iwl_vendor_cmd_fill_links_info(vif, skb);
+	if (ret)
+		goto err;
+
+	nla_nest_end(skb, link_info_attr);
+	return cfg80211_vendor_cmd_reply(skb);
+
+err:
+	kfree_skb(skb);
+	return ret;
+}
+
 static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 					    struct wireless_dev *wdev,
 					    const void *data, int data_len)
@@ -1789,6 +1877,17 @@ static const struct wiphy_vendor_command iwl_mvm_vendor_commands[] = {
 		},
 		.doit = iwl_mvm_vendor_get_csme_conn_info,
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
+		.policy = iwl_mvm_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_GET_LINK_INFO,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_vendor_get_links_info,
 		.policy = iwl_mvm_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},

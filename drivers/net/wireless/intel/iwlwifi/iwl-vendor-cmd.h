@@ -109,6 +109,8 @@
  * @IWL_MVM_VENDOR_CMD_RFIM_GET_TABLE: Retrieve the RFIM table
  * @IWL_MVM_VENDOR_CMD_RFIM_GET_CAPA: Retrieve RFIM capabilities
  * @IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER: Set CNVI is master or not
+ * @IWL_MVM_VENDOR_CMD_GET_LINK_INFO: Get link information.
+ *	This is needed for RFIm user app
  */
 
 enum iwl_mvm_vendor_cmd {
@@ -165,6 +167,7 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_GEO_SAR_GET_TABLE                    = 0x35,
 	IWL_MVM_VENDOR_CMD_SGOM_GET_TABLE			= 0x36,
 	IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER			= 0x37,
+	IWL_MVM_VENDOR_CMD_GET_LINK_INFO			= 0x38,
 };
 
 /**
@@ -791,6 +794,12 @@ enum iwl_vendor_auth_akm_mode {
  * @IWL_MVM_VENDOR_ATTR_RFIM_FREQ: RFIM frequency (u16)
  * @IWL_MVM_VENDOR_ATTR_RFIM_INFO: overall RFIM info (nested)
  * @IWL_MVM_VENDOR_ATTR_RFIM_CNVI_MASTER: CNVI master configuration (u32)
+ * @IWL_MVM_VENDOR_ATTR_LINKS_INFO: Link information (nested)
+ * @IWL_MVM_VENDOR_ATTR_CHANNEL: Operating channel (u8)
+ * @IWL_MVM_VENDOR_ATTR_PHY_BAND: Operating band (u8)
+ *	&PHY_BAND_5 for 5 GHz band, &PHY_BAND_24 for 2.4 GHz band and
+ *	&PHY_BAND_6 for 6 GHz band.
+ * @IWL_MVM_VENDOR_ATTR_RSSI: average beacon rssi (u8)
  *
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
@@ -907,6 +916,10 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_GEO_SAR_VER                         = 0x77,
 	IWL_MVM_VENDOR_ATTR_SGOM_TABLE				= 0x78,
 	IWL_MVM_VENDOR_ATTR_RFIM_CNVI_MASTER			= 0x79,
+	IWL_MVM_VENDOR_ATTR_LINKS_INFO				= 0x7a,
+	IWL_MVM_VENDOR_ATTR_CHANNEL				= 0x7b,
+	IWL_MVM_VENDOR_ATTR_PHY_BAND				= 0x7c,
+	IWL_MVM_VENDOR_ATTR_RSSI				= 0x7d,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,
