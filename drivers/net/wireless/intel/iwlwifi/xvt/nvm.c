@@ -7,7 +7,7 @@
 
 #include "iwl-trans.h"
 #include "xvt.h"
-#include "iwl-eeprom-parse.h"
+#include "iwl-nvm-utils.h"
 #include "iwl-nvm-parse.h"
 #include "iwl-prph.h"
 #include "fw-api.h"

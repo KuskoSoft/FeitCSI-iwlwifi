@@ -8,7 +8,7 @@
 #include <linux/export.h>
 #include "iwl-drv.h"
 #include "iwl-modparams.h"
-#include "iwl-eeprom-parse.h"
+#include "iwl-nvm-utils.h"
 
 int iwl_init_sband_channels(struct iwl_nvm_data *data,
 			    struct ieee80211_supported_band *sband,
@@ -31,6 +31,7 @@ int iwl_init_sband_channels(struct iwl_nvm_data *data,
 
 	return n;
 }
+IWL_EXPORT_SYMBOL(iwl_init_sband_channels);
 
 #define MAX_BIT_RATE_40_MHZ	150 /* Mbps */
 #define MAX_BIT_RATE_20_MHZ	72 /* Mbps */
@@ -114,4 +115,4 @@ void iwl_init_ht_hw_capab(struct iwl_trans *trans,
 				IEEE80211_HT_MCS_TX_MAX_STREAMS_SHIFT);
 	}
 }
-
+IWL_EXPORT_SYMBOL(iwl_init_ht_hw_capab);
