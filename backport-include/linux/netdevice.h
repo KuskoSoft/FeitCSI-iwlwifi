@@ -253,4 +253,33 @@ static inline bool LINUX_BACKPORT(napi_schedule)(struct napi_struct *n)
 #define napi_schedule LINUX_BACKPORT(napi_schedule)
 #endif /* < 6.7.0 */
 
+#if LINUX_VERSION_IS_LESS(6,10,0)
+static inline struct net_device *alloc_netdev_dummy(int sizeof_priv)
+{
+	struct net_device *dev;
+
+	dev = kzalloc(sizeof(*dev) +
+		      ALIGN(sizeof(struct net_device), NETDEV_ALIGN) +
+		      sizeof_priv,
+		      GFP_KERNEL);
+
+	if (!dev)
+		return NULL;
+
+	init_dummy_netdev(dev);
+	return dev;
+}
+
+static inline void LINUX_BACKPORT(free_netdev)(struct net_device *dev)
+{
+	if (dev->reg_state == NETREG_DUMMY) {
+		kfree(dev);
+		return;
+	}
+
+	free_netdev(dev);
+}
+#define free_netdev LINUX_BACKPORT(free_netdev)
+#endif /* 6.10.0 */
+
 #endif /* __BACKPORT_NETDEVICE_H */
