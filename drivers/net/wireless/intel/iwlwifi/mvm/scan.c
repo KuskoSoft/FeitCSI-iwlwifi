@@ -231,7 +231,7 @@ iwl_mvm_scan_type _iwl_mvm_get_scan_type(struct iwl_mvm *mvm,
 	 * ACS (automatic channel selection).
 	 * Force a non-fragmented scan in that case.
 	 */
-	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
+	if (vif && ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
 		return IWL_SCAN_TYPE_WILD;
 
 	ieee80211_iterate_active_interfaces_atomic(mvm->hw,
