@@ -5426,6 +5426,7 @@ static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm *mvm,
 							false);
 	}
 
+	iwl_vendor_send_link_info_changed_event(mvm, vif);
 	goto out;
 
 out_remove_binding:
@@ -5518,6 +5519,7 @@ static void __iwl_mvm_unassign_vif_chanctx(struct iwl_mvm *mvm,
 	iwl_mvm_update_quotas(mvm, false, disabled_vif);
 	iwl_mvm_binding_remove_vif(mvm, vif);
 
+	iwl_vendor_send_link_info_changed_event(mvm, vif);
 out:
 	if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_CHANNEL_SWITCH_CMD) &&
 	    switching_chanctx)

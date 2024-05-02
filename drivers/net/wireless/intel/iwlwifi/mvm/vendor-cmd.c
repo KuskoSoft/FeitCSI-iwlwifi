@@ -1910,6 +1910,7 @@ enum iwl_mvm_vendor_events_idx {
 	IWL_MVM_VENDOR_EVENT_IDX_TSM_CFM,
 	IWL_MVM_VENDOR_EVENT_IDX_TSM_MSMT,
 	IWL_MVM_VENDOR_EVENT_IDX_ROAMING_FORBIDDEN = 4,
+	IWL_MVM_VENDOR_EVENT_IDX_LINK_INFO_CHANGED,
 	NUM_IWL_MVM_VENDOR_EVENT_IDX
 };
 
@@ -1922,6 +1923,10 @@ iwl_mvm_vendor_events[NUM_IWL_MVM_VENDOR_EVENT_IDX] = {
 	[IWL_MVM_VENDOR_EVENT_IDX_ROAMING_FORBIDDEN] = {
 		.vendor_id = INTEL_OUI,
 		.subcmd = IWL_MVM_VENDOR_CMD_ROAMING_FORBIDDEN_EVENT,
+	},
+	[IWL_MVM_VENDOR_EVENT_IDX_LINK_INFO_CHANGED] = {
+		.vendor_id = INTEL_OUI,
+		.subcmd = IWL_MVM_VENDOR_CMD_LINK_INFO_CHANGED_EVENT,
 	},
 };
 
@@ -2139,4 +2144,18 @@ void iwl_mvm_send_roaming_forbidden_event(struct iwl_mvm *mvm,
 
  nla_put_failure:
 	kfree_skb(msg);
+}
+
+void
+iwl_vendor_send_link_info_changed_event(struct iwl_mvm *mvm,
+					struct ieee80211_vif *vif)
+{
+	int event_idx = IWL_MVM_VENDOR_EVENT_IDX_LINK_INFO_CHANGED;
+	struct sk_buff *msg;
+
+	msg = cfg80211_vendor_event_alloc(mvm->hw->wiphy,
+					  ieee80211_vif_to_wdev(vif), 0,
+					  event_idx, GFP_ATOMIC);
+	if (msg)
+		cfg80211_vendor_event(msg, GFP_ATOMIC);
 }

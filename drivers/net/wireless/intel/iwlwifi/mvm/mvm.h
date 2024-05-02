@@ -2725,6 +2725,8 @@ u32 iwl_mvm_get_sec_flags(struct iwl_mvm *mvm,
 
 /* 11ax Softap Test Mode */
 
+void iwl_vendor_send_link_info_changed_event(struct iwl_mvm *mvm,
+					     struct ieee80211_vif *vif);
 bool iwl_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr);
 int iwl_rfi_send_config_cmd(struct iwl_mvm *mvm,
 			    struct iwl_rfi_ddr_lut_entry *rfi_table,

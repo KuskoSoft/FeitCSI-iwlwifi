@@ -111,6 +111,7 @@
  * @IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER: Set CNVI is master or not
  * @IWL_MVM_VENDOR_CMD_GET_LINK_INFO: Get link information.
  *	This is needed for RFIm user app
+ * @IWL_MVM_VENDOR_CMD_LINK_INFO_CHANGED_EVENT: Link information is changed
  */
 
 enum iwl_mvm_vendor_cmd {
@@ -168,6 +169,7 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_SGOM_GET_TABLE			= 0x36,
 	IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER			= 0x37,
 	IWL_MVM_VENDOR_CMD_GET_LINK_INFO			= 0x38,
+	IWL_MVM_VENDOR_CMD_LINK_INFO_CHANGED_EVENT		= 0x39,
 };
 
 /**
