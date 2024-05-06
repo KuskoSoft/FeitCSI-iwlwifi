@@ -294,8 +294,7 @@ static const u8 tm_if_types_ext_capa_sta[] = {
 	 [9] = WLAN_EXT_CAPA10_TWT_REQUESTER_SUPPORT,
 };
 
-/*
- * Additional interface types for which extended capabilities are
+/* Additional interface types for which extended capabilities are
  * specified separately
  */
 
@@ -410,15 +409,13 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		ieee80211_hw_set(hw, HANDLES_QUIET_CSA);
 	}
 
-	/*
-	 * With MLD FW API, it tracks timing by itself,
+	/* With MLD FW API, it tracks timing by itself,
 	 * no need for any timing from the host
 	 */
 	if (!mvm->mld_api_is_used)
 		ieee80211_hw_set(hw, TIMING_BEACON_ONLY);
 
-	/*
-	 * We should probably have this, but mac80211
+	/* We should probably have this, but mac80211
 	 * currently doesn't support it for MLO.
 	 */
 	if (!(hw->wiphy->flags & WIPHY_FLAG_SUPPORTS_MLO))
@@ -1141,7 +1138,7 @@ int iwl_mvm_mac_ampdu_action(struct ieee80211_hw *hw,
 	switch (action) {
 	case IEEE80211_AMPDU_RX_START:
 		if (iwl_mvm_vif_from_mac80211(vif)->deflink.ap_sta_id ==
-				iwl_mvm_sta_from_mac80211(sta)->deflink.sta_id) {
+		    iwl_mvm_sta_from_mac80211(sta)->deflink.sta_id) {
 			struct iwl_mvm_vif *mvmvif;
 			u16 macid = iwl_mvm_vif_from_mac80211(vif)->id;
 			struct iwl_mvm_tcm_mac *mdata = &mvm->tcm.data[macid];
@@ -1754,8 +1751,7 @@ static int iwl_mvm_alloc_bcast_mcast_sta(struct iwl_mvm *mvm,
 		return ret;
 	}
 
-	/*
-	 * Only queue for this station is the mcast queue,
+	/* Only queue for this station is the mcast queue,
 	 * which shouldn't be in TFD mask anyway
 	 */
 	return iwl_mvm_allocate_int_sta(mvm, &mvmvif->deflink.mcast_sta, 0,
@@ -2361,8 +2357,8 @@ static void iwl_mvm_parse_ppe(struct iwl_mvm *mvm,
 	* If nss < MAX: we can set zeros in other streams
 	*/
 	if (nss > MAX_HE_SUPP_NSS) {
-		IWL_DEBUG_INFO(mvm, "Got NSS = %d - trimming to %d\n",
-			       nss, MAX_HE_SUPP_NSS);
+		IWL_DEBUG_INFO(mvm, "Got NSS = %d - trimming to %d\n", nss,
+			       MAX_HE_SUPP_NSS);
 		nss = MAX_HE_SUPP_NSS;
 	}
 
@@ -2406,7 +2402,8 @@ static void iwl_mvm_set_pkt_ext_from_he_ppe(struct iwl_mvm *mvm,
 					    struct iwl_he_pkt_ext_v2 *pkt_ext,
 					    bool inheritance)
 {
-	u8 nss = (link_sta->he_cap.ppe_thres[0] & IEEE80211_PPE_THRES_NSS_MASK) + 1;
+	u8 nss = (link_sta->he_cap.ppe_thres[0] &
+		  IEEE80211_PPE_THRES_NSS_MASK) + 1;
 	u8 *ppe = &link_sta->he_cap.ppe_thres[0];
 	u8 ru_index_bitmap =
 		u8_get_bits(*ppe,
@@ -2418,8 +2415,9 @@ static void iwl_mvm_set_pkt_ext_from_he_ppe(struct iwl_mvm *mvm,
 			  inheritance);
 }
 
-static int iwl_mvm_set_pkt_ext_from_nominal_padding(struct iwl_he_pkt_ext_v2 *pkt_ext,
-						    u8 nominal_padding)
+static int
+iwl_mvm_set_pkt_ext_from_nominal_padding(struct iwl_he_pkt_ext_v2 *pkt_ext,
+					 u8 nominal_padding)
 {
 	int low_th = -1;
 	int high_th = -1;
@@ -2496,8 +2494,7 @@ int iwl_mvm_set_sta_pkt_ext(struct iwl_mvm *mvm,
 	if (WARN_ON(!link_sta))
 		return -EINVAL;
 
-	/*
-	 * Initialize the PPE thresholds to "None" (7), as described in Table
+	/* Initialize the PPE thresholds to "None" (7), as described in Table
 	 * 9-262ac of 80211.ax/D3.0.
 	 */
 	memset(pkt_ext, IWL_HE_PKT_EXT_NONE,
@@ -2508,7 +2505,9 @@ int iwl_mvm_set_sta_pkt_ext(struct iwl_mvm *mvm,
 			u8_get_bits(link_sta->eht_cap.eht_cap_elem.phy_cap_info[5],
 				    IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_MASK);
 
-		/* If PPE Thresholds exists, parse them into a FW-familiar format. */
+		/* If PPE Thresholds exists, parse them into a FW-familiar
+		 * format.
+		 */
 		if (link_sta->eht_cap.eht_cap_elem.phy_cap_info[5] &
 		    IEEE80211_EHT_PHY_CAP5_PPE_THRESHOLD_PRESENT) {
 			u8 nss = (link_sta->eht_cap.eht_ppe_thres[0] &
@@ -2522,28 +2521,28 @@ int iwl_mvm_set_sta_pkt_ext(struct iwl_mvm *mvm,
 
 			iwl_mvm_parse_ppe(mvm, pkt_ext, nss, ru_index_bitmap,
 					  ppe, ppe_pos_bit, true);
-		/* EHT PPE Thresholds doesn't exist - set the API according to HE PPE Tresholds*/
+		/* EHT PPE Thresholds doesn't exist - set the API according to
+		 * HE PPE Tresholds
+		 */
 		} else if (link_sta->he_cap.he_cap_elem.phy_cap_info[6] &
 			   IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) {
-			/*
-			* Even though HE Capabilities IE doesn't contain PPE
-			* Thresholds for BW 320Mhz, thresholds for this BW will
-			* be filled in with the same values as 160Mhz, due to
-			* the inheritance, as required.
-			*/
+			/* Even though HE Capabilities IE doesn't contain PPE
+			 * Thresholds for BW 320Mhz, thresholds for this BW will
+			 * be filled in with the same values as 160Mhz, due to
+			 * the inheritance, as required.
+			 */
 			iwl_mvm_set_pkt_ext_from_he_ppe(mvm, link_sta, pkt_ext,
 							true);
 
-			/*
-			* According to the requirements, for MCSs 12-13 the maximum value between
-			* HE PPE Threshold and Common Nominal Packet Padding needs to be taken
-			*/
+			/* According to the requirements, for MCSs 12-13 the
+			 * maximum value between HE PPE Threshold and Common
+			 * Nominal Packet Padding needs to be taken
+			 */
 			iwl_mvm_get_optimal_ppe_info(pkt_ext, nominal_padding);
 
-		/*
-		* if PPE Thresholds doesn't present in both EHT IE and HE IE -
-		* take the Thresholds from Common Nominal Packet Padding field
-		*/
+		/* if PPE Thresholds doesn't present in both EHT IE and HE IE -
+		 * take the Thresholds from Common Nominal Packet Padding field
+		 */
 		} else {
 			ret = iwl_mvm_set_pkt_ext_from_nominal_padding(pkt_ext,
 								       nominal_padding);
@@ -2554,10 +2553,9 @@ int iwl_mvm_set_sta_pkt_ext(struct iwl_mvm *mvm,
 			IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) {
 			iwl_mvm_set_pkt_ext_from_he_ppe(mvm, link_sta, pkt_ext,
 							false);
-		/*
-		* PPE Thresholds doesn't exist - set the API PPE values
-		* according to Common Nominal Packet Padding field.
-		*/
+		/* PPE Thresholds doesn't exist - set the API PPE values
+		 * according to Common Nominal Packet Padding field.
+		 */
 		} else {
 			nominal_padding =
 				u8_get_bits(link_sta->he_cap.he_cap_elem.phy_cap_info[9],
@@ -2883,8 +2881,7 @@ void iwl_mvm_bss_info_changed_station_assoc(struct iwl_mvm *mvm,
 	int ret;
 	int link_id;
 
-	/*
-	 * The firmware tracks the MU-MIMO group on its own.
+	/* The firmware tracks the MU-MIMO group on its own.
 	 * However, on HW restart we should restore this data.
 	 */
 	if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) &&
@@ -2910,17 +2907,17 @@ void iwl_mvm_bss_info_changed_station_assoc(struct iwl_mvm *mvm,
 }
 
 /* Execute the common part for MLD and non-MLD modes */
-void iwl_mvm_bss_info_changed_station_common(struct iwl_mvm *mvm,
-					     struct ieee80211_vif *vif,
-					     struct ieee80211_bss_conf *link_conf,
-					     u64 changes)
+void
+iwl_mvm_bss_info_changed_station_common(struct iwl_mvm *mvm,
+					struct ieee80211_vif *vif,
+					struct ieee80211_bss_conf *link_conf,
+					u64 changes)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	int ret;
 
 	if (changes & BSS_CHANGED_BEACON_INFO) {
-		/*
-		 * We received a beacon from the associated AP so
+		/* We received a beacon from the associated AP so
 		 * remove the session protection.
 		 */
 		iwl_mvm_stop_session_protection(mvm, vif);
@@ -2930,8 +2927,7 @@ void iwl_mvm_bss_info_changed_station_common(struct iwl_mvm *mvm,
 	}
 
 	if (changes & (BSS_CHANGED_PS | BSS_CHANGED_P2P_PS | BSS_CHANGED_QOS |
-		       /*
-			* Send power command on every beacon change,
+		       /* Send power command on every beacon change,
 			* because we may have not enabled beacon abort yet.
 			*/
 		       BSS_CHANGED_BEACON_INFO)) {
@@ -4332,7 +4328,8 @@ int iwl_mvm_mac_sta_state_common(struct ieee80211_hw *hw,
 
 	if (old_state == IEEE80211_STA_NOTEXIST &&
 	    new_state == IEEE80211_STA_NONE) {
-		ret = iwl_mvm_sta_state_notexist_to_none(mvm, vif, sta, callbacks);
+		ret = iwl_mvm_sta_state_notexist_to_none(mvm, vif, sta,
+							 callbacks);
 		if (ret < 0)
 			goto out_unlock;
 
@@ -5232,10 +5229,11 @@ void iwl_mvm_change_chanctx(struct ieee80211_hw *hw,
  * Returns true if we're done assigning the chanctx
  * (either on failure or success)
  */
-static bool __iwl_mvm_assign_vif_chanctx_common(struct iwl_mvm *mvm,
-						struct ieee80211_vif *vif,
-						struct ieee80211_chanctx_conf *ctx,
-						bool switching_chanctx, int *ret)
+static bool
+__iwl_mvm_assign_vif_chanctx_common(struct iwl_mvm *mvm,
+				    struct ieee80211_vif *vif,
+				    struct ieee80211_chanctx_conf *ctx,
+				    bool switching_chanctx, int *ret)
 {
 	u16 *phy_ctxt_id = (u16 *)ctx->drv_priv;
 	struct iwl_mvm_phy_ctxt *phy_ctxt = &mvm->phy_ctxts[*phy_ctxt_id];
@@ -5551,11 +5549,12 @@ out_restart:
 }
 
 /* Execute the common part for both MLD and non-MLD modes */
-int iwl_mvm_switch_vif_chanctx_common(struct ieee80211_hw *hw,
-				      struct ieee80211_vif_chanctx_switch *vifs,
-				      int n_vifs,
-				      enum ieee80211_chanctx_switch_mode mode,
-				      const struct iwl_mvm_switch_vif_chanctx_ops *ops)
+int
+iwl_mvm_switch_vif_chanctx_common(struct ieee80211_hw *hw,
+				  struct ieee80211_vif_chanctx_switch *vifs,
+				  int n_vifs,
+				  enum ieee80211_chanctx_switch_mode mode,
+				  const struct iwl_mvm_switch_vif_chanctx_ops *ops)
 {
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	int ret;
@@ -5629,8 +5628,8 @@ static int __iwl_mvm_mac_testmode_cmd(struct iwl_mvm *mvm,
 	int err;
 	u32 noa_duration;
 
-	err = nla_parse(tb, IWL_TM_ATTR_MAX, data, len, iwl_mvm_tm_policy,
-			NULL);
+	err = nla_parse_deprecated(tb, IWL_TM_ATTR_MAX, data, len,
+				   iwl_mvm_tm_policy, NULL);
 	if (err)
 		return err;
 
@@ -6384,7 +6383,8 @@ void iwl_mvm_mac_sta_statistics(struct ieee80211_hw *hw,
 	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_BEACON_RX);
 	if (mvmvif->deflink.beacon_stats.avg_signal) {
 		/* firmware only reports a value after RXing a few beacons */
-		sinfo->rx_beacon_signal_avg = mvmvif->deflink.beacon_stats.avg_signal;
+		sinfo->rx_beacon_signal_avg =
+			mvmvif->deflink.beacon_stats.avg_signal;
 		sinfo->filled |= BIT_ULL(NL80211_STA_INFO_BEACON_SIGNAL_AVG);
 	}
 }

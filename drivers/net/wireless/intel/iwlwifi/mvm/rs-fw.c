@@ -767,7 +767,16 @@ void iwl_mvm_rs_fw_rate_init(struct iwl_mvm *mvm,
 #endif
 }
 
-void iwl_mvm_rs_add_sta_link(struct iwl_mvm *mvm, struct iwl_mvm_link_sta *link_sta)
+int rs_fw_tx_protection(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvmsta,
+			bool enable)
+{
+	/* TODO: need to introduce a new FW cmd since LQ cmd is not relevant */
+	IWL_DEBUG_RATE(mvm, "tx protection - not implemented yet.\n");
+	return 0;
+}
+
+void iwl_mvm_rs_add_sta_link(struct iwl_mvm *mvm,
+			     struct iwl_mvm_link_sta *link_sta)
 {
 	struct iwl_lq_sta_rs_fw *lq_sta;
 
@@ -801,12 +810,4 @@ void iwl_mvm_rs_add_sta(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvmsta)
 
 		iwl_mvm_rs_add_sta_link(mvm, link);
 	}
-}
-
-int rs_fw_tx_protection(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvmsta,
-			bool enable)
-{
-	/* TODO: need to introduce a new FW cmd since LQ cmd is not relevant */
-	IWL_DEBUG_RATE(mvm, "tx protection - not implemented yet.\n");
-	return 0;
 }

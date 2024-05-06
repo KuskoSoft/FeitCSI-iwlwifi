@@ -785,4 +785,3 @@ void iwl_mvm_bt_coex_vif_change(struct iwl_mvm *mvm)
 {
 	iwl_mvm_bt_coex_notif_handle(mvm);
 }
-
