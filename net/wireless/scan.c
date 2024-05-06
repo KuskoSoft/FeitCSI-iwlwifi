@@ -980,15 +980,19 @@ skip:
 		struct cfg80211_scan_request *old = rdev->int_scan_req;
 		rdev->int_scan_req = request;
 
-		/*
-		 * Add the ssids from the parent scan request to the new scan
-		 * request, so the driver would be able to use them in its
-		 * probe requests to discover hidden APs on PSC channels.
-		 */
-		request->ssids = (void *)&request->channels[request->n_channels];
-		request->n_ssids = rdev_req->n_ssids;
-		memcpy(request->ssids, rdev_req->ssids, sizeof(*request->ssids) *
-		       request->n_ssids);
+		if (rdev_req->n_ssids) {
+			/*
+			 * Add the ssids from the parent scan request to the new
+			 * scan request, so the driver would be able to use them
+			 * in its probe requests to discover hidden APs on PSC
+			 * channels.
+			 */
+			request->ssids =
+				(void *)&request->channels[request->n_channels];
+			request->n_ssids = rdev_req->n_ssids;
+			memcpy(request->ssids, rdev_req->ssids,
+			       sizeof(*request->ssids) * request->n_ssids);
+		}
 
 		/*
 		 * If this scan follows a previous scan, save the scan start
