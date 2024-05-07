@@ -620,7 +620,8 @@ enum iwl_system_subcmd_ids {
 	FW_ERROR_RECOVERY_CMD = 0x7,
 
 	/**
-	 * @RFI_CONFIG_CMD: &struct iwl_rfi_config_cmd
+	 * @RFI_CONFIG_CMD: &struct iwl_rfi_config_cmd_v3,
+	 *	&struct iwl_rfi_config_cmd
 	 */
 	RFI_CONFIG_CMD = 0xb,
 

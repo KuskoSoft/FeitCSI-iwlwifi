@@ -337,10 +337,11 @@ static int iwl_vendor_rfi_ddr_set_table(struct wiphy *wiphy,
 					const void *data, int data_len)
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
-	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	struct iwl_rfi_config_info *rfi_config_info = NULL;
 	struct iwl_rfi_ddr_lut_entry *rfi_ddr_table = NULL;
-	struct nlattr **tb;
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
 	struct nlattr *attr;
+	struct nlattr **tb;
 	int rem, err = 0;
 	int row_idx = -1; /* the row is updated only at frequency attr */
 
@@ -353,13 +354,21 @@ static int iwl_vendor_rfi_ddr_set_table(struct wiphy *wiphy,
 		goto out;
 	}
 
-	rfi_ddr_table = kzalloc(sizeof(*rfi_ddr_table) * IWL_RFI_DDR_LUT_SIZE,
-				GFP_KERNEL);
-	if (!rfi_ddr_table) {
+	rfi_config_info = kzalloc(sizeof(*rfi_config_info), GFP_KERNEL);
+	if (!rfi_config_info) {
 		err = -ENOMEM;
 		goto out;
 	}
 
+	/*
+	 * Fill rfi_config_info with default data to have compatibility
+	 * with old RFI user application.
+	 */
+	memset(&rfi_config_info->desense_table, IWL_RFI_DDR_DESENSE_VALUE,
+	       sizeof(rfi_config_info->desense_table));
+	rfi_config_info->snr_threshold = cpu_to_le32(IWL_RFI_DDR_SNR_THRESHOLD);
+
+	rfi_ddr_table = rfi_config_info->ddr_table;
 	nla_for_each_nested(attr, tb[IWL_MVM_VENDOR_ATTR_RFIM_INFO], rem) {
 		switch (nla_type(attr)) {
 		case IWL_MVM_VENDOR_ATTR_RFIM_FREQ:
@@ -391,13 +400,13 @@ static int iwl_vendor_rfi_ddr_set_table(struct wiphy *wiphy,
 	}
 
 	mutex_lock(&mvm->mutex);
-	err = iwl_rfi_send_config_cmd(mvm, rfi_ddr_table, false, false);
+	err = iwl_rfi_send_config_cmd(mvm, rfi_config_info, false, false);
 	mutex_unlock(&mvm->mutex);
 	if (err)
 		IWL_ERR(mvm, "Failed to send rfi table to FW, error %d\n", err);
 
 out:
-	kfree(rfi_ddr_table);
+	kfree(rfi_config_info);
 	kfree(tb);
 	return err;
 }

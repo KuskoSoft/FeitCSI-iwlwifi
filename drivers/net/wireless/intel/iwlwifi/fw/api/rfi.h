@@ -25,6 +25,17 @@ struct iwl_rfi_ddr_lut_entry {
 } __packed;
 
 /**
+ * struct iwl_rfi_desense_lut_entry - an entry in the RFI DDR DESENSE LUT.
+ *
+ * @chain_a: positive dB value for chain a.
+ * @chain_b: positive dB value for chain b.
+ */
+struct iwl_rfi_desense_lut_entry {
+	u8 chain_a[IWL_RFI_DDR_LUT_ENTRY_CHANNELS_NUM];
+	u8 chain_b[IWL_RFI_DDR_LUT_ENTRY_CHANNELS_NUM];
+} __packed;
+
+/**
  * struct iwl_rfi_dlvr_lut_entry - an entry in the RFI DLVR frequency LUT.
  *
  * @freq: DLVR frequency
@@ -44,26 +55,50 @@ struct iwl_rfi_dlvr_lut_entry {
  *
  * @RFI_DDR_SUPPORTED_MSK: enable DDR support
  * @RFI_DLVR_SUPPORTED_MSK: enable DLVR support
+ * @RFI_DESENSE_SUPPORTED_MSK: enable desense support
  */
 enum rfi_memory_support_mask {
-	RFI_DDR_SUPPORTED_MSK	= BIT(0),
-	RFI_DLVR_SUPPORTED_MSK	= BIT(1),
+	RFI_DDR_SUPPORTED_MSK		= BIT(0),
+	RFI_DLVR_SUPPORTED_MSK		= BIT(1),
+	RFI_DESENSE_SUPPORTED_MSK	= BIT(2),
 };
+
+/**
+ * struct iwl_rfi_config_cmd_v3 - RFI configuration table
+ *
+ * @rfi_memory_support: memory support mask @enum rfi_memory_support_mask
+ * @ddr_table: a table of channels that are used by DDR
+ * @oem: specifies if this is the default table or set by OEM
+ * @reserved: (reserved/padding)
+ */
+struct iwl_rfi_config_cmd_v3 {
+	__le32 rfi_memory_support;
+	struct iwl_rfi_ddr_lut_entry ddr_table[IWL_RFI_DDR_LUT_SIZE];
+	u8 oem;
+	u8 reserved[3];
+} __packed; /* RFI_CONFIG_CMD_API_S_VER_3 */
+
+#define IWL_RFI_DDR_DESENSE_VALUE 10
+#define IWL_RFI_DDR_SNR_THRESHOLD 68
 
 /**
  * struct iwl_rfi_config_cmd - RFI configuration table
  *
  * @rfi_memory_support: memory support mask @enum rfi_memory_support_mask
- * @ddr_table: a table can have 44 frequency/channel mappings
+ * @ddr_table: a table of channels that are used by DDR
  * @oem: specifies if this is the default table or set by OEM
  * @reserved: (reserved/padding)
+ * @desense_table: desense values per chain. see &iwl_rfi_desense_lut_entry
+ * @snr_threshold: SNR threshold to be used for RSSI based RFIM.
  */
 struct iwl_rfi_config_cmd {
 	__le32 rfi_memory_support;
 	struct iwl_rfi_ddr_lut_entry ddr_table[IWL_RFI_DDR_LUT_SIZE];
 	u8 oem;
 	u8 reserved[3];
-} __packed; /* RFI_CONFIG_CMD_API_S_VER_3 */
+	struct iwl_rfi_desense_lut_entry desense_table[IWL_RFI_DDR_LUT_SIZE];
+	__le32 snr_threshold;
+} __packed; /* RFI_CONFIG_CMD_API_S_VER_4 */
 
 /**
  * enum iwl_rfi_freq_table_status - status of the frequency table query

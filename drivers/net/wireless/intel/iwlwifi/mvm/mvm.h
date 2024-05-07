@@ -612,6 +612,19 @@ struct iwl_mvm_vif {
 	     link_id++)							\
 		if ((mvm_vif)->link[link_id])
 
+/**
+ * struct iwl_rfi_config_info - RFI DDR configuration information
+ *
+ * @ddr_table: a table of channels that are used by DDR
+ * @desense_table: desense values per chain. see &iwl_rfi_desense_lut_entry
+ * @snr_threshold: SNR threshold to be used for RSSI based RFIM.
+ */
+struct iwl_rfi_config_info {
+	struct iwl_rfi_ddr_lut_entry ddr_table[IWL_RFI_DDR_LUT_SIZE];
+	struct iwl_rfi_desense_lut_entry desense_table[IWL_RFI_DDR_LUT_SIZE];
+	__le32 snr_threshold;
+};
+
 static inline struct iwl_mvm_vif *
 iwl_mvm_vif_from_mac80211(struct ieee80211_vif *vif)
 {
@@ -2733,7 +2746,7 @@ void iwl_vendor_send_link_info_changed_event(struct iwl_mvm *mvm,
 					     struct ieee80211_vif *vif);
 bool iwl_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr);
 int iwl_rfi_send_config_cmd(struct iwl_mvm *mvm,
-			    struct iwl_rfi_ddr_lut_entry *rfi_table,
+			    struct iwl_rfi_config_info *rfi_config_info,
 			    bool is_set_master_cmd, bool force_send_table);
 void *iwl_rfi_get_freq_table(struct iwl_mvm *mvm);
 u32
@@ -2742,6 +2755,12 @@ iwl_mvm_rfi_esr_state_link_pair(struct ieee80211_vif *vif,
 				const struct iwl_mvm_link_sel_data *b);
 void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
 				   struct iwl_rx_cmd_buffer *rxb);
+
+static inline bool iwl_mvm_rfi_desense_supported(struct iwl_mvm *mvm)
+{
+	return iwl_fw_lookup_cmd_ver(mvm->fw, WIDE_ID(SYSTEM_GROUP,
+				     RFI_CONFIG_CMD), 0) > 3;
+}
 
 static inline bool iwl_mvm_fw_rfi_state_supported(struct iwl_mvm *mvm)
 {
