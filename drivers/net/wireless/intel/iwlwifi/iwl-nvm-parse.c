@@ -379,7 +379,7 @@ static u32 iwl_get_channel_flags(u8 ch_num, int ch_idx, enum nl80211_band band,
 	return flags;
 }
 
-static int iwl_nl80211_band_from_channel_idx(int ch_idx)
+static enum nl80211_band iwl_nl80211_band_from_channel_idx(int ch_idx)
 {
 	if (ch_idx >= NUM_2GHZ_CHANNELS + NUM_5GHZ_CHANNELS)
 		return NL80211_BAND_6GHZ;
@@ -403,7 +403,6 @@ static int iwl_init_channel_map(struct iwl_trans *trans,
 	u32 ch_flags;
 	int num_of_ch;
 	const u16 *nvm_chan;
-	int band;
 
 	if (cfg->uhb_supported) {
 		num_of_ch = IWL_NVM_NUM_CHANNELS_UHB;
@@ -417,9 +416,8 @@ static int iwl_init_channel_map(struct iwl_trans *trans,
 	}
 
 	for (ch_idx = 0; ch_idx < num_of_ch; ch_idx++) {
-		band = iwl_nl80211_band_from_channel_idx(ch_idx);
-		if (band == -1)
-			continue;
+		enum nl80211_band band =
+			iwl_nl80211_band_from_channel_idx(ch_idx);
 
 		if (v4)
 			ch_flags =
@@ -2037,10 +2035,8 @@ iwl_parse_nvm_mcc_info(struct device *dev, const struct iwl_cfg *cfg,
 	reg_capa = iwl_get_reg_capa(cap, resp_ver);
 
 	for (ch_idx = 0; ch_idx < num_of_ch; ch_idx++) {
-		int band = iwl_nl80211_band_from_channel_idx(ch_idx);
-
-		if (band == -1)
-			continue;
+		enum nl80211_band band =
+			iwl_nl80211_band_from_channel_idx(ch_idx);
 
 		ch_flags = (u16)__le32_to_cpup(channels + ch_idx);
 		center_freq = ieee80211_channel_to_frequency(nvm_chan[ch_idx],
