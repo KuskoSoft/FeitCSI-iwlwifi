@@ -29,6 +29,7 @@ iwlwifi-$(CONFIG_PCI) += pcie/ctxt-info.o pcie/ctxt-info-gen3.o pcie/trans-gen2.
 iwlwifi-$(CPTCFG_IWLMVM) += cfg/7000.o cfg/8000.o
 iwlwifi-$(CPTCFG_IWLMVM) += cfg/9000.o cfg/22000.o
 iwlwifi-$(CPTCFG_IWLMVM) += cfg/ax210.o cfg/bz.o cfg/sc.o
+iwlwifi-$(CPTCFG_IWLMLD) += cfg/bz.o cfg/sc.o
 
 iwlwifi-$(CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES) += iwl-dbg-cfg.o
 
@@ -46,6 +47,7 @@ subdir-ccflags-y += $(call cc-option,-Wimplicit-fallthrough)
 obj-$(CPTCFG_IWLMVM)	+= mvm/
 obj-$(CPTCFG_IWLMEI)	+= mei/
 obj-$(CPTCFG_IWLXVT)	+= xvt/
+obj-$(CPTCFG_IWLMLD)	+= mld/
 
 obj-$(CPTCFG_IWLWIFI_KUNIT_TESTS) += tests/
 

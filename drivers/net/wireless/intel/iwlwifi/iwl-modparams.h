@@ -65,6 +65,7 @@ enum iwl_uapsd_disable {
  * @remove_when_gone: remove an inaccessible device from the PCIe bus.
  * @enable_ini: enable new FW debug infratructure (INI TLVs)
  * @disable_11be: disable EHT capabilities, default = false.
+ * @mld_op_mode: Load the MLD operation mode. Default = false.
  */
 struct iwl_mod_params {
 	int swcrypto;
@@ -92,6 +93,9 @@ struct iwl_mod_params {
 	bool remove_when_gone;
 	u32 enable_ini;
 	bool disable_11be;
+#if IS_ENABLED(CPTCFG_IWLMLD)
+	bool mld_op_mode;
+#endif
 
 };
 

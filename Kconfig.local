@@ -220,6 +220,9 @@ config BACKPORTED_IWLDVM
 config BACKPORTED_IWLMVM
 	tristate
 	default IWLMVM
+config BACKPORTED_IWLMLD
+	tristate
+	default IWLMLD
 config BACKPORTED_IWLWIFI_OPMODE_MODULAR
 	tristate
 	default IWLWIFI_OPMODE_MODULAR

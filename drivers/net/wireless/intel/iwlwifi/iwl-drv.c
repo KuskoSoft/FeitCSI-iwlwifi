@@ -86,6 +86,9 @@ struct iwl_drv {
 enum {
 	DVM_OP_MODE,
 	MVM_OP_MODE,
+#if IS_ENABLED(CPTCFG_IWLMLD)
+	MLD_OP_MODE,
+#endif
 #if IS_ENABLED(CPTCFG_IWLXVT)
 	XVT_OP_MODE,
 #endif
@@ -100,6 +103,9 @@ static struct iwlwifi_opmode_table {
 } iwlwifi_opmode_table[] = {		/* ops set when driver is initialized */
 	[DVM_OP_MODE] = { .name = "iwldvm", .ops = NULL },
 	[MVM_OP_MODE] = { .name = "iwlmvm", .ops = NULL },
+#if IS_ENABLED(CPTCFG_IWLMLD)
+	[MLD_OP_MODE] = { .name = "iwlmld", .ops = NULL },
+#endif
 #if IS_ENABLED(CPTCFG_IWLXVT)
 	[XVT_OP_MODE] = { .name = "iwlxvt", .ops = NULL },
 #endif
@@ -2013,6 +2019,10 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 		op = &iwlwifi_opmode_table[MVM_OP_MODE];
 		break;
 	}
+#if IS_ENABLED(CPTCFG_IWLMLD)
+	if (iwlwifi_mod_params.mld_op_mode && drv->fw.type == IWL_FW_MVM)
+		op = &iwlwifi_opmode_table[MLD_OP_MODE];
+#endif
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
 	if (iwlwifi_mod_params.xvt_default_mode && drv->fw.type == IWL_FW_MVM)
@@ -2410,3 +2420,10 @@ MODULE_PARM_DESC(disable_msix, "Disable MSI-X and use MSI instead (default: fals
 module_param_named(disable_11be, iwlwifi_mod_params.disable_11be, bool, 0444);
 MODULE_PARM_DESC(disable_11be, "Disable EHT capabilities (default: false)");
 
+#if IS_ENABLED(CPTCFG_IWLMLD)
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+module_param_named(mld_op_mode, iwlwifi_mod_params.mld_op_mode,
+		   bool, 0444);
+MODULE_PARM_DESC(mld_op_mode, "Load iwlwifi using the MLD operation mode (default: false)");
+#endif
+#endif
