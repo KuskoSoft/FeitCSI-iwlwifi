@@ -1994,7 +1994,6 @@ iwl_parse_nvm_mcc_info(struct device *dev, const struct iwl_cfg *cfg,
 	const u16 *nvm_chan;
 	struct ieee80211_regdomain *regd, *copy_rd;
 	struct ieee80211_reg_rule *rule;
-	int band;
 	int center_freq, prev_center_freq = 0;
 	int valid_rules = 0;
 	bool new_rule;
@@ -2038,7 +2037,8 @@ iwl_parse_nvm_mcc_info(struct device *dev, const struct iwl_cfg *cfg,
 	reg_capa = iwl_get_reg_capa(cap, resp_ver);
 
 	for (ch_idx = 0; ch_idx < num_of_ch; ch_idx++) {
-		band = iwl_nl80211_band_from_channel_idx(ch_idx);
+		int band = iwl_nl80211_band_from_channel_idx(ch_idx);
+
 		if (band == -1)
 			continue;
 
