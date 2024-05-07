@@ -91,8 +91,7 @@ int iwl_txq_gen2_set_tb(struct iwl_trans *trans, struct iwl_tfh_tfd *tfd,
 	int idx = iwl_txq_gen2_get_num_tbs(trans, tfd);
 	struct iwl_tfh_tb *tb;
 
-	/*
-	 * Only WARN here so we know about the issue, but we mess up our
+	/* Only WARN here so we know about the issue, but we mess up our
 	 * unmap path because not every place currently checks for errors
 	 * returned from this function - it can only return an error if
 	 * there's no more space, and so when we know there is enough we
