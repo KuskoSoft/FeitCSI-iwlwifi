@@ -368,7 +368,7 @@ enum {
 	WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK	= 0x80000000,
 };
 
-#define CNVI_AUX_MISC_CHIP				0xA200B0
+#define CNVI_AUX_MISC_CHIP			0xA200B0
 #define CNVI_AUX_MISC_CHIP_MAC_STEP(_val)	(((_val) & 0xf000000) >> 24)
 #define CNVI_AUX_MISC_CHIP_PROD_TYPE(_val)	((_val) & 0xfff)
 #define CNVI_AUX_MISC_CHIP_PROD_TYPE_GL		0x910

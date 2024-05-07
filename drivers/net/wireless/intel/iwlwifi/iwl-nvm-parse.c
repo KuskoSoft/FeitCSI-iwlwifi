@@ -395,7 +395,7 @@ static int iwl_init_channel_map(struct iwl_trans *trans,
 {
 	const struct iwl_cfg *cfg = trans->cfg;
 	struct device *dev = trans->dev;
-	int ch_idx = 0;
+	int ch_idx;
 	int n_channels = 0;
 	struct ieee80211_channel *channel;
 	u32 ch_flags;
@@ -414,7 +414,7 @@ static int iwl_init_channel_map(struct iwl_trans *trans,
 		nvm_chan = iwl_nvm_channels;
 	}
 
-	for (; ch_idx < num_of_ch; ch_idx++) {
+	for (ch_idx = 0; ch_idx < num_of_ch; ch_idx++) {
 		band = iwl_nl80211_band_from_channel_idx(ch_idx);
 		if (band == -1)
 			continue;
