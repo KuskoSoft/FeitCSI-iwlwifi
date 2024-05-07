@@ -3369,7 +3369,8 @@ int iwl_fw_send_timestamp_marker_cmd(struct iwl_fw_runtime *fwrt)
 
 	if (cmd_ver > 1 && hcmd.resp_pkt) {
 		resp = (void *)hcmd.resp_pkt->data;
-		IWL_DEBUG_INFO(fwrt, "FW GP2 time: %u\n", le32_to_cpu(resp->gp2));
+		IWL_DEBUG_INFO(fwrt, "FW GP2 time: %u\n",
+			       le32_to_cpu(resp->gp2));
 	}
 
 	return ret;

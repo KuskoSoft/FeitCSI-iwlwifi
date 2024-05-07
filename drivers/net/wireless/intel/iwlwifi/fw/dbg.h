@@ -227,6 +227,8 @@ static inline void iwl_fw_flush_dumps(struct iwl_fw_runtime *fwrt)
 		flush_delayed_work(&fwrt->dump.wks[i].wk);
 }
 
+int iwl_fw_send_timestamp_marker_cmd(struct iwl_fw_runtime *fwrt);
+
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 static inline void iwl_fw_cancel_timestamp(struct iwl_fw_runtime *fwrt)
 {
@@ -234,7 +236,6 @@ static inline void iwl_fw_cancel_timestamp(struct iwl_fw_runtime *fwrt)
 	cancel_delayed_work_sync(&fwrt->timestamp.wk);
 }
 
-int iwl_fw_send_timestamp_marker_cmd(struct iwl_fw_runtime *fwrt);
 void iwl_fw_trigger_timestamp(struct iwl_fw_runtime *fwrt, u32 delay);
 
 static inline void iwl_fw_suspend_timestamp(struct iwl_fw_runtime *fwrt)
@@ -264,6 +265,8 @@ static inline void iwl_fw_resume_timestamp(struct iwl_fw_runtime *fwrt) {}
 
 #endif /* CPTCFG_IWLWIFI_DEBUGFS */
 
+void iwl_fw_dbg_stop_sync(struct iwl_fw_runtime *fwrt);
+
 static inline void iwl_fw_lmac1_set_alive_err_table(struct iwl_trans *trans,
 						    u32 lmac_error_event_table)
 {
@@ -283,8 +286,6 @@ static inline void iwl_fw_umac_set_alive_err_table(struct iwl_trans *trans,
 		    umac_error_event_table))
 		trans->dbg.umac_error_event_table = umac_error_event_table;
 }
-
-void iwl_fw_dbg_stop_sync(struct iwl_fw_runtime *fwrt);
 
 static inline void iwl_fw_error_collect(struct iwl_fw_runtime *fwrt, bool sync)
 {
