@@ -2681,8 +2681,8 @@ __le32 iwl_mvm_get_sta_htc_flags(struct ieee80211_sta *sta,
 	return htc_flags;
 }
 
-void iwl_mvm_cfg_he_sta(struct iwl_mvm *mvm,
-			struct ieee80211_vif *vif, u8 sta_id)
+static void iwl_mvm_cfg_he_sta(struct iwl_mvm *mvm,
+			       struct ieee80211_vif *vif, u8 sta_id)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct iwl_he_sta_context_cmd_v3 sta_ctxt_cmd = {
