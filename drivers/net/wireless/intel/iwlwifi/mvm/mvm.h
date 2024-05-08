@@ -567,7 +567,6 @@ struct iwl_mvm_vif {
 	     link_id++)							\
 		if ((mvm_vif)->link[link_id])
 
-
 static inline struct iwl_mvm_vif *
 iwl_mvm_vif_from_mac80211(struct ieee80211_vif *vif)
 {
@@ -696,7 +695,6 @@ enum iwl_mvm_traffic_load {
 	IWL_MVM_TRAFFIC_MEDIUM,
 	IWL_MVM_TRAFFIC_HIGH,
 };
-
 
 DECLARE_EWMA(rate, 16, 16)
 
@@ -1220,12 +1218,11 @@ struct iwl_mvm {
 	bool fw_static_smps_request;
 
 	unsigned long bt_coex_last_tcm_ts;
+	struct iwl_mvm_tcm tcm;
 
 	u8 uapsd_noagg_bssid_write_idx;
 	struct mac_address uapsd_noagg_bssids[IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM]
 		__aligned(2);
-
-	struct iwl_mvm_tcm tcm;
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
 	struct list_head tdls_peer_cache_list;
@@ -1367,7 +1364,10 @@ struct iwl_mvm {
 
 	/* does a monitor vif exist (only one can exist hence bool) */
 	bool monitor_on;
-	/* primary channel place relative the whole bandwidth in gaps of 80Mhz */
+	/*
+	 * primary channel position relative to he whole bandwidth,
+	 * in steps of 80 MHz
+	 */
 	u8 monitor_p80;
 
 	/* sniffer data to include in radiotap */
@@ -1387,13 +1387,14 @@ struct iwl_mvm {
 	bool sta_remove_requires_queue_remove;
 	bool mld_api_is_used;
 
+	bool pldr_sync;
+
 	struct iwl_time_sync_data time_sync;
 
 	struct iwl_mvm_acs_survey *acs_survey;
 
 	/* Firmware RFI state &enum iwl_rfi_support_reason */
 	u32 fw_rfi_state;
-	bool pldr_sync;
 	bool rfi_wlan_master;
 	bool force_enable_rfi;
 	bool statistics_clear;
@@ -1686,16 +1687,16 @@ static inline bool iwl_mvm_cdb_scan_api(struct iwl_mvm *mvm)
 	return mvm->trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_22000;
 }
 
-static inline bool iwl_mvm_is_reduced_config_scan_supported(struct iwl_mvm *mvm)
-{
-	return fw_has_api(&mvm->fw->ucode_capa,
-			  IWL_UCODE_TLV_API_REDUCED_SCAN_CONFIG);
-}
-
 static inline bool iwl_mvm_is_scan_ext_chan_supported(struct iwl_mvm *mvm)
 {
 	return fw_has_api(&mvm->fw->ucode_capa,
 			  IWL_UCODE_TLV_API_SCAN_EXT_CHAN_VER);
+}
+
+static inline bool iwl_mvm_is_reduced_config_scan_supported(struct iwl_mvm *mvm)
+{
+	return fw_has_api(&mvm->fw->ucode_capa,
+			  IWL_UCODE_TLV_API_REDUCED_SCAN_CONFIG);
 }
 
 static inline bool iwl_mvm_is_band_in_rx_supported(struct iwl_mvm *mvm)
@@ -2380,10 +2381,11 @@ void iwl_mvm_update_smps(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 				enum iwl_mvm_smps_type_request req_type,
 				enum ieee80211_smps_mode smps_request,
 				unsigned int link_id);
-void iwl_mvm_update_smps_on_active_links(struct iwl_mvm *mvm,
-					 struct ieee80211_vif *vif,
-					 enum iwl_mvm_smps_type_request req_type,
-					 enum ieee80211_smps_mode smps_request);
+void
+iwl_mvm_update_smps_on_active_links(struct iwl_mvm *mvm,
+				    struct ieee80211_vif *vif,
+				    enum iwl_mvm_smps_type_request req_type,
+				    enum ieee80211_smps_mode smps_request);
 bool iwl_mvm_rx_diversity_allowed(struct iwl_mvm *mvm,
 				  struct iwl_mvm_phy_ctxt *ctxt);
 void iwl_mvm_update_link_smps(struct ieee80211_vif *vif,
@@ -2763,11 +2765,12 @@ struct iwl_mvm_switch_vif_chanctx_ops {
 				       bool switching_chanctx);
 };
 
-int iwl_mvm_switch_vif_chanctx_common(struct ieee80211_hw *hw,
-				      struct ieee80211_vif_chanctx_switch *vifs,
-				      int n_vifs,
-				      enum ieee80211_chanctx_switch_mode mode,
-				      const struct iwl_mvm_switch_vif_chanctx_ops *ops);
+int
+iwl_mvm_switch_vif_chanctx_common(struct ieee80211_hw *hw,
+				  struct ieee80211_vif_chanctx_switch *vifs,
+				  int n_vifs,
+				  enum ieee80211_chanctx_switch_mode mode,
+				  const struct iwl_mvm_switch_vif_chanctx_ops *ops);
 
 /* Channel info utils */
 static inline bool iwl_mvm_has_ultra_hb_channel(struct iwl_mvm *mvm)

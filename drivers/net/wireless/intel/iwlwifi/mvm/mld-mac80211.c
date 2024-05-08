@@ -18,8 +18,7 @@ static int iwl_mvm_mld_mac_add_interface(struct ieee80211_hw *hw,
 
 	mvmvif->mvm = mvm;
 
-	/*
-	 * Not much to do here. The stack will not allow interface
+	/* Not much to do here. The stack will not allow interface
 	 * types or combinations that we didn't advertise, so we
 	 * don't really have to check the types.
 	 */
@@ -150,8 +149,7 @@ static void iwl_mvm_mld_mac_remove_interface(struct ieee80211_hw *hw,
 
 	iwl_mvm_vif_dbgfs_rm_link(mvm, vif);
 
-	/*
-	 * For AP/GO interface, the tear down of the resources allocated to the
+	/* For AP/GO interface, the tear down of the resources allocated to the
 	 * interface is be handled as part of the stop_ap flow.
 	 */
 	if (vif->type == NL80211_IFTYPE_AP ||
@@ -296,11 +294,12 @@ static int iwl_mvm_esr_mode_active(struct iwl_mvm *mvm,
 	return ret;
 }
 
-static int __iwl_mvm_mld_assign_vif_chanctx(struct iwl_mvm *mvm,
-					    struct ieee80211_vif *vif,
-					    struct ieee80211_bss_conf *link_conf,
-					    struct ieee80211_chanctx_conf *ctx,
-					    bool switching_chanctx)
+static int
+__iwl_mvm_mld_assign_vif_chanctx(struct iwl_mvm *mvm,
+				 struct ieee80211_vif *vif,
+				 struct ieee80211_bss_conf *link_conf,
+				 struct ieee80211_chanctx_conf *ctx,
+				 bool switching_chanctx)
 {
 	u16 *phy_ctxt_id = (u16 *)ctx->drv_priv;
 	struct iwl_mvm_phy_ctxt *phy_ctxt = &mvm->phy_ctxts[*phy_ctxt_id];
@@ -351,8 +350,7 @@ static int __iwl_mvm_mld_assign_vif_chanctx(struct iwl_mvm *mvm,
 	if (ret)
 		goto out;
 
-	/*
-	 * Initialize rate control for the AP station, since we might be
+	/* Initialize rate control for the AP station, since we might be
 	 * doing a link switch here - we cannot initialize it before since
 	 * this needs the phy context assigned (and in FW?), and we cannot
 	 * do it later because it needs to be initialized as soon as we're
@@ -399,7 +397,8 @@ static int __iwl_mvm_mld_assign_vif_chanctx(struct iwl_mvm *mvm,
 	return 0;
 
 deactivate:
-	iwl_mvm_link_changed(mvm, vif, link_conf, LINK_CONTEXT_MODIFY_ACTIVE, false);
+	iwl_mvm_link_changed(mvm, vif, link_conf, LINK_CONTEXT_MODIFY_ACTIVE,
+			     false);
 out:
 	mvmvif->link[link_id]->phy_ctxt = NULL;
 	iwl_mvm_power_update_mac(mvm);
@@ -482,11 +481,12 @@ static int iwl_mvm_esr_mode_inactive(struct iwl_mvm *mvm,
 	return ret;
 }
 
-static void __iwl_mvm_mld_unassign_vif_chanctx(struct iwl_mvm *mvm,
-					       struct ieee80211_vif *vif,
-					       struct ieee80211_bss_conf *link_conf,
-					       struct ieee80211_chanctx_conf *ctx,
-					       bool switching_chanctx)
+static void
+__iwl_mvm_mld_unassign_vif_chanctx(struct iwl_mvm *mvm,
+				   struct ieee80211_vif *vif,
+				   struct ieee80211_bss_conf *link_conf,
+				   struct ieee80211_chanctx_conf *ctx,
+				   bool switching_chanctx)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	unsigned int n_active = iwl_mvm_mld_count_active_links(mvmvif);
@@ -659,10 +659,9 @@ static int iwl_mvm_mld_start_ap_ibss(struct ieee80211_hw *hw,
 	if (ret)
 		return ret;
 
-	/*
-	* Send the bcast station. At this stage the TBTT and DTIM time
-	* events are added and applied to the scheduler
-	*/
+	/* Send the bcast station. At this stage the TBTT and DTIM time
+	 * events are added and applied to the scheduler
+	 */
 	ret = iwl_mvm_mld_add_bcast_sta(mvm, vif, link_conf);
 	if (ret)
 		goto out_rm_mcast;
@@ -777,10 +776,11 @@ static bool iwl_mvm_esr_bw_criteria(struct iwl_mvm *mvm,
 	return false;
 }
 
-static void iwl_mvm_mld_link_info_changed_station(struct iwl_mvm *mvm,
-						  struct ieee80211_vif *vif,
-						  struct ieee80211_bss_conf *link_conf,
-						  u64 changes)
+static void
+iwl_mvm_mld_link_info_changed_station(struct iwl_mvm *mvm,
+				      struct ieee80211_vif *vif,
+				      struct ieee80211_bss_conf *link_conf,
+				      u64 changes)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	bool has_he, has_eht;
@@ -880,8 +880,7 @@ static void iwl_mvm_mld_vif_cfg_changed_station(struct iwl_mvm *mvm,
 	unsigned int i;
 	int ret;
 
-	/*
-	 * This might get called without active links during the
+	/* This might get called without active links during the
 	 * chanctx switch, but we don't care about it anyway.
 	 */
 	if (changes == BSS_CHANGED_IDLE)
@@ -1123,8 +1122,7 @@ iwl_mvm_mld_mac_conf_tx(struct ieee80211_hw *hw,
 
 	mvm_link->queue_params[ac] = *params;
 
-	/*
-	 * No need to update right away, we'll get BSS_CHANGED_QOS
+	/* No need to update right away, we'll get BSS_CHANGED_QOS
 	 * The exception is P2P_DEVICE interface which needs immediate update.
 	 */
 	if (vif->type == NL80211_IFTYPE_P2P_DEVICE) {
@@ -1206,7 +1204,8 @@ iwl_mvm_mld_change_vif_links(struct ieee80211_hw *hw,
 		new_link[i]->fw_link_id = IWL_MVM_FW_LINK_ID_INVALID;
 
 		for (r = 0; r < NUM_IWL_MVM_SMPS_REQ; r++)
-			new_link[i]->smps_requests[r] = IEEE80211_SMPS_AUTOMATIC;
+			new_link[i]->smps_requests[r] =
+				IEEE80211_SMPS_AUTOMATIC;
 	}
 
 	mutex_lock(&mvm->mutex);

@@ -38,8 +38,7 @@ static u32 iwl_mvm_get_sec_sta_mask(struct iwl_mvm *mvm,
 	if (!sta && vif->type == NL80211_IFTYPE_STATION)
 		sta = mvmvif->ap_sta;
 
-	/*
-	 * During remove the STA was removed and the group keys come later
+	/* During remove the STA was removed and the group keys come later
 	 * (which sounds like a bad sequence, but remember that to mac80211 the
 	 * group keys have no sta pointer), so we don't have a STA now.
 	 * Since this happens for group keys only, just use the link_info as

@@ -241,8 +241,7 @@ int iwl_mvm_mld_add_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 				       IWL_MAX_TID_COUNT, &wdg_timeout);
 }
 
-/*
- * Allocate a new station entry for the broadcast station to the given vif,
+/* Allocate a new station entry for the broadcast station to the given vif,
  * and send it to the FW.
  * Note that each AP/GO mac should have its own multicast station.
  */
@@ -263,8 +262,7 @@ int iwl_mvm_mld_add_mcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		    vif->type != NL80211_IFTYPE_ADHOC))
 		return -EOPNOTSUPP;
 
-	/*
-	 * In IBSS, ieee80211_check_queues() sets the cab_queue to be
+	/* In IBSS, ieee80211_check_queues() sets the cab_queue to be
 	 * invalid, so make sure we use the queue we want.
 	 * Note that this is done here as we want to avoid making DQA
 	 * changes in mac80211 layer.
@@ -300,8 +298,7 @@ int iwl_mvm_mld_add_aux_sta(struct iwl_mvm *mvm, u32 lmac_id)
 {
 	lockdep_assert_held(&mvm->mutex);
 
-	/*
-	 * In CDB NICs we need to specify which lmac to use for aux activity;
+	/* In CDB NICs we need to specify which lmac to use for aux activity;
 	 * use the link_id argument place to send lmac_id to the function.
 	 */
 	return iwl_mvm_mld_add_int_sta(mvm, &mvm->aux_sta, &mvm->aux_queue,
@@ -396,8 +393,7 @@ int iwl_mvm_mld_rm_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 				      true, IWL_MAX_TID_COUNT, queueptr);
 }
 
-/*
- * Send the FW a request to remove the station from it's internal data
+/* Send the FW a request to remove the station from it's internal data
  * structures, and in addition remove it from the local data structure.
  */
 int iwl_mvm_mld_rm_mcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
@@ -496,7 +492,8 @@ static int iwl_mvm_mld_cfg_sta(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
 	cmd.tx_ampdu_max_size = cpu_to_le32(agg_size);
 
 	if (sta->wme) {
-		cmd.sp_length = cpu_to_le32(sta->max_sp ? sta->max_sp * 2 : 128);
+		cmd.sp_length =
+			cpu_to_le32(sta->max_sp ? sta->max_sp * 2 : 128);
 		cmd.uapsd_acs = cpu_to_le32(iwl_mvm_get_sta_uapsd_acs(sta));
 	}
 

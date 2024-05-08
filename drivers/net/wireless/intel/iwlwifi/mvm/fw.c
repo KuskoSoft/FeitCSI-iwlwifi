@@ -1764,9 +1764,6 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	}
 #endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
 
-	if (!mvm->ptp_data.ptp_clock)
-		iwl_mvm_ptp_init(mvm);
-
 	if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
 		iwl_mvm_send_recovery_cmd(mvm, ERROR_RECOVERY_UPDATE_DB);
 
@@ -1775,6 +1772,9 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 						 IWL_TIME_SYNC_PROTOCOL_TM |
 						 IWL_TIME_SYNC_PROTOCOL_FTM);
 	}
+
+	if (!mvm->ptp_data.ptp_clock)
+		iwl_mvm_ptp_init(mvm);
 
 	ret = iwl_mvm_ppag_init(mvm);
 	if (ret)

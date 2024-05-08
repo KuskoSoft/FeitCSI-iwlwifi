@@ -193,7 +193,8 @@ int iwl_mvm_esr_non_bss_link(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	if (data.lift_block) {
 		mutex_lock(&mvm->mutex);
 		iwl_mvm_unblock_esr(mvm, bss_vif, IWL_MVM_ESR_BLOCKED_NON_BSS);
-		mutex_unlock(&mvm->mutex);}
+		mutex_unlock(&mvm->mutex);
+	}
 
 	return 0;
 }

@@ -696,6 +696,14 @@ static const struct iwl_hcmd_names iwl_mvm_data_path_names[] = {
 /* Please keep this array *SORTED* by hex value.
  * Access is done through binary search
  */
+static const struct iwl_hcmd_names iwl_mvm_statistics_names[] = {
+	HCMD_NAME(STATISTICS_OPER_NOTIF),
+	HCMD_NAME(STATISTICS_OPER_PART1_NOTIF),
+};
+
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
 static const struct iwl_hcmd_names iwl_mvm_debug_names[] = {
 	HCMD_NAME(LMAC_RD_WR),
 	HCMD_NAME(UMAC_RD_WR),
@@ -706,14 +714,6 @@ static const struct iwl_hcmd_names iwl_mvm_debug_names[] = {
 	HCMD_NAME(FW_DUMP_COMPLETE_CMD),
 	HCMD_NAME(FW_CLEAR_BUFFER),
 	HCMD_NAME(MFU_ASSERT_DUMP_NTF),
-};
-
-/* Please keep this array *SORTED* by hex value.
- * Access is done through binary search
- */
-static const struct iwl_hcmd_names iwl_mvm_statistics_names[] = {
-	HCMD_NAME(STATISTICS_OPER_NOTIF),
-	HCMD_NAME(STATISTICS_OPER_PART1_NOTIF),
 };
 
 /* Please keep this array *SORTED* by hex value.
@@ -1000,118 +1000,6 @@ static int iwl_mvm_start_post_nvm(struct iwl_mvm *mvm)
 	return 0;
 }
 
-static void iwl_mvm_me_conn_status(void *priv, const struct iwl_mei_conn_info *conn_info)
-{
-	struct iwl_mvm *mvm = priv;
-	struct iwl_mvm_csme_conn_info *prev_conn_info, *curr_conn_info;
-
-	/*
-	 * This is protected by the guarantee that this function will not be
-	 * called twice on two different threads
-	 */
-	prev_conn_info = rcu_dereference_protected(mvm->csme_conn_info, true);
-
-	curr_conn_info = kzalloc(sizeof(*curr_conn_info), GFP_KERNEL);
-	if (!curr_conn_info)
-		return;
-
-	curr_conn_info->conn_info = *conn_info;
-
-	rcu_assign_pointer(mvm->csme_conn_info, curr_conn_info);
-
-	if (prev_conn_info)
-		kfree_rcu(prev_conn_info, rcu_head);
-}
-
-static void iwl_mvm_mei_rfkill(void *priv, bool blocked,
-			       bool csme_taking_ownership)
-{
-	struct iwl_mvm *mvm = priv;
-
-	if (blocked && !IWL_MVM_MEI_REPORT_RFKILL && !csme_taking_ownership)
-		return;
-
-	mvm->mei_rfkill_blocked = blocked;
-	if (!mvm->hw_registered)
-		return;
-
-	wiphy_rfkill_set_hw_state_reason(mvm->hw->wiphy,
-					 mvm->mei_rfkill_blocked,
-					 RFKILL_HARD_BLOCK_NOT_OWNER);
-}
-
-static void iwl_mvm_mei_roaming_forbidden(void *priv, bool forbidden)
-{
-	struct iwl_mvm *mvm = priv;
-
-	if (!mvm->hw_registered || !mvm->csme_vif)
-		return;
-
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-	iwl_mvm_send_roaming_forbidden_event(mvm, mvm->csme_vif, forbidden);
-#endif
-}
-
-static void iwl_mvm_sap_connected_wk(struct work_struct *wk)
-{
-	struct iwl_mvm *mvm =
-		container_of(wk, struct iwl_mvm, sap_connected_wk);
-	int ret;
-
-	ret = iwl_mvm_start_get_nvm(mvm);
-	if (ret)
-		goto out_free;
-
-	ret = iwl_mvm_start_post_nvm(mvm);
-	if (ret)
-		goto out_free;
-
-	return;
-
-out_free:
-	IWL_ERR(mvm, "Couldn't get started...\n");
-	iwl_mei_start_unregister();
-	iwl_mei_unregister_complete();
-	iwl_fw_flush_dumps(&mvm->fwrt);
-	iwl_mvm_thermal_exit(mvm);
-	iwl_fw_runtime_free(&mvm->fwrt);
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_free(mvm->trans);
-#endif
-	iwl_phy_db_free(mvm->phy_db);
-	kfree(mvm->scan_cmd);
-	iwl_trans_op_mode_leave(mvm->trans);
-	kfree(mvm->nvm_data);
-	kfree(mvm->mei_nvm_data);
-
-	ieee80211_free_hw(mvm->hw);
-}
-
-static void iwl_mvm_mei_sap_connected(void *priv)
-{
-	struct iwl_mvm *mvm = priv;
-
-	if (!mvm->hw_registered)
-		schedule_work(&mvm->sap_connected_wk);
-}
-
-static void iwl_mvm_mei_nic_stolen(void *priv)
-{
-	struct iwl_mvm *mvm = priv;
-
-	rtnl_lock();
-	cfg80211_shutdown_all_interfaces(mvm->hw->wiphy);
-	rtnl_unlock();
-}
-
-static const struct iwl_mei_ops mei_ops = {
-	.me_conn_status = iwl_mvm_me_conn_status,
-	.rfkill = iwl_mvm_mei_rfkill,
-	.roaming_forbidden = iwl_mvm_mei_roaming_forbidden,
-	.sap_connected = iwl_mvm_mei_sap_connected,
-	.nic_stolen = iwl_mvm_mei_nic_stolen,
-};
-
 struct iwl_mvm_frob_txf_data {
 	u8 *buf;
 	size_t buflen;
@@ -1287,6 +1175,118 @@ static const struct iwl_dump_sanitize_ops iwl_mvm_sanitize_ops = {
 	.frob_txf = iwl_mvm_frob_txf,
 	.frob_hcmd = iwl_mvm_frob_hcmd,
 	.frob_mem = iwl_mvm_frob_mem,
+};
+
+static void iwl_mvm_me_conn_status(void *priv, const struct iwl_mei_conn_info *conn_info)
+{
+	struct iwl_mvm *mvm = priv;
+	struct iwl_mvm_csme_conn_info *prev_conn_info, *curr_conn_info;
+
+	/*
+	 * This is protected by the guarantee that this function will not be
+	 * called twice on two different threads
+	 */
+	prev_conn_info = rcu_dereference_protected(mvm->csme_conn_info, true);
+
+	curr_conn_info = kzalloc(sizeof(*curr_conn_info), GFP_KERNEL);
+	if (!curr_conn_info)
+		return;
+
+	curr_conn_info->conn_info = *conn_info;
+
+	rcu_assign_pointer(mvm->csme_conn_info, curr_conn_info);
+
+	if (prev_conn_info)
+		kfree_rcu(prev_conn_info, rcu_head);
+}
+
+static void iwl_mvm_mei_rfkill(void *priv, bool blocked,
+			       bool csme_taking_ownership)
+{
+	struct iwl_mvm *mvm = priv;
+
+	if (blocked && !IWL_MVM_MEI_REPORT_RFKILL && !csme_taking_ownership)
+		return;
+
+	mvm->mei_rfkill_blocked = blocked;
+	if (!mvm->hw_registered)
+		return;
+
+	wiphy_rfkill_set_hw_state_reason(mvm->hw->wiphy,
+					 mvm->mei_rfkill_blocked,
+					 RFKILL_HARD_BLOCK_NOT_OWNER);
+}
+
+static void iwl_mvm_mei_roaming_forbidden(void *priv, bool forbidden)
+{
+	struct iwl_mvm *mvm = priv;
+
+	if (!mvm->hw_registered || !mvm->csme_vif)
+		return;
+
+#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+	iwl_mvm_send_roaming_forbidden_event(mvm, mvm->csme_vif, forbidden);
+#endif
+}
+
+static void iwl_mvm_sap_connected_wk(struct work_struct *wk)
+{
+	struct iwl_mvm *mvm =
+		container_of(wk, struct iwl_mvm, sap_connected_wk);
+	int ret;
+
+	ret = iwl_mvm_start_get_nvm(mvm);
+	if (ret)
+		goto out_free;
+
+	ret = iwl_mvm_start_post_nvm(mvm);
+	if (ret)
+		goto out_free;
+
+	return;
+
+out_free:
+	IWL_ERR(mvm, "Couldn't get started...\n");
+	iwl_mei_start_unregister();
+	iwl_mei_unregister_complete();
+	iwl_fw_flush_dumps(&mvm->fwrt);
+	iwl_mvm_thermal_exit(mvm);
+	iwl_fw_runtime_free(&mvm->fwrt);
+#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
+	iwl_dnt_free(mvm->trans);
+#endif
+	iwl_phy_db_free(mvm->phy_db);
+	kfree(mvm->scan_cmd);
+	iwl_trans_op_mode_leave(mvm->trans);
+	kfree(mvm->nvm_data);
+	kfree(mvm->mei_nvm_data);
+
+	ieee80211_free_hw(mvm->hw);
+}
+
+static void iwl_mvm_mei_sap_connected(void *priv)
+{
+	struct iwl_mvm *mvm = priv;
+
+	if (!mvm->hw_registered)
+		schedule_work(&mvm->sap_connected_wk);
+}
+
+static void iwl_mvm_mei_nic_stolen(void *priv)
+{
+	struct iwl_mvm *mvm = priv;
+
+	rtnl_lock();
+	cfg80211_shutdown_all_interfaces(mvm->hw->wiphy);
+	rtnl_unlock();
+}
+
+static const struct iwl_mei_ops mei_ops = {
+	.me_conn_status = iwl_mvm_me_conn_status,
+	.rfkill = iwl_mvm_mei_rfkill,
+	.roaming_forbidden = iwl_mvm_mei_roaming_forbidden,
+	.sap_connected = iwl_mvm_mei_sap_connected,
+	.nic_stolen = iwl_mvm_mei_nic_stolen,
 };
 
 static void iwl_mvm_find_link_selection_vif(void *_data, u8 *mac,
