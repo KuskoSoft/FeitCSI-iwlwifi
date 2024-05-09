@@ -377,6 +377,8 @@ void *iwl_rfi_get_freq_table(struct iwl_mvm *mvm)
 	if (notif_ver == 1)
 		resp_size = sizeof(struct iwl_rfi_freq_table_resp_cmd_v1);
 	else if (notif_ver == 2)
+		resp_size = sizeof(struct iwl_rfi_freq_table_resp_cmd_v2);
+	else if (notif_ver == 3)
 		resp_size = sizeof(struct iwl_rfi_freq_table_resp_cmd);
 	else
 		return ERR_PTR(-EOPNOTSUPP);

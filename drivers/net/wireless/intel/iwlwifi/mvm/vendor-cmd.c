@@ -277,16 +277,31 @@ static int iwl_vendor_rfim_get_capa(struct wiphy *wiphy,
 	return cfg80211_vendor_cmd_reply(skb);
 }
 
+/* RFIM_INFO requires 4 bytes for nlattr.
+ * DDR table will have 4 entries and each entry contains, frequency which
+ * requires 2 bytes for it and 4 bytes for nlattr. channel, bands, chain_a and
+ * chain_b requires 15 bytes each of it and 4 bytes each nlattr, extra 18 bytes
+ * for future.
+ * For desense supported response 4 + 4 * (2 + 4 + 4 * (15 + 4)) + 18 = 350
+ * For desense not supported response 4 + 4 * (2 + 4 + 4 * (15 + 2)) + 18 = 318
+ * For
+ */
+
+#define RFI_DDR_GET_TABLE_RESP_SIZE_WITH_DESENSE	350
+#define RFI_DDR_GET_TABLE_RESP_SIZE			318
 static int iwl_vendor_rfi_ddr_get_table(struct wiphy *wiphy,
 					struct wireless_dev *wdev,
 					const void *data, int data_len)
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
-	struct iwl_rfi_freq_table_resp_cmd_v1 *resp;
+	struct iwl_rfi_freq_table_resp_cmd *resp;
 	struct sk_buff *skb = NULL;
 	struct nlattr *rfim_info;
+	int resp_size;
 	int i, ret;
+	u8 notif_ver = iwl_fw_lookup_notif_ver(mvm->fw, SYSTEM_GROUP,
+					       RFI_GET_FREQ_TABLE_CMD, 0);
 
 	resp = iwl_rfi_get_freq_table(mvm);
 
@@ -298,7 +313,12 @@ static int iwl_vendor_rfi_ddr_get_table(struct wiphy *wiphy,
 		goto err;
 	}
 
-	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, sizeof(*rfim_info) + 100);
+	if (notif_ver < 3)
+		resp_size = RFI_DDR_GET_TABLE_RESP_SIZE_WITH_DESENSE;
+	else
+		resp_size = RFI_DDR_GET_TABLE_RESP_SIZE;
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, resp_size);
 	if (!skb) {
 		ret = -ENOMEM;
 		goto err;
@@ -311,6 +331,8 @@ static int iwl_vendor_rfi_ddr_get_table(struct wiphy *wiphy,
 		goto err;
 	}
 
+	BUILD_BUG_ON(ARRAY_SIZE(resp->ddr_table) !=
+		     ARRAY_SIZE(resp->desense_table));
 	for (i = 0; i < ARRAY_SIZE(resp->ddr_table); i++) {
 		if (nla_put_u16(skb, IWL_MVM_VENDOR_ATTR_RFIM_FREQ,
 				le16_to_cpu(resp->ddr_table[i].freq)) ||
@@ -320,6 +342,18 @@ static int iwl_vendor_rfi_ddr_get_table(struct wiphy *wiphy,
 		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_BANDS,
 			    sizeof(resp->ddr_table[i].bands),
 			    resp->ddr_table[i].bands)) {
+			ret = -ENOBUFS;
+			goto err;
+		}
+		if (notif_ver < 3)
+			continue;
+
+		if (nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE,
+			    sizeof(resp->desense_table[i].chain_a),
+			    resp->desense_table[i].chain_a) ||
+		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE,
+			    sizeof(resp->desense_table[i].chain_b),
+			    resp->desense_table[i].chain_b)) {
 			ret = -ENOBUFS;
 			goto err;
 		}

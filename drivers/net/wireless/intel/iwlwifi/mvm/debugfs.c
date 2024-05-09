@@ -2346,8 +2346,11 @@ static ssize_t iwl_dbgfs_rfi_freq_table_write(struct iwl_mvm *mvm, char *buf,
 #define IWL_RFI_DLVR_BUF_SIZE (IWL_RFI_DLVR_LUT_INSTALLED_SIZE *\
 				(5 + IWL_RFI_DLVR_LUT_ENTRY_CHANNELS_NUM *\
 					(6 + 5)))
+#define IWL_RFI_DESENSE_BUF_SIZE IWL_RFI_DDR_BUF_SIZE
+
 /* Extra 32 for "DDR and DLVR table" message */
-#define IWL_RFI_BUF_SIZE (IWL_RFI_DDR_BUF_SIZE + IWL_RFI_DLVR_BUF_SIZE + 32)
+#define IWL_RFI_BUF_SIZE (IWL_RFI_DDR_BUF_SIZE + IWL_RFI_DLVR_BUF_SIZE +\
+				IWL_RFI_DESENSE_BUF_SIZE + 32)
 
 static ssize_t iwl_dbgfs_rfi_freq_table_read(struct file *file,
 					     char __user *user_buf,
@@ -2378,6 +2381,8 @@ static ssize_t iwl_dbgfs_rfi_freq_table_read(struct file *file,
 		goto out;
 	}
 
+	BUILD_BUG_ON(ARRAY_SIZE(resp->ddr_table) !=
+		     ARRAY_SIZE(resp->desense_table));
 	pos = scnprintf(buf + pos, bufsz - pos, "DDR table:\n");
 	for (i = 0; i < ARRAY_SIZE(resp->ddr_table); i++) {
 		pos += scnprintf(buf + pos, bufsz - pos, "%u: ",
@@ -2388,6 +2393,16 @@ static ssize_t iwl_dbgfs_rfi_freq_table_read(struct file *file,
 					 "(%u, %u) ",
 					 resp->ddr_table[i].channels[j],
 					 resp->ddr_table[i].bands[j]);
+		pos += scnprintf(buf + pos, bufsz - pos, "\n");
+
+		if (notif_ver < 3)
+			continue;
+
+		for (j = 0; j < ARRAY_SIZE(resp->desense_table[0].chain_a); j++)
+			pos += scnprintf(buf + pos, bufsz - pos,
+					 "(%u, %u) ",
+					 resp->desense_table[i].chain_a[j],
+					 resp->desense_table[i].chain_b[j]);
 		pos += scnprintf(buf + pos, bufsz - pos, "\n");
 	}
 

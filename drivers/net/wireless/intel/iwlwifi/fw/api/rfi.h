@@ -128,17 +128,32 @@ struct iwl_rfi_freq_table_resp_cmd_v1 {
 } __packed; /* RFI_CONFIG_CMD_API_S_VER_1 */
 
 /**
- * struct iwl_rfi_freq_table_resp_cmd - get the rfi freq tables used by FW
+ * struct iwl_rfi_freq_table_resp_cmd_v2 - get the rfi freq tables used by FW
  *
  * @ddr_table: DDR table used by FW &iwl_rfi_ddr_lut_entry.
  * @status: see &iwl_rfi_freq_table_status
  * @dlvr_table: DLVR table used by FW &iwl_rfi_dlvr_lut_entry.
  */
-struct iwl_rfi_freq_table_resp_cmd {
+struct iwl_rfi_freq_table_resp_cmd_v2 {
 	struct iwl_rfi_ddr_lut_entry ddr_table[IWL_RFI_DDR_LUT_INSTALLED_SIZE];
 	__le32 status;
 	struct iwl_rfi_dlvr_lut_entry dlvr_table[IWL_RFI_DLVR_LUT_INSTALLED_SIZE];
 } __packed; /* RFI_CONFIG_CMD_API_S_VER_2 */
+
+/**
+ * struct iwl_rfi_freq_table_resp_cmd - get the rfi freq tables used by FW
+ *
+ * @ddr_table: DDR table used by FW
+ * @status: see &iwl_rfi_freq_table_status
+ * @dlvr_table: DLVR table used by FW
+ * @desense_table: De-sense table used by FW
+ */
+struct iwl_rfi_freq_table_resp_cmd {
+	struct iwl_rfi_ddr_lut_entry ddr_table[IWL_RFI_DDR_LUT_INSTALLED_SIZE];
+	__le32 status;
+	struct iwl_rfi_dlvr_lut_entry dlvr_table[IWL_RFI_DLVR_LUT_INSTALLED_SIZE];
+	struct iwl_rfi_desense_lut_entry desense_table[IWL_RFI_DDR_LUT_INSTALLED_SIZE];
+} __packed; /* RFI_CONFIG_CMD_API_S_VER_3 */
 
 /**
  * enum iwl_rfi_support_reason - indicate error or pmc supported
