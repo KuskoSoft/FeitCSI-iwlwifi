@@ -310,8 +310,7 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 	       sizeof(trans->dbg.conf_tlv));
 	trans->dbg.trigger_tlv = xvt->fw->dbg.trigger_tlv;
 
-	IWL_INFO(xvt, "Detected %s, REV=0x%X, xVT operation mode\n",
-		 xvt->trans->name, xvt->trans->hw_rev);
+	IWL_INFO(xvt, "xVT operation mode\n");
 
 	err = iwl_xvt_dbgfs_register(xvt, dbgfs_dir);
 	if (err)

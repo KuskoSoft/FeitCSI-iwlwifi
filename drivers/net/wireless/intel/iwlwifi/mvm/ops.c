@@ -1585,9 +1585,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		goto out_free;
 	}
 
-	IWL_INFO(mvm, "Detected %s, REV=0x%X\n",
-		 mvm->trans->name, mvm->trans->hw_rev);
-
 	if (iwlwifi_mod_params.nvm_file)
 		mvm->nvm_file_name = iwlwifi_mod_params.nvm_file;
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
