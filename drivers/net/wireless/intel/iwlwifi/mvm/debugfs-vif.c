@@ -879,11 +879,9 @@ static ssize_t iwl_dbgfs_esr_disable_reason_write(struct ieee80211_vif *vif,
 	struct iwl_mvm *mvm = mvmvif->mvm;
 	u32 reason;
 	u8 block;
-	int ret;
 
-	ret = sscanf(buf, "%u %hhu", &reason, &block);
-	if (ret < 0)
-		return ret;
+	if (sscanf(buf, "%u %hhu", &reason, &block) != 2)
+		return -EINVAL;
 
 	if (hweight16(reason) != 1 || !(reason & IWL_MVM_BLOCK_ESR_REASONS))
 		return -EINVAL;
