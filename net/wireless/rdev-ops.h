@@ -1546,4 +1546,17 @@ rdev_set_ttlm(struct cfg80211_registered_device *rdev,
 
 	return ret;
 }
+
+static inline void
+rdev_iface_usage(struct cfg80211_registered_device *rdev,
+		 struct net_device *dev,
+		 struct cfg80211_iface_usage *iface_usage)
+{
+	struct wiphy *wiphy = &rdev->wiphy;
+
+	trace_rdev_iface_usage(wiphy, dev, iface_usage);
+	if (rdev->ops->iface_usage)
+		rdev->ops->iface_usage(wiphy, dev, iface_usage);
+	trace_rdev_return_void(wiphy);
+}
 #endif /* __CFG80211_RDEV_OPS */
