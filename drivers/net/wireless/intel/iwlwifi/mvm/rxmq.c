@@ -1971,6 +1971,14 @@ static void iwl_mvm_rx_fill_status(struct iwl_mvm *mvm,
 
 	rx_status->device_timestamp = phy_data->gp2_on_air_rise;
 
+	if (mvm->rx_ts_ptp && mvm->monitor_on) {
+		rx_status->mactime =
+			iwl_mvm_ptp_get_adj_time(mvm, phy_data->gp2_on_air_rise * NSEC_PER_USEC) /
+			NSEC_PER_USEC;
+		rx_status->flag |= RX_FLAG_MACTIME_IS_RTAP_TS64;
+		rx_status->flag &= ~RX_FLAG_MACTIME;
+	}
+
 	rx_status->freq = ieee80211_channel_to_frequency(phy_data->channel,
 							 rx_status->band);
 	iwl_mvm_get_signal_strength(mvm, rx_status, rate_n_flags,

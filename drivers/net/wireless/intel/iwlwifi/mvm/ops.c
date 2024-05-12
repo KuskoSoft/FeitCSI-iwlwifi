@@ -1750,6 +1750,8 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 		iwl_mvm_vendor_cmds_unregister(mvm);
 #endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
 
+	iwl_mvm_ptp_remove(mvm);
+
 	iwl_trans_op_mode_leave(mvm->trans);
 
 	iwl_phy_db_free(mvm->phy_db);
