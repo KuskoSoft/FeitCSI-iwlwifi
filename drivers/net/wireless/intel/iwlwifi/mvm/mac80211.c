@@ -2062,10 +2062,6 @@ static void iwl_mvm_mac_remove_interface(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_MONITOR)
 		mvm->monitor_on = false;
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-	iwl_mvm_tdls_peer_cache_clear(mvm, vif);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
-
 out:
 	if (vif->type == NL80211_IFTYPE_AP ||
 	    vif->type == NL80211_IFTYPE_ADHOC) {

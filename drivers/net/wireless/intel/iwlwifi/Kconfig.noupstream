@@ -68,15 +68,6 @@ config IWLMVM_VENDOR_CMDS
 	  This option mostly exists for non-upstream tagging, so best
 	  leave it set to Y.
 
-config IWLMVM_TDLS_PEER_CACHE
-	bool "enable TDLS peer caching and traffic monitoring"
-	depends on IWLMVM_VENDOR_CMDS
-	default y
-	help
-	  This option enables (vendor) commands from userspace to monitor
-	  traffic to and from specific peers on the same BSS. These peers
-	  might be TDLS peers, or candidates to become such.
-
 config IWLWIFI_DISALLOW_OLDER_FW
 	bool "disallow fallback to older firmware images"
 	depends on IWLWIFI

@@ -1473,10 +1473,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	mvm->tcm.ll_ts = jiffies;
 	mvm->tcm.uapsd_nonagg_ts = jiffies;
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-	INIT_LIST_HEAD(&mvm->tdls_peer_cache_list);
-#endif
-
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
 	mvm->rx_filters = IWL_MVM_VENDOR_RXFILTER_EINVAL;
 #endif
@@ -1769,10 +1765,6 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	kfree(mvm->acs_survey);
 
 	cancel_delayed_work_sync(&mvm->tcm.work);
-
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-	iwl_mvm_tdls_peer_cache_clear(mvm, NULL);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
 	iwl_fw_runtime_free(&mvm->fwrt);
 	mutex_destroy(&mvm->mutex);

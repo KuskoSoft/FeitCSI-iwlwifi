@@ -736,22 +736,6 @@ struct iwl_mvm_tcm {
 	} result;
 };
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-#define IWL_MVM_TDLS_CNT_MAX_PEERS 4
-
-struct iwl_mvm_tdls_peer_counter {
-	struct list_head list;
-	struct rcu_head rcu_head;
-
-	struct mac_address mac __aligned(2);
-	struct ieee80211_vif *vif;
-	u32 tx_bytes;
-	struct {
-		u32 bytes;
-	} ____cacheline_aligned_in_smp rx[];
-};
-#endif
-
 /**
  * struct iwl_mvm_reorder_buffer - per ra/tid/queue reorder buffer
  * @head_sn: reorder window head sn
@@ -1223,11 +1207,6 @@ struct iwl_mvm {
 	u8 uapsd_noagg_bssid_write_idx;
 	struct mac_address uapsd_noagg_bssids[IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM]
 		__aligned(2);
-
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-	struct list_head tdls_peer_cache_list;
-	u32 tdls_peer_cache_cnt;
-#endif
 
 	struct iwl_time_quota_cmd last_quota_cmd;
 
@@ -2557,14 +2536,6 @@ void iwl_mvm_tdls_cancel_channel_switch(struct ieee80211_hw *hw,
 void iwl_mvm_rx_tdls_notif(struct iwl_mvm *mvm, struct iwl_rx_cmd_buffer *rxb);
 void iwl_mvm_tdls_ch_switch_work(struct work_struct *work);
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-void iwl_mvm_tdls_peer_cache_pkt(struct iwl_mvm *mvm, struct ieee80211_hdr *hdr,
-				 u32 len, int rxq);
-void iwl_mvm_tdls_peer_cache_clear(struct iwl_mvm *mvm,
-				   struct ieee80211_vif *vif);
-struct iwl_mvm_tdls_peer_counter *
-iwl_mvm_tdls_peer_cache_find(struct iwl_mvm *mvm, const u8 *addr);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 void iwl_mvm_sync_rx_queues_internal(struct iwl_mvm *mvm,
 				     enum iwl_mvm_rxq_notif_type type,
 				     bool sync,

@@ -453,13 +453,6 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct napi_struct *napi,
 		    ieee80211_is_data(hdr->frame_control))
 			iwl_mvm_rx_handle_tcm(mvm, sta, hdr, len, phy_info,
 					      rate_n_flags);
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-		/*
-		 * these packets are from the AP or the existing TDLS peer.
-		 * In both cases an existing station.
-		 */
-		iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, len, 0);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
 		if (ieee80211_is_data(hdr->frame_control))
 			iwl_mvm_rx_csum(sta, skb, rx_pkt_status);

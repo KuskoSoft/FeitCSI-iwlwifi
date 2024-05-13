@@ -194,10 +194,6 @@ static void iwl_mvm_mld_mac_remove_interface(struct ieee80211_hw *hw,
 		mvm->monitor_on = false;
 		__clear_bit(IEEE80211_HW_RX_INCLUDES_FCS, mvm->hw->flags);
 	}
-
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-	iwl_mvm_tdls_peer_cache_clear(mvm, vif);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 }
 
 static unsigned int iwl_mvm_mld_count_active_links(struct iwl_mvm_vif *mvmvif)

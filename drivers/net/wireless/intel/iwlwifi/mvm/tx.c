@@ -1820,12 +1820,6 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm *mvm,
 		info->status.status_driver_data[0] =
 			RS_DRV_DATA_PACK(lq_color, tx_resp->reduced_tpc);
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-		if (info->flags & IEEE80211_TX_STAT_ACK)
-			iwl_mvm_tdls_peer_cache_pkt(mvm, (void *)skb->data,
-						    skb->len, -1);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
-
 		if (likely(!iwl_mvm_time_sync_frame(mvm, skb, hdr->addr1)))
 			ieee80211_tx_status_skb(mvm->hw, skb);
 	}
@@ -2143,10 +2137,6 @@ static void iwl_mvm_tx_reclaim(struct iwl_mvm *mvm, int sta_id, int tid,
 			else
 				WARN_ON_ONCE(tid != IWL_MAX_TID_COUNT);
 		}
-
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-		iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, skb->len, -1);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
 		/* this is the first skb we deliver in this batch */
 		/* put the rate scaling data there */

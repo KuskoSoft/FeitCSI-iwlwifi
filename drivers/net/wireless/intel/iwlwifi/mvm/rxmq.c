@@ -2315,14 +2315,6 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm *mvm, struct napi_struct *napi,
 		if (ieee80211_is_data(hdr->frame_control))
 			iwl_mvm_rx_csum(mvm, sta, skb, pkt);
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-		/*
-		 * these packets are from the AP or the existing TDLS peer.
-		 * In both cases an existing station.
-		 */
-		iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, len, queue);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
-
 		if (iwl_mvm_is_dup(sta, queue, rx_status, hdr, desc)) {
 			IWL_DEBUG_DROP(mvm, "Dropping duplicate packet 0x%x\n",
 				       le16_to_cpu(hdr->seq_ctrl));
