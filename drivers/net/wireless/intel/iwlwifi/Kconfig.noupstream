@@ -17,12 +17,6 @@ config IWLXVT
 	  Say Y if you have the user space application and want
 	  to execute debug and testing flows on the HW.
 
-config IWLWIFI_NUM_CHANNELS
-	int "number of supported concurrent channels"
-	range 1 2
-	default 2
-	depends on IWLMVM
-
 config IWLWIFI_THERMAL_DEBUGFS
 	bool "enable thermal debug write and read support"
 	depends on IWLWIFI_DEBUGFS
