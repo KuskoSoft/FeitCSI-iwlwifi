@@ -17,15 +17,6 @@ config IWLXVT
 	  Say Y if you have the user space application and want
 	  to execute debug and testing flows on the HW.
 
-config IWLWIFI_THERMAL_DEBUGFS
-	bool "enable thermal debug write and read support"
-	depends on IWLWIFI_DEBUGFS
-	default y
-	help
-	  Enable thermal settings debugfs entries that can be used to change
-	  the temperatures and other parameters for testing, This code isn't
-	  intended for upstream, hence the config option. You shouldn't turn it off.
-
 config IWLWIFI_DEVICE_TESTMODE
 	bool "enable generic netlink testmode support"
 	depends on IWLWIFI

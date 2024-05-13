@@ -19,80 +19,6 @@
 #include "fw/error-dump.h"
 #include "fw/api/phy-ctxt.h"
 
-#ifdef CPTCFG_IWLWIFI_THERMAL_DEBUGFS
-static ssize_t iwl_dbgfs_tt_tx_backoff_write(struct iwl_mvm *mvm, char *buf,
-					     size_t count, loff_t *ppos)
-{
-	int i = 0;
-	int ret;
-	u32 temperature, backoff;
-	char *value_str;
-	char *seps = "\n ";
-	char *buf_ptr = buf;
-	struct iwl_tt_tx_backoff new_backoff_values[TT_TX_BACKOFF_SIZE];
-
-	mutex_lock(&mvm->mutex);
-	while ((value_str = strsep(&buf_ptr, seps))) {
-		if (sscanf(value_str, "%u=%u", &temperature, &backoff) != 2)
-			break;
-
-		if (temperature >=
-		    mvm->thermal_throttle.params.ct_kill_entry ||
-		    backoff < mvm->thermal_throttle.min_backoff) {
-			ret = -EINVAL;
-			goto out;
-		}
-
-		if (i == TT_TX_BACKOFF_SIZE) {
-			ret = -EINVAL;
-			goto out;
-		}
-
-		new_backoff_values[i].backoff = backoff;
-		new_backoff_values[i].temperature = temperature;
-		i++;
-	}
-
-	if (i != TT_TX_BACKOFF_SIZE) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	memcpy(mvm->thermal_throttle.params.tx_backoff, new_backoff_values,
-	       sizeof(mvm->thermal_throttle.params.tx_backoff));
-
-	ret = count;
-
-out:
-	mutex_unlock(&mvm->mutex);
-	return ret;
-}
-
-static ssize_t iwl_dbgfs_tt_tx_backoff_read(struct file *file,
-					    char __user *user_buf, size_t count,
-					    loff_t *ppos)
-{
-	struct iwl_mvm *mvm = file->private_data;
-	struct iwl_tt_tx_backoff *tx_backoff =
-	       mvm->thermal_throttle.params.tx_backoff;
-	/* we need 10 chars per line: 3 chars for the temperature + 1
-	 * for the equal sign + 5 for the backoff value + end of line.
-	*/
-	char buf[TT_TX_BACKOFF_SIZE * 10 + 1];
-	int i, pos = 0, bufsz = sizeof(buf);
-
-	mutex_lock(&mvm->mutex);
-	for (i = 0; i < TT_TX_BACKOFF_SIZE; i++) {
-		pos += scnprintf(buf + pos, bufsz - pos, "%d=%d\n",
-				 tx_backoff[i].temperature,
-				 tx_backoff[i].backoff);
-	}
-	mutex_unlock(&mvm->mutex);
-
-	return simple_read_from_buffer(user_buf, count, ppos, buf, pos);
-}
-#endif
-
 static ssize_t iwl_dbgfs_ctdp_budget_read(struct file *file,
 					  char __user *user_buf,
 					  size_t count, loff_t *ppos)
@@ -2702,9 +2628,6 @@ out:
 MVM_DEBUGFS_READ_WRITE_FILE_OPS(prph_reg, 64);
 
 /* Device wide debugfs entries */
-#ifdef CPTCFG_IWLWIFI_THERMAL_DEBUGFS
-MVM_DEBUGFS_READ_WRITE_FILE_OPS(tt_tx_backoff, 64);
-#endif
 MVM_DEBUGFS_READ_FILE_OPS(ctdp_budget);
 MVM_DEBUGFS_WRITE_FILE_OPS(stop_ctdp, 8);
 MVM_DEBUGFS_WRITE_FILE_OPS(start_ctdp, 8);
@@ -2931,16 +2854,10 @@ void iwl_mvm_link_sta_add_debugfs(struct ieee80211_hw *hw,
 
 void iwl_mvm_dbgfs_register(struct iwl_mvm *mvm)
 {
-#ifdef CPTCFG_IWLWIFI_THERMAL_DEBUGFS
-	struct iwl_tt_params *tt_params = &mvm->thermal_throttle.params;
-#endif
 	struct dentry *bcast_dir __maybe_unused;
 
 	spin_lock_init(&mvm->drv_stats_lock);
 
-#ifdef CPTCFG_IWLWIFI_THERMAL_DEBUGFS
-	MVM_DEBUGFS_ADD_FILE(tt_tx_backoff, mvm->debugfs_dir, 0400);
-#endif
 	MVM_DEBUGFS_ADD_FILE(tx_flush, mvm->debugfs_dir, 0200);
 	MVM_DEBUGFS_ADD_FILE(sta_drain, mvm->debugfs_dir, 0200);
 	MVM_DEBUGFS_ADD_FILE(sram, mvm->debugfs_dir, 0600);
@@ -3042,30 +2959,6 @@ void iwl_mvm_dbgfs_register(struct iwl_mvm *mvm)
 			    &mvm->nvm_phy_sku_blob);
 	debugfs_create_blob("nvm_reg", S_IRUSR,
 			    mvm->debugfs_dir, &mvm->nvm_reg_blob);
-
-#ifdef CPTCFG_IWLWIFI_THERMAL_DEBUGFS
-	debugfs_create_u32("ct_kill_exit", 0600,
-			   mvm->debugfs_dir,
-			   &tt_params->ct_kill_exit);
-	debugfs_create_u32("ct_kill_entry", 0600,
-			   mvm->debugfs_dir,
-			   &tt_params->ct_kill_entry);
-	debugfs_create_u32("ct_kill_duration", 0600,
-			   mvm->debugfs_dir,
-			   &tt_params->ct_kill_duration);
-	debugfs_create_u32("dynamic_smps_entry", 0600,
-			   mvm->debugfs_dir,
-			   &tt_params->dynamic_smps_entry);
-	debugfs_create_u32("dynamic_smps_exit", 0600,
-			   mvm->debugfs_dir,
-			   &tt_params->dynamic_smps_exit);
-	debugfs_create_u32("tx_protection_entry", 0600,
-			   mvm->debugfs_dir,
-			   &tt_params->tx_protection_entry);
-	debugfs_create_u32("tx_protection_exit", 0600,
-			   mvm->debugfs_dir,
-			   &tt_params->tx_protection_exit);
-#endif
 
 	debugfs_create_file("mem", 0600, mvm->debugfs_dir, mvm,
 			    &iwl_dbgfs_mem_ops);
