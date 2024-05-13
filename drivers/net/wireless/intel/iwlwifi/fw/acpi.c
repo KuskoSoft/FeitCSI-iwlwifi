@@ -746,10 +746,7 @@ int iwl_acpi_get_wgds_table(struct iwl_fw_runtime *fwrt)
 		}
 	}
 
-	if (idx < ARRAY_SIZE(rev_data))
-		ret = PTR_ERR(wifi_pkg);
-	else
-		ret = -ENOENT;
+	ret = -ENOENT;
 	goto out_free;
 
 read_table:
