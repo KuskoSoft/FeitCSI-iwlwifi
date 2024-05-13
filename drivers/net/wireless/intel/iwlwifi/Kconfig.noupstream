@@ -56,18 +56,6 @@ config IWLWIFI_FORCE_OFDM_RATE
 
 	  If unsure say N, Say Y if you have this code and want to transmit OFDM low rate.
 
-config IWLMVM_P2P_OPPPS_TEST_WA
-	bool "Use WA to pass P2P OPPPS certification test"
-	depends on IWLMVM
-	---help---
-	  This option enables a WA to pass P2P OPPPS certification test.
-	  This test verifies P2P client power management behavior when
-	  connected to P2P GO that advertises OPPPS. Since P2P client power
-	  management is not supported currently by FW a special WA is required.
-	  Send zeroed quota on P2P client MAC if power save is enabled from
-	  user space to mimic power management behavior. Update quota to normal
-	  value otherwise.
-
 config IWLMVM_VENDOR_CMDS
 	bool "enable vendor commands"
 	depends on IWLMVM

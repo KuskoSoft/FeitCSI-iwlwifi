@@ -87,39 +87,6 @@ static void iwl_mvm_quota_iterator(void *_data, u8 *mac,
 	}
 }
 
-#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-/*
- * Zero quota for P2P client MAC as part of a WA to pass P2P OPPPS certification
- * test. Refer to IWLMVM_P2P_OPPPS_TEST_WA description in Kconfig.noupstream for
- * details.
- */
-static void iwl_mvm_adjust_quota_for_p2p_wa(struct iwl_mvm *mvm,
-					    struct iwl_time_quota_cmd *cmd)
-{
-	struct iwl_time_quota_data *quota;
-	int i, phy_id = -1;
-
-	if (!mvm->p2p_opps_test_wa_vif ||
-	    !mvm->p2p_opps_test_wa_vif->deflink.phy_ctxt)
-		return;
-
-	phy_id = mvm->p2p_opps_test_wa_vif->deflink.phy_ctxt->id;
-	for (i = 0; i < MAX_BINDINGS; i++) {
-		u32 id;
-		u32 id_n_c;
-
-		quota = iwl_mvm_quota_cmd_get_quota(mvm, cmd, i);
-		id_n_c = le32_to_cpu(quota->id_and_color);
-		id = (id_n_c & FW_CTXT_ID_MSK) >> FW_CTXT_ID_POS;
-
-		if (id != phy_id)
-			continue;
-
-		quota->quota = 0;
-	}
-}
-#endif
-
 static void iwl_mvm_adjust_quota_for_noa(struct iwl_mvm *mvm,
 					 struct iwl_time_quota_cmd *cmd)
 {
@@ -313,16 +280,6 @@ int iwl_mvm_update_quotas(struct iwl_mvm *mvm,
 		WARN_ONCE(qdata->quota == 0,
 			  "zero quota on binding %d\n", i);
 	}
-
-#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-	/*
-	 * Zero quota for P2P client MAC as part of a WA to pass P2P OPPPS
-	 * certification test. Refer to IWLMVM_P2P_OPPPS_TEST_WA description in
-	 * Kconfig.noupstream for details.
-	 */
-	if (mvm->p2p_opps_test_wa_vif)
-		iwl_mvm_adjust_quota_for_p2p_wa(mvm, &cmd);
-#endif
 
 	if (!send && !force_update) {
 		/* don't send a practically unchanged command, the firmware has

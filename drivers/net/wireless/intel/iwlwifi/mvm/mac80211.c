@@ -2028,11 +2028,6 @@ static bool iwl_mvm_mac_remove_interface_common(struct ieee80211_hw *hw,
 		return true;
 	}
 
-#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-	if (mvmvif == mvm->p2p_opps_test_wa_vif)
-		mvm->p2p_opps_test_wa_vif = NULL;
-#endif
-
 	iwl_mvm_power_update_mac(mvm);
 	return false;
 }

@@ -1291,15 +1291,6 @@ struct iwl_mvm {
 	struct iwl_dev_tx_power_cmd txp_cmd;
 #endif
 
-#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-	/*
-	 * Add the following as part of a WA to pass P2P OPPPS certification
-	 * test. Refer to IWLMVM_P2P_OPPPS_TEST_WA description in
-	 * Kconfig.noupstream for details.
-	 */
-	struct iwl_mvm_vif *p2p_opps_test_wa_vif;
-#endif
-
 	u32 ciphers[IWL_MVM_NUM_CIPHERS];
 
 	struct cfg80211_ftm_responder_stats ftm_resp_stats;

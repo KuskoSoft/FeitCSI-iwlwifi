@@ -162,11 +162,6 @@ static void iwl_mvm_mld_mac_remove_interface(struct ieee80211_hw *hw,
 #endif
 	}
 
-#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-	if (mvmvif == mvm->p2p_opps_test_wa_vif)
-		mvm->p2p_opps_test_wa_vif = NULL;
-#endif
-
 	iwl_mvm_power_update_mac(mvm);
 
 	/* Before the interface removal, mac80211 would cancel the ROC, and the
