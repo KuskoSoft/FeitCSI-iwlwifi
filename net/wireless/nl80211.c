@@ -13960,7 +13960,6 @@ void cfg80211_free_coalesce(struct cfg80211_coalesce *coalesce)
 			kfree(rule->patterns[j].mask);
 		kfree(rule->patterns);
 	}
-	kfree(coalesce->rules);
 	kfree(coalesce);
 }
 
