@@ -415,7 +415,7 @@ void ieee80211_start_next_roc(struct ieee80211_local *local)
 
 void ieee80211_reconfig_roc(struct ieee80211_local *local)
 {
-	struct ieee80211_roc_work *roc;
+	struct ieee80211_roc_work *roc, *tmp;
 
 	/*
 	 * In the software implementation can just continue with the
@@ -429,7 +429,7 @@ void ieee80211_reconfig_roc(struct ieee80211_local *local)
 	wiphy_work_flush(local->hw.wiphy, &local->hw_roc_start);
 	wiphy_work_flush(local->hw.wiphy, &local->hw_roc_done);
 
-	list_for_each_entry(roc, &local->roc_list, list) {
+	list_for_each_entry_safe(roc, tmp, &local->roc_list, list) {
 		if (!roc->started)
 			break;
 
