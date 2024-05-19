@@ -290,3 +290,20 @@ iwl_trans_dump_data(struct iwl_trans *trans, u32 dump_mask,
 					sanitize_ops, sanitize_ctx);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_dump_data);
+
+int iwl_trans_d3_suspend(struct iwl_trans *trans, bool test, bool reset)
+{
+	might_sleep();
+
+	return iwl_trans_pcie_d3_suspend(trans, test, reset);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_d3_suspend);
+
+int iwl_trans_d3_resume(struct iwl_trans *trans, enum iwl_d3_status *status,
+			bool test, bool reset)
+{
+	might_sleep();
+
+	return iwl_trans_pcie_d3_resume(trans, status, test, reset);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_d3_resume);

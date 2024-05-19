@@ -499,12 +499,6 @@ struct iwl_pnvm_image {
  *	an interrupt if the HW RF kill switch is triggered.
  *	This callback must do the right thing and not crash even if %start_hw()
  *	was called but not &start_fw(). May sleep.
- * @d3_suspend: put the device into the correct mode for WoWLAN during
- *	suspend. This is optional, if not implemented WoWLAN will not be
- *	supported. This callback may sleep.
- * @d3_resume: resume the device after WoWLAN, enabling the opmode to
- *	talk to the WoWLAN image to get its status. This is optional, if not
- *	implemented WoWLAN will not be supported. This callback may sleep.
  * @send_cmd:send a host command. Must return -ERFKILL if RFkill is asserted.
  *	If RFkill is asserted in the middle of a SYNC host command, it must
  *	return -ERFKILL straight away.
@@ -560,10 +554,6 @@ struct iwl_trans_ops {
 			bool run_in_rfkill);
 	void (*fw_alive)(struct iwl_trans *trans, u32 scd_addr);
 	void (*stop_device)(struct iwl_trans *trans);
-
-	int (*d3_suspend)(struct iwl_trans *trans, bool test, bool reset);
-	int (*d3_resume)(struct iwl_trans *trans, enum iwl_d3_status *status,
-			 bool test, bool reset);
 
 	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
 
@@ -1158,26 +1148,10 @@ static inline void iwl_trans_stop_device(struct iwl_trans *trans)
 	trans->state = IWL_TRANS_NO_FW;
 }
 
-static inline int iwl_trans_d3_suspend(struct iwl_trans *trans, bool test,
-				       bool reset)
-{
-	might_sleep();
-	if (!trans->ops->d3_suspend)
-		return -EOPNOTSUPP;
+int iwl_trans_d3_suspend(struct iwl_trans *trans, bool test, bool reset);
 
-	return trans->ops->d3_suspend(trans, test, reset);
-}
-
-static inline int iwl_trans_d3_resume(struct iwl_trans *trans,
-				      enum iwl_d3_status *status,
-				      bool test, bool reset)
-{
-	might_sleep();
-	if (!trans->ops->d3_resume)
-		return -EOPNOTSUPP;
-
-	return trans->ops->d3_resume(trans, status, test, reset);
-}
+int iwl_trans_d3_resume(struct iwl_trans *trans, enum iwl_d3_status *status,
+			bool test, bool reset);
 
 struct iwl_trans_dump_data *
 iwl_trans_dump_data(struct iwl_trans *trans, u32 dump_mask,
