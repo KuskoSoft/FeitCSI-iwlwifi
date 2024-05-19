@@ -2364,8 +2364,8 @@ out:
 	spin_unlock_bh(&trans_pcie->reg_lock);
 }
 
-static int iwl_trans_pcie_read_mem(struct iwl_trans *trans, u32 addr,
-				   void *buf, int dwords)
+int iwl_trans_pcie_read_mem(struct iwl_trans *trans, u32 addr,
+			    void *buf, int dwords)
 {
 #define IWL_MAX_HW_ERRS 5
 	unsigned int num_consec_hw_errors = 0;
@@ -2414,8 +2414,8 @@ static int iwl_trans_pcie_read_mem(struct iwl_trans *trans, u32 addr,
 	return 0;
 }
 
-static int iwl_trans_pcie_write_mem(struct iwl_trans *trans, u32 addr,
-				    const void *buf, int dwords)
+int iwl_trans_pcie_write_mem(struct iwl_trans *trans, u32 addr,
+			     const void *buf, int dwords)
 {
 	int offs, ret = 0;
 	const u32 *vals = buf;
@@ -3584,8 +3584,6 @@ static void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 #define IWL_TRANS_REQUEST_FW
 #define IWL_TRANS_COMMON_OPS						\
 	IWL_TRANS_REQUEST_FW						\
-	.read_mem = iwl_trans_pcie_read_mem,				\
-	.write_mem = iwl_trans_pcie_write_mem,				\
 	.read_config32 = iwl_trans_pcie_read_config32,			\
 	.set_pmi = iwl_trans_pcie_set_pmi,				\
 	.sw_reset = iwl_trans_pcie_sw_reset,				\

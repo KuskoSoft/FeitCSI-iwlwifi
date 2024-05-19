@@ -1048,6 +1048,10 @@ void iwl_trans_pcie_write32(struct iwl_trans *trans, u32 ofs, u32 val);
 u32 iwl_trans_pcie_read32(struct iwl_trans *trans, u32 ofs);
 u32 iwl_trans_pcie_read_prph(struct iwl_trans *trans, u32 reg);
 void iwl_trans_pcie_write_prph(struct iwl_trans *trans, u32 addr, u32 val);
+int iwl_trans_pcie_read_mem(struct iwl_trans *trans, u32 addr,
+			    void *buf, int dwords);
+int iwl_trans_pcie_write_mem(struct iwl_trans *trans, u32 addr,
+			     const void *buf, int dwords);
 
 /* common functions that are used by gen2 transport */
 int iwl_pcie_gen2_apm_init(struct iwl_trans *trans);

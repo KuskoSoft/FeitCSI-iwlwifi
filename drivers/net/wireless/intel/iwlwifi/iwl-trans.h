@@ -534,9 +534,6 @@ struct iwl_pnvm_image {
  * @wait_txq_empty: wait until specific tx queue is empty. May sleep.
  * @freeze_txq_timer: prevents the timer of the queue from firing until the
  *	queue is set to awake. Must be atomic.
- * @read_mem: read device's SRAM in DWORD
- * @write_mem: write device's SRAM in DWORD. If %buf is %NULL, then the memory
- *	will be zeroed.
  * @read_config32: read a u32 value from the device's config space at
  *	the given offset.
  * @set_pmi: set the power pmi state
@@ -603,10 +600,6 @@ struct iwl_trans_ops {
 	void (*freeze_txq_timer)(struct iwl_trans *trans, unsigned long txqs,
 				 bool freeze);
 
-	int (*read_mem)(struct iwl_trans *trans, u32 addr,
-			void *buf, int dwords);
-	int (*write_mem)(struct iwl_trans *trans, u32 addr,
-			 const void *buf, int dwords);
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
 	void (*set_pmi)(struct iwl_trans *trans, bool state);
 	int (*sw_reset)(struct iwl_trans *trans, bool retake_ownership);
@@ -1408,11 +1401,8 @@ u32 iwl_trans_read_prph(struct iwl_trans *trans, u32 ofs);
 
 void iwl_trans_write_prph(struct iwl_trans *trans, u32 ofs, u32 val);
 
-static inline int iwl_trans_read_mem(struct iwl_trans *trans, u32 addr,
-				     void *buf, int dwords)
-{
-	return trans->ops->read_mem(trans, addr, buf, dwords);
-}
+int iwl_trans_read_mem(struct iwl_trans *trans, u32 addr,
+		       void *buf, int dwords);
 
 #define iwl_trans_read_mem_bytes(trans, addr, buf, bufsize)		      \
 	do {								      \
@@ -1440,11 +1430,8 @@ static inline u32 iwl_trans_read_mem32(struct iwl_trans *trans, u32 addr)
 	return value;
 }
 
-static inline int iwl_trans_write_mem(struct iwl_trans *trans, u32 addr,
-				      const void *buf, int dwords)
-{
-	return trans->ops->write_mem(trans, addr, buf, dwords);
-}
+int iwl_trans_write_mem(struct iwl_trans *trans, u32 addr,
+			const void *buf, int dwords);
 
 static inline u32 iwl_trans_write_mem32(struct iwl_trans *trans, u32 addr,
 					u32 val)

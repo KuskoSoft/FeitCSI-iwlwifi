@@ -251,3 +251,17 @@ void iwl_trans_write_prph(struct iwl_trans *trans, u32 ofs, u32 val)
 	return iwl_trans_pcie_write_prph(trans, ofs, val);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_write_prph);
+
+int iwl_trans_read_mem(struct iwl_trans *trans, u32 addr,
+		       void *buf, int dwords)
+{
+	return iwl_trans_pcie_read_mem(trans, addr, buf, dwords);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_read_mem);
+
+int iwl_trans_write_mem(struct iwl_trans *trans, u32 addr,
+			const void *buf, int dwords)
+{
+	return iwl_trans_pcie_write_mem(trans, addr, buf, dwords);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_write_mem);
