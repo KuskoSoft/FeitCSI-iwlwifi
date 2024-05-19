@@ -265,3 +265,12 @@ int iwl_trans_write_mem(struct iwl_trans *trans, u32 addr,
 	return iwl_trans_pcie_write_mem(trans, addr, buf, dwords);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_write_mem);
+
+void iwl_trans_set_pmi(struct iwl_trans *trans, bool state)
+{
+	if (state)
+		set_bit(STATUS_TPOWER_PMI, &trans->status);
+	else
+		clear_bit(STATUS_TPOWER_PMI, &trans->status);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_set_pmi);

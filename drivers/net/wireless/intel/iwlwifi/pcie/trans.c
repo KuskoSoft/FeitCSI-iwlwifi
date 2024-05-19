@@ -2145,14 +2145,6 @@ void iwl_trans_pcie_free(struct iwl_trans *trans)
 	iwl_trans_free(trans);
 }
 
-static void iwl_trans_pcie_set_pmi(struct iwl_trans *trans, bool state)
-{
-	if (state)
-		set_bit(STATUS_TPOWER_PMI, &trans->status);
-	else
-		clear_bit(STATUS_TPOWER_PMI, &trans->status);
-}
-
 struct iwl_trans_pcie_removal {
 	struct pci_dev *pdev;
 	struct work_struct work;
@@ -3585,7 +3577,6 @@ static void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 #define IWL_TRANS_COMMON_OPS						\
 	IWL_TRANS_REQUEST_FW						\
 	.read_config32 = iwl_trans_pcie_read_config32,			\
-	.set_pmi = iwl_trans_pcie_set_pmi,				\
 	.sw_reset = iwl_trans_pcie_sw_reset,				\
 	.grab_nic_access = iwl_trans_pcie_grab_nic_access,		\
 	.release_nic_access = iwl_trans_pcie_release_nic_access,	\
