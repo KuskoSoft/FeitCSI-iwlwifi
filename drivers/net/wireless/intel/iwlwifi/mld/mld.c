@@ -56,12 +56,6 @@ iwl_mld_allocate_op_mode(void)
 }
 
 static void
-iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
-{
-	/*TODO: add debugfs files */
-}
-
-static void
 iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 		  const struct iwl_cfg *cfg, const struct iwl_fw *fw,
 		  struct dentry *debugfs_dir)

@@ -32,4 +32,7 @@ struct iwl_mld {
 #define IWL_OP_MODE_GET_MLD(_iwl_op_mode)		\
 	((struct iwl_mld *)(_iwl_op_mode)->op_mode_specific)
 
+void
+iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir);
+
 #endif /* __iwl_mld_h__ */
