@@ -313,3 +313,9 @@ void iwl_trans_interrupts(struct iwl_trans *trans, bool enable)
 	iwl_trans_pci_interrupts(trans, enable);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_interrupts);
+
+void iwl_trans_sync_nmi(struct iwl_trans *trans)
+{
+	iwl_trans_pcie_sync_nmi(trans);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_sync_nmi);

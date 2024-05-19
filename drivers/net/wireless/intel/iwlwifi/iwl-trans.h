@@ -538,7 +538,6 @@ struct iwl_pnvm_image {
  * @set_bits_mask: set SRAM register according to value and mask.
  * @debugfs_cleanup: used in the driver unload flow to make a proper cleanup
  *	of the trans debugfs
- * @sync_nmi: trigger a firmware NMI and wait for it to complete
  * @load_pnvm: save the pnvm data in DRAM
  * @set_pnvm: set the pnvm data in the prph scratch buffer, inside the
  *	context info.
@@ -591,7 +590,6 @@ struct iwl_trans_ops {
 			      u32 value);
 
 	void (*debugfs_cleanup)(struct iwl_trans *trans);
-	void (*sync_nmi)(struct iwl_trans *trans);
 	int (*load_pnvm)(struct iwl_trans *trans,
 			 const struct iwl_pnvm_image *pnvm_payloads,
 			 const struct iwl_ucode_capabilities *capa);
@@ -1432,11 +1430,7 @@ static inline bool iwl_trans_fw_running(struct iwl_trans *trans)
 	return trans->state == IWL_TRANS_FW_ALIVE;
 }
 
-static inline void iwl_trans_sync_nmi(struct iwl_trans *trans)
-{
-	if (trans->ops->sync_nmi)
-		trans->ops->sync_nmi(trans);
-}
+void iwl_trans_sync_nmi(struct iwl_trans *trans);
 
 void iwl_trans_sync_nmi_with_addr(struct iwl_trans *trans, u32 inta_addr,
 				  u32 sw_err_bit);
