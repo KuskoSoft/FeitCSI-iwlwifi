@@ -534,11 +534,6 @@ struct iwl_pnvm_image {
  * @wait_txq_empty: wait until specific tx queue is empty. May sleep.
  * @freeze_txq_timer: prevents the timer of the queue from firing until the
  *	queue is set to awake. Must be atomic.
- * @write8: write a u8 to a register at offset ofs from the BAR
- * @write32: write a u32 to a register at offset ofs from the BAR
- * @read32: read a u32 register at offset ofs from the BAR
- * @read_prph: read a DWORD from a periphery register
- * @write_prph: write a DWORD to a periphery register
  * @read_mem: read device's SRAM in DWORD
  * @write_mem: write device's SRAM in DWORD. If %buf is %NULL, then the memory
  *	will be zeroed.
@@ -608,11 +603,6 @@ struct iwl_trans_ops {
 	void (*freeze_txq_timer)(struct iwl_trans *trans, unsigned long txqs,
 				 bool freeze);
 
-	void (*write8)(struct iwl_trans *trans, u32 ofs, u8 val);
-	void (*write32)(struct iwl_trans *trans, u32 ofs, u32 val);
-	u32 (*read32)(struct iwl_trans *trans, u32 ofs);
-	u32 (*read_prph)(struct iwl_trans *trans, u32 ofs);
-	void (*write_prph)(struct iwl_trans *trans, u32 ofs, u32 val);
 	int (*read_mem)(struct iwl_trans *trans, u32 addr,
 			void *buf, int dwords);
 	int (*write_mem)(struct iwl_trans *trans, u32 addr,
@@ -1408,31 +1398,15 @@ static inline int iwl_trans_wait_txq_empty(struct iwl_trans *trans, int queue)
 	return trans->ops->wait_txq_empty(trans, queue);
 }
 
-static inline void iwl_trans_write8(struct iwl_trans *trans, u32 ofs, u8 val)
-{
-	trans->ops->write8(trans, ofs, val);
-}
+void iwl_trans_write8(struct iwl_trans *trans, u32 ofs, u8 val);
 
-static inline void iwl_trans_write32(struct iwl_trans *trans, u32 ofs, u32 val)
-{
-	trans->ops->write32(trans, ofs, val);
-}
+void iwl_trans_write32(struct iwl_trans *trans, u32 ofs, u32 val);
 
-static inline u32 iwl_trans_read32(struct iwl_trans *trans, u32 ofs)
-{
-	return trans->ops->read32(trans, ofs);
-}
+u32 iwl_trans_read32(struct iwl_trans *trans, u32 ofs);
 
-static inline u32 iwl_trans_read_prph(struct iwl_trans *trans, u32 ofs)
-{
-	return trans->ops->read_prph(trans, ofs);
-}
+u32 iwl_trans_read_prph(struct iwl_trans *trans, u32 ofs);
 
-static inline void iwl_trans_write_prph(struct iwl_trans *trans, u32 ofs,
-					u32 val)
-{
-	return trans->ops->write_prph(trans, ofs, val);
-}
+void iwl_trans_write_prph(struct iwl_trans *trans, u32 ofs, u32 val);
 
 static inline int iwl_trans_read_mem(struct iwl_trans *trans, u32 addr,
 				     void *buf, int dwords)

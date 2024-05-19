@@ -221,3 +221,33 @@ void iwl_trans_op_mode_leave(struct iwl_trans *trans)
 	trans->state = IWL_TRANS_NO_FW;
 }
 IWL_EXPORT_SYMBOL(iwl_trans_op_mode_leave);
+
+void iwl_trans_write8(struct iwl_trans *trans, u32 ofs, u8 val)
+{
+	iwl_trans_pcie_write8(trans, ofs, val);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_write8);
+
+void iwl_trans_write32(struct iwl_trans *trans, u32 ofs, u32 val)
+{
+	iwl_trans_pcie_write32(trans, ofs, val);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_write32);
+
+u32 iwl_trans_read32(struct iwl_trans *trans, u32 ofs)
+{
+	return iwl_trans_pcie_read32(trans, ofs);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_read32);
+
+u32 iwl_trans_read_prph(struct iwl_trans *trans, u32 ofs)
+{
+	return iwl_trans_pcie_read_prph(trans, ofs);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_read_prph);
+
+void iwl_trans_write_prph(struct iwl_trans *trans, u32 ofs, u32 val)
+{
+	return iwl_trans_pcie_write_prph(trans, ofs, val);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_write_prph);
