@@ -201,3 +201,11 @@ void iwl_trans_configure(struct iwl_trans *trans,
 	WARN_ON(iwl_cmd_groups_verify_sorted(trans_cfg));
 }
 IWL_EXPORT_SYMBOL(iwl_trans_configure);
+
+int iwl_trans_start_hw(struct iwl_trans *trans)
+{
+	might_sleep();
+
+	return iwl_trans_pcie_start_hw(trans);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_start_hw);

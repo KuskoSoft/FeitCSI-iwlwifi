@@ -488,8 +488,6 @@ struct iwl_pnvm_image {
  *
  * All the handlers MUST be implemented
  *
- * @start_hw: starts the HW. From that point on, the HW can send interrupts.
- *	May sleep.
  * @op_mode_leave: Turn off the HW RF kill indication if on
  *	May sleep
  * @start_fw: allocates and inits all the resources for the transport
@@ -573,7 +571,6 @@ struct iwl_pnvm_image {
  */
 struct iwl_trans_ops {
 
-	int (*start_hw)(struct iwl_trans *iwl_trans);
 	void (*op_mode_leave)(struct iwl_trans *iwl_trans);
 	int (*start_fw)(struct iwl_trans *trans, const struct fw_img *fw,
 			bool run_in_rfkill);
@@ -1152,12 +1149,7 @@ int iwl_cmd_groups_verify_sorted(const struct iwl_trans_config *trans);
 void iwl_trans_configure(struct iwl_trans *trans,
 			 const struct iwl_trans_config *trans_cfg);
 
-static inline int iwl_trans_start_hw(struct iwl_trans *trans)
-{
-	might_sleep();
-
-	return trans->ops->start_hw(trans);
-}
+int iwl_trans_start_hw(struct iwl_trans *trans);
 
 static inline void iwl_trans_op_mode_leave(struct iwl_trans *trans)
 {
