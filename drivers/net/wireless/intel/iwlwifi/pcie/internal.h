@@ -1038,6 +1038,10 @@ static inline void iwl_trans_pcie_dbgfs_register(struct iwl_trans *trans) { }
 
 void iwl_pcie_rx_allocator_work(struct work_struct *data);
 
+/* common trans ops for all generations transports */
+void iwl_trans_pcie_configure(struct iwl_trans *trans,
+			      const struct iwl_trans_config *trans_cfg);
+
 /* common functions that are used by gen2 transport */
 int iwl_pcie_gen2_apm_init(struct iwl_trans *trans);
 void iwl_pcie_apm_config(struct iwl_trans *trans);

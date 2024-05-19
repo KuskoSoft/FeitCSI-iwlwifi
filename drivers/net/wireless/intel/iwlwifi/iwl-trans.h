@@ -548,9 +548,6 @@ struct iwl_pnvm_image {
  *	will be zeroed.
  * @read_config32: read a u32 value from the device's config space at
  *	the given offset.
- * @configure: configure parameters required by the transport layer from
- *	the op_mode. May be called several times before start_fw, can't be
- *	called after that.
  * @set_pmi: set the power pmi state
  * @sw_reset: trigger software reset of the NIC
  * @grab_nic_access: wake the NIC to be able to access non-HBUS regs.
@@ -627,8 +624,6 @@ struct iwl_trans_ops {
 	int (*write_mem)(struct iwl_trans *trans, u32 addr,
 			 const void *buf, int dwords);
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
-	void (*configure)(struct iwl_trans *trans,
-			  const struct iwl_trans_config *trans_cfg);
 	void (*set_pmi)(struct iwl_trans *trans, bool state);
 	int (*sw_reset)(struct iwl_trans *trans, bool retake_ownership);
 	bool (*grab_nic_access)(struct iwl_trans *trans);
@@ -1154,14 +1149,8 @@ struct iwl_trans {
 const char *iwl_get_cmd_string(struct iwl_trans *trans, u32 id);
 int iwl_cmd_groups_verify_sorted(const struct iwl_trans_config *trans);
 
-static inline void iwl_trans_configure(struct iwl_trans *trans,
-				       const struct iwl_trans_config *trans_cfg)
-{
-	trans->op_mode = trans_cfg->op_mode;
-
-	trans->ops->configure(trans, trans_cfg);
-	WARN_ON(iwl_cmd_groups_verify_sorted(trans_cfg));
-}
+void iwl_trans_configure(struct iwl_trans *trans,
+			 const struct iwl_trans_config *trans_cfg);
 
 static inline int iwl_trans_start_hw(struct iwl_trans *trans)
 {

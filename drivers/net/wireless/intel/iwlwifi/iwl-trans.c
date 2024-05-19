@@ -13,6 +13,7 @@
 #include "iwl-fh.h"
 #include <linux/dmapool.h>
 #include "fw/api/commands.h"
+#include "pcie/internal.h"
 
 struct iwl_trans *iwl_trans_alloc(unsigned int priv_size,
 				  struct device *dev,
@@ -190,3 +191,13 @@ int iwl_cmd_groups_verify_sorted(const struct iwl_trans_config *trans)
 	return 0;
 }
 IWL_EXPORT_SYMBOL(iwl_cmd_groups_verify_sorted);
+
+void iwl_trans_configure(struct iwl_trans *trans,
+			 const struct iwl_trans_config *trans_cfg)
+{
+	trans->op_mode = trans_cfg->op_mode;
+
+	iwl_trans_pcie_configure(trans, trans_cfg);
+	WARN_ON(iwl_cmd_groups_verify_sorted(trans_cfg));
+}
+IWL_EXPORT_SYMBOL(iwl_trans_configure);
