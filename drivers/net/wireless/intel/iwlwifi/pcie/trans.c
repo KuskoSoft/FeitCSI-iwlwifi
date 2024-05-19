@@ -130,8 +130,7 @@ out:
 	kfree(buf);
 }
 
-static int iwl_trans_pcie_sw_reset(struct iwl_trans *trans,
-				   bool retake_ownership)
+int iwl_trans_pcie_sw_reset(struct iwl_trans *trans, bool retake_ownership)
 {
 	/* Reset entire device - do controller reset (results in SHRD_HW_RST) */
 	if (trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ) {
@@ -3577,7 +3576,6 @@ static void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 #define IWL_TRANS_COMMON_OPS						\
 	IWL_TRANS_REQUEST_FW						\
 	.read_config32 = iwl_trans_pcie_read_config32,			\
-	.sw_reset = iwl_trans_pcie_sw_reset,				\
 	.grab_nic_access = iwl_trans_pcie_grab_nic_access,		\
 	.release_nic_access = iwl_trans_pcie_release_nic_access,	\
 	.set_bits_mask = iwl_trans_pcie_set_bits_mask,			\

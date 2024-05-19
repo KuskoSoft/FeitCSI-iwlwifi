@@ -536,7 +536,6 @@ struct iwl_pnvm_image {
  *	queue is set to awake. Must be atomic.
  * @read_config32: read a u32 value from the device's config space at
  *	the given offset.
- * @sw_reset: trigger software reset of the NIC
  * @grab_nic_access: wake the NIC to be able to access non-HBUS regs.
  *	Sleeping is not allowed between grab_nic_access and
  *	release_nic_access.
@@ -600,7 +599,6 @@ struct iwl_trans_ops {
 				 bool freeze);
 
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
-	int (*sw_reset)(struct iwl_trans *trans, bool retake_ownership);
 	bool (*grab_nic_access)(struct iwl_trans *trans);
 	void (*release_nic_access)(struct iwl_trans *trans);
 	void (*set_bits_mask)(struct iwl_trans *trans, u32 reg, u32 mask,
@@ -1439,13 +1437,7 @@ static inline u32 iwl_trans_write_mem32(struct iwl_trans *trans, u32 addr,
 
 void iwl_trans_set_pmi(struct iwl_trans *trans, bool state);
 
-static inline int iwl_trans_sw_reset(struct iwl_trans *trans,
-				     bool retake_ownership)
-{
-	if (trans->ops->sw_reset)
-		return trans->ops->sw_reset(trans, retake_ownership);
-	return 0;
-}
+int iwl_trans_sw_reset(struct iwl_trans *trans, bool retake_ownership);
 
 static inline void
 iwl_trans_set_bits_mask(struct iwl_trans *trans, u32 reg, u32 mask, u32 value)

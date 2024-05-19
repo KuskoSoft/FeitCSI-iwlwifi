@@ -1052,6 +1052,7 @@ int iwl_trans_pcie_read_mem(struct iwl_trans *trans, u32 addr,
 			    void *buf, int dwords);
 int iwl_trans_pcie_write_mem(struct iwl_trans *trans, u32 addr,
 			     const void *buf, int dwords);
+int iwl_trans_pcie_sw_reset(struct iwl_trans *trans, bool retake_ownership);
 
 /* common functions that are used by gen2 transport */
 int iwl_pcie_gen2_apm_init(struct iwl_trans *trans);
