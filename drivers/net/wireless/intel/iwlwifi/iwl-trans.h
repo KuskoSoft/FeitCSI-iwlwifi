@@ -543,7 +543,6 @@ struct iwl_pnvm_image {
  *	context info.
  * @load_reduce_power: copy reduce power table to the corresponding DRAM memory
  * @set_reduce_power: set reduce power table addresses in the sratch buffer
- * @imr_dma_data: set up IMR DMA
  * @rxq_dma_data: retrieve RX queue DMA data, see @struct iwl_trans_rxq_dma_data
  */
 struct iwl_trans_ops {
@@ -600,10 +599,6 @@ struct iwl_trans_ops {
 				 const struct iwl_ucode_capabilities *capa);
 	void (*set_reduce_power)(struct iwl_trans *trans,
 				 const struct iwl_ucode_capabilities *capa);
-
-	int (*imr_dma_data)(struct iwl_trans *trans,
-			    u32 dst_addr, u64 src_addr,
-			    u32 byte_cnt);
 
 };
 
@@ -1364,14 +1359,8 @@ int iwl_trans_read_mem(struct iwl_trans *trans, u32 addr,
 		iwl_trans_read_mem(trans, addr, buf, (bufsize) / sizeof(u32));\
 	} while (0)
 
-static inline int iwl_trans_write_imr_mem(struct iwl_trans *trans,
-					  u32 dst_addr, u64 src_addr,
-					  u32 byte_cnt)
-{
-	if (trans->ops->imr_dma_data)
-		return trans->ops->imr_dma_data(trans, dst_addr, src_addr, byte_cnt);
-	return 0;
-}
+int iwl_trans_write_imr_mem(struct iwl_trans *trans, u32 dst_addr,
+			    u64 src_addr, u32 byte_cnt);
 
 static inline u32 iwl_trans_read_mem32(struct iwl_trans *trans, u32 addr)
 {

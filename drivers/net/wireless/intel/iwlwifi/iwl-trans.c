@@ -319,3 +319,10 @@ void iwl_trans_sync_nmi(struct iwl_trans *trans)
 	iwl_trans_pcie_sync_nmi(trans);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_sync_nmi);
+
+int iwl_trans_write_imr_mem(struct iwl_trans *trans, u32 dst_addr,
+			    u64 src_addr, u32 byte_cnt)
+{
+	return iwl_trans_pcie_copy_imr(trans, dst_addr, src_addr, byte_cnt);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_write_imr_mem);

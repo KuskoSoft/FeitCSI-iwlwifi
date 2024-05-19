@@ -3576,8 +3576,7 @@ void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 	.read_config32 = iwl_trans_pcie_read_config32,			\
 	.grab_nic_access = iwl_trans_pcie_grab_nic_access,		\
 	.release_nic_access = iwl_trans_pcie_release_nic_access,	\
-	.set_bits_mask = iwl_trans_pcie_set_bits_mask,			\
-	.imr_dma_data = iwl_trans_pcie_copy_imr				\
+	.set_bits_mask = iwl_trans_pcie_set_bits_mask			\
 
 static const struct iwl_trans_ops trans_ops_pcie = {
 	IWL_TRANS_COMMON_OPS,
