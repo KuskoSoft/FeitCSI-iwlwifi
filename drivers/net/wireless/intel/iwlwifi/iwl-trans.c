@@ -280,3 +280,13 @@ int iwl_trans_sw_reset(struct iwl_trans *trans, bool retake_ownership)
 	return iwl_trans_pcie_sw_reset(trans, retake_ownership);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_sw_reset);
+
+struct iwl_trans_dump_data *
+iwl_trans_dump_data(struct iwl_trans *trans, u32 dump_mask,
+		    const struct iwl_dump_sanitize_ops *sanitize_ops,
+		    void *sanitize_ctx)
+{
+	return iwl_trans_pcie_dump_data(trans, dump_mask,
+					sanitize_ops, sanitize_ctx);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_dump_data);

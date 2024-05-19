@@ -542,9 +542,6 @@ struct iwl_pnvm_image {
  * @release_nic_access: let the NIC go to sleep. The "flags" parameter
  *	must be the same one that was sent before to the grab_nic_access.
  * @set_bits_mask: set SRAM register according to value and mask.
- * @dump_data: return a vmalloc'ed buffer with debug data, maybe containing last
- *	TX'ed commands and similar. The buffer will be vfree'd by the caller.
- *	Note that the transport must fill in the proper file headers.
  * @debugfs_cleanup: used in the driver unload flow to make a proper cleanup
  *	of the trans debugfs
  * @sync_nmi: trigger a firmware NMI and wait for it to complete
@@ -604,10 +601,6 @@ struct iwl_trans_ops {
 	void (*set_bits_mask)(struct iwl_trans *trans, u32 reg, u32 mask,
 			      u32 value);
 
-	struct iwl_trans_dump_data *(*dump_data)(struct iwl_trans *trans,
-						 u32 dump_mask,
-						 const struct iwl_dump_sanitize_ops *sanitize_ops,
-						 void *sanitize_ctx);
 	void (*debugfs_cleanup)(struct iwl_trans *trans);
 	void (*sync_nmi)(struct iwl_trans *trans);
 	int (*load_pnvm)(struct iwl_trans *trans,
@@ -1186,16 +1179,10 @@ static inline int iwl_trans_d3_resume(struct iwl_trans *trans,
 	return trans->ops->d3_resume(trans, status, test, reset);
 }
 
-static inline struct iwl_trans_dump_data *
+struct iwl_trans_dump_data *
 iwl_trans_dump_data(struct iwl_trans *trans, u32 dump_mask,
 		    const struct iwl_dump_sanitize_ops *sanitize_ops,
-		    void *sanitize_ctx)
-{
-	if (!trans->ops->dump_data)
-		return NULL;
-	return trans->ops->dump_data(trans, dump_mask,
-				     sanitize_ops, sanitize_ctx);
-}
+		    void *sanitize_ctx);
 
 static inline struct iwl_device_tx_cmd *
 iwl_trans_alloc_tx_cmd(struct iwl_trans *trans)
