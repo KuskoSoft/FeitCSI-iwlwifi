@@ -3543,7 +3543,7 @@ iwl_trans_pcie_dump_data(struct iwl_trans *trans, u32 dump_mask,
 	return dump_data;
 }
 
-static void iwl_trans_pci_interrupts(struct iwl_trans *trans, bool enable)
+void iwl_trans_pci_interrupts(struct iwl_trans *trans, bool enable)
 {
 	if (enable)
 		iwl_enable_interrupts(trans);
@@ -3577,7 +3577,6 @@ static void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 	.grab_nic_access = iwl_trans_pcie_grab_nic_access,		\
 	.release_nic_access = iwl_trans_pcie_release_nic_access,	\
 	.set_bits_mask = iwl_trans_pcie_set_bits_mask,			\
-	.interrupts = iwl_trans_pci_interrupts,				\
 	.sync_nmi = iwl_trans_pcie_sync_nmi,				\
 	.imr_dma_data = iwl_trans_pcie_copy_imr				\
 

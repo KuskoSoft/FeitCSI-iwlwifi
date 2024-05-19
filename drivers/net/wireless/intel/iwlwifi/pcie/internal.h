@@ -1061,6 +1061,7 @@ int iwl_trans_pcie_d3_resume(struct iwl_trans *trans,
 			     enum iwl_d3_status *status,
 			     bool test,  bool reset);
 int iwl_trans_pcie_d3_suspend(struct iwl_trans *trans, bool test, bool reset);
+void iwl_trans_pci_interrupts(struct iwl_trans *trans, bool enable);
 
 /* common functions that are used by gen2 transport */
 int iwl_pcie_gen2_apm_init(struct iwl_trans *trans);

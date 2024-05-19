@@ -544,7 +544,6 @@ struct iwl_pnvm_image {
  *	context info.
  * @load_reduce_power: copy reduce power table to the corresponding DRAM memory
  * @set_reduce_power: set reduce power table addresses in the sratch buffer
- * @interrupts: disable/enable interrupts to transport
  * @imr_dma_data: set up IMR DMA
  * @rxq_dma_data: retrieve RX queue DMA data, see @struct iwl_trans_rxq_dma_data
  */
@@ -604,7 +603,6 @@ struct iwl_trans_ops {
 	void (*set_reduce_power)(struct iwl_trans *trans,
 				 const struct iwl_ucode_capabilities *capa);
 
-	void (*interrupts)(struct iwl_trans *trans, bool enable);
 	int (*imr_dma_data)(struct iwl_trans *trans,
 			    u32 dst_addr, u64 src_addr,
 			    u32 byte_cnt);
@@ -1479,11 +1477,7 @@ static inline bool iwl_trans_dbg_ini_valid(struct iwl_trans *trans)
 		trans->dbg.external_ini_cfg != IWL_INI_CFG_STATE_NOT_LOADED;
 }
 
-static inline void iwl_trans_interrupts(struct iwl_trans *trans, bool enable)
-{
-	if (trans->ops->interrupts)
-		trans->ops->interrupts(trans, enable);
-}
+void iwl_trans_interrupts(struct iwl_trans *trans, bool enable);
 
 /*****************************************************
  * transport helper functions
