@@ -209,3 +209,15 @@ int iwl_trans_start_hw(struct iwl_trans *trans)
 	return iwl_trans_pcie_start_hw(trans);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_start_hw);
+
+void iwl_trans_op_mode_leave(struct iwl_trans *trans)
+{
+	might_sleep();
+
+	iwl_trans_pcie_op_mode_leave(trans);
+
+	trans->op_mode = NULL;
+
+	trans->state = IWL_TRANS_NO_FW;
+}
+IWL_EXPORT_SYMBOL(iwl_trans_op_mode_leave);

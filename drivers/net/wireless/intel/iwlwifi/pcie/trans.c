@@ -1937,7 +1937,7 @@ int iwl_trans_pcie_start_hw(struct iwl_trans *trans)
 	return ret;
 }
 
-static void iwl_trans_pcie_op_mode_leave(struct iwl_trans *trans)
+void iwl_trans_pcie_op_mode_leave(struct iwl_trans *trans)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -3585,7 +3585,6 @@ static void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 #define IWL_TRANS_REQUEST_FW
 #define IWL_TRANS_COMMON_OPS						\
 	IWL_TRANS_REQUEST_FW						\
-	.op_mode_leave = iwl_trans_pcie_op_mode_leave,			\
 	.write8 = iwl_trans_pcie_write8,				\
 	.write32 = iwl_trans_pcie_write32,				\
 	.read32 = iwl_trans_pcie_read32,				\

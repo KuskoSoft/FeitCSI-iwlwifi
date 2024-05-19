@@ -488,8 +488,6 @@ struct iwl_pnvm_image {
  *
  * All the handlers MUST be implemented
  *
- * @op_mode_leave: Turn off the HW RF kill indication if on
- *	May sleep
  * @start_fw: allocates and inits all the resources for the transport
  *	layer. Also kick a fw image.
  *	May sleep
@@ -571,7 +569,6 @@ struct iwl_pnvm_image {
  */
 struct iwl_trans_ops {
 
-	void (*op_mode_leave)(struct iwl_trans *iwl_trans);
 	int (*start_fw)(struct iwl_trans *trans, const struct fw_img *fw,
 			bool run_in_rfkill);
 	void (*fw_alive)(struct iwl_trans *trans, u32 scd_addr);
@@ -1151,17 +1148,7 @@ void iwl_trans_configure(struct iwl_trans *trans,
 
 int iwl_trans_start_hw(struct iwl_trans *trans);
 
-static inline void iwl_trans_op_mode_leave(struct iwl_trans *trans)
-{
-	might_sleep();
-
-	if (trans->ops->op_mode_leave)
-		trans->ops->op_mode_leave(trans);
-
-	trans->op_mode = NULL;
-
-	trans->state = IWL_TRANS_NO_FW;
-}
+void iwl_trans_op_mode_leave(struct iwl_trans *trans);
 
 static inline void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr)
 {
