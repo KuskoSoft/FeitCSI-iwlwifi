@@ -326,3 +326,10 @@ int iwl_trans_write_imr_mem(struct iwl_trans *trans, u32 dst_addr,
 	return iwl_trans_pcie_copy_imr(trans, dst_addr, src_addr, byte_cnt);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_write_imr_mem);
+
+void iwl_trans_set_bits_mask(struct iwl_trans *trans, u32 reg,
+			     u32 mask, u32 value)
+{
+	iwl_trans_pcie_set_bits_mask(trans, reg, mask, value);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_set_bits_mask);

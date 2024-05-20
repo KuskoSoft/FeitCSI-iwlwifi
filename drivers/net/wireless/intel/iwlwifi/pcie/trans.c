@@ -2535,8 +2535,8 @@ static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans *trans, u32 txq_bm)
 	return ret;
 }
 
-static void iwl_trans_pcie_set_bits_mask(struct iwl_trans *trans, u32 reg,
-					 u32 mask, u32 value)
+void iwl_trans_pcie_set_bits_mask(struct iwl_trans *trans, u32 reg,
+				  u32 mask, u32 value)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -3575,8 +3575,7 @@ void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 	IWL_TRANS_REQUEST_FW						\
 	.read_config32 = iwl_trans_pcie_read_config32,			\
 	.grab_nic_access = iwl_trans_pcie_grab_nic_access,		\
-	.release_nic_access = iwl_trans_pcie_release_nic_access,	\
-	.set_bits_mask = iwl_trans_pcie_set_bits_mask			\
+	.release_nic_access = iwl_trans_pcie_release_nic_access		\
 
 static const struct iwl_trans_ops trans_ops_pcie = {
 	IWL_TRANS_COMMON_OPS,

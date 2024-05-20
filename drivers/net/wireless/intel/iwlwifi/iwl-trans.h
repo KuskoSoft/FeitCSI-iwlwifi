@@ -535,7 +535,6 @@ struct iwl_pnvm_image {
  *	release_nic_access.
  * @release_nic_access: let the NIC go to sleep. The "flags" parameter
  *	must be the same one that was sent before to the grab_nic_access.
- * @set_bits_mask: set SRAM register according to value and mask.
  * @debugfs_cleanup: used in the driver unload flow to make a proper cleanup
  *	of the trans debugfs
  * @load_pnvm: save the pnvm data in DRAM
@@ -585,8 +584,6 @@ struct iwl_trans_ops {
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
 	bool (*grab_nic_access)(struct iwl_trans *trans);
 	void (*release_nic_access)(struct iwl_trans *trans);
-	void (*set_bits_mask)(struct iwl_trans *trans, u32 reg, u32 mask,
-			      u32 value);
 
 	void (*debugfs_cleanup)(struct iwl_trans *trans);
 	int (*load_pnvm)(struct iwl_trans *trans,
@@ -1385,11 +1382,8 @@ void iwl_trans_set_pmi(struct iwl_trans *trans, bool state);
 
 int iwl_trans_sw_reset(struct iwl_trans *trans, bool retake_ownership);
 
-static inline void
-iwl_trans_set_bits_mask(struct iwl_trans *trans, u32 reg, u32 mask, u32 value)
-{
-	trans->ops->set_bits_mask(trans, reg, mask, value);
-}
+void iwl_trans_set_bits_mask(struct iwl_trans *trans, u32 reg,
+			     u32 mask, u32 value);
 
 #define iwl_trans_grab_nic_access(trans)		\
 	__cond_lock(nic_access,				\
