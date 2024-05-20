@@ -27,3 +27,4 @@ ncscope.*
 # gcc profile objects
 *.gcno
 *.dwo
+.vscode/
