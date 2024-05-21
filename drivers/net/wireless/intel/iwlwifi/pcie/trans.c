@@ -1508,7 +1508,7 @@ void iwl_trans_pcie_handle_stop_rfkill(struct iwl_trans *trans,
 		iwl_trans_pcie_rf_kill(trans, hw_rfkill, false);
 }
 
-static void iwl_trans_pcie_stop_device(struct iwl_trans *trans)
+void iwl_trans_pcie_stop_device(struct iwl_trans *trans)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	bool was_in_rfkill;
@@ -3579,8 +3579,6 @@ void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 
 static const struct iwl_trans_ops trans_ops_pcie = {
 	IWL_TRANS_COMMON_OPS,
-	.stop_device = iwl_trans_pcie_stop_device,
-
 	.send_cmd = iwl_pcie_enqueue_hcmd,
 
 	.tx = iwl_trans_pcie_tx,
@@ -3601,8 +3599,6 @@ static const struct iwl_trans_ops trans_ops_pcie = {
 
 static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 	IWL_TRANS_COMMON_OPS,
-	.stop_device = iwl_trans_pcie_gen2_stop_device,
-
 	.send_cmd = iwl_pcie_gen2_enqueue_hcmd,
 
 	.tx = iwl_txq_gen2_tx,

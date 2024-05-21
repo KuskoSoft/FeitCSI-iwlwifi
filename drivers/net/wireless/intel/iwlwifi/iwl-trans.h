@@ -488,11 +488,6 @@ struct iwl_pnvm_image {
  *
  * All the handlers MUST be implemented
  *
- * @stop_device: stops the whole device (embedded CPU put to reset) and stops
- *	the HW. From that point on, the HW will be stopped but will still issue
- *	an interrupt if the HW RF kill switch is triggered.
- *	This callback must do the right thing and not crash even if %start_hw()
- *	was called but not &start_fw(). May sleep.
  * @send_cmd:send a host command. Must return -ERFKILL if RFkill is asserted.
  *	If RFkill is asserted in the middle of a SYNC host command, it must
  *	return -ERFKILL straight away.
@@ -539,8 +534,6 @@ struct iwl_pnvm_image {
  * @rxq_dma_data: retrieve RX queue DMA data, see @struct iwl_trans_rxq_dma_data
  */
 struct iwl_trans_ops {
-
-	void (*stop_device)(struct iwl_trans *trans);
 
 	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
 
@@ -1096,14 +1089,7 @@ void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr);
 int iwl_trans_start_fw(struct iwl_trans *trans, const struct fw_img *fw,
 		       bool run_in_rfkill);
 
-static inline void iwl_trans_stop_device(struct iwl_trans *trans)
-{
-	might_sleep();
-
-	trans->ops->stop_device(trans);
-
-	trans->state = IWL_TRANS_NO_FW;
-}
+void iwl_trans_stop_device(struct iwl_trans *trans);
 
 int iwl_trans_d3_suspend(struct iwl_trans *trans, bool test, bool reset);
 

@@ -369,3 +369,16 @@ int iwl_trans_start_fw(struct iwl_trans *trans, const struct fw_img *fw,
 	return ret;
 }
 IWL_EXPORT_SYMBOL(iwl_trans_start_fw);
+
+void iwl_trans_stop_device(struct iwl_trans *trans)
+{
+	might_sleep();
+
+	if (trans->trans_cfg->gen2)
+		iwl_trans_pcie_gen2_stop_device(trans);
+	else
+		iwl_trans_pcie_stop_device(trans);
+
+	trans->state = IWL_TRANS_NO_FW;
+}
+IWL_EXPORT_SYMBOL(iwl_trans_stop_device);

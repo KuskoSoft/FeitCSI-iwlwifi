@@ -1070,6 +1070,7 @@ void iwl_trans_pcie_set_bits_mask(struct iwl_trans *trans, u32 reg,
 void iwl_trans_pcie_fw_alive(struct iwl_trans *trans, u32 scd_addr);
 int iwl_trans_pcie_start_fw(struct iwl_trans *trans,
 			    const struct fw_img *fw, bool run_in_rfkill);
+void iwl_trans_pcie_stop_device(struct iwl_trans *trans);
 
 /* common functions that are used by gen2 transport */
 int iwl_pcie_gen2_apm_init(struct iwl_trans *trans);
