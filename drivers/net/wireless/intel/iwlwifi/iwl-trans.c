@@ -382,3 +382,21 @@ void iwl_trans_stop_device(struct iwl_trans *trans)
 	trans->state = IWL_TRANS_NO_FW;
 }
 IWL_EXPORT_SYMBOL(iwl_trans_stop_device);
+
+int iwl_trans_tx(struct iwl_trans *trans, struct sk_buff *skb,
+		 struct iwl_device_tx_cmd *dev_cmd, int queue)
+{
+	if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status)))
+		return -EIO;
+
+	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return -EIO;
+	}
+
+	if (trans->trans_cfg->gen2)
+		return iwl_txq_gen2_tx(trans, skb, dev_cmd, queue);
+
+	return iwl_trans_pcie_tx(trans, skb, dev_cmd, queue);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_tx);

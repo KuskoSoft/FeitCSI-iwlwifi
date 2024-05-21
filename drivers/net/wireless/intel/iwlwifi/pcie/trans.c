@@ -3581,7 +3581,6 @@ static const struct iwl_trans_ops trans_ops_pcie = {
 	IWL_TRANS_COMMON_OPS,
 	.send_cmd = iwl_pcie_enqueue_hcmd,
 
-	.tx = iwl_trans_pcie_tx,
 	.reclaim = iwl_pcie_reclaim,
 
 	.txq_disable = iwl_trans_pcie_txq_disable,
@@ -3601,7 +3600,6 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 	IWL_TRANS_COMMON_OPS,
 	.send_cmd = iwl_pcie_gen2_enqueue_hcmd,
 
-	.tx = iwl_txq_gen2_tx,
 	.reclaim = iwl_pcie_reclaim,
 
 	.set_q_ptrs = iwl_pcie_set_q_ptrs,

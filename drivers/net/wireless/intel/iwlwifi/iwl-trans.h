@@ -492,12 +492,6 @@ struct iwl_pnvm_image {
  *	If RFkill is asserted in the middle of a SYNC host command, it must
  *	return -ERFKILL straight away.
  *	May sleep only if CMD_ASYNC is not set
- * @tx: send an skb. The transport relies on the op_mode to zero the
- *	the ieee80211_tx_info->driver_data. If the MPDU is an A-MSDU, all
- *	the CSUM will be taken care of (TCP CSUM and IP header in case of
- *	IPv4). If the MPDU is a single MSDU, the op_mode must compute the IP
- *	header if it is IPv4.
- *	Must be atomic
  * @reclaim: free packet until ssn. Returns a list of freed packets.
  *	Must be atomic
  * @set_q_ptrs: set queue pointers internally, after D3 when HW state changed
@@ -537,8 +531,6 @@ struct iwl_trans_ops {
 
 	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
 
-	int (*tx)(struct iwl_trans *trans, struct sk_buff *skb,
-		  struct iwl_device_tx_cmd *dev_cmd, int queue);
 	void (*reclaim)(struct iwl_trans *trans, int queue, int ssn,
 			struct sk_buff_head *skbs, bool is_flush);
 
@@ -1115,19 +1107,8 @@ static inline void iwl_trans_free_tx_cmd(struct iwl_trans *trans,
 	kmem_cache_free(trans->dev_cmd_pool, dev_cmd);
 }
 
-static inline int iwl_trans_tx(struct iwl_trans *trans, struct sk_buff *skb,
-			       struct iwl_device_tx_cmd *dev_cmd, int queue)
-{
-	if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status)))
-		return -EIO;
-
-	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return -EIO;
-	}
-
-	return trans->ops->tx(trans, skb, dev_cmd, queue);
-}
+int iwl_trans_tx(struct iwl_trans *trans, struct sk_buff *skb,
+		 struct iwl_device_tx_cmd *dev_cmd, int queue);
 
 static inline void iwl_trans_reclaim(struct iwl_trans *trans, int queue,
 				     int ssn, struct sk_buff_head *skbs,
