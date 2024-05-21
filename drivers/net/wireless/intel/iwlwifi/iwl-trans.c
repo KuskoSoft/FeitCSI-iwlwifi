@@ -400,3 +400,15 @@ int iwl_trans_tx(struct iwl_trans *trans, struct sk_buff *skb,
 	return iwl_trans_pcie_tx(trans, skb, dev_cmd, queue);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_tx);
+
+void iwl_trans_reclaim(struct iwl_trans *trans, int queue, int ssn,
+		       struct sk_buff_head *skbs, bool is_flush)
+{
+	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return;
+	}
+
+	iwl_pcie_reclaim(trans, queue, ssn, skbs, is_flush);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_reclaim);

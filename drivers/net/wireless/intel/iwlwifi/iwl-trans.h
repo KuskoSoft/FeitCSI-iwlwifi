@@ -492,8 +492,6 @@ struct iwl_pnvm_image {
  *	If RFkill is asserted in the middle of a SYNC host command, it must
  *	return -ERFKILL straight away.
  *	May sleep only if CMD_ASYNC is not set
- * @reclaim: free packet until ssn. Returns a list of freed packets.
- *	Must be atomic
  * @set_q_ptrs: set queue pointers internally, after D3 when HW state changed
  * @txq_enable: setup a queue. To setup an AC queue, use the
  *	iwl_trans_ac_txq_enable wrapper. fw_alive must have been called before
@@ -530,9 +528,6 @@ struct iwl_pnvm_image {
 struct iwl_trans_ops {
 
 	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
-
-	void (*reclaim)(struct iwl_trans *trans, int queue, int ssn,
-			struct sk_buff_head *skbs, bool is_flush);
 
 	void (*set_q_ptrs)(struct iwl_trans *trans, int queue, int ptr);
 
@@ -1110,17 +1105,8 @@ static inline void iwl_trans_free_tx_cmd(struct iwl_trans *trans,
 int iwl_trans_tx(struct iwl_trans *trans, struct sk_buff *skb,
 		 struct iwl_device_tx_cmd *dev_cmd, int queue);
 
-static inline void iwl_trans_reclaim(struct iwl_trans *trans, int queue,
-				     int ssn, struct sk_buff_head *skbs,
-				     bool is_flush)
-{
-	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return;
-	}
-
-	trans->ops->reclaim(trans, queue, ssn, skbs, is_flush);
-}
+void iwl_trans_reclaim(struct iwl_trans *trans, int queue, int ssn,
+		       struct sk_buff_head *skbs, bool is_flush);
 
 static inline void iwl_trans_set_q_ptrs(struct iwl_trans *trans, int queue,
 					int ptr)
