@@ -346,3 +346,26 @@ void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr)
 		iwl_trans_pcie_fw_alive(trans, scd_addr);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_fw_alive);
+
+int iwl_trans_start_fw(struct iwl_trans *trans, const struct fw_img *fw,
+		       bool run_in_rfkill)
+{
+	int ret;
+
+	might_sleep();
+
+	WARN_ON_ONCE(!trans->rx_mpdu_cmd);
+
+	clear_bit(STATUS_FW_ERROR, &trans->status);
+
+	if (trans->trans_cfg->gen2)
+		ret = iwl_trans_pcie_gen2_start_fw(trans, fw, run_in_rfkill);
+	else
+		ret = iwl_trans_pcie_start_fw(trans, fw, run_in_rfkill);
+
+	if (ret == 0)
+		trans->state = IWL_TRANS_FW_STARTED;
+
+	return ret;
+}
+IWL_EXPORT_SYMBOL(iwl_trans_start_fw);

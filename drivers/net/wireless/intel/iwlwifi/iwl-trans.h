@@ -488,9 +488,6 @@ struct iwl_pnvm_image {
  *
  * All the handlers MUST be implemented
  *
- * @start_fw: allocates and inits all the resources for the transport
- *	layer. Also kick a fw image.
- *	May sleep
  * @stop_device: stops the whole device (embedded CPU put to reset) and stops
  *	the HW. From that point on, the HW will be stopped but will still issue
  *	an interrupt if the HW RF kill switch is triggered.
@@ -543,8 +540,6 @@ struct iwl_pnvm_image {
  */
 struct iwl_trans_ops {
 
-	int (*start_fw)(struct iwl_trans *trans, const struct fw_img *fw,
-			bool run_in_rfkill);
 	void (*stop_device)(struct iwl_trans *trans);
 
 	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
@@ -1098,23 +1093,8 @@ void iwl_trans_op_mode_leave(struct iwl_trans *trans);
 
 void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr);
 
-static inline int iwl_trans_start_fw(struct iwl_trans *trans,
-				     const struct fw_img *fw,
-				     bool run_in_rfkill)
-{
-	int ret;
-
-	might_sleep();
-
-	WARN_ON_ONCE(!trans->rx_mpdu_cmd);
-
-	clear_bit(STATUS_FW_ERROR, &trans->status);
-	ret = trans->ops->start_fw(trans, fw, run_in_rfkill);
-	if (ret == 0)
-		trans->state = IWL_TRANS_FW_STARTED;
-
-	return ret;
-}
+int iwl_trans_start_fw(struct iwl_trans *trans, const struct fw_img *fw,
+		       bool run_in_rfkill);
 
 static inline void iwl_trans_stop_device(struct iwl_trans *trans)
 {
