@@ -1066,6 +1066,9 @@ void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans);
 void iwl_trans_pcie_set_bits_mask(struct iwl_trans *trans, u32 reg,
 				  u32 mask, u32 value);
 
+/* transport gen 1 exported functions */
+void iwl_trans_pcie_fw_alive(struct iwl_trans *trans, u32 scd_addr);
+
 /* common functions that are used by gen2 transport */
 int iwl_pcie_gen2_apm_init(struct iwl_trans *trans);
 void iwl_pcie_apm_config(struct iwl_trans *trans);

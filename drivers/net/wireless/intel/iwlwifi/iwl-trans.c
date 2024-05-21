@@ -333,3 +333,16 @@ void iwl_trans_set_bits_mask(struct iwl_trans *trans, u32 reg,
 	iwl_trans_pcie_set_bits_mask(trans, reg, mask, value);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_set_bits_mask);
+
+void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr)
+{
+	might_sleep();
+
+	trans->state = IWL_TRANS_FW_ALIVE;
+
+	if (trans->trans_cfg->gen2)
+		iwl_trans_pcie_gen2_fw_alive(trans, scd_addr);
+	else
+		iwl_trans_pcie_fw_alive(trans, scd_addr);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_fw_alive);

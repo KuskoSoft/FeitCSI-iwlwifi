@@ -491,9 +491,6 @@ struct iwl_pnvm_image {
  * @start_fw: allocates and inits all the resources for the transport
  *	layer. Also kick a fw image.
  *	May sleep
- * @fw_alive: called when the fw sends alive notification. If the fw provides
- *	the SCD base address in SRAM, then provide it here, or 0 otherwise.
- *	May sleep
  * @stop_device: stops the whole device (embedded CPU put to reset) and stops
  *	the HW. From that point on, the HW will be stopped but will still issue
  *	an interrupt if the HW RF kill switch is triggered.
@@ -548,7 +545,6 @@ struct iwl_trans_ops {
 
 	int (*start_fw)(struct iwl_trans *trans, const struct fw_img *fw,
 			bool run_in_rfkill);
-	void (*fw_alive)(struct iwl_trans *trans, u32 scd_addr);
 	void (*stop_device)(struct iwl_trans *trans);
 
 	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
@@ -1100,14 +1096,7 @@ int iwl_trans_start_hw(struct iwl_trans *trans);
 
 void iwl_trans_op_mode_leave(struct iwl_trans *trans);
 
-static inline void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr)
-{
-	might_sleep();
-
-	trans->state = IWL_TRANS_FW_ALIVE;
-
-	trans->ops->fw_alive(trans, scd_addr);
-}
+void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr);
 
 static inline int iwl_trans_start_fw(struct iwl_trans *trans,
 				     const struct fw_img *fw,
