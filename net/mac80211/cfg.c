@@ -1805,8 +1805,15 @@ static void sta_apply_mesh_params(struct ieee80211_local *local,
 #endif
 }
 
+enum sta_link_apply_mode {
+	STA_LINK_MODE_NEW,
+	STA_LINK_MODE_STA_MODIFY,
+	STA_LINK_MODE_LINK_MODIFY,
+};
+
 static int sta_link_apply_parameters(struct ieee80211_local *local,
-				     struct sta_info *sta, bool new_link,
+				     struct sta_info *sta,
+				     enum sta_link_apply_mode mode,
 				     struct link_station_parameters *params)
 {
 	int ret = 0;
@@ -1818,18 +1825,29 @@ static int sta_link_apply_parameters(struct ieee80211_local *local,
 	struct link_sta_info *link_sta =
 		rcu_dereference_protected(sta->link[link_id],
 					  lockdep_is_held(&local->hw.wiphy->mtx));
+	bool changes = params->link_mac ||
+		       params->txpwr_set ||
+		       params->supported_rates_len ||
+		       params->ht_capa ||
+		       params->vht_capa ||
+		       params->he_capa ||
+		       params->eht_capa ||
+		       params->opmode_notif_used;
 
-	/*
-	 * If there are no changes, then accept a link that exist,
-	 * unless it's a new link.
-	 */
-	if (params->link_id >= 0 && !new_link &&
-	    !params->link_mac && !params->txpwr_set &&
-	    !params->supported_rates_len &&
-	    !params->ht_capa && !params->vht_capa &&
-	    !params->he_capa && !params->eht_capa &&
-	    !params->opmode_notif_used)
-		return 0;
+	switch (mode) {
+	case STA_LINK_MODE_NEW:
+		if (!params->link_mac)
+			return -EINVAL;
+		break;
+	case STA_LINK_MODE_LINK_MODIFY:
+		break;
+	case STA_LINK_MODE_STA_MODIFY:
+		if (params->link_id >= 0)
+			break;
+		if (!changes)
+			return 0;
+		break;
+	}
 
 	if (!link || !link_sta)
 		return -EINVAL;
@@ -1839,15 +1857,13 @@ static int sta_link_apply_parameters(struct ieee80211_local *local,
 		return -EINVAL;
 
 	if (params->link_mac) {
-		if (new_link) {
+		if (mode == STA_LINK_MODE_NEW) {
 			memcpy(link_sta->addr, params->link_mac, ETH_ALEN);
 			memcpy(link_sta->pub->addr, params->link_mac, ETH_ALEN);
 		} else if (!ether_addr_equal(link_sta->addr,
 					     params->link_mac)) {
 			return -EINVAL;
 		}
-	} else if (new_link) {
-		return -EINVAL;
 	}
 
 	if (params->txpwr_set) {
@@ -2019,7 +2035,7 @@ static int sta_apply_parameters(struct ieee80211_local *local,
 	if (params->listen_interval >= 0)
 		sta->listen_interval = params->listen_interval;
 
-	ret = sta_link_apply_parameters(local, sta, false,
+	ret = sta_link_apply_parameters(local, sta, STA_LINK_MODE_STA_MODIFY,
 					&params->link_sta_params);
 	if (ret)
 		return ret;
@@ -4943,7 +4959,7 @@ ieee80211_add_link_station(struct wiphy *wiphy, struct net_device *dev,
 	if (ret)
 		return ret;
 
-	ret = sta_link_apply_parameters(local, sta, true, params);
+	ret = sta_link_apply_parameters(local, sta, STA_LINK_MODE_NEW, params);
 	if (ret) {
 		ieee80211_sta_free_link(sta, params->link_id);
 		return ret;
@@ -4970,7 +4986,8 @@ ieee80211_mod_link_station(struct wiphy *wiphy, struct net_device *dev,
 	if (!(sta->sta.valid_links & BIT(params->link_id)))
 		return -EINVAL;
 
-	return sta_link_apply_parameters(local, sta, false, params);
+	return sta_link_apply_parameters(local, sta, STA_LINK_MODE_LINK_MODIFY,
+					 params);
 }
 
 static int
