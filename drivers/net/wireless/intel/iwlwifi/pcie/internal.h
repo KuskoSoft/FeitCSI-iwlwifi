@@ -760,6 +760,8 @@ void iwl_pcie_reclaim(struct iwl_trans *trans, int txq_id, int ssn,
 void iwl_pcie_set_q_ptrs(struct iwl_trans *trans, int txq_id, int ptr);
 void iwl_pcie_freeze_txq_timer(struct iwl_trans *trans,
 			       unsigned long txqs, bool freeze);
+int iwl_trans_pcie_wait_txq_empty(struct iwl_trans *trans, int txq_idx);
+int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans *trans, u32 txq_bm);
 
 /*****************************************************
 * Error handling

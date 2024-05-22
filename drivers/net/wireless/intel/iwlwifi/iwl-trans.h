@@ -493,22 +493,8 @@ struct iwl_pnvm_image {
  *	return -ERFKILL straight away.
  *	May sleep only if CMD_ASYNC is not set
  * @set_q_ptrs: set queue pointers internally, after D3 when HW state changed
- * @txq_enable: setup a queue. To setup an AC queue, use the
- *	iwl_trans_ac_txq_enable wrapper. fw_alive must have been called before
- *	this one. The op_mode must not configure the HCMD queue. The scheduler
- *	configuration may be %NULL, in which case the hardware will not be
- *	configured. If true is returned, the operation mode needs to increment
- *	the sequence number of the packets routed to this queue because of a
- *	hardware scheduler bug. May sleep.
- * @txq_disable: de-configure a Tx queue to send AMPDUs
- *	Must be atomic
  * @txq_alloc: Allocate a new TX queue, may sleep.
  * @txq_free: Free a previously allocated TX queue.
- * @txq_set_shared_mode: change Tx queue shared/unshared marking
- * @wait_tx_queues_empty: wait until tx queues are empty. May sleep.
- * @wait_txq_empty: wait until specific tx queue is empty. May sleep.
- * @freeze_txq_timer: prevents the timer of the queue from firing until the
- *	queue is set to awake. Must be atomic.
  * @read_config32: read a u32 value from the device's config space at
  *	the given offset.
  * @grab_nic_access: wake the NIC to be able to access non-HBUS regs.
@@ -531,11 +517,6 @@ struct iwl_trans_ops {
 
 	void (*set_q_ptrs)(struct iwl_trans *trans, int queue, int ptr);
 
-	bool (*txq_enable)(struct iwl_trans *trans, int queue, u16 ssn,
-			   const struct iwl_trans_txq_scd_cfg *cfg,
-			   unsigned int queue_wdg_timeout);
-	void (*txq_disable)(struct iwl_trans *trans, int queue,
-			    bool configure_scd);
 	/* 22000 functions */
 	int (*txq_alloc)(struct iwl_trans *trans, u32 flags,
 			 u32 sta_mask, u8 tid,
@@ -543,14 +524,6 @@ struct iwl_trans_ops {
 	void (*txq_free)(struct iwl_trans *trans, int queue);
 	int (*rxq_dma_data)(struct iwl_trans *trans, int queue,
 			    struct iwl_trans_rxq_dma_data *data);
-
-	void (*txq_set_shared_mode)(struct iwl_trans *trans, u32 txq_id,
-				    bool shared);
-
-	int (*wait_tx_queues_empty)(struct iwl_trans *trans, u32 txq_bm);
-	int (*wait_txq_empty)(struct iwl_trans *trans, int queue);
-	void (*freeze_txq_timer)(struct iwl_trans *trans, unsigned long txqs,
-				 bool freeze);
 
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
 	bool (*grab_nic_access)(struct iwl_trans *trans);
@@ -1119,27 +1092,12 @@ static inline void iwl_trans_set_q_ptrs(struct iwl_trans *trans, int queue,
 	trans->ops->set_q_ptrs(trans, queue, ptr);
 }
 
-static inline void iwl_trans_txq_disable(struct iwl_trans *trans, int queue,
-					 bool configure_scd)
-{
-	trans->ops->txq_disable(trans, queue, configure_scd);
-}
+void iwl_trans_txq_disable(struct iwl_trans *trans, int queue,
+			   bool configure_scd);
 
-static inline bool
-iwl_trans_txq_enable_cfg(struct iwl_trans *trans, int queue, u16 ssn,
-			 const struct iwl_trans_txq_scd_cfg *cfg,
-			 unsigned int queue_wdg_timeout)
-{
-	might_sleep();
-
-	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return false;
-	}
-
-	return trans->ops->txq_enable(trans, queue, ssn,
-				      cfg, queue_wdg_timeout);
-}
+bool iwl_trans_txq_enable_cfg(struct iwl_trans *trans, int queue, u16 ssn,
+			      const struct iwl_trans_txq_scd_cfg *cfg,
+			      unsigned int queue_wdg_timeout);
 
 static inline int
 iwl_trans_get_rxq_dma_data(struct iwl_trans *trans, int queue,
@@ -1178,13 +1136,8 @@ iwl_trans_txq_alloc(struct iwl_trans *trans,
 	return trans->ops->txq_alloc(trans, flags, sta_mask, tid,
 				     size, wdg_timeout);
 }
-
-static inline void iwl_trans_txq_set_shared_mode(struct iwl_trans *trans,
-						 int queue, bool shared_mode)
-{
-	if (trans->ops->txq_set_shared_mode)
-		trans->ops->txq_set_shared_mode(trans, queue, shared_mode);
-}
+void iwl_trans_txq_set_shared_mode(struct iwl_trans *trans,
+				   int txq_id, bool shared_mode);
 
 static inline void iwl_trans_txq_enable(struct iwl_trans *trans, int queue,
 					int fifo, int sta_id, int tid,
@@ -1217,46 +1170,12 @@ void iwl_trans_ac_txq_enable(struct iwl_trans *trans, int queue, int fifo,
 	iwl_trans_txq_enable_cfg(trans, queue, 0, &cfg, queue_wdg_timeout);
 }
 
-static inline void iwl_trans_freeze_txq_timer(struct iwl_trans *trans,
-					      unsigned long txqs,
-					      bool freeze)
-{
-	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return;
-	}
+void iwl_trans_freeze_txq_timer(struct iwl_trans *trans,
+				unsigned long txqs, bool freeze);
 
-	if (trans->ops->freeze_txq_timer)
-		trans->ops->freeze_txq_timer(trans, txqs, freeze);
-}
+int iwl_trans_wait_tx_queues_empty(struct iwl_trans *trans, u32 txqs);
 
-static inline int iwl_trans_wait_tx_queues_empty(struct iwl_trans *trans,
-						 u32 txqs)
-{
-	if (WARN_ON_ONCE(!trans->ops->wait_tx_queues_empty))
-		return -EOPNOTSUPP;
-
-	/* No need to wait if the firmware is not alive */
-	if (trans->state != IWL_TRANS_FW_ALIVE) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return -EIO;
-	}
-
-	return trans->ops->wait_tx_queues_empty(trans, txqs);
-}
-
-static inline int iwl_trans_wait_txq_empty(struct iwl_trans *trans, int queue)
-{
-	if (WARN_ON_ONCE(!trans->ops->wait_txq_empty))
-		return -EOPNOTSUPP;
-
-	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return -EIO;
-	}
-
-	return trans->ops->wait_txq_empty(trans, queue);
-}
+int iwl_trans_wait_txq_empty(struct iwl_trans *trans, int queue);
 
 void iwl_trans_write8(struct iwl_trans *trans, u32 ofs, u8 val);
 

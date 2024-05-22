@@ -2447,7 +2447,7 @@ static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans *trans, int queue,
 	return 0;
 }
 
-static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans *trans, int txq_idx)
+int iwl_trans_pcie_wait_txq_empty(struct iwl_trans *trans, int txq_idx)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	struct iwl_txq *txq;
@@ -2509,7 +2509,7 @@ static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans *trans, int txq_idx)
 	return 0;
 }
 
-static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans *trans, u32 txq_bm)
+int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans *trans, u32 txq_bm)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	int cnt;
@@ -3579,19 +3579,10 @@ void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 
 static const struct iwl_trans_ops trans_ops_pcie = {
 	IWL_TRANS_COMMON_OPS,
-	.send_cmd = iwl_pcie_enqueue_hcmd,
-
-	.txq_disable = iwl_trans_pcie_txq_disable,
-	.txq_enable = iwl_trans_pcie_txq_enable,
-
-	.txq_set_shared_mode = iwl_trans_pcie_txq_set_shared_mode,
-
-	.wait_tx_queues_empty = iwl_trans_pcie_wait_txqs_empty,
-
-	.freeze_txq_timer = iwl_pcie_freeze_txq_timer,
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	.debugfs_cleanup = iwl_trans_pcie_debugfs_cleanup,
 #endif
+	.send_cmd = iwl_pcie_enqueue_hcmd
 };
 
 static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
@@ -3602,7 +3593,6 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 
 	.txq_alloc = iwl_txq_dyn_alloc,
 	.txq_free = iwl_txq_dyn_free,
-	.wait_txq_empty = iwl_trans_pcie_wait_txq_empty,
 	.rxq_dma_data = iwl_trans_pcie_rxq_dma_data,
 	.load_pnvm = iwl_trans_pcie_ctx_info_gen3_load_pnvm,
 	.set_pnvm = iwl_trans_pcie_ctx_info_gen3_set_pnvm,

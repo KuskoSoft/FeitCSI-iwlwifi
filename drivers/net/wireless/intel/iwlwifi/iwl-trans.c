@@ -40,8 +40,6 @@ struct iwl_trans *iwl_trans_alloc(unsigned int priv_size,
 	trans->ops = ops;
 	trans->num_rx_queues = 1;
 
-	WARN_ON(!ops->wait_txq_empty && !ops->wait_tx_queues_empty);
-
 	return trans;
 }
 
@@ -412,3 +410,68 @@ void iwl_trans_reclaim(struct iwl_trans *trans, int queue, int ssn,
 	iwl_pcie_reclaim(trans, queue, ssn, skbs, is_flush);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_reclaim);
+
+void iwl_trans_txq_disable(struct iwl_trans *trans, int queue,
+			   bool configure_scd)
+{
+	iwl_trans_pcie_txq_disable(trans, queue, configure_scd);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_txq_disable);
+
+bool iwl_trans_txq_enable_cfg(struct iwl_trans *trans, int queue, u16 ssn,
+			      const struct iwl_trans_txq_scd_cfg *cfg,
+			      unsigned int queue_wdg_timeout)
+{
+	might_sleep();
+
+	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return false;
+	}
+
+	return iwl_trans_pcie_txq_enable(trans, queue, ssn,
+					 cfg, queue_wdg_timeout);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_txq_enable_cfg);
+
+int iwl_trans_wait_txq_empty(struct iwl_trans *trans, int queue)
+{
+	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return -EIO;
+	}
+
+	return iwl_trans_pcie_wait_txq_empty(trans, queue);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_wait_txq_empty);
+
+int iwl_trans_wait_tx_queues_empty(struct iwl_trans *trans, u32 txqs)
+{
+	/* No need to wait if the firmware is not alive */
+	if (trans->state != IWL_TRANS_FW_ALIVE) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return -EIO;
+	}
+
+	return iwl_trans_pcie_wait_txqs_empty(trans, txqs);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_wait_tx_queues_empty);
+
+void iwl_trans_freeze_txq_timer(struct iwl_trans *trans,
+				unsigned long txqs, bool freeze)
+{
+	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return;
+	}
+
+	iwl_pcie_freeze_txq_timer(trans, txqs, freeze);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_freeze_txq_timer);
+
+void iwl_trans_txq_set_shared_mode(struct iwl_trans *trans,
+				   int txq_id, bool shared_mode)
+{
+	iwl_trans_pcie_txq_set_shared_mode(trans, txq_id, shared_mode);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_txq_set_shared_mode);
