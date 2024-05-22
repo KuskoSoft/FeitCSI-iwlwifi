@@ -1034,6 +1034,7 @@ void iwl_trans_pcie_dump_regs(struct iwl_trans *trans);
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 void iwl_trans_pcie_dbgfs_register(struct iwl_trans *trans);
+void iwl_trans_pcie_debugfs_cleanup(struct iwl_trans *trans);
 #else
 static inline void iwl_trans_pcie_dbgfs_register(struct iwl_trans *trans) { }
 #endif

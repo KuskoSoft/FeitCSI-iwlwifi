@@ -475,3 +475,11 @@ void iwl_trans_txq_set_shared_mode(struct iwl_trans *trans,
 	iwl_trans_pcie_txq_set_shared_mode(trans, txq_id, shared_mode);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_txq_set_shared_mode);
+
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+void iwl_trans_debugfs_cleanup(struct iwl_trans *trans)
+{
+	iwl_trans_pcie_debugfs_cleanup(trans);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_debugfs_cleanup);
+#endif

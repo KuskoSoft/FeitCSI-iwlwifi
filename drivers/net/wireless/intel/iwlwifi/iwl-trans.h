@@ -502,8 +502,6 @@ struct iwl_pnvm_image {
  *	release_nic_access.
  * @release_nic_access: let the NIC go to sleep. The "flags" parameter
  *	must be the same one that was sent before to the grab_nic_access.
- * @debugfs_cleanup: used in the driver unload flow to make a proper cleanup
- *	of the trans debugfs
  * @load_pnvm: save the pnvm data in DRAM
  * @set_pnvm: set the pnvm data in the prph scratch buffer, inside the
  *	context info.
@@ -529,7 +527,6 @@ struct iwl_trans_ops {
 	bool (*grab_nic_access)(struct iwl_trans *trans);
 	void (*release_nic_access)(struct iwl_trans *trans);
 
-	void (*debugfs_cleanup)(struct iwl_trans *trans);
 	int (*load_pnvm)(struct iwl_trans *trans,
 			 const struct iwl_pnvm_image *pnvm_payloads,
 			 const struct iwl_ucode_capabilities *capa);
@@ -1189,6 +1186,10 @@ void iwl_trans_write_prph(struct iwl_trans *trans, u32 ofs, u32 val);
 
 int iwl_trans_read_mem(struct iwl_trans *trans, u32 addr,
 		       void *buf, int dwords);
+
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+void iwl_trans_debugfs_cleanup(struct iwl_trans *trans);
+#endif
 
 #define iwl_trans_read_mem_bytes(trans, addr, buf, bufsize)		      \
 	do {								      \
