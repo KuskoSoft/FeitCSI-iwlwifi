@@ -112,6 +112,7 @@
  * @IWL_MVM_VENDOR_CMD_GET_LINK_INFO: Get link information.
  *	This is needed for RFIm user app
  * @IWL_MVM_VENDOR_CMD_LINK_INFO_CHANGED_EVENT: Link information is changed
+ * @IWL_MVM_VENDOR_CMD_EXIT_EMLSR: exit EMLSR
  */
 
 enum iwl_mvm_vendor_cmd {
@@ -170,6 +171,7 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER			= 0x37,
 	IWL_MVM_VENDOR_CMD_GET_LINK_INFO			= 0x38,
 	IWL_MVM_VENDOR_CMD_LINK_INFO_CHANGED_EVENT		= 0x39,
+	IWL_MVM_VENDOR_CMD_EXIT_EMLSR				= 0x3a,
 };
 
 /**
