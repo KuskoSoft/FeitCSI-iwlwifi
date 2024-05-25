@@ -464,8 +464,10 @@ iwl_mvm_ftm_put_target_v2(struct iwl_mvm *mvm,
 	return 0;
 }
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 #define FTM_PUT_FLAG(flag)	(target->initiator_ap_flags |= \
 				 cpu_to_le32(IWL_INITIATOR_AP_FLAGS_##flag))
+#endif
 
 #define FTM_SET_FLAG(flag)	(*flags |= \
 				 cpu_to_le32(IWL_INITIATOR_AP_FLAGS_##flag))
