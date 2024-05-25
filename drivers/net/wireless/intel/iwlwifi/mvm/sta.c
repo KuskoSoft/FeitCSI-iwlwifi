@@ -4426,9 +4426,7 @@ void iwl_mvm_count_mpdu(struct iwl_mvm_sta *mvm_sta, u8 fw_sta_id, u32 count,
 			bool tx, int queue)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(mvm_sta->vif);
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	struct iwl_mvm *mvm = mvmvif->mvm;
-#endif
 	struct iwl_mvm_tpt_counter *queue_counter;
 	struct iwl_mvm_mpdu_counter *link_counter;
 	u32 total_mpdus = 0;
