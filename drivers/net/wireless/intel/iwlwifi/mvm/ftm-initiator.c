@@ -1045,7 +1045,9 @@ iwl_mvm_ftm_put_target_v10(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	iwl_mvm_ftm_set_target_flags(mvm, peer, &target->initiator_ap_flags);
 	iwl_mvm_ftm_set_sta(mvm, vif, peer, &target->sta_id,
 			    &target->initiator_ap_flags);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_mvm_ftm_set_calib(mvm, target->calib, &target->initiator_ap_flags);
+#endif
 	iwl_mvm_ftm_set_secured_ranging(mvm, vif, target->bssid,
 					&target->cipher, target->hltk,
 					target->tk, target->rx_pn,
