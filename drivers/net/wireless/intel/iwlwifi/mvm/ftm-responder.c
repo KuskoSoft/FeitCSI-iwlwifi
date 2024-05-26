@@ -142,7 +142,7 @@ iwl_mvm_ftm_responder_cmd(struct iwl_mvm *mvm,
 	}
 #endif
 
-	if (cmd_ver == 10) {
+	if (cmd_ver >= 10) {
 		cmd.band =
 			iwl_mvm_phy_band_from_nl80211(chandef->chan->band);
 	}

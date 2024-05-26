@@ -1078,6 +1078,16 @@ iwl_mvm_ftm_put_target_v10(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	if (IWL_MVM_FTM_TEST_INCORRECT_SAC)
 		FTM_PUT_FLAG(TEST_INCORRECT_SAC);
+
+	if (IWL_MVM_FTM_TEST_BAD_SLTF) {
+		u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw,
+						   WIDE_ID(LOCATION_GROUP,
+							   TOF_RANGE_REQ_CMD),
+						   IWL_FW_CMD_VER_UNKNOWN);
+
+		if (cmd_ver == 15)
+			FTM_PUT_FLAG(TEST_BAD_SLTF);
+	}
 #endif
 
 	/*
@@ -1147,6 +1157,8 @@ int iwl_mvm_ftm_start(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 						   IWL_FW_CMD_VER_UNKNOWN);
 
 		switch (cmd_ver) {
+		case 15:
+			/* Version 15 has the same struct as 14 */
 		case 14:
 			err = iwl_mvm_ftm_start_v14(mvm, vif, req);
 			break;
