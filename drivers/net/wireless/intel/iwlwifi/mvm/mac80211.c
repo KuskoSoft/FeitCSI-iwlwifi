@@ -1313,6 +1313,7 @@ static void iwl_mvm_restart_cleanup(struct iwl_mvm *mvm)
 
 int __iwl_mvm_mac_start(struct iwl_mvm *mvm)
 {
+	bool fast_resume;
 	int ret;
 
 	lockdep_assert_held(&mvm->mutex);
@@ -1338,6 +1339,15 @@ int __iwl_mvm_mac_start(struct iwl_mvm *mvm)
 		mvm->nvm_data = NULL;
 	}
 
+	/* fast_resume will be cleared by iwl_mvm_fast_resume */
+	fast_resume = mvm->fast_resume;
+	if (fast_resume) {
+		ret = iwl_mvm_fast_resume(mvm);
+		if (ret)
+			iwl_mvm_stop_device(mvm);
+		/* iwl_mvm_up() will be called further down */
+	}
+
 	if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
 		/*
 		 * Now convert the HW_RESTART_REQUESTED flag to IN_HW_RESTART
@@ -1348,7 +1358,10 @@ int __iwl_mvm_mac_start(struct iwl_mvm *mvm)
 		/* Clean up some internal and mac80211 state on restart */
 		iwl_mvm_restart_cleanup(mvm);
 	}
-	ret = iwl_mvm_up(mvm);
+
+	/* we also want to load the firmware if fast_resume failed */
+	if (!fast_resume || ret)
+		ret = iwl_mvm_up(mvm);
 
 	iwl_dbg_tlv_time_point(&mvm->fwrt, IWL_FW_INI_TIME_POINT_POST_INIT,
 			       NULL);
@@ -1436,7 +1449,7 @@ void iwl_mvm_mac_reconfig_complete(struct ieee80211_hw *hw,
 	}
 }
 
-void __iwl_mvm_mac_stop(struct iwl_mvm *mvm)
+void __iwl_mvm_mac_stop(struct iwl_mvm *mvm, bool suspend)
 {
 	lockdep_assert_held(&mvm->mutex);
 
@@ -1452,7 +1465,11 @@ void __iwl_mvm_mac_stop(struct iwl_mvm *mvm)
 	if (!iwl_mvm_has_new_station_api(mvm->fw))
 		iwl_mvm_rm_aux_sta(mvm);
 
-	iwl_mvm_stop_device(mvm);
+	if (suspend &&
+	    mvm->trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_AX210)
+		iwl_mvm_fast_suspend(mvm);
+	else
+		iwl_mvm_stop_device(mvm);
 
 	iwl_mvm_async_handlers_purge(mvm);
 	/* async_handlers_list is empty and will stay empty: HW is stopped */
@@ -1521,7 +1538,7 @@ void iwl_mvm_mac_stop(struct ieee80211_hw *hw, bool suspend)
 	iwl_mvm_mei_set_sw_rfkill_state(mvm);
 
 	mutex_lock(&mvm->mutex);
-	__iwl_mvm_mac_stop(mvm);
+	__iwl_mvm_mac_stop(mvm, suspend);
 	mutex_unlock(&mvm->mutex);
 
 	/*
