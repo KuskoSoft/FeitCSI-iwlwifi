@@ -3570,9 +3570,7 @@ void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 	iwl_trans_sync_nmi_with_addr(trans, inta_addr, sw_err_bit);
 }
 
-#define IWL_TRANS_REQUEST_FW
 #define IWL_TRANS_COMMON_OPS						\
-	IWL_TRANS_REQUEST_FW						\
 	.grab_nic_access = iwl_trans_pcie_grab_nic_access,		\
 	.release_nic_access = iwl_trans_pcie_release_nic_access		\
 

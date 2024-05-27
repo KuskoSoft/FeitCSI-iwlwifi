@@ -498,7 +498,6 @@ struct iwl_trans_ops {
 
 	bool (*grab_nic_access)(struct iwl_trans *trans);
 	void (*release_nic_access)(struct iwl_trans *trans);
-
 };
 
 /**
