@@ -487,9 +487,6 @@ struct iwl_pnvm_image {
  * struct iwl_trans_ops - transport specific operations
  *
  * All the handlers MUST be implemented
- *
- * @read_config32: read a u32 value from the device's config space at
- *	the given offset.
  * @grab_nic_access: wake the NIC to be able to access non-HBUS regs.
  *	Sleeping is not allowed between grab_nic_access and
  *	release_nic_access.
@@ -499,7 +496,6 @@ struct iwl_pnvm_image {
 struct iwl_trans_ops {
 	/* 22000 functions */
 
-	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
 	bool (*grab_nic_access)(struct iwl_trans *trans);
 	void (*release_nic_access)(struct iwl_trans *trans);
 
@@ -1113,6 +1109,9 @@ void iwl_trans_write_prph(struct iwl_trans *trans, u32 ofs, u32 val);
 
 int iwl_trans_read_mem(struct iwl_trans *trans, u32 addr,
 		       void *buf, int dwords);
+
+int iwl_trans_read_config32(struct iwl_trans *trans, u32 ofs,
+			    u32 *val);
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 void iwl_trans_debugfs_cleanup(struct iwl_trans *trans);

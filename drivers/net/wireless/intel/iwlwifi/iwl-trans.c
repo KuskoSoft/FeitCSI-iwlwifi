@@ -333,6 +333,13 @@ void iwl_trans_set_bits_mask(struct iwl_trans *trans, u32 reg,
 }
 IWL_EXPORT_SYMBOL(iwl_trans_set_bits_mask);
 
+int iwl_trans_read_config32(struct iwl_trans *trans, u32 ofs,
+			    u32 *val)
+{
+	return iwl_trans_pcie_read_config32(trans, ofs, val);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_read_config32);
+
 void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr)
 {
 	might_sleep();
