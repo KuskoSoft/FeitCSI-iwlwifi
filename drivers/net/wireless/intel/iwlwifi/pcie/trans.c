@@ -3578,13 +3578,11 @@ void iwl_trans_pcie_sync_nmi(struct iwl_trans *trans)
 	.release_nic_access = iwl_trans_pcie_release_nic_access		\
 
 static const struct iwl_trans_ops trans_ops_pcie = {
-	IWL_TRANS_COMMON_OPS,
-	.send_cmd = iwl_pcie_enqueue_hcmd
+	IWL_TRANS_COMMON_OPS
 };
 
 static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
-	IWL_TRANS_COMMON_OPS,
-	.send_cmd = iwl_pcie_gen2_enqueue_hcmd
+	IWL_TRANS_COMMON_OPS
 };
 
 struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,

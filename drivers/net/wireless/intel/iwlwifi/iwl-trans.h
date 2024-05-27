@@ -488,10 +488,6 @@ struct iwl_pnvm_image {
  *
  * All the handlers MUST be implemented
  *
- * @send_cmd:send a host command. Must return -ERFKILL if RFkill is asserted.
- *	If RFkill is asserted in the middle of a SYNC host command, it must
- *	return -ERFKILL straight away.
- *	May sleep only if CMD_ASYNC is not set
  * @read_config32: read a u32 value from the device's config space at
  *	the given offset.
  * @grab_nic_access: wake the NIC to be able to access non-HBUS regs.
@@ -501,9 +497,6 @@ struct iwl_pnvm_image {
  *	must be the same one that was sent before to the grab_nic_access.
  */
 struct iwl_trans_ops {
-
-	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
-
 	/* 22000 functions */
 
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
