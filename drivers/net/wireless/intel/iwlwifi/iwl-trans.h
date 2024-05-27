@@ -492,9 +492,6 @@ struct iwl_pnvm_image {
  *	If RFkill is asserted in the middle of a SYNC host command, it must
  *	return -ERFKILL straight away.
  *	May sleep only if CMD_ASYNC is not set
- * @set_q_ptrs: set queue pointers internally, after D3 when HW state changed
- * @txq_alloc: Allocate a new TX queue, may sleep.
- * @txq_free: Free a previously allocated TX queue.
  * @read_config32: read a u32 value from the device's config space at
  *	the given offset.
  * @grab_nic_access: wake the NIC to be able to access non-HBUS regs.
@@ -507,21 +504,12 @@ struct iwl_pnvm_image {
  *	context info.
  * @load_reduce_power: copy reduce power table to the corresponding DRAM memory
  * @set_reduce_power: set reduce power table addresses in the sratch buffer
- * @rxq_dma_data: retrieve RX queue DMA data, see @struct iwl_trans_rxq_dma_data
  */
 struct iwl_trans_ops {
 
 	int (*send_cmd)(struct iwl_trans *trans, struct iwl_host_cmd *cmd);
 
-	void (*set_q_ptrs)(struct iwl_trans *trans, int queue, int ptr);
-
 	/* 22000 functions */
-	int (*txq_alloc)(struct iwl_trans *trans, u32 flags,
-			 u32 sta_mask, u8 tid,
-			 int size, unsigned int queue_wdg_timeout);
-	void (*txq_free)(struct iwl_trans *trans, int queue);
-	int (*rxq_dma_data)(struct iwl_trans *trans, int queue,
-			    struct iwl_trans_rxq_dma_data *data);
 
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
 	bool (*grab_nic_access)(struct iwl_trans *trans);
@@ -1078,16 +1066,7 @@ int iwl_trans_tx(struct iwl_trans *trans, struct sk_buff *skb,
 void iwl_trans_reclaim(struct iwl_trans *trans, int queue, int ssn,
 		       struct sk_buff_head *skbs, bool is_flush);
 
-static inline void iwl_trans_set_q_ptrs(struct iwl_trans *trans, int queue,
-					int ptr)
-{
-	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return;
-	}
-
-	trans->ops->set_q_ptrs(trans, queue, ptr);
-}
+void iwl_trans_set_q_ptrs(struct iwl_trans *trans, int queue, int ptr);
 
 void iwl_trans_txq_disable(struct iwl_trans *trans, int queue,
 			   bool configure_scd);
@@ -1096,43 +1075,14 @@ bool iwl_trans_txq_enable_cfg(struct iwl_trans *trans, int queue, u16 ssn,
 			      const struct iwl_trans_txq_scd_cfg *cfg,
 			      unsigned int queue_wdg_timeout);
 
-static inline int
-iwl_trans_get_rxq_dma_data(struct iwl_trans *trans, int queue,
-			   struct iwl_trans_rxq_dma_data *data)
-{
-	if (WARN_ON_ONCE(!trans->ops->rxq_dma_data))
-		return -EOPNOTSUPP;
+int iwl_trans_get_rxq_dma_data(struct iwl_trans *trans, int queue,
+			       struct iwl_trans_rxq_dma_data *data);
 
-	return trans->ops->rxq_dma_data(trans, queue, data);
-}
+void iwl_trans_txq_free(struct iwl_trans *trans, int queue);
 
-static inline void
-iwl_trans_txq_free(struct iwl_trans *trans, int queue)
-{
-	if (WARN_ON_ONCE(!trans->ops->txq_free))
-		return;
+int iwl_trans_txq_alloc(struct iwl_trans *trans, u32 flags, u32 sta_mask,
+			u8 tid, int size, unsigned int wdg_timeout);
 
-	trans->ops->txq_free(trans, queue);
-}
-
-static inline int
-iwl_trans_txq_alloc(struct iwl_trans *trans,
-		    u32 flags, u32 sta_mask, u8 tid,
-		    int size, unsigned int wdg_timeout)
-{
-	might_sleep();
-
-	if (WARN_ON_ONCE(!trans->ops->txq_alloc))
-		return -EOPNOTSUPP;
-
-	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
-		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-		return -EIO;
-	}
-
-	return trans->ops->txq_alloc(trans, flags, sta_mask, tid,
-				     size, wdg_timeout);
-}
 void iwl_trans_txq_set_shared_mode(struct iwl_trans *trans,
 				   int txq_id, bool shared_mode);
 

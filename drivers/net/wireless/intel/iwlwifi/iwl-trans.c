@@ -483,3 +483,42 @@ void iwl_trans_debugfs_cleanup(struct iwl_trans *trans)
 }
 IWL_EXPORT_SYMBOL(iwl_trans_debugfs_cleanup);
 #endif
+
+void iwl_trans_set_q_ptrs(struct iwl_trans *trans, int queue, int ptr)
+{
+	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return;
+	}
+
+	iwl_pcie_set_q_ptrs(trans, queue, ptr);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_set_q_ptrs);
+
+int iwl_trans_txq_alloc(struct iwl_trans *trans, u32 flags, u32 sta_mask,
+			u8 tid, int size, unsigned int wdg_timeout)
+{
+	might_sleep();
+
+	if (WARN_ON_ONCE(trans->state != IWL_TRANS_FW_ALIVE)) {
+		IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+		return -EIO;
+	}
+
+	return iwl_txq_dyn_alloc(trans, flags, sta_mask, tid,
+				 size, wdg_timeout);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_txq_alloc);
+
+void iwl_trans_txq_free(struct iwl_trans *trans, int queue)
+{
+	iwl_txq_dyn_free(trans, queue);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_txq_free);
+
+int iwl_trans_get_rxq_dma_data(struct iwl_trans *trans, int queue,
+			       struct iwl_trans_rxq_dma_data *data)
+{
+	return iwl_trans_pcie_rxq_dma_data(trans, queue, data);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_get_rxq_dma_data);

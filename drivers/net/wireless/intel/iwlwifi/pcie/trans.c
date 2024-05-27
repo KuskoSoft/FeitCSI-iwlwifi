@@ -2431,8 +2431,8 @@ static int iwl_trans_pcie_read_config32(struct iwl_trans *trans, u32 ofs,
 
 #define IWL_FLUSH_WAIT_MS	2000
 
-static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans *trans, int queue,
-				       struct iwl_trans_rxq_dma_data *data)
+int iwl_trans_pcie_rxq_dma_data(struct iwl_trans *trans, int queue,
+				struct iwl_trans_rxq_dma_data *data)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -3586,11 +3586,6 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 	IWL_TRANS_COMMON_OPS,
 	.send_cmd = iwl_pcie_gen2_enqueue_hcmd,
 
-	.set_q_ptrs = iwl_pcie_set_q_ptrs,
-
-	.txq_alloc = iwl_txq_dyn_alloc,
-	.txq_free = iwl_txq_dyn_free,
-	.rxq_dma_data = iwl_trans_pcie_rxq_dma_data,
 	.load_pnvm = iwl_trans_pcie_ctx_info_gen3_load_pnvm,
 	.set_pnvm = iwl_trans_pcie_ctx_info_gen3_set_pnvm,
 	.load_reduce_power = iwl_trans_pcie_ctx_info_gen3_load_reduce_power,

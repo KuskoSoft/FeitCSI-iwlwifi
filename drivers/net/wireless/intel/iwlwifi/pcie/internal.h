@@ -1111,5 +1111,7 @@ void iwl_trans_pcie_copy_imr_fh(struct iwl_trans *trans,
 				u32 dst_addr, u64 src_addr, u32 byte_cnt);
 int iwl_trans_pcie_copy_imr(struct iwl_trans *trans,
 			    u32 dst_addr, u64 src_addr, u32 byte_cnt);
+int iwl_trans_pcie_rxq_dma_data(struct iwl_trans *trans, int queue,
+				struct iwl_trans_rxq_dma_data *data);
 
 #endif /* __iwl_trans_int_pcie_h__ */
