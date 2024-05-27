@@ -14,6 +14,7 @@
 #include <linux/dmapool.h>
 #include "fw/api/commands.h"
 #include "pcie/internal.h"
+#include "iwl-context-info-gen3.h"
 
 struct iwl_trans *iwl_trans_alloc(unsigned int priv_size,
 				  struct device *dev,
@@ -522,3 +523,18 @@ int iwl_trans_get_rxq_dma_data(struct iwl_trans *trans, int queue,
 	return iwl_trans_pcie_rxq_dma_data(trans, queue, data);
 }
 IWL_EXPORT_SYMBOL(iwl_trans_get_rxq_dma_data);
+
+int iwl_trans_load_pnvm(struct iwl_trans *trans,
+			const struct iwl_pnvm_image *pnvm_data,
+			const struct iwl_ucode_capabilities *capa)
+{
+	return iwl_trans_pcie_ctx_info_gen3_load_pnvm(trans, pnvm_data, capa);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_load_pnvm);
+
+void iwl_trans_set_pnvm(struct iwl_trans *trans,
+			const struct iwl_ucode_capabilities *capa)
+{
+	iwl_trans_pcie_ctx_info_gen3_set_pnvm(trans, capa);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_set_pnvm);
