@@ -3584,10 +3584,7 @@ static const struct iwl_trans_ops trans_ops_pcie = {
 
 static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 	IWL_TRANS_COMMON_OPS,
-	.send_cmd = iwl_pcie_gen2_enqueue_hcmd,
-
-	.load_reduce_power = iwl_trans_pcie_ctx_info_gen3_load_reduce_power,
-	.set_reduce_power = iwl_trans_pcie_ctx_info_gen3_set_reduce_power,
+	.send_cmd = iwl_pcie_gen2_enqueue_hcmd
 };
 
 struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,

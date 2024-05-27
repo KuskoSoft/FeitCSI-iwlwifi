@@ -499,8 +499,6 @@ struct iwl_pnvm_image {
  *	release_nic_access.
  * @release_nic_access: let the NIC go to sleep. The "flags" parameter
  *	must be the same one that was sent before to the grab_nic_access.
- * @load_reduce_power: copy reduce power table to the corresponding DRAM memory
- * @set_reduce_power: set reduce power table addresses in the sratch buffer
  */
 struct iwl_trans_ops {
 
@@ -511,12 +509,6 @@ struct iwl_trans_ops {
 	int (*read_config32)(struct iwl_trans *trans, u32 ofs, u32 *val);
 	bool (*grab_nic_access)(struct iwl_trans *trans);
 	void (*release_nic_access)(struct iwl_trans *trans);
-
-	int (*load_reduce_power)(struct iwl_trans *trans,
-				 const struct iwl_pnvm_image *payloads,
-				 const struct iwl_ucode_capabilities *capa);
-	void (*set_reduce_power)(struct iwl_trans *trans,
-				 const struct iwl_ucode_capabilities *capa);
 
 };
 
@@ -1209,21 +1201,12 @@ int iwl_trans_load_pnvm(struct iwl_trans *trans,
 void iwl_trans_set_pnvm(struct iwl_trans *trans,
 			const struct iwl_ucode_capabilities *capa);
 
-static inline int iwl_trans_load_reduce_power
-				(struct iwl_trans *trans,
-				 const struct iwl_pnvm_image *payloads,
-				 const struct iwl_ucode_capabilities *capa)
-{
-	return trans->ops->load_reduce_power(trans, payloads, capa);
-}
+int iwl_trans_load_reduce_power(struct iwl_trans *trans,
+				const struct iwl_pnvm_image *payloads,
+				const struct iwl_ucode_capabilities *capa);
 
-static inline void
-iwl_trans_set_reduce_power(struct iwl_trans *trans,
-			   const struct iwl_ucode_capabilities *capa)
-{
-	if (trans->ops->set_reduce_power)
-		trans->ops->set_reduce_power(trans, capa);
-}
+void iwl_trans_set_reduce_power(struct iwl_trans *trans,
+				const struct iwl_ucode_capabilities *capa);
 
 static inline bool iwl_trans_dbg_ini_valid(struct iwl_trans *trans)
 {
