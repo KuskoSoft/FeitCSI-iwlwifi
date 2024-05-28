@@ -79,6 +79,26 @@ iwl_mld_construct_fw_runtime(struct iwl_mld *mld, struct iwl_trans *trans,
 	iwl_fw_set_current_image(&mld->fwrt, IWL_UCODE_REGULAR);
 }
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
+	HCMD_NAME(UCODE_ALIVE_NTFY),
+	HCMD_NAME(INIT_COMPLETE_NOTIF),
+};
+
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_system_names[] = {
+	HCMD_NAME(INIT_EXTENDED_CFG_CMD),
+};
+
+static const struct iwl_hcmd_arr iwl_mld_groups[] = {
+	[LEGACY_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
+	[SYSTEM_GROUP] = HCMD_ARR(iwl_mld_system_names),
+};
+
 static void
 iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 {
@@ -86,6 +106,8 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 		.op_mode = op_mode,
 		/* Rx is not supported yet, but add it to avoid warnings */
 		.rx_buf_size = iwl_amsdu_size_to_rxb_size(),
+		.command_groups = iwl_mld_groups,
+		.command_groups_size = ARRAY_SIZE(iwl_mld_groups),
 	};
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
