@@ -340,6 +340,20 @@ int iwl_trans_read_config32(struct iwl_trans *trans, u32 ofs,
 }
 IWL_EXPORT_SYMBOL(iwl_trans_read_config32);
 
+bool _iwl_trans_grab_nic_access(struct iwl_trans *trans)
+{
+	return iwl_trans_pcie_grab_nic_access(trans);
+}
+IWL_EXPORT_SYMBOL(_iwl_trans_grab_nic_access);
+
+void __releases(nic_access)
+iwl_trans_release_nic_access(struct iwl_trans *trans)
+{
+	iwl_trans_pcie_release_nic_access(trans);
+	__release(nic_access);
+}
+IWL_EXPORT_SYMBOL(iwl_trans_release_nic_access);
+
 void iwl_trans_fw_alive(struct iwl_trans *trans, u32 scd_addr)
 {
 	might_sleep();

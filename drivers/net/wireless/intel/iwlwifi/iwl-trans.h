@@ -487,18 +487,8 @@ struct iwl_pnvm_image {
  * struct iwl_trans_ops - transport specific operations
  *
  * All the handlers MUST be implemented
- * @grab_nic_access: wake the NIC to be able to access non-HBUS regs.
- *	Sleeping is not allowed between grab_nic_access and
- *	release_nic_access.
- * @release_nic_access: let the NIC go to sleep. The "flags" parameter
- *	must be the same one that was sent before to the grab_nic_access.
  */
-struct iwl_trans_ops {
-	/* 22000 functions */
-
-	bool (*grab_nic_access)(struct iwl_trans *trans);
-	void (*release_nic_access)(struct iwl_trans *trans);
-};
+struct iwl_trans_ops {};
 
 /**
  * enum iwl_trans_state - state of the transport layer
@@ -1152,16 +1142,14 @@ int iwl_trans_sw_reset(struct iwl_trans *trans, bool retake_ownership);
 void iwl_trans_set_bits_mask(struct iwl_trans *trans, u32 reg,
 			     u32 mask, u32 value);
 
+bool _iwl_trans_grab_nic_access(struct iwl_trans *trans);
+
 #define iwl_trans_grab_nic_access(trans)		\
 	__cond_lock(nic_access,				\
-		    likely((trans)->ops->grab_nic_access(trans)))
+		    likely(_iwl_trans_grab_nic_access(trans)))
 
-static inline void __releases(nic_access)
-iwl_trans_release_nic_access(struct iwl_trans *trans)
-{
-	trans->ops->release_nic_access(trans);
-	__release(nic_access);
-}
+void __releases(nic_access)
+iwl_trans_release_nic_access(struct iwl_trans *trans);
 
 static inline void iwl_trans_fw_error(struct iwl_trans *trans, bool sync)
 {
