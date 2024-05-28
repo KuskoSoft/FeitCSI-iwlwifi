@@ -484,13 +484,6 @@ struct iwl_pnvm_image {
 };
 
 /**
- * struct iwl_trans_ops - transport specific operations
- *
- * All the handlers MUST be implemented
- */
-struct iwl_trans_ops {};
-
-/**
  * enum iwl_trans_state - state of the transport layer
  *
  * @IWL_TRANS_NO_FW: firmware wasn't started yet, or crashed
@@ -834,7 +827,6 @@ struct iwl_txq {
  * struct iwl_trans - transport common data
  *
  * @csme_own: true if we couldn't get ownership on the device
- * @ops: pointer to iwl_trans_ops
  * @op_mode: pointer to the op_mode
  * @trans_cfg: the trans-specific configuration part
  * @cfg: pointer to the configuration
@@ -895,7 +887,6 @@ struct iwl_txq {
  */
 struct iwl_trans {
 	bool csme_own;
-	const struct iwl_trans_ops *ops;
 	struct iwl_op_mode *op_mode;
 	const struct iwl_cfg_trans_params *trans_cfg;
 	const struct iwl_cfg *cfg;
@@ -1200,7 +1191,6 @@ void iwl_trans_interrupts(struct iwl_trans *trans, bool enable);
  *****************************************************/
 struct iwl_trans *iwl_trans_alloc(unsigned int priv_size,
 			  struct device *dev,
-			  const struct iwl_trans_ops *ops,
 			  const struct iwl_cfg_trans_params *cfg_trans);
 int iwl_trans_init(struct iwl_trans *trans);
 void iwl_trans_free(struct iwl_trans *trans);
