@@ -89,6 +89,7 @@ iwl_mld_construct_fw_runtime(struct iwl_mld *mld, struct iwl_trans *trans,
 static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
 	HCMD_NAME(UCODE_ALIVE_NTFY),
 	HCMD_NAME(INIT_COMPLETE_NOTIF),
+	HCMD_NAME(MFUART_LOAD_NOTIFICATION),
 };
 
 /* Please keep this array *SORTED* by hex value.
