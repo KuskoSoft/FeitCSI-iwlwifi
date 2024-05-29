@@ -4,6 +4,7 @@
  */
 
 #include "mld.h"
+#include "notif.h"
 #include "fw/api/rx.h"
 #include "fw/dbg.h"
 
@@ -171,16 +172,6 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 }
 
 static void
-iwl_mld_rx(struct iwl_op_mode *op_mode, struct napi_struct *napi,
-	   struct iwl_rx_cmd_buffer *rxb)
-{
-	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
-	struct iwl_rx_packet *pkt = rxb_addr(rxb);
-
-	iwl_notification_wait_notify(&mld->notif_wait, pkt);
-}
-
-static void
 iwl_mld_rx_rss(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 	       struct iwl_rx_cmd_buffer *rxb, unsigned int queue)
 {
@@ -244,7 +235,7 @@ iwl_mld_time_point(struct iwl_op_mode *op_mode,
 static const struct iwl_op_mode_ops iwl_mld_ops = {
 	.start = iwl_op_mode_mld_start,
 	.stop = iwl_op_mode_mld_stop,
-	.rx = iwl_mld_rx,
+	.rx = iwl_mld_rx_notif,
 	.rx_rss = iwl_mld_rx_rss,
 	.queue_full = iwl_mld_queue_full,
 	.queue_not_full = iwl_mld_queue_not_full,

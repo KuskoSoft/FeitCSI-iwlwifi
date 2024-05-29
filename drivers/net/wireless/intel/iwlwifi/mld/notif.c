@@ -4,6 +4,7 @@
  */
 
 #include "mld.h"
+#include "notif.h"
 #include "iwl-trans.h"
 #include "fw/file.h"
 #include "fw/dbg.h"
@@ -52,6 +53,7 @@ struct iwl_notif_struct_size {
 	u32 size:24, ver:8;
 };
 
+/* Please use this in an increasing order of the versions */
 #define CMD_VER_ENTRY(_ver, _struct) { .size = sizeof(struct _struct), .ver = _ver },
 #define CMD_VERSIONS(name, ...) static const struct iwl_notif_struct_size iwl_notif_struct_sizes_##name[] = { __VA_ARGS__ };
 
@@ -94,7 +96,76 @@ CMD_VERSIONS(mfuart_notif,
  *
  * The handler can be one from three contexts, see &iwl_rx_handler_context
  */
-static const struct iwl_rx_handler iwl_mld_rx_handlers[] __attribute__((unused)) = {
+static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_SIZES(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION, mfuart_notif,
 			 RX_HANDLER_SYNC)
 };
+
+static bool
+iwl_mld_notif_is_valid(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
+		       const struct iwl_rx_handler *handler)
+{
+	unsigned int size = iwl_rx_packet_payload_len(pkt);
+	size_t notif_ver;
+
+	/* n_sizes == 0 means that a validation function may be used */
+	if (!handler->n_sizes && handler->val_fn)
+		return handler->val_fn(mld, pkt);
+
+	notif_ver = iwl_fw_lookup_notif_ver(mld->fw,
+					    iwl_cmd_groupid(handler->cmd_id),
+					    iwl_cmd_opcode(handler->cmd_id),
+					    IWL_FW_CMD_VER_UNKNOWN);
+
+	for (int i = 0; i < handler->n_sizes; i++) {
+		if (handler->sizes[i].ver != notif_ver)
+			continue;
+
+		if (IWL_FW_CHECK(mld, size < handler->sizes[i].size,
+				 "unexpected notification 0x%04x size %d, need %d\n",
+				 handler->cmd_id, size, handler->sizes[i].size))
+			return false;
+		return true;
+	}
+
+	IWL_ERR(mld,
+		"notification 0x%04x version %ld doesn't have an expected size, using the size of version %d\n",
+		handler->cmd_id, notif_ver,
+		handler->sizes[handler->n_sizes].ver);
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/* Drop the notification in non-upstream builds to force adding
+	 * support for new versions
+	 */
+	return false;
+#endif
+	return size < handler->sizes[handler->n_sizes - 1].size;
+}
+
+void iwl_mld_rx_notif(struct iwl_op_mode *op_mode, struct napi_struct *napi,
+		      struct iwl_rx_cmd_buffer *rxb)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	/* Do the notification wait before RX handlers so
+	 * even if the RX handler consumes the RXB we have
+	 * access to it in the notification wait entry.
+	 */
+	iwl_notification_wait_notify(&mld->notif_wait, pkt);
+
+	for (int i = 0; i < ARRAY_SIZE(iwl_mld_rx_handlers); i++) {
+		const struct iwl_rx_handler *rx_h = &iwl_mld_rx_handlers[i];
+
+		if (rx_h->cmd_id != WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd))
+			continue;
+
+		if (!iwl_mld_notif_is_valid(mld, pkt, rx_h))
+			return;
+
+		if (rx_h->context == RX_HANDLER_SYNC) {
+			rx_h->fn(mld, pkt);
+			return;
+		}
+	}
+}
