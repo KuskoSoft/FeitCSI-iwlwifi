@@ -147,6 +147,9 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	/* Configure transport layer with the opmode specific params */
 	iwl_mld_configure_trans(op_mode);
 
+	/* set up notification wait support */
+	iwl_notification_wait_init(&mld->notif_wait);
+
 	return op_mode;
 }
 
@@ -166,8 +169,10 @@ static void
 iwl_mld_rx(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 	   struct iwl_rx_cmd_buffer *rxb)
 {
-	/* TODO: add RX path :-) */
-	WARN_ONCE(1, "RX is not supported yet\n");
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+
+	iwl_notification_wait_notify(&mld->notif_wait, pkt);
 }
 
 static void

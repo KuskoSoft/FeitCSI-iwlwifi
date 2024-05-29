@@ -8,6 +8,7 @@
 #include "iwl-trans.h"
 #include "iwl-op-mode.h"
 #include "fw/runtime.h"
+#include "fw/notif-wait.h"
 
 /**
  * struct iwl_mld - MLD op mode
@@ -18,6 +19,7 @@
  * @fw: a pointer to the fw object
  * @fwrt: fw runtime data
  * @debugfs_dir: debugfs directory
+ * @notif_wait: notification wait related data.
  */
 struct iwl_mld {
 	struct device *dev;
@@ -26,6 +28,7 @@ struct iwl_mld {
 	const struct iwl_fw *fw;
 	struct iwl_fw_runtime fwrt;
 	struct dentry *debugfs_dir;
+	struct iwl_notif_wait_data notif_wait;
 };
 
 /* Extract MLD priv from op_mode */
