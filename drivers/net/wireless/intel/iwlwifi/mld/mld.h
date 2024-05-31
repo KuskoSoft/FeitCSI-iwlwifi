@@ -17,6 +17,8 @@
  * @trans: pointer to the transport layer
  * @cfg: pointer to the device configuration
  * @fw: a pointer to the fw object
+ * @hw: pointer to the hw object.
+ * @wiphy: a pointer to the wiphy struct, for easier access to it.
  * @fwrt: fw runtime data
  * @debugfs_dir: debugfs directory
  * @notif_wait: notification wait related data.
@@ -26,6 +28,8 @@ struct iwl_mld {
 	struct iwl_trans *trans;
 	const struct iwl_cfg *cfg;
 	const struct iwl_fw *fw;
+	struct ieee80211_hw *hw;
+	struct wiphy *wiphy;
 	struct iwl_fw_runtime fwrt;
 	struct dentry *debugfs_dir;
 	struct iwl_notif_wait_data notif_wait;
@@ -37,5 +41,7 @@ struct iwl_mld {
 
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir);
+
+extern const struct ieee80211_ops iwl_mld_hw_ops;
 
 #endif /* __iwl_mld_h__ */

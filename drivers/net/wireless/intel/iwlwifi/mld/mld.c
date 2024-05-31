@@ -3,6 +3,8 @@
  * Copyright (C) 2024 Intel Corporation
  */
 
+#include <net/mac80211.h>
+
 #include "mld.h"
 #include "notif.h"
 #include "fw/api/rx.h"
@@ -39,34 +41,17 @@ iwl_is_mld_op_mode_supported(struct iwl_trans *trans)
 	return trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ;
 }
 
-static struct iwl_op_mode *
-iwl_mld_allocate_op_mode(void)
-{
-	struct iwl_op_mode *op_mode;
-	size_t alloc_size =
-		sizeof(struct iwl_op_mode) + sizeof(struct iwl_mld);
-
-	/*
-	 * TODO: when the mac80211 ops is added, use ieee80211_alloc_hw instead
-	 */
-	op_mode = kzalloc(alloc_size, GFP_KERNEL);
-	if (!op_mode)
-		return NULL;
-
-	op_mode->ops = &iwl_mld_ops;
-
-	return op_mode;
-}
-
 static void
 iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 		  const struct iwl_cfg *cfg, const struct iwl_fw *fw,
-		  struct dentry *debugfs_dir)
+		  struct ieee80211_hw *hw, struct dentry *debugfs_dir)
 {
 	mld->dev = trans->dev;
 	mld->trans = trans;
 	mld->cfg = cfg;
 	mld->fw = fw;
+	mld->hw = hw;
+	mld->wiphy = hw->wiphy;
 
 	iwl_mld_add_debugfs_files(mld, debugfs_dir);
 
@@ -137,19 +122,27 @@ static struct iwl_op_mode *
 iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		      const struct iwl_fw *fw, struct dentry *dbgfs_dir)
 {
+	struct ieee80211_hw *hw;
 	struct iwl_op_mode *op_mode;
 	struct iwl_mld *mld;
 
 	if (WARN_ON(!iwl_is_mld_op_mode_supported(trans)))
 		return NULL;
 
-	op_mode = iwl_mld_allocate_op_mode();
-	if (!op_mode)
+	/* Allocate and initialize a new hardware device */
+	hw = ieee80211_alloc_hw(sizeof(struct iwl_op_mode) +
+				sizeof(struct iwl_mld),
+				&iwl_mld_hw_ops);
+	if (!hw)
 		return NULL;
+
+	op_mode = hw->priv;
+
+	op_mode->ops = &iwl_mld_ops;
 
 	mld = IWL_OP_MODE_GET_MLD(op_mode);
 
-	iwl_construct_mld(mld, trans, cfg, fw, dbgfs_dir);
+	iwl_construct_mld(mld, trans, cfg, fw, hw, dbgfs_dir);
 
 	iwl_mld_construct_fw_runtime(mld, trans, fw, dbgfs_dir);
 
@@ -168,7 +161,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 
 	iwl_trans_op_mode_leave(mld->trans);
 
-	kfree(op_mode);
+	ieee80211_free_hw(mld->hw);
 }
 
 static void
