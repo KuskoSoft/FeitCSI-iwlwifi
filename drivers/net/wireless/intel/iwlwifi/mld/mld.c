@@ -110,9 +110,12 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 		.command_groups = iwl_mld_groups,
 		.command_groups_size = ARRAY_SIZE(iwl_mld_groups),
 	};
-	struct iwl_trans *trans = IWL_OP_MODE_GET_MLD(op_mode)->trans;
+	const struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+	struct iwl_trans *trans = mld->trans;
 
 	trans->rx_mpdu_cmd = REPLY_RX_MPDU_CMD;
+	trans->iml = mld->fw->iml;
+	trans->iml_len = mld->fw->iml_len;
 
 	/*TODO: add more configurations here */
 
