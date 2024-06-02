@@ -56,6 +56,12 @@ iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	iwl_mld_add_debugfs_files(mld, debugfs_dir);
 
 	iwl_notification_wait_init(&mld->notif_wait);
+
+	/* Setup async RX handling */
+	spin_lock_init(&mld->async_handlers_lock);
+	INIT_LIST_HEAD(&mld->async_handlers_list);
+	wiphy_work_init(&mld->async_handlers_wk,
+			iwl_mld_async_handlers_wk);
 }
 
 static void
@@ -156,6 +162,9 @@ static void
 iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	/* TODO: move to drv_stop, when added */
+	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
 
 	iwl_fw_runtime_free(&mld->fwrt);
 
