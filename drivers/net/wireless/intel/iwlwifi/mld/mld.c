@@ -5,10 +5,11 @@
 
 #include <net/mac80211.h>
 
-#include "mld.h"
-#include "notif.h"
 #include "fw/api/rx.h"
 #include "fw/dbg.h"
+
+#include "mld.h"
+#include "notif.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -87,13 +88,29 @@ static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
 /* Please keep this array *SORTED* by hex value.
  * Access is done through binary search
  */
+static const struct iwl_hcmd_names iwl_mld_long_names[] = {
+	HCMD_NAME(POWER_TABLE_CMD),
+};
+
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
 static const struct iwl_hcmd_names iwl_mld_system_names[] = {
 	HCMD_NAME(INIT_EXTENDED_CFG_CMD),
 };
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_reg_and_nvm_names[] = {
+	HCMD_NAME(NVM_GET_INFO),
+};
+
 static const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
+	[LONG_GROUP] = HCMD_ARR(iwl_mld_long_names),
 	[SYSTEM_GROUP] = HCMD_ARR(iwl_mld_system_names),
+	[REGULATORY_AND_NVM_GROUP] = HCMD_ARR(iwl_mld_reg_and_nvm_names),
 };
 
 static void
@@ -117,6 +134,28 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 	/*TODO: add more configurations here */
 
 	iwl_trans_configure(trans, &trans_cfg);
+}
+
+static int iwl_mld_load_fw(struct iwl_mld *mld)
+{
+	int ret = iwl_trans_start_hw(mld->trans);
+
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_run_fw_init_sequence(mld);
+	if (ret)
+		return ret;
+
+	mld->fw_status.running = true;
+
+	return 0;
+}
+
+static void iwl_mld_stop_fw(struct iwl_mld *mld)
+{
+	mld->fw_status.running = false;
+	iwl_trans_stop_device(mld->trans);
 }
 
 /*
@@ -155,7 +194,16 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	/* Configure transport layer with the opmode specific params */
 	iwl_mld_configure_trans(op_mode);
 
+	if (iwl_mld_load_fw(mld))
+		goto free_hw;
+
+	iwl_mld_stop_fw(mld);
+
 	return op_mode;
+
+free_hw:
+	ieee80211_free_hw(mld->hw);
+	return NULL;
 }
 
 static void
@@ -163,12 +211,17 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
+	if (WARN_ON(mld->fw_status.running))
+		iwl_mld_stop_fw(mld);
+
 	/* TODO: move to drv_stop, when added */
 	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
 
 	iwl_fw_runtime_free(&mld->fwrt);
 
 	iwl_trans_op_mode_leave(mld->trans);
+
+	kfree(mld->nvm_data);
 
 	ieee80211_free_hw(mld->hw);
 }
@@ -215,6 +268,8 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
+	mld->fw_status.running = false;
+
 	if (!test_bit(STATUS_TRANS_DEAD, &mld->trans->status))
 		iwl_fwrt_dump_error_logs(&mld->fwrt);
 
@@ -230,8 +285,9 @@ iwl_mld_time_point(struct iwl_op_mode *op_mode,
 		   enum iwl_fw_ini_time_point tp_id,
 		   union iwl_dbg_tlv_tp_data *tp_data)
 {
-	/* TODO: debug support */
-	WARN_ONCE(1, "Not supported yet\n");
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	iwl_dbg_tlv_time_point(&mld->fwrt, tp_id, tp_data);
 }
 
 static const struct iwl_op_mode_ops iwl_mld_ops = {

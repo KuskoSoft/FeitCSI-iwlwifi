@@ -19,6 +19,7 @@
  * @fw: a pointer to the fw object
  * @hw: pointer to the hw object.
  * @wiphy: a pointer to the wiphy struct, for easier access to it.
+ * @nvm_data: pointer to the nvm_data that includes all our capabilities
  * @fwrt: fw runtime data
  * @debugfs_dir: debugfs directory
  * @notif_wait: notification wait related data.
@@ -29,6 +30,7 @@
  *	&async_handlers_wk and RX notifcation path.
  * @async_handlers_wk: A work to run all async RX handlers from
  *	&async_handlers_list.
+ * @fw_status: bitmap of fw status bits
  */
 struct iwl_mld {
 	struct device *dev;
@@ -37,12 +39,17 @@ struct iwl_mld {
 	const struct iwl_fw *fw;
 	struct ieee80211_hw *hw;
 	struct wiphy *wiphy;
+	struct iwl_nvm_data *nvm_data;
 	struct iwl_fw_runtime fwrt;
 	struct dentry *debugfs_dir;
 	struct iwl_notif_wait_data notif_wait;
 	struct list_head async_handlers_list;
 	spinlock_t async_handlers_lock;
 	struct wiphy_work async_handlers_wk;
+
+	struct {
+		u32 running:1;
+	} fw_status;
 };
 
 /* Extract MLD priv from op_mode */
@@ -51,6 +58,7 @@ struct iwl_mld {
 
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir);
+int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld);
 
 extern const struct ieee80211_ops iwl_mld_hw_ops;
 
