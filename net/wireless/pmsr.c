@@ -150,7 +150,7 @@ static int pmsr_parse_ftm(struct cfg80211_registered_device *rdev,
 
 	if (out->ftm.ftms_per_burst > 31 && !out->ftm.non_trigger_based &&
 	    !out->ftm.trigger_based) {
-		NL_SET_ERR_MSG_ATTR(genl_info_extack(info),
+		NL_SET_ERR_MSG_ATTR(info->extack,
 				    tb[NL80211_PMSR_FTM_REQ_ATTR_FTMS_PER_BURST],
 				    "FTM: FTMs per burst must be set lower than 31");
 		return -ERANGE;
