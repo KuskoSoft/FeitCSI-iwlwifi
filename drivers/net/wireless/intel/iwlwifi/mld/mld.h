@@ -48,7 +48,8 @@ struct iwl_mld {
 	struct wiphy_work async_handlers_wk;
 
 	struct {
-		u32 running:1;
+		u32 running:1,
+		    do_not_dump_once:1;
 	} fw_status;
 };
 

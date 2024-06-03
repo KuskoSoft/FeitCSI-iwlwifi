@@ -58,20 +58,16 @@ static ssize_t _iwl_dbgfs_##name##_write(struct file *file,		\
 									\
 	if (copy_from_user(buf, user_buf, buf_size))			\
 		return -EFAULT;						\
+	if (*ppos)							\
+		return -EINVAL;						\
 									\
 	return iwl_dbgfs_##name##_write(arg, buf, buf_size);		\
 }
 
-/*
- * TODO: Dummy macro to avoid compilations err. Make a function once
- * the first debugfs entry is added
- */
-#define MLD_DEBUGFS_RELEASE_WRAPPER					\
-static int _iwl_dbgfs_release(struct inode *inode, struct file *file)	\
-{									\
-	kfree(file->private_data);					\
-									\
-	return 0;							\
+static int _iwl_dbgfs_release(struct inode *inode, struct file *file)
+{
+	kfree(file->private_data);
+	return 0;
 }
 
 #define _MLD_DEBUGFS_READ_FILE_OPS(name, buflen, argtype)		\
