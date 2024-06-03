@@ -5,6 +5,7 @@
 
 #include "mld.h"
 #include "fw/api/rx.h"
+#include "fw/dbg.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -218,8 +219,16 @@ iwl_mld_free_skb(struct iwl_op_mode *op_mode, struct sk_buff *skb)
 static void
 iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
 {
-	/* TODO */
-	WARN_ONCE(1, "Not supported yet\n");
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	if (!test_bit(STATUS_TRANS_DEAD, &mld->trans->status))
+		iwl_fwrt_dump_error_logs(&mld->fwrt);
+
+	/* TODO: call WRT, but only if sync = true because this means we're
+	 * shutting down the device and we can't delay the data collection.
+	 *
+	 * TODO: restart the device.
+	 */
 }
 
 static void
