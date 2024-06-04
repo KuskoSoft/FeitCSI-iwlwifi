@@ -117,6 +117,7 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 	trans->rx_mpdu_cmd = REPLY_RX_MPDU_CMD;
 	trans->iml = mld->fw->iml;
 	trans->iml_len = mld->fw->iml_len;
+	trans->wide_cmd_header = true;
 
 	/*TODO: add more configurations here */
 
