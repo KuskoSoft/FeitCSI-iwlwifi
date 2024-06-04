@@ -727,7 +727,6 @@ int iwl_mvm_mld_add_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		if (vif->type == NL80211_IFTYPE_STATION)
 			iwl_mvm_mld_set_ap_sta_id(sta, mvm_vif->link[link_id],
 						  mvm_link_sta);
-
 	}
 	return 0;
 

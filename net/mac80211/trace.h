@@ -15,6 +15,12 @@
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM mac80211
 
+#if LINUX_VERSION_IS_GEQ(6,10,0)
+#define ASSIGN_VIF_STR	__assign_str(vif_name)
+#else
+#define ASSIGN_VIF_STR	__assign_str(vif_name, sdata->name)
+#endif
+
 #define MAXNAME		32
 #define LOCAL_ENTRY	__array(char, wiphy_name, 32)
 #define LOCAL_ASSIGN	strscpy(__entry->wiphy_name, wiphy_name(local->hw.wiphy), MAXNAME)
@@ -33,7 +39,7 @@
 			__string(vif_name, sdata->name)
 #define VIF_ASSIGN	__entry->vif_type = sdata->vif.type; __entry->sdata = sdata;	\
 			__entry->p2p = sdata->vif.p2p;					\
-			__assign_str(vif_name, sdata->name)
+			ASSIGN_VIF_STR
 #define VIF_PR_FMT	" vif:%s(%d%s)"
 #define VIF_PR_ARG	__get_str(vif_name), __entry->vif_type, __entry->p2p ? "/p2p" : ""
 

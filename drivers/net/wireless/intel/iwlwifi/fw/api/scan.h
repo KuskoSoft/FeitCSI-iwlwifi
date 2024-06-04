@@ -69,6 +69,8 @@ struct iwl_ssid_ie {
 
 #define IWL_MAX_NUM_NOISE_RESULTS 22
 
+#define IWL_MAX_NUM_NOISE_RESULTS 22
+
 enum scan_framework_client {
 	SCAN_CLIENT_SCHED_SCAN		= BIT(0),
 	SCAN_CLIENT_NETDETECT		= BIT(1),

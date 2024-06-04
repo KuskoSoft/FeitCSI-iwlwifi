@@ -3152,6 +3152,21 @@ void iwl_mvm_rx_umac_scan_complete_notif(struct iwl_mvm *mvm,
 		       notif->last_schedule, notif->last_iter,
 		       __le32_to_cpu(notif->time_from_last_iter));
 
+	IWL_DEBUG_SCAN(mvm,
+		       "Scan completed: uid=%u type=%u, status=%s, EBS=%s\n",
+		       uid, mvm->scan_uid_status[uid],
+		       notif->status == IWL_SCAN_OFFLOAD_COMPLETED ?
+				"completed" : "aborted",
+		       iwl_mvm_ebs_status_str(notif->ebs_status));
+
+	IWL_DEBUG_SCAN(mvm, "Scan completed: scan_status=0x%x\n",
+		       mvm->scan_status);
+
+	IWL_DEBUG_SCAN(mvm,
+		       "Scan completed: line=%u, iter=%u, elapsed time=%u\n",
+		       notif->last_schedule, notif->last_iter,
+		       __le32_to_cpu(notif->time_from_last_iter));
+
 	if (WARN_ON(!(mvm->scan_uid_status[uid] & mvm->scan_status)))
 		return;
 

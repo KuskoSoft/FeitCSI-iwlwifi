@@ -92,7 +92,7 @@ enum iwl_data_path_subcmd_ids {
 	SEC_KEY_CMD = 0x18,
 
 	/**
-	 * @ESR_MODE_NOTIF: notification to recommend/forct a wanted esr mode,
+	 * @ESR_MODE_NOTIF: notification to recommend/force a wanted esr mode,
 	 *	uses &struct iwl_mvm_esr_mode_notif
 	 */
 	ESR_MODE_NOTIF = 0xF3,
