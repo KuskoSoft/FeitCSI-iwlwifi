@@ -68,6 +68,8 @@ iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	mld->fw = fw;
 
 	iwl_mld_add_debugfs_files(mld, debugfs_dir);
+
+	iwl_notification_wait_init(&mld->notif_wait);
 }
 
 static void
@@ -151,9 +153,6 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	/* Configure transport layer with the opmode specific params */
 	iwl_mld_configure_trans(op_mode);
-
-	/* set up notification wait support */
-	iwl_notification_wait_init(&mld->notif_wait);
 
 	return op_mode;
 }
