@@ -10,6 +10,8 @@
 #include "fw/runtime.h"
 #include "fw/notif-wait.h"
 
+#define IWL_MLD_MAX_ADDRESSES		5
+
 /**
  * struct iwl_mld - MLD op mode
  *
@@ -31,6 +33,7 @@
  * @async_handlers_wk: A work to run all async RX handlers from
  *	&async_handlers_list.
  * @fw_status: bitmap of fw status bits
+ * @addresses: device MAC addresses.
  */
 struct iwl_mld {
 	struct device *dev;
@@ -51,6 +54,7 @@ struct iwl_mld {
 		u32 running:1,
 		    do_not_dump_once:1;
 	} fw_status;
+	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
 };
 
 /* Extract MLD priv from op_mode */

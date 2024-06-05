@@ -10,6 +10,7 @@
 
 #include "mld.h"
 #include "notif.h"
+#include "mac80211.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -215,6 +216,9 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	iwl_mld_stop_fw(mld);
 
+	if (iwl_mld_register_hw(mld))
+		goto free_hw;
+
 	return op_mode;
 
 free_hw:
@@ -232,6 +236,8 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 
 	/* TODO: move to drv_stop, when added */
 	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
+
+	ieee80211_unregister_hw(mld->hw);
 
 	iwl_fw_runtime_free(&mld->fwrt);
 

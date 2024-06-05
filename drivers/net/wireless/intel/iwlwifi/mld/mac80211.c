@@ -6,6 +6,60 @@
 #include <net/mac80211.h>
 
 #include "mld.h"
+#include "mac80211.h"
+
+static void iwl_mld_hw_set_addresses(struct iwl_mld *mld)
+{
+	struct wiphy *wiphy = mld->wiphy;
+	int num_addrs = 1;
+
+	/* Extract MAC address */
+	memcpy(mld->addresses[0].addr, mld->nvm_data->hw_addr, ETH_ALEN);
+	wiphy->addresses = mld->addresses;
+	wiphy->n_addresses = 1;
+
+	/* Extract additional MAC addresses if available */
+	if (mld->nvm_data->n_hw_addrs > 1)
+		num_addrs = min(mld->nvm_data->n_hw_addrs,
+				IWL_MLD_MAX_ADDRESSES);
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.hw_address.len)
+		num_addrs = IWL_MLD_MAX_ADDRESSES;
+#endif
+
+	for (int i = 1; i < num_addrs; i++) {
+		memcpy(mld->addresses[i].addr,
+		       mld->addresses[i - 1].addr,
+		       ETH_ALEN);
+		mld->addresses[i].addr[ETH_ALEN - 1]++;
+		wiphy->n_addresses++;
+	}
+}
+
+static void iwl_mld_hw_set_channels(struct iwl_mld *mld)
+{
+	struct wiphy *wiphy = mld->wiphy;
+	struct ieee80211_supported_band *bands = mld->nvm_data->bands;
+
+	wiphy->bands[NL80211_BAND_2GHZ] = &bands[NL80211_BAND_2GHZ];
+	wiphy->bands[NL80211_BAND_5GHZ] = &bands[NL80211_BAND_5GHZ];
+
+	if (bands[NL80211_BAND_6GHZ].n_channels)
+		wiphy->bands[NL80211_BAND_6GHZ] = &bands[NL80211_BAND_6GHZ];
+}
+
+int iwl_mld_register_hw(struct iwl_mld *mld)
+{
+	struct ieee80211_hw *hw = mld->hw;
+
+	hw->queues = IEEE80211_NUM_ACS;
+
+	iwl_mld_hw_set_addresses(mld);
+	iwl_mld_hw_set_channels(mld);
+
+	return ieee80211_register_hw(mld->hw);
+}
 
 static void
 iwl_mld_mac80211_tx(struct ieee80211_hw *hw,
