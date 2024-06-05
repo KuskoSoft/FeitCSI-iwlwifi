@@ -49,6 +49,40 @@ static void iwl_mld_hw_set_channels(struct iwl_mld *mld)
 		wiphy->bands[NL80211_BAND_6GHZ] = &bands[NL80211_BAND_6GHZ];
 }
 
+static void iwl_mld_hw_set_security(struct iwl_mld *mld)
+{
+	struct ieee80211_hw *hw = mld->hw;
+	static const u32 mld_ciphers[] = {
+		WLAN_CIPHER_SUITE_WEP40,
+		WLAN_CIPHER_SUITE_WEP104,
+		WLAN_CIPHER_SUITE_TKIP,
+		WLAN_CIPHER_SUITE_CCMP,
+		WLAN_CIPHER_SUITE_GCMP,
+		WLAN_CIPHER_SUITE_GCMP_256,
+		WLAN_CIPHER_SUITE_AES_CMAC,
+		WLAN_CIPHER_SUITE_BIP_GMAC_128,
+		WLAN_CIPHER_SUITE_BIP_GMAC_256
+	};
+
+	hw->wiphy->n_cipher_suites = ARRAY_SIZE(mld_ciphers);
+	hw->wiphy->cipher_suites = mld_ciphers;
+
+	ieee80211_hw_set(hw, MFP_CAPABLE);
+	wiphy_ext_feature_set(hw->wiphy,
+			      NL80211_EXT_FEATURE_BEACON_PROTECTION);
+}
+
+static void iwl_mld_hw_set_regulatory(struct iwl_mld *mld)
+{
+	struct wiphy *wiphy = mld->wiphy;
+
+	/* LAR is expected to be enabled for all supported devices */
+	WARN_ON(!mld->nvm_data->lar_enabled);
+
+	wiphy->regulatory_flags |= REGULATORY_WIPHY_SELF_MANAGED;
+	wiphy->regulatory_flags |= REGULATORY_ENABLE_RELAX_NO_IR;
+}
+
 int iwl_mld_register_hw(struct iwl_mld *mld)
 {
 	struct ieee80211_hw *hw = mld->hw;
@@ -57,6 +91,8 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 
 	iwl_mld_hw_set_addresses(mld);
 	iwl_mld_hw_set_channels(mld);
+	iwl_mld_hw_set_security(mld);
+	iwl_mld_hw_set_regulatory(mld);
 
 	return ieee80211_register_hw(mld->hw);
 }
