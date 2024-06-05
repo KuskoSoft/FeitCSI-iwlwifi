@@ -7,6 +7,10 @@
 
 #include "mld.h"
 #include "mac80211.h"
+#include "fw/api/scan.h"
+#ifdef CONFIG_PM_SLEEP
+#include "fw/api/d3.h"
+#endif /* CONFIG_PM_SLEEP */
 
 static void iwl_mld_hw_set_addresses(struct iwl_mld *mld)
 {
@@ -83,6 +87,43 @@ static void iwl_mld_hw_set_regulatory(struct iwl_mld *mld)
 	wiphy->regulatory_flags |= REGULATORY_ENABLE_RELAX_NO_IR;
 }
 
+static void iwl_mld_hw_set_pm(struct iwl_mld *mld)
+{
+#ifdef CONFIG_PM_SLEEP
+	struct wiphy *wiphy = mld->wiphy;
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mld->fw,
+					   SCAN_OFFLOAD_UPDATE_PROFILES_CMD,
+					   IWL_FW_CMD_VER_UNKNOWN);
+
+	if (!device_can_wakeup(mld->trans->dev))
+		return;
+
+	/* All supported devices are currently using version 3 of the cmd.
+	 * Since version 3, IWL_SCAN_MAX_PROFILES_V2 shall be used where
+	 * necessary, verify that once here.
+	 */
+	WARN_ONCE(cmd_ver != 3,
+		  "Unexpected SCAN_OFFLOAD_UPDATE_PROFILES_CMD version %d\n",
+		  cmd_ver);
+
+	mld->wowlan.flags |= WIPHY_WOWLAN_MAGIC_PKT |
+			     WIPHY_WOWLAN_DISCONNECT |
+			     WIPHY_WOWLAN_EAP_IDENTITY_REQ |
+			     WIPHY_WOWLAN_RFKILL_RELEASE |
+			     WIPHY_WOWLAN_NET_DETECT |
+			     WIPHY_WOWLAN_SUPPORTS_GTK_REKEY |
+			     WIPHY_WOWLAN_GTK_REKEY_FAILURE |
+			     WIPHY_WOWLAN_4WAY_HANDSHAKE;
+
+	mld->wowlan.n_patterns = IWL_WOWLAN_MAX_PATTERNS;
+	mld->wowlan.pattern_min_len = IWL_WOWLAN_MIN_PATTERN_LEN;
+	mld->wowlan.pattern_max_len = IWL_WOWLAN_MAX_PATTERN_LEN;
+	mld->wowlan.max_nd_match_sets = IWL_SCAN_MAX_PROFILES_V2;
+
+	wiphy->wowlan = &mld->wowlan;
+#endif /* CONFIG_PM_SLEEP */
+}
+
 int iwl_mld_register_hw(struct iwl_mld *mld)
 {
 	struct ieee80211_hw *hw = mld->hw;
@@ -93,6 +134,7 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mld_hw_set_channels(mld);
 	iwl_mld_hw_set_security(mld);
 	iwl_mld_hw_set_regulatory(mld);
+	iwl_mld_hw_set_pm(mld);
 
 	return ieee80211_register_hw(mld->hw);
 }
@@ -196,6 +238,22 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	WARN_ON("Not supported yet\n");
 }
 
+#ifdef CONFIG_PM_SLEEP
+static
+int iwl_mld_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
+{
+	WARN_ON("Not supported yet\n");
+	return -EOPNOTSUPP;
+}
+
+static
+int iwl_mld_resume(struct ieee80211_hw *hw)
+{
+	WARN_ON("Not supported yet\n");
+	return -EOPNOTSUPP;
+}
+#endif /* CONFIG_PM_SLEEP */
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -210,4 +268,8 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.change_chanctx = iwl_mld_change_chanctx,
 	.assign_vif_chanctx = iwl_mld_assign_vif_chanctx,
 	.unassign_vif_chanctx = iwl_mld_unassign_vif_chanctx,
+#ifdef CONFIG_PM_SLEEP
+	.suspend = iwl_mld_suspend,
+	.resume = iwl_mld_resume,
+#endif /* CONFIG_PM_SLEEP */
 };

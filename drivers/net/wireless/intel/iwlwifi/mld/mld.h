@@ -34,6 +34,7 @@
  *	&async_handlers_list.
  * @fw_status: bitmap of fw status bits
  * @addresses: device MAC addresses.
+ * @wowlan: WoWLAN support data.
  */
 struct iwl_mld {
 	struct device *dev;
@@ -55,6 +56,9 @@ struct iwl_mld {
 		    do_not_dump_once:1;
 	} fw_status;
 	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
+#ifdef CONFIG_PM
+	struct wiphy_wowlan_support wowlan;
+#endif /* CONFIG_PM */
 };
 
 /* Extract MLD priv from op_mode */
