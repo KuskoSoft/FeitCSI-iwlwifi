@@ -62,4 +62,9 @@ int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld);
 
 extern const struct ieee80211_ops iwl_mld_hw_ops;
 
+#if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)
+extern const struct iwl_hcmd_arr iwl_mld_groups[];
+extern const unsigned int global_iwl_mld_goups_size;
+#endif
+
 #endif /* __iwl_mld_h__ */
