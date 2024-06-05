@@ -132,6 +132,24 @@ static void iwl_mld_hw_set_pm(struct iwl_mld *mld)
 #endif /* CONFIG_PM_SLEEP */
 }
 
+static void iwl_mac_hw_set_radiotap(struct iwl_mld *mld)
+{
+	struct ieee80211_hw *hw = mld->hw;
+
+	hw->radiotap_mcs_details |= IEEE80211_RADIOTAP_MCS_HAVE_FEC |
+				    IEEE80211_RADIOTAP_MCS_HAVE_STBC;
+
+	hw->radiotap_vht_details |= IEEE80211_RADIOTAP_VHT_KNOWN_STBC |
+				    IEEE80211_RADIOTAP_VHT_KNOWN_BEAMFORMED;
+
+	hw->radiotap_timestamp.units_pos =
+		IEEE80211_RADIOTAP_TIMESTAMP_UNIT_US |
+		IEEE80211_RADIOTAP_TIMESTAMP_SPOS_PLCP_SIG_ACQ;
+
+	/* this is the case for CCK frames, it's better (only 8) for OFDM */
+	hw->radiotap_timestamp.accuracy = 22;
+}
+
 int iwl_mld_register_hw(struct iwl_mld *mld)
 {
 	struct ieee80211_hw *hw = mld->hw;
@@ -144,6 +162,7 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mld_hw_set_regulatory(mld);
 	iwl_mld_hw_set_pm(mld);
 	iwl_mld_hw_set_antennas(mld);
+	iwl_mac_hw_set_radiotap(mld);
 
 	return ieee80211_register_hw(mld->hw);
 }
