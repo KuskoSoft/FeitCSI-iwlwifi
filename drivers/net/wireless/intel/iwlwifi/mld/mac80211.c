@@ -150,6 +150,39 @@ static void iwl_mac_hw_set_radiotap(struct iwl_mld *mld)
 	hw->radiotap_timestamp.accuracy = 22;
 }
 
+static void iwl_mac_hw_set_flags(struct iwl_mld *mld)
+{
+	struct ieee80211_hw *hw = mld->hw;
+
+	ieee80211_hw_set(hw, USES_RSS);
+	ieee80211_hw_set(hw, HANDLES_QUIET_CSA);
+	ieee80211_hw_set(hw, AP_LINK_PS);
+	ieee80211_hw_set(hw, SIGNAL_DBM);
+	ieee80211_hw_set(hw, SPECTRUM_MGMT);
+	ieee80211_hw_set(hw, REPORTS_TX_ACK_STATUS);
+	ieee80211_hw_set(hw, WANT_MONITOR_VIF);
+	ieee80211_hw_set(hw, SUPPORTS_PS);
+	ieee80211_hw_set(hw, SUPPORTS_DYNAMIC_PS);
+	ieee80211_hw_set(hw, AMPDU_AGGREGATION);
+	ieee80211_hw_set(hw, CONNECTION_MONITOR);
+	ieee80211_hw_set(hw, CHANCTX_STA_CSA);
+	ieee80211_hw_set(hw, SUPPORT_FAST_XMIT);
+	ieee80211_hw_set(hw, SUPPORTS_CLONED_SKBS);
+	ieee80211_hw_set(hw, NEEDS_UNIQUE_STA_ADDR);
+	ieee80211_hw_set(hw, SUPPORTS_VHT_EXT_NSS_BW);
+	ieee80211_hw_set(hw, BUFF_MMPDU_TXQ);
+	ieee80211_hw_set(hw, STA_MMPDU_TXQ);
+	ieee80211_hw_set(hw, TX_AMSDU);
+	ieee80211_hw_set(hw, TX_FRAG_LIST);
+	ieee80211_hw_set(hw, TX_AMPDU_SETUP_IN_HW);
+	ieee80211_hw_set(hw, HAS_RATE_CONTROL);
+	ieee80211_hw_set(hw, SUPPORTS_REORDERING_BUFFER);
+	ieee80211_hw_set(hw, DISALLOW_PUNCTURING_5GHZ);
+	ieee80211_hw_set(hw, SINGLE_SCAN_ON_ALL_BANDS);
+	ieee80211_hw_set(hw, SUPPORTS_AMSDU_IN_AMPDU);
+	ieee80211_hw_set(hw, TDLS_WIDER_BW);
+}
+
 int iwl_mld_register_hw(struct iwl_mld *mld)
 {
 	struct ieee80211_hw *hw = mld->hw;
@@ -163,6 +196,7 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mld_hw_set_pm(mld);
 	iwl_mld_hw_set_antennas(mld);
 	iwl_mac_hw_set_radiotap(mld);
+	iwl_mac_hw_set_flags(mld);
 
 	return ieee80211_register_hw(mld->hw);
 }
@@ -282,6 +316,12 @@ int iwl_mld_resume(struct ieee80211_hw *hw)
 }
 #endif /* CONFIG_PM_SLEEP */
 
+static
+int iwl_mld_mac80211_set_rts_threshold(struct ieee80211_hw *hw, u32 value)
+{
+	return -EOPNOTSUPP;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -296,6 +336,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.change_chanctx = iwl_mld_change_chanctx,
 	.assign_vif_chanctx = iwl_mld_assign_vif_chanctx,
 	.unassign_vif_chanctx = iwl_mld_unassign_vif_chanctx,
+	.set_rts_threshold = iwl_mld_mac80211_set_rts_threshold,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
