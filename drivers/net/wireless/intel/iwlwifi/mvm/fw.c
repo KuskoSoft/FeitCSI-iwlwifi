@@ -32,9 +32,6 @@
 #define MVM_UCODE_ALIVE_TIMEOUT	(2 * HZ * CPTCFG_IWL_TIMEOUT_FACTOR)
 #define MVM_UCODE_CALIB_TIMEOUT	(2 * HZ * CPTCFG_IWL_TIMEOUT_FACTOR)
 
-#define IWL_UATS_VLP_AP_SUPPORTED BIT(29)
-#define IWL_UATS_AFC_AP_SUPPORTED BIT(30)
-
 struct iwl_mvm_alive_data {
 	bool valid;
 	u32 scd_base_addr;
@@ -513,14 +510,8 @@ static void iwl_mvm_uats_init(struct iwl_mvm *mvm)
 		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
 	};
 
-	if (!(mvm->trans->trans_cfg->device_family >=
-	      IWL_DEVICE_FAMILY_AX210)) {
+	if (mvm->trans->trans_cfg->device_family < IWL_DEVICE_FAMILY_AX210) {
 		IWL_DEBUG_RADIO(mvm, "UATS feature is not supported\n");
-		return;
-	}
-
-	if (!mvm->fwrt.uats_enabled) {
-		IWL_DEBUG_RADIO(mvm, "UATS feature is disabled\n");
 		return;
 	}
 
@@ -1342,10 +1333,6 @@ static void iwl_mvm_lari_cfg(struct iwl_mvm *mvm)
 					"Failed to send LARI_CONFIG_CHANGE (%d)\n",
 					ret);
 	}
-
-	if (le32_to_cpu(cmd.oem_uhb_allow_bitmap) & IWL_UATS_VLP_AP_SUPPORTED ||
-	    le32_to_cpu(cmd.oem_uhb_allow_bitmap) & IWL_UATS_AFC_AP_SUPPORTED)
-		mvm->fwrt.uats_enabled = true;
 }
 
 void iwl_mvm_get_bios_tables(struct iwl_mvm *mvm)
