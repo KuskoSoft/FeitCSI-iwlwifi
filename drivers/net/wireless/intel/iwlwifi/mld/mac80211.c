@@ -12,6 +12,80 @@
 #include "fw/api/d3.h"
 #endif /* CONFIG_PM_SLEEP */
 
+#define IWL_MLD_LIMITS(ap)					\
+	{							\
+		.max = CPTCFG_IWLWIFI_NUM_STA_INTERFACES,	\
+		.types = BIT(NL80211_IFTYPE_STATION),		\
+	},							\
+	{							\
+		.max = 1,					\
+		.types = ap |					\
+			 BIT(NL80211_IFTYPE_P2P_CLIENT) |	\
+			 BIT(NL80211_IFTYPE_P2P_GO),		\
+	},							\
+	{							\
+		.max = 1,					\
+		.types = BIT(NL80211_IFTYPE_P2P_DEVICE),	\
+	}
+
+static const struct ieee80211_iface_limit iwl_mld_limits[] = {
+	IWL_MLD_LIMITS(0)
+};
+
+static const struct ieee80211_iface_limit iwl_mld_limits_ap[] = {
+	IWL_MLD_LIMITS(BIT(NL80211_IFTYPE_AP))
+};
+
+static const struct ieee80211_iface_combination
+iwl_mld_iface_combinations[] = {
+	{
+		.num_different_channels = 2,
+		.max_interfaces = CPTCFG_IWLWIFI_NUM_STA_INTERFACES + 2,
+		.limits = iwl_mld_limits,
+		.n_limits = ARRAY_SIZE(iwl_mld_limits),
+	},
+	{
+		.num_different_channels = 1,
+		.max_interfaces = CPTCFG_IWLWIFI_NUM_STA_INTERFACES + 2,
+		.limits = iwl_mld_limits_ap,
+		.n_limits = ARRAY_SIZE(iwl_mld_limits_ap),
+	},
+};
+
+/* Each capability added here should also be add to tm_if_types_ext_capa_sta */
+static const u8 if_types_ext_capa_sta[] = {
+	 [0] = WLAN_EXT_CAPA1_EXT_CHANNEL_SWITCHING,
+	 [2] = WLAN_EXT_CAPA3_MULTI_BSSID_SUPPORT,
+	 [7] = WLAN_EXT_CAPA8_OPMODE_NOTIF |
+	       WLAN_EXT_CAPA8_MAX_MSDU_IN_AMSDU_LSB,
+	 [8] = WLAN_EXT_CAPA9_MAX_MSDU_IN_AMSDU_MSB,
+};
+
+#define IWL_MLD_EMLSR_CAPA	(IEEE80211_EML_CAP_EMLSR_SUPP | \
+				 IEEE80211_EML_CAP_EMLSR_PADDING_DELAY_32US << \
+					__bf_shf(IEEE80211_EML_CAP_EMLSR_PADDING_DELAY) | \
+				 IEEE80211_EML_CAP_EMLSR_TRANSITION_DELAY_64US << \
+					__bf_shf(IEEE80211_EML_CAP_EMLSR_TRANSITION_DELAY))
+#define IWL_MLD_CAPA_OPS FIELD_PREP_CONST( \
+			IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP, \
+			IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP_SAME)
+
+/* TODO:
+ * 1. AX_SOFTAP_TESTMODE
+ * 2. tm (time measurement)
+ */
+static const struct wiphy_iftype_ext_capab iftypes_ext_capa[] = {
+	{
+		.iftype = NL80211_IFTYPE_STATION,
+		.extended_capabilities = if_types_ext_capa_sta,
+		.extended_capabilities_mask = if_types_ext_capa_sta,
+		.extended_capabilities_len = sizeof(if_types_ext_capa_sta),
+		/* relevant only if EHT is supported */
+		.eml_capabilities = IWL_MLD_EMLSR_CAPA,
+		.mld_capa_and_ops = IWL_MLD_CAPA_OPS,
+	},
+};
+
 static void iwl_mld_hw_set_addresses(struct iwl_mld *mld)
 {
 	struct wiphy *wiphy = mld->wiphy;
@@ -80,9 +154,6 @@ static void iwl_mld_hw_set_regulatory(struct iwl_mld *mld)
 {
 	struct wiphy *wiphy = mld->wiphy;
 
-	/* LAR is expected to be enabled for all supported devices */
-	WARN_ON(!mld->nvm_data->lar_enabled);
-
 	wiphy->regulatory_flags |= REGULATORY_WIPHY_SELF_MANAGED;
 	wiphy->regulatory_flags |= REGULATORY_ENABLE_RELAX_NO_IR;
 }
@@ -99,20 +170,9 @@ static void iwl_mld_hw_set_pm(struct iwl_mld *mld)
 {
 #ifdef CONFIG_PM_SLEEP
 	struct wiphy *wiphy = mld->wiphy;
-	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mld->fw,
-					   SCAN_OFFLOAD_UPDATE_PROFILES_CMD,
-					   IWL_FW_CMD_VER_UNKNOWN);
 
 	if (!device_can_wakeup(mld->trans->dev))
 		return;
-
-	/* All supported devices are currently using version 3 of the cmd.
-	 * Since version 3, IWL_SCAN_MAX_PROFILES_V2 shall be used where
-	 * necessary, verify that once here.
-	 */
-	WARN_ONCE(cmd_ver != 3,
-		  "Unexpected SCAN_OFFLOAD_UPDATE_PROFILES_CMD version %d\n",
-		  cmd_ver);
 
 	mld->wowlan.flags |= WIPHY_WOWLAN_MAGIC_PKT |
 			     WIPHY_WOWLAN_DISCONNECT |
@@ -183,9 +243,141 @@ static void iwl_mac_hw_set_flags(struct iwl_mld *mld)
 	ieee80211_hw_set(hw, TDLS_WIDER_BW);
 }
 
+static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
+{
+	struct ieee80211_hw *hw = mld->hw;
+	struct wiphy *wiphy = hw->wiphy;
+	const struct iwl_ucode_capabilities *ucode_capa = &mld->fw->ucode_capa;
+
+	wiphy->interface_modes = BIT(NL80211_IFTYPE_STATION) |
+				 BIT(NL80211_IFTYPE_P2P_CLIENT) |
+				 BIT(NL80211_IFTYPE_AP) |
+				 BIT(NL80211_IFTYPE_P2P_GO) |
+				 BIT(NL80211_IFTYPE_P2P_DEVICE) |
+				 BIT(NL80211_IFTYPE_ADHOC);
+
+	wiphy->features |= NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR |
+			   NL80211_FEATURE_SCAN_RANDOM_MAC_ADDR |
+			   NL80211_FEATURE_ND_RANDOM_MAC_ADDR |
+			   NL80211_FEATURE_HT_IBSS |
+			   NL80211_FEATURE_P2P_GO_CTWIN |
+			   NL80211_FEATURE_LOW_PRIORITY_SCAN |
+			   NL80211_FEATURE_P2P_GO_OPPPS |
+			   NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE |
+			   NL80211_FEATURE_DYNAMIC_SMPS |
+			   NL80211_FEATURE_STATIC_SMPS |
+			   NL80211_FEATURE_SUPPORTS_WMM_ADMISSION |
+			   NL80211_FEATURE_TX_POWER_INSERTION |
+			   NL80211_FEATURE_DS_PARAM_SET_IE_IN_PROBES;
+
+	wiphy->flags |= WIPHY_FLAG_IBSS_RSN |
+			WIPHY_FLAG_AP_UAPSD |
+			WIPHY_FLAG_HAS_CHANNEL_SWITCH |
+			WIPHY_FLAG_SPLIT_SCAN_6GHZ |
+			WIPHY_FLAG_SUPPORTS_TDLS |
+			WIPHY_FLAG_SUPPORTS_EXT_KEK_KCK;
+
+	if (mld->nvm_data->sku_cap_11be_enable &&
+	    !iwlwifi_mod_params.disable_11ax &&
+	    !iwlwifi_mod_params.disable_11be)
+		wiphy->flags |= WIPHY_FLAG_SUPPORTS_MLO;
+
+	/* the firmware uses u8 for num of iterations, but 0xff is saved for
+	 * infinite loop, so the maximum number of iterations is actually 254.
+	 */
+	wiphy->max_sched_scan_plan_iterations = 254;
+
+	/* driver create the 802.11 header (24 bytes), DS parameter (3 bytes)
+	 * and SSID IE (2 bytes).
+	 */
+	wiphy->max_sched_scan_ie_len = SCAN_OFFLOAD_PROBE_REQ_SIZE - 24 - 3 - 2;
+	wiphy->max_scan_ie_len = SCAN_OFFLOAD_PROBE_REQ_SIZE - 24 - 3 - 2;
+	wiphy->max_sched_scan_ssids = PROBE_OPTION_MAX;
+	wiphy->max_scan_ssids = PROBE_OPTION_MAX;
+	wiphy->max_sched_scan_plans = IWL_MAX_SCHED_SCAN_PLANS;
+	wiphy->max_sched_scan_reqs = 1;
+	wiphy->max_sched_scan_plan_interval = U16_MAX;
+	wiphy->max_match_sets = IWL_SCAN_MAX_PROFILES_V2;
+
+	wiphy->max_remain_on_channel_duration = 10000;
+
+	wiphy->hw_version = mld->trans->hw_id;
+
+	wiphy->hw_timestamp_max_peers = 1;
+
+	wiphy->iface_combinations = iwl_mld_iface_combinations;
+	wiphy->n_iface_combinations = ARRAY_SIZE(iwl_mld_iface_combinations);
+
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_VHT_IBSS);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_DFS_CONCURRENT);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_BEACON_RATE_LEGACY);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_SPP_AMSDU_SUPPORT);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_SCAN_START_TIME);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_BSS_PARENT_TSF);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_SCAN_MIN_PREQ_CONTENT);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_ACCEPT_BCAST_PROBE_RESP);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_FILS_MAX_CHANNEL_TIME);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_OCE_PROBE_REQ_HIGH_TX_RATE);
+	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_MU_MIMO_AIR_SNIFFER);
+
+	if (fw_has_capa(ucode_capa, IWL_UCODE_TLV_CAPA_PROTECTED_TWT))
+		wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_PROTECTED_TWT);
+
+	wiphy->iftype_ext_capab = NULL;
+	wiphy->num_iftype_ext_capab = 0;
+
+	if (!iwlwifi_mod_params.disable_11ax) {
+		wiphy->iftype_ext_capab = iftypes_ext_capa;
+		wiphy->num_iftype_ext_capab = ARRAY_SIZE(iftypes_ext_capa);
+
+		ieee80211_hw_set(hw, SUPPORTS_MULTI_BSSID);
+		ieee80211_hw_set(hw, SUPPORTS_ONLY_HE_MULTI_BSSID);
+	}
+
+	/* TODO:
+	 * 1. iwlmld_mod_params CAM MODE (WIPHY_FLAG_PS_ON_BY_DEFAULT)
+	 * 2. tm (time measurement) ext capab
+	 * 3. eml_capabilities debug override
+	 *
+	 * location:
+	 * 1. NL80211_EXT_FEATURE_PROT_RANGE_NEGO_AND_MEASURE
+	 * 2. NL80211_EXT_FEATURE_SECURE_LTF
+	 * 3. NL80211_EXT_FEATURE_ENABLE_FTM_RESPONDER
+	 * 4. wiphy->pmsr_capa
+	 */
+}
+
+static int iwl_mld_hw_verify_preconditions(struct iwl_mld *mld)
+{
+	/* 11ax is expected to be enabled for all supported devices */
+	if (WARN_ON(!mld->nvm_data->sku_cap_11ax_enable))
+		return -EINVAL;
+
+	/* LAR is expected to be enabled for all supported devices */
+	if (WARN_ON(!mld->nvm_data->lar_enabled))
+		return -EINVAL;
+
+	/* All supported devices are currently using version 3 of the cmd.
+	 * Since version 3, IWL_SCAN_MAX_PROFILES_V2 shall be used where
+	 * necessary.
+	 */
+	if (WARN_ON(iwl_fw_lookup_cmd_ver(mld->fw,
+					  SCAN_OFFLOAD_UPDATE_PROFILES_CMD,
+					  IWL_FW_CMD_VER_UNKNOWN) != 3))
+		return -EINVAL;
+
+	return 0;
+}
+
 int iwl_mld_register_hw(struct iwl_mld *mld)
 {
 	struct ieee80211_hw *hw = mld->hw;
+
+	/* verify once essential preconditions required for setting
+	 * the hw capabilities
+	 */
+	if (iwl_mld_hw_verify_preconditions(mld))
+		return -EINVAL;
 
 	hw->queues = IEEE80211_NUM_ACS;
 
@@ -197,6 +389,7 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mld_hw_set_antennas(mld);
 	iwl_mac_hw_set_radiotap(mld);
 	iwl_mac_hw_set_flags(mld);
+	iwl_mac_hw_set_wiphy(mld);
 
 	return ieee80211_register_hw(mld->hw);
 }
@@ -322,6 +515,43 @@ int iwl_mld_mac80211_set_rts_threshold(struct ieee80211_hw *hw, u32 value)
 	return -EOPNOTSUPP;
 }
 
+static
+void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
+					struct ieee80211_vif *vif,
+					struct ieee80211_bss_conf *link_conf,
+					u64 changes)
+{
+	WARN_ON("Not supported yet\n");
+}
+
+static
+void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
+				      struct ieee80211_vif *vif,
+				      u64 changes)
+{
+	WARN_ON("Not supported yet\n");
+}
+
+static
+int iwl_mld_mac80211_set_key(struct ieee80211_hw *hw,
+			     enum set_key_cmd cmd,
+			     struct ieee80211_vif *vif,
+			     struct ieee80211_sta *sta,
+			     struct ieee80211_key_conf *key)
+{
+	WARN_ON("Not supported yet\n");
+	return -EOPNOTSUPP;
+}
+
+static
+int iwl_mld_mac80211_hw_scan(struct ieee80211_hw *hw,
+			     struct ieee80211_vif *vif,
+			     struct ieee80211_scan_request *hw_req)
+{
+	WARN_ON("Not supported yet\n");
+	return -EOPNOTSUPP;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -337,6 +567,10 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.assign_vif_chanctx = iwl_mld_assign_vif_chanctx,
 	.unassign_vif_chanctx = iwl_mld_unassign_vif_chanctx,
 	.set_rts_threshold = iwl_mld_mac80211_set_rts_threshold,
+	.link_info_changed = iwl_mld_mac80211_link_info_changed,
+	.vif_cfg_changed = iwl_mld_mac80211_vif_cfg_changed,
+	.set_key = iwl_mld_mac80211_set_key,
+	.hw_scan = iwl_mld_mac80211_hw_scan,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
