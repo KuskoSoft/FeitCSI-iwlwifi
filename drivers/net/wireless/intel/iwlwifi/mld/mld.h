@@ -61,6 +61,21 @@ struct iwl_mld {
 #endif /* CONFIG_PM */
 };
 
+enum iwl_power_scheme {
+	IWL_POWER_SCHEME_CAM = 1,
+	IWL_POWER_SCHEME_BPS,
+};
+
+/**
+ * struct iwl_mld_mod_params - module parameters for iwlmld
+ * @power_scheme: one of enum iwl_power_scheme
+ */
+struct iwl_mld_mod_params {
+	int power_scheme;
+};
+
+extern struct iwl_mld_mod_params iwlmld_mod_params;
+
 /* Extract MLD priv from op_mode */
 #define IWL_OP_MODE_GET_MLD(_iwl_op_mode)		\
 	((struct iwl_mld *)(_iwl_op_mode)->op_mode_specific)

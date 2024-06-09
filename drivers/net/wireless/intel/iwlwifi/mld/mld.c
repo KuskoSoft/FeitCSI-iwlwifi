@@ -329,3 +329,11 @@ static const struct iwl_op_mode_ops iwl_mld_ops = {
 	.nic_error = iwl_mld_nic_error,
 	.time_point = iwl_mld_time_point,
 };
+
+struct iwl_mld_mod_params iwlmld_mod_params = {
+	.power_scheme = IWL_POWER_SCHEME_BPS,
+};
+
+module_param_named(power_scheme, iwlmld_mod_params.power_scheme, int, 0444);
+MODULE_PARM_DESC(power_scheme,
+		 "power management scheme: 1-active, 2-balanced, default: 2");
