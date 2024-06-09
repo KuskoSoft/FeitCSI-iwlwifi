@@ -347,6 +347,32 @@ static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
 	 */
 }
 
+static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
+{
+	struct ieee80211_hw *hw = mld->hw;
+
+	hw->queues = IEEE80211_NUM_ACS;
+
+	hw->netdev_features = NETIF_F_HIGHDMA | NETIF_F_SG;
+	hw->netdev_features |= mld->cfg->features;
+
+	hw->max_tx_fragments = mld->trans->max_skb_frags;
+	hw->max_listen_interval = 10;
+
+	hw->uapsd_max_sp_len = IEEE80211_WMM_IE_STA_QOSINFO_SP_ALL;
+	hw->uapsd_queues = IEEE80211_WMM_IE_STA_QOSINFO_AC_VO |
+			   IEEE80211_WMM_IE_STA_QOSINFO_AC_VI |
+			   IEEE80211_WMM_IE_STA_QOSINFO_AC_BK |
+			   IEEE80211_WMM_IE_STA_QOSINFO_AC_BE;
+
+	/* TODO set:
+	 * 1. hw->sta_data_size
+	 * 2. hw->vif_data_size
+	 * 3. hw->txq_data_size
+	 * 4. hw->chanctx_data_size
+	 */
+}
+
 static int iwl_mld_hw_verify_preconditions(struct iwl_mld *mld)
 {
 	/* 11ax is expected to be enabled for all supported devices */
@@ -371,15 +397,11 @@ static int iwl_mld_hw_verify_preconditions(struct iwl_mld *mld)
 
 int iwl_mld_register_hw(struct iwl_mld *mld)
 {
-	struct ieee80211_hw *hw = mld->hw;
-
 	/* verify once essential preconditions required for setting
 	 * the hw capabilities
 	 */
 	if (iwl_mld_hw_verify_preconditions(mld))
 		return -EINVAL;
-
-	hw->queues = IEEE80211_NUM_ACS;
 
 	iwl_mld_hw_set_addresses(mld);
 	iwl_mld_hw_set_channels(mld);
@@ -390,6 +412,12 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mac_hw_set_radiotap(mld);
 	iwl_mac_hw_set_flags(mld);
 	iwl_mac_hw_set_wiphy(mld);
+	iwl_mac_hw_set_misc(mld);
+
+	/* TODO:
+	 * 1. leds_init
+	 * 2. register vendor cmds
+	 */
 
 	return ieee80211_register_hw(mld->hw);
 }
