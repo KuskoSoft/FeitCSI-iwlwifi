@@ -7,6 +7,7 @@
 
 #include "mld.h"
 #include "mac80211.h"
+#include "phy.h"
 #include "fw/api/scan.h"
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
@@ -365,11 +366,11 @@ static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
 			   IEEE80211_WMM_IE_STA_QOSINFO_AC_BK |
 			   IEEE80211_WMM_IE_STA_QOSINFO_AC_BE;
 
+	hw->chanctx_data_size = sizeof(struct iwl_mld_phy);
 	/* TODO set:
 	 * 1. hw->sta_data_size
 	 * 2. hw->vif_data_size
 	 * 3. hw->txq_data_size
-	 * 4. hw->chanctx_data_size
 	 */
 }
 

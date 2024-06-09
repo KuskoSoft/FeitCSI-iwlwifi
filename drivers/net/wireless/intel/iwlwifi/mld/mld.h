@@ -117,4 +117,9 @@ extern const struct iwl_hcmd_arr iwl_mld_groups[];
 extern const unsigned int global_iwl_mld_goups_size;
 #endif
 
+/* memset the part of the struct that requires cleanup on restart */
+#define CLEANUP_STRUCT(_ptr)				\
+	memset((void *)&_ptr->zeroed_on_hw_restart, 0,	\
+	       sizeof(_ptr->zeroed_on_hw_restart))
+
 #endif /* __iwl_mld_h__ */
