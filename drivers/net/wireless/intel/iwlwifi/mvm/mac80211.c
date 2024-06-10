@@ -1346,9 +1346,21 @@ int __iwl_mvm_mac_start(struct iwl_mvm *mvm)
 	fast_resume = mvm->fast_resume;
 	if (fast_resume) {
 		ret = iwl_mvm_fast_resume(mvm);
-		if (ret)
+		if (ret) {
 			iwl_mvm_stop_device(mvm);
-		/* iwl_mvm_up() will be called further down */
+			/* iwl_mvm_up() will be called further down */
+		} else {
+			/*
+			 * We clear IWL_MVM_STATUS_FIRMWARE_RUNNING upon
+			 * mac_down() so that debugfs will stop honoring
+			 * requests after we flush all the workers.
+			 * Set the IWL_MVM_STATUS_FIRMWARE_RUNNING bit again
+			 * now that we are back. This is a bit abusing the
+			 * flag since the firmware wasn't really ever stopped,
+			 * but this still serves the purpose.
+			 */
+			set_bit(IWL_MVM_STATUS_FIRMWARE_RUNNING, &mvm->status);
+		}
 	}
 
 	if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status)) {
