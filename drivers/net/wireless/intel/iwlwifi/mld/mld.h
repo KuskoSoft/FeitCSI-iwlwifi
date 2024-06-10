@@ -69,6 +69,26 @@ void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir);
 int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld);
 
+static inline u8 iwl_mld_get_valid_tx_ant(const struct iwl_mld *mld)
+{
+	u8 tx_ant = mld->fw->valid_tx_ant;
+
+	if (mld->nvm_data && mld->nvm_data->valid_tx_ant)
+		tx_ant &= mld->nvm_data->valid_tx_ant;
+
+	return tx_ant;
+}
+
+static inline u8 iwl_mld_get_valid_rx_ant(const struct iwl_mld *mld)
+{
+	u8 rx_ant = mld->fw->valid_rx_ant;
+
+	if (mld->nvm_data && mld->nvm_data->valid_rx_ant)
+		rx_ant &= mld->nvm_data->valid_rx_ant;
+
+	return rx_ant;
+}
+
 extern const struct ieee80211_ops iwl_mld_hw_ops;
 
 #if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)

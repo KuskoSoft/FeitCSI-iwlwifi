@@ -87,6 +87,14 @@ static void iwl_mld_hw_set_regulatory(struct iwl_mld *mld)
 	wiphy->regulatory_flags |= REGULATORY_ENABLE_RELAX_NO_IR;
 }
 
+static void iwl_mld_hw_set_antennas(struct iwl_mld *mld)
+{
+	struct wiphy *wiphy = mld->wiphy;
+
+	wiphy->available_antennas_tx = iwl_mld_get_valid_tx_ant(mld);
+	wiphy->available_antennas_rx = iwl_mld_get_valid_rx_ant(mld);
+}
+
 static void iwl_mld_hw_set_pm(struct iwl_mld *mld)
 {
 #ifdef CONFIG_PM_SLEEP
@@ -135,6 +143,7 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mld_hw_set_security(mld);
 	iwl_mld_hw_set_regulatory(mld);
 	iwl_mld_hw_set_pm(mld);
+	iwl_mld_hw_set_antennas(mld);
 
 	return ieee80211_register_hw(mld->hw);
 }
