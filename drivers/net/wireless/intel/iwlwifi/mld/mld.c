@@ -172,8 +172,10 @@ static int iwl_mld_load_fw(struct iwl_mld *mld)
 
 static void iwl_mld_stop_fw(struct iwl_mld *mld)
 {
+	iwl_fw_dbg_stop_sync(&mld->fwrt);
 	mld->fw_status.running = false;
 	iwl_trans_stop_device(mld->trans);
+	iwl_fw_dump_conf_clear(&mld->fwrt);
 }
 
 /*
