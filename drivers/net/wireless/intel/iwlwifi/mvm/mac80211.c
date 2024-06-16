@@ -1791,7 +1791,8 @@ static void iwl_mvm_prevent_esr_done_wk(struct wiphy *wiphy,
 	struct iwl_mvm_vif *mvmvif =
 		container_of(wk, struct iwl_mvm_vif, prevent_esr_done_wk.work);
 	struct iwl_mvm *mvm = mvmvif->mvm;
-	struct ieee80211_vif *vif = iwl_mvm_get_bss_vif(mvm);
+	struct ieee80211_vif *vif =
+		container_of((void *)mvmvif, struct ieee80211_vif, drv_priv);
 
 	guard(mvm)(mvm);
 	iwl_mvm_unblock_esr(mvm, vif, IWL_MVM_ESR_BLOCKED_PREVENTION);
@@ -1813,7 +1814,8 @@ static void iwl_mvm_unblock_esr_tpt(struct wiphy *wiphy, struct wiphy_work *wk)
 	struct iwl_mvm_vif *mvmvif =
 		container_of(wk, struct iwl_mvm_vif, unblock_esr_tpt_wk);
 	struct iwl_mvm *mvm = mvmvif->mvm;
-	struct ieee80211_vif *vif = iwl_mvm_get_bss_vif(mvm);
+	struct ieee80211_vif *vif =
+		container_of((void *)mvmvif, struct ieee80211_vif, drv_priv);
 
 	guard(mvm)(mvm);
 	iwl_mvm_unblock_esr(mvm, vif, IWL_MVM_ESR_BLOCKED_TPT);
