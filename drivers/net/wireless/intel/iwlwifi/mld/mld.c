@@ -139,6 +139,7 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 		.rx_buf_size = iwl_amsdu_size_to_rxb_size(),
 		.command_groups = iwl_mld_groups,
 		.command_groups_size = ARRAY_SIZE(iwl_mld_groups),
+		.fw_reset_handshake = true,
 	};
 	const struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 	struct iwl_trans *trans = mld->trans;
