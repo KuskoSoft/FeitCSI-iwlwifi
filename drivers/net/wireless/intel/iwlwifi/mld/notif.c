@@ -75,7 +75,7 @@ struct iwl_notif_struct_size {
 static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt)
 {
-	struct iwl_mfuart_load_notif *mfuart_notif = (void *)pkt;
+	struct iwl_mfuart_load_notif *mfuart_notif = (void *)pkt->data;
 
 	IWL_DEBUG_INFO(mld,
 		       "MFUART: installed ver: 0x%08x, external ver: 0x%08x, status: 0x%08x, duration: 0x%08x image size: 0x%08x\n",
