@@ -22,14 +22,6 @@ struct iwl_mld_link {
 	/* And here fields that survive a fw restart */
 };
 
-/* Constructor function for struct iwl_mld_link */
-static inline void
-iwl_mld_init_link(struct iwl_mld *mld, struct iwl_mld_link *link, u8 fw_id)
-{
-	/* TODO: use a 'find_free_fw_id' here instead of a parameter */
-	link->fw_id = fw_id;
-}
-
 /* Cleanup function for struct iwl_mld_phy, will be called in restart */
 static inline void
 iwl_mld_cleanup_link(struct iwl_mld_link *link)
@@ -38,10 +30,10 @@ iwl_mld_cleanup_link(struct iwl_mld_link *link)
 }
 
 /* TODO: make these static function when it is used */
-int iwl_mld_add_link_to_fw(struct iwl_mld *mld,
-			   struct ieee80211_bss_conf *link_conf);
 int iwl_mld_rm_link_from_fw(struct iwl_mld *mld,
 			    struct ieee80211_bss_conf *link);
 int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
 				  struct ieee80211_bss_conf *link);
+int iwl_mld_add_link(struct iwl_mld *mld,
+		     struct ieee80211_bss_conf *bss_conf);
 #endif /* __iwl_mld_link_h__ */

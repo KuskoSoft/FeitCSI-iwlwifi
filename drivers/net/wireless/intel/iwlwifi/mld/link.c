@@ -27,8 +27,8 @@ static int iwl_mld_send_link_cmd(struct iwl_mld *mld,
 	return ret;
 }
 
-int iwl_mld_add_link_to_fw(struct iwl_mld *mld,
-			   struct ieee80211_bss_conf *link_conf)
+static int iwl_mld_add_link_to_fw(struct iwl_mld *mld,
+				  struct ieee80211_bss_conf *link_conf)
 {
 	struct ieee80211_vif *vif = link_conf->vif;
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
@@ -94,6 +94,35 @@ int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
 	ret = iwl_mld_change_link_in_fw(mld, link,
 					LINK_CONTEXT_MODIFY_ACTIVE,
 					false);
+
+	return ret;
+}
+
+IWL_MLD_ALLOC_FN(link, bss_conf)
+
+/* Constructor function for struct iwl_mld_link */
+static int
+iwl_mld_init_link(struct iwl_mld *mld, struct iwl_mld_link *link)
+{
+	return iwl_mld_allocate_link_fw_id(mld, link);
+}
+
+/* Initializes the link structure, maps fw id to the ieee80211_bss_conf, and
+ * adds a link to the fw
+ */
+int iwl_mld_add_link(struct iwl_mld *mld,
+		     struct ieee80211_bss_conf *bss_conf)
+{
+	struct iwl_mld_link *link = iwl_mld_link_from_mac80211(bss_conf);
+	int ret;
+
+	ret = iwl_mld_init_link(mld, link);
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_add_link_to_fw(mld, bss_conf);
+	if (ret)
+		RCU_INIT_POINTER(mld->fw_id_to_bss_conf[link->fw_id], NULL);
 
 	return ret;
 }
