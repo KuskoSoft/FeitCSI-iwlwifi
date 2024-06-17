@@ -37,6 +37,10 @@
  * @wowlan: WoWLAN support data.
  */
 struct iwl_mld {
+	/* Add here fields that need clean up on restart */
+	struct_group(zeroed_on_hw_restart,
+	);
+	/* And here fields that survive a fw restart */
 	struct device *dev;
 	struct iwl_trans *trans;
 	const struct iwl_cfg *cfg;
@@ -60,6 +64,18 @@ struct iwl_mld {
 	struct wiphy_wowlan_support wowlan;
 #endif /* CONFIG_PM */
 };
+
+/* memset the part of the struct that requires cleanup on restart */
+#define CLEANUP_STRUCT(_ptr)				\
+	memset((void *)&_ptr->zeroed_on_hw_restart, 0,	\
+	       sizeof(_ptr->zeroed_on_hw_restart))
+
+/* Cleanup function for struct iwl_mld_vif, will be called in restart */
+static inline void
+iwl_cleanup_mld(struct iwl_mld *mld)
+{
+	CLEANUP_STRUCT(mld);
+}
 
 enum iwl_power_scheme {
 	IWL_POWER_SCHEME_CAM = 1,
@@ -116,10 +132,5 @@ extern const struct ieee80211_ops iwl_mld_hw_ops;
 extern const struct iwl_hcmd_arr iwl_mld_groups[];
 extern const unsigned int global_iwl_mld_goups_size;
 #endif
-
-/* memset the part of the struct that requires cleanup on restart */
-#define CLEANUP_STRUCT(_ptr)				\
-	memset((void *)&_ptr->zeroed_on_hw_restart, 0,	\
-	       sizeof(_ptr->zeroed_on_hw_restart))
 
 #endif /* __iwl_mld_h__ */
