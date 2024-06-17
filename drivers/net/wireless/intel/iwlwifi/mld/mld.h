@@ -10,6 +10,7 @@
 #include "fw/runtime.h"
 #include "fw/notif-wait.h"
 #include "fw/api/mac-cfg.h"
+#include "fw/api/mac.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
 
@@ -18,6 +19,8 @@
  *
  * @fw_id_to_bss_conf: maps a fw id of a link to the corresponding
  *	ieee80211_bss_conf.
+ * @fw_id_to_vif: maps a fw id of a MAC context to the corresponding
+ *	ieee80211_vif. Mapping is valid only when the MAC exists in the fw.
  * @dev: pointer to device struct. For printing purposes
  * @trans: pointer to the transport layer
  * @cfg: pointer to the device configuration
@@ -46,6 +49,7 @@ struct iwl_mld {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
 		struct ieee80211_bss_conf __rcu *fw_id_to_bss_conf[IWL_FW_MAX_LINK_ID + 1];
+		struct ieee80211_vif __rcu *fw_id_to_vif[NUM_MAC_INDEX_DRIVER];
 	);
 	/* And here fields that survive a fw restart */
 	struct device *dev;
