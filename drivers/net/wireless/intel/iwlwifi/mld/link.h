@@ -37,4 +37,11 @@ iwl_mld_cleanup_link(struct iwl_mld_link *link)
 	CLEANUP_STRUCT(link);
 }
 
+/* TODO: make these static function when it is used */
+int iwl_mld_add_link_to_fw(struct iwl_mld *mld,
+			   struct ieee80211_bss_conf *link_conf);
+int iwl_mld_rm_link_from_fw(struct iwl_mld *mld,
+			    struct ieee80211_bss_conf *link);
+int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
+				  struct ieee80211_bss_conf *link);
 #endif /* __iwl_mld_link_h__ */
