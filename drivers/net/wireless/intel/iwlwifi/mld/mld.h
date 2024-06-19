@@ -80,11 +80,15 @@ extern struct iwl_mld_mod_params iwlmld_mod_params;
 #define IWL_OP_MODE_GET_MLD(_iwl_op_mode)		\
 	((struct iwl_mld *)(_iwl_op_mode)->op_mode_specific)
 
+#define IWL_MAC80211_GET_MLD(_hw)			\
+	IWL_OP_MODE_GET_MLD((struct iwl_op_mode *)((_hw)->priv))
+
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir);
 int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld);
 int iwl_mld_load_fw(struct iwl_mld *mld);
 void iwl_mld_stop_fw(struct iwl_mld *mld);
+int iwl_mld_start_fw(struct iwl_mld *mld);
 
 static inline u8 iwl_mld_get_valid_tx_ant(const struct iwl_mld *mld)
 {

@@ -286,3 +286,26 @@ void iwl_mld_stop_fw(struct iwl_mld *mld)
 
 	mld->fw_status.running = false;
 }
+
+int iwl_mld_start_fw(struct iwl_mld *mld)
+{
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	ret = iwl_mld_load_fw(mld);
+	if (IWL_FW_CHECK(mld, ret, "Failed to start firmware %d\n", ret)) {
+		iwl_fw_dbg_error_collect(&mld->fwrt, FW_DBG_TRIGGER_DRIVER);
+		goto error;
+	}
+
+	IWL_DEBUG_INFO(mld, "uCode started.\n");
+
+	/* TODO: send all necessary commands to configure the fw */
+
+	return 0;
+
+error:
+	iwl_mld_stop_fw(mld);
+	return ret;
+}

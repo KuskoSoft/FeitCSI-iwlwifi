@@ -432,36 +432,85 @@ iwl_mld_mac80211_tx(struct ieee80211_hw *hw,
 static
 int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 {
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* TODO:
+	 * 1. consider restart flow flags
+	 * 2. fast resume
+	 */
+
+	ret = iwl_mld_start_fw(mld);
+	if (ret)
+		return ret;
+
+	iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_POINT_POST_INIT,
+			       NULL);
+	iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_POINT_PERIODIC,
+			       NULL);
+
+	return ret;
 }
 
 static
 void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* execute all pending notifications (async handlers)*/
+	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
+
+	/* TODO:
+	 * 1. suspend
+	 * 2. consider restart flow flags
+	 * 3. ftm_initiator_smooth_stop
+	 */
+
+	if (suspend)
+		WARN_ON(1);
+	else
+		iwl_mld_stop_fw(mld);
+
+	/* the work might have been scheduled again - cancel it now as the hw
+	 * is stopped.
+	 */
+	wiphy_work_cancel(mld->wiphy, &mld->async_handlers_wk);
 }
 
 static
 int iwl_mld_mac80211_config(struct ieee80211_hw *hw, u32 changed)
 {
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
+	return 0;
 }
 
 static
 int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 				   struct ieee80211_vif *vif)
 {
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* TODO: for now just log the function is not implemented
+	 * and return 0
+	 */
+	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+
+	return 0;
 }
 
 static
 void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 				       struct ieee80211_vif *vif)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* TODO: for now just log the function is not implemented */
+	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+
+	return;
 }
 
 static
@@ -470,7 +519,14 @@ void iwl_mld_mac80211_configure_filter(struct ieee80211_hw *hw,
 				       unsigned int *total_flags,
 				       u64 multicast)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* TODO: for now just log the function is not implemented
+	 * and set total_flags = 0 to avoid mac80211 warning
+	 */
+	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+
+	*total_flags = 0;
 }
 
 static
@@ -549,7 +605,12 @@ void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 					struct ieee80211_bss_conf *link_conf,
 					u64 changes)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* TODO: for now just log the function is not implemented */
+	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+
+	return;
 }
 
 static

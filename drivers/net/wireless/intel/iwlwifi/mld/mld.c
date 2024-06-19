@@ -210,12 +210,6 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
-	if (WARN_ON(mld->fw_status.running))
-		iwl_mld_stop_fw(mld);
-
-	/* TODO: move to drv_stop, when added */
-	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
-
 	ieee80211_unregister_hw(mld->hw);
 
 	iwl_fw_runtime_free(&mld->fwrt);
