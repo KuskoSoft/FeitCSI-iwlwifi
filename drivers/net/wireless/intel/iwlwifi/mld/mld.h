@@ -83,6 +83,8 @@ extern struct iwl_mld_mod_params iwlmld_mod_params;
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir);
 int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld);
+int iwl_mld_load_fw(struct iwl_mld *mld);
+void iwl_mld_stop_fw(struct iwl_mld *mld);
 
 static inline u8 iwl_mld_get_valid_tx_ant(const struct iwl_mld *mld)
 {

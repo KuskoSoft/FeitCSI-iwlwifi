@@ -261,3 +261,28 @@ init_failure:
 	iwl_trans_stop_device(mld->trans);
 	return ret;
 }
+
+int iwl_mld_load_fw(struct iwl_mld *mld)
+{
+	int ret = iwl_trans_start_hw(mld->trans);
+
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_run_fw_init_sequence(mld);
+	if (ret)
+		return ret;
+
+	mld->fw_status.running = true;
+
+	return 0;
+}
+
+void iwl_mld_stop_fw(struct iwl_mld *mld)
+{
+	iwl_fw_dbg_stop_sync(&mld->fwrt);
+
+	iwl_trans_stop_device(mld->trans);
+
+	mld->fw_status.running = false;
+}

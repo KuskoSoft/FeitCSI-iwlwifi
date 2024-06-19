@@ -154,30 +154,6 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 	iwl_trans_configure(trans, &trans_cfg);
 }
 
-static int iwl_mld_load_fw(struct iwl_mld *mld)
-{
-	int ret = iwl_trans_start_hw(mld->trans);
-
-	if (ret)
-		return ret;
-
-	ret = iwl_mld_run_fw_init_sequence(mld);
-	if (ret)
-		return ret;
-
-	mld->fw_status.running = true;
-
-	return 0;
-}
-
-static void iwl_mld_stop_fw(struct iwl_mld *mld)
-{
-	iwl_fw_dbg_stop_sync(&mld->fwrt);
-	mld->fw_status.running = false;
-	iwl_trans_stop_device(mld->trans);
-	iwl_fw_dump_conf_clear(&mld->fwrt);
-}
-
 /*
  *****************************************************
  * op mode ops functions
