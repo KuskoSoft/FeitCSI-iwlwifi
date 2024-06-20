@@ -62,5 +62,7 @@ iwl_mld_init_vif(struct iwl_mld *mld, struct iwl_mld_vif *mld_vif, u8 id)
 
 /* Cleanup function for struct iwl_mld_vif, will be called in restart */
 void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif);
+int iwl_mld_mac_fw_action(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			  u32 action);
 
 #endif /* __iwl_mld_iface_h__ */

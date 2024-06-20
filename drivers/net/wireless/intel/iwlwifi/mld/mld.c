@@ -147,6 +147,7 @@ static const struct iwl_hcmd_names iwl_mld_debug_names[] = {
  * Access is done through binary search
  */
 static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
+	HCMD_NAME(MAC_CONFIG_CMD),
 	HCMD_NAME(LINK_CONFIG_CMD),
 };
 
