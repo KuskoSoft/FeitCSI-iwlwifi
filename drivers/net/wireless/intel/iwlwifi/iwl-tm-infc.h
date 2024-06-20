@@ -33,7 +33,7 @@ enum iwl_tm_gnl_cmd_t {
 #define XVT_CMD_NOTIF_BASE	0x400
 #define XVT_BUS_TESTER_BASE	0x500
 
-/**
+/*
  * signifies iwl_tm_mod_tx_request is set to infinite mode,
  * when iwl_tm_mod_tx_request.times ==  IWL_XVT_TX_MODULATED_INFINITE
  */
