@@ -66,12 +66,33 @@ iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 			iwl_mld_async_handlers_wk);
 }
 
+static void __acquires(&mld->wiphy->mtx)
+iwl_mld_fwrt_dump_start(void *ctx)
+{
+	struct iwl_mld *mld = ctx;
+
+	wiphy_lock(mld->wiphy);
+}
+
+static void __releases(&mld->wiphy->mtx)
+iwl_mld_fwrt_dump_end(void *ctx)
+{
+	struct iwl_mld *mld = ctx;
+
+	wiphy_unlock(mld->wiphy);
+}
+
+static const struct iwl_fw_runtime_ops iwl_mld_fwrt_ops = {
+	.dump_start = iwl_mld_fwrt_dump_start,
+	.dump_end = iwl_mld_fwrt_dump_end,
+};
+
 static void
 iwl_mld_construct_fw_runtime(struct iwl_mld *mld, struct iwl_trans *trans,
 			     const struct iwl_fw *fw,
 			     struct dentry *debugfs_dir)
 {
-	iwl_fw_runtime_init(&mld->fwrt, trans, fw, NULL, mld,
+	iwl_fw_runtime_init(&mld->fwrt, trans, fw, &iwl_mld_fwrt_ops, mld,
 			    NULL, NULL, debugfs_dir);
 
 	iwl_fw_set_current_image(&mld->fwrt, IWL_UCODE_REGULAR);
