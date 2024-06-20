@@ -6,10 +6,48 @@
 #include "mld.h"
 
 #include "fw/api/alive.h"
+#include "fw/api/rx.h"
 #include "fw/dbg.h"
 #include "fw/pnvm.h"
 #include "hcmd.h"
 #include "iwl-nvm-parse.h"
+
+static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
+{
+	struct iwl_tx_ant_cfg_cmd cmd;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	cmd.valid = cpu_to_le32(iwl_mld_get_valid_tx_ant(mld));
+
+	IWL_DEBUG_FW(mld, "select valid tx ant: %u\n", cmd.valid);
+
+	return iwl_mld_send_cmd_pdu(mld, TX_ANT_CONFIGURATION_CMD,
+				    sizeof(cmd), &cmd);
+}
+
+static int iwl_mld_send_rss_cfg_cmd(struct iwl_mld *mld)
+{
+	struct iwl_rss_config_cmd cmd = {
+		.flags = cpu_to_le32(IWL_RSS_ENABLE),
+		.hash_mask = BIT(IWL_RSS_HASH_TYPE_IPV4_TCP) |
+			     BIT(IWL_RSS_HASH_TYPE_IPV4_UDP) |
+			     BIT(IWL_RSS_HASH_TYPE_IPV4_PAYLOAD) |
+			     BIT(IWL_RSS_HASH_TYPE_IPV6_TCP) |
+			     BIT(IWL_RSS_HASH_TYPE_IPV6_UDP) |
+			     BIT(IWL_RSS_HASH_TYPE_IPV6_PAYLOAD),
+	};
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* Do not direct RSS traffic to Q 0 which is our fallback queue */
+	for (int i = 0; i < ARRAY_SIZE(cmd.indirection_table); i++)
+		cmd.indirection_table[i] =
+			1 + (i % (mld->trans->num_rx_queues - 1));
+	netdev_rss_key_fill(cmd.secret_key, sizeof(cmd.secret_key));
+
+	return iwl_mld_send_cmd_pdu(mld, RSS_CONFIG_CMD, sizeof(cmd), &cmd);
+}
 
 static void iwl_mld_alive_imr_data(struct iwl_trans *trans,
 				   const struct iwl_imr_alive_info *imr_info)
@@ -287,6 +325,49 @@ void iwl_mld_stop_fw(struct iwl_mld *mld)
 	mld->fw_status.running = false;
 }
 
+static int iwl_mld_config_fw(struct iwl_mld *mld)
+{
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	iwl_fw_disable_dbg_asserts(&mld->fwrt);
+	iwl_get_shared_mem_conf(&mld->fwrt);
+
+	ret = iwl_mld_send_tx_ant_cfg(mld);
+	if (ret)
+		return ret;
+
+	ret = iwl_set_soc_latency(&mld->fwrt);
+	if (ret)
+		return ret;
+
+	ret = iwl_configure_rxq(&mld->fwrt);
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_send_rss_cfg_cmd(mld);
+	if (ret)
+		return ret;
+
+	/* TODO:
+	 * - ptp
+	 * - testmode
+	 * - leds
+	 * - vendor cmds
+	 * - thermal
+	 * - system_features_control
+	 * - regulatory cmds (need also to read bios tables on init)
+	 * - power cmd
+	 * - BT init
+	 * - scan init
+	 * - init mcc
+	 * - recovery cmd
+	 */
+
+	return 0;
+}
+
 int iwl_mld_start_fw(struct iwl_mld *mld)
 {
 	int ret;
@@ -301,7 +382,9 @@ int iwl_mld_start_fw(struct iwl_mld *mld)
 
 	IWL_DEBUG_INFO(mld, "uCode started.\n");
 
-	/* TODO: send all necessary commands to configure the fw */
+	ret = iwl_mld_config_fw(mld);
+	if (ret)
+		goto error;
 
 	return 0;
 

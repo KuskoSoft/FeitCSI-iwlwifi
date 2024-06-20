@@ -6,6 +6,7 @@
 #include <net/mac80211.h>
 
 #include "fw/api/rx.h"
+#include "fw/api/datapath.h"
 #include "fw/dbg.h"
 
 #include "mld.h"
@@ -112,6 +113,8 @@ static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
  */
 static const struct iwl_hcmd_names iwl_mld_long_names[] = {
 	HCMD_NAME(POWER_TABLE_CMD),
+	HCMD_NAME(TX_ANT_CONFIGURATION_CMD),
+	HCMD_NAME(RSS_CONFIG_CMD),
 	HCMD_NAME(LDBG_CONFIG_CMD),
 };
 
@@ -119,6 +122,8 @@ static const struct iwl_hcmd_names iwl_mld_long_names[] = {
  * Access is done through binary search
  */
 static const struct iwl_hcmd_names iwl_mld_system_names[] = {
+	HCMD_NAME(SHARED_MEM_CFG_CMD),
+	HCMD_NAME(SOC_CONFIGURATION_CMD),
 	HCMD_NAME(INIT_EXTENDED_CFG_CMD),
 };
 
@@ -136,11 +141,19 @@ static const struct iwl_hcmd_names iwl_mld_debug_names[] = {
 	HCMD_NAME(HOST_EVENT_CFG),
 };
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
+	HCMD_NAME(RFH_QUEUE_CONFIG_CMD),
+};
+
 VISIBLE_IF_IWLWIFI_KUNIT
 const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
 	[LONG_GROUP] = HCMD_ARR(iwl_mld_long_names),
 	[SYSTEM_GROUP] = HCMD_ARR(iwl_mld_system_names),
+	[DATA_PATH_GROUP] = HCMD_ARR(iwl_mld_data_path_names),
 	[REGULATORY_AND_NVM_GROUP] = HCMD_ARR(iwl_mld_reg_and_nvm_names),
 	[DEBUG_GROUP] = HCMD_ARR(iwl_mld_debug_names),
 };
