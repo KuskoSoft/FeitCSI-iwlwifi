@@ -64,8 +64,8 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 	return -EOPNOTSUPP;
 }
 
-int iwl_mld_rm_link_from_fw(struct iwl_mld *mld,
-			    struct ieee80211_bss_conf *link)
+static int
+iwl_mld_rm_link_from_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link)
 {
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
 	struct iwl_link_config_cmd cmd = {};
@@ -82,8 +82,8 @@ int iwl_mld_rm_link_from_fw(struct iwl_mld *mld,
 	return iwl_mld_send_link_cmd(mld, &cmd, FW_CTXT_ACTION_REMOVE);
 }
 
-int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
-				  struct ieee80211_bss_conf *link)
+static int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
+					 struct ieee80211_bss_conf *link)
 {
 	int ret;
 
@@ -125,4 +125,30 @@ int iwl_mld_add_link(struct iwl_mld *mld,
 		RCU_INIT_POINTER(mld->fw_id_to_bss_conf[link->fw_id], NULL);
 
 	return ret;
+}
+
+/* Remove link from fw, unmap the bss_conf, and destroy the link structure */
+int iwl_mld_remove_link(struct iwl_mld *mld,
+			struct ieee80211_bss_conf *bss_conf)
+{
+	struct iwl_mld_link *link = iwl_mld_link_from_mac80211(bss_conf);
+	int ret;
+
+	if (link->active) {
+		ret = iwl_mld_deactivate_link_in_fw(mld, bss_conf);
+		if (ret)
+			return ret;
+		link->active = false;
+	}
+
+	ret = iwl_mld_rm_link_from_fw(mld, bss_conf);
+	if (ret)
+		return ret;
+
+	if (WARN_ON(link->fw_id >= ARRAY_SIZE(mld->fw_id_to_bss_conf)))
+		return -EINVAL;
+
+	RCU_INIT_POINTER(mld->fw_id_to_bss_conf[link->fw_id], NULL);
+
+	return 0;
 }

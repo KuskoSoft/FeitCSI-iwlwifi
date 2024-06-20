@@ -13,11 +13,13 @@
  * struct iwl_mld_link - link configuration parameters
  *
  * @fw_id: the fw id of the link.
+ * @active: if the link is active or not.
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
 		u8 fw_id;
+		bool active;
 	);
 	/* And here fields that survive a fw restart */
 };
@@ -29,11 +31,8 @@ iwl_mld_cleanup_link(struct iwl_mld_link *link)
 	CLEANUP_STRUCT(link);
 }
 
-/* TODO: make these static function when it is used */
-int iwl_mld_rm_link_from_fw(struct iwl_mld *mld,
-			    struct ieee80211_bss_conf *link);
-int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
-				  struct ieee80211_bss_conf *link);
 int iwl_mld_add_link(struct iwl_mld *mld,
 		     struct ieee80211_bss_conf *bss_conf);
+int iwl_mld_remove_link(struct iwl_mld *mld,
+			struct ieee80211_bss_conf *bss_conf);
 #endif /* __iwl_mld_link_h__ */
