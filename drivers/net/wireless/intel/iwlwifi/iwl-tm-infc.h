@@ -185,7 +185,7 @@ struct iwl_tm_cmd_request {
 } __packed __aligned(4);
 
 /**
- * struct iwl_svt_sdio_enable - SV Tester SDIO bus enable command
+ * struct iwl_tm_sdio_io_toggle - SV Tester SDIO bus enable command
  * @enable:	Function enable/disable 1/0
  */
 struct iwl_tm_sdio_io_toggle {
@@ -312,7 +312,7 @@ struct iwl_sil_step {
 } __packed __aligned(4);
 
 /**
- * struct iwl_sil_type - holds the silicon type
+ * struct iwl_tm_sil_type - holds the silicon type
  * @silicon_type: the device silicon type
  */
 struct iwl_tm_sil_type {
@@ -413,7 +413,7 @@ struct iwl_xvt_sw_cfg_request {
 } __packed __aligned(4);
 
 /**
- * struct iwl_xvt_sw_cfg_request - Data for set SW stack configuration request
+ * struct iwl_xvt_phy_db_request - Data for set SW stack configuration request
  * @type:	Type of DB section
  * @chg_id:	Channel Group ID, relevant only when
  *		type is CHG PAPD or CHG TXP calibrations
@@ -430,7 +430,7 @@ struct iwl_xvt_phy_db_request {
 #define IWL_TM_STATION_COUNT	16
 
 /**
- * struct iwl_tm_tx_request - Data transmission request
+ * struct iwl_tm_mod_tx_request - Data transmission request
  * @times:	  Number of times to transmit the data.
  * @delay_us:	  Delay between frames
  * @pa_detect_en: Flag. When True, enable PA detector
@@ -526,7 +526,7 @@ struct iwl_xvt_alloc_dma {
 } __packed __aligned(4);
 
 /**
- * struct iwl_xvt_alloc_dma - Data for alloc dma requests
+ * struct iwl_xvt_get_dma - Data for alloc dma requests
  * @size:	size of data
  * @data:	Data to transmit
  */
@@ -554,7 +554,7 @@ struct iwl_tm_crash_data {
 } __packed __aligned(4);
 
 /**
- * struct iwl_xvt_curr_mac_addr_info - Current mac address data
+ * struct iwl_xvt_mac_addr_info - Current mac address data
  * @mac_addr:	the current mac address
  */
 struct iwl_xvt_mac_addr_info {
@@ -715,7 +715,7 @@ struct tx_cmd_commom_data {
 } __packed __aligned(4);
 
 /**
- * struct tx_cmd_frame - frame specific transmission data
+ * struct tx_cmd_frame_data - frame specific transmission data
  * @times: Number of subsequent times to transmit tx command to queue
  * @sta_id: Station index
  * @queue: Transmission queue
@@ -832,7 +832,7 @@ struct iwl_xvt_config_rx_mpdu_req {
 } __packed __aligned(4);
 
 /**
- * enum for FW image type
+ * enum iwl_xvt_fw_img_type - enum for FW image type
  * @IWL_XVT_FW_IMG_TYPE_LMAC_D0: LMAC D0
  * @IWL_XVT_FW_IMG_TYPE_UMAC: UMAC
 */
