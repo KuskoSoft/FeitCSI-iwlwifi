@@ -41,7 +41,7 @@ static int iwl_mld_add_link_to_fw(struct iwl_mld *mld,
 		return -EINVAL;
 
 	cmd.link_id = cpu_to_le32(link->fw_id);
-	cmd.mac_id = cpu_to_le32(mld_vif->id);
+	cmd.mac_id = cpu_to_le32(mld_vif->fw_id);
 	cmd.spec_link_id = link_conf->link_id;
 	cmd.phy_id = cpu_to_le32(FW_CTXT_INVALID);
 

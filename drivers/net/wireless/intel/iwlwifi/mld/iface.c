@@ -88,7 +88,7 @@ static void iwl_mld_mac_cmd_fill_common(struct iwl_mld *mld,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	cmd->id_and_color = cpu_to_le32(mld_vif->id);
+	cmd->id_and_color = cpu_to_le32(mld_vif->fw_id);
 	cmd->action = cpu_to_le32(action);
 
 	cmd->mac_type =
@@ -190,7 +190,7 @@ iwl_mld_rm_mac_from_fw(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mac_config_cmd cmd = {
 		.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE),
-		.id_and_color = cpu_to_le32(mld_vif->id),
+		.id_and_color = cpu_to_le32(mld_vif->fw_id),
 	};
 
 	return iwl_mld_send_mac_cmd(mld, &cmd);
@@ -222,4 +222,65 @@ int iwl_mld_mac_fw_action(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	}
 
 	return iwl_mld_send_mac_cmd(mld, &cmd);
+}
+
+IWL_MLD_ALLOC_FN(vif, vif)
+
+/* Constructor function for struct iwl_mld_vif */
+static int
+iwl_mld_init_vif(struct iwl_mld *mld, struct iwl_mld_vif *mld_vif)
+{
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	mld_vif->mld = mld;
+
+	ret = iwl_mld_allocate_vif_fw_id(mld, mld_vif);
+	if (ret)
+		return ret;
+
+	/* the first link points to the default one when in non-MLO */
+	RCU_INIT_POINTER(mld_vif->link[0], &mld_vif->deflink);
+
+	return 0;
+}
+
+int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+
+	ret = iwl_mld_init_vif(mld, mld_vif);
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_ADD);
+	if (ret)
+		RCU_INIT_POINTER(mld->fw_id_to_vif[mld_vif->fw_id], NULL);
+
+	return ret;
+}
+
+int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+
+	ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_REMOVE);
+
+	if (WARN_ON(mld_vif->fw_id >= ARRAY_SIZE(mld->fw_id_to_vif)))
+		return -EINVAL;
+
+	RCU_INIT_POINTER(mld->fw_id_to_vif[mld_vif->fw_id], NULL);
+
+	return ret;
 }
