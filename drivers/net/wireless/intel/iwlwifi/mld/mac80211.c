@@ -9,6 +9,7 @@
 #include "mac80211.h"
 #include "phy.h"
 #include "iface.h"
+#include "power.h"
 #include "fw/api/scan.h"
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
@@ -519,13 +520,43 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 				   struct ieee80211_vif *vif)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
 
-	/* TODO: for now just log the function is not implemented
-	 * and return 0
-	 */
-	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+	lockdep_assert_wiphy(mld->wiphy);
+
+	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+
+	/* Construct mld_vif, add it to fw, and map its ID to ieee80211_vif */
+	ret = iwl_mld_add_vif(mld, vif);
+	if (ret)
+		return ret;
+
+	/* Add the default link (now pointed to by link[0]) */
+	ret = iwl_mld_add_link(mld, &vif->bss_conf);
+	if (ret)
+		goto err_rm_vif;
+
+	/* beacon filtering */
+	ret = iwl_mld_disable_beacon_filter(mld, vif);
+	if (ret)
+		goto err_rm_link;
+
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
+		vif->driver_flags |= IEEE80211_VIF_BEACON_FILTER |
+				     IEEE80211_VIF_SUPPORTS_CQM_RSSI;
+
+	if (vif->p2p || iwl_fw_lookup_cmd_ver(mld->fw, PHY_CONTEXT_CMD, 0) < 5)
+		vif->driver_flags |= IEEE80211_VIF_IGNORE_OFDMA_WIDER_BW;
+
+	/* TODO: power considerations */
 
 	return 0;
+
+err_rm_link:
+	iwl_mld_remove_link(mld, &vif->bss_conf);
+err_rm_vif:
+	iwl_mld_rm_vif(mld, vif);
+	return ret;
 }
 
 static
@@ -534,10 +565,19 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 
-	/* TODO: for now just log the function is not implemented */
-	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+	lockdep_assert_wiphy(mld->wiphy);
 
-	return;
+	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
+		vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER |
+				       IEEE80211_VIF_SUPPORTS_CQM_RSSI);
+
+	/* TODO: power considerations */
+
+	iwl_mld_remove_link(mld, &vif->bss_conf);
+
+	iwl_mld_rm_vif(mld, vif);
 }
 
 static
