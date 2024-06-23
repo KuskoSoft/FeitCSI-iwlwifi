@@ -16,7 +16,7 @@
 
 #define IWL_MLD_LIMITS(ap)					\
 	{							\
-		.max = CPTCFG_IWLWIFI_NUM_STA_INTERFACES,	\
+		.max = 1,					\
 		.types = BIT(NL80211_IFTYPE_STATION),		\
 	},							\
 	{							\
@@ -42,13 +42,13 @@ static const struct ieee80211_iface_combination
 iwl_mld_iface_combinations[] = {
 	{
 		.num_different_channels = 2,
-		.max_interfaces = CPTCFG_IWLWIFI_NUM_STA_INTERFACES + 2,
+		.max_interfaces = 3,
 		.limits = iwl_mld_limits,
 		.n_limits = ARRAY_SIZE(iwl_mld_limits),
 	},
 	{
 		.num_different_channels = 1,
-		.max_interfaces = CPTCFG_IWLWIFI_NUM_STA_INTERFACES + 2,
+		.max_interfaces = 3,
 		.limits = iwl_mld_limits_ap,
 		.n_limits = ARRAY_SIZE(iwl_mld_limits_ap),
 	},
