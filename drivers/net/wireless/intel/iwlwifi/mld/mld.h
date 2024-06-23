@@ -195,4 +195,11 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 
 #define MSEC_TO_TU(_msec)	((_msec) * 1000 / 1024)
 
+void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
+			     struct ieee80211_vif *vif);
+void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
+			      struct ieee80211_vif *vif,
+			      struct ieee80211_bss_conf *link_conf,
+			      struct dentry *dir);
+
 #endif /* __iwl_mld_h__ */

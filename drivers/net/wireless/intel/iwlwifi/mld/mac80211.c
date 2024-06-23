@@ -818,4 +818,8 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
 #endif /* CONFIG_PM_SLEEP */
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	.vif_add_debugfs = iwl_mld_add_vif_debugfs,
+	.link_add_debugfs = iwl_mld_add_link_debugfs,
+#endif
 };
