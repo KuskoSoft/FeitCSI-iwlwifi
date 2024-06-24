@@ -197,6 +197,8 @@ static int iwl_mld_load_fw_wait_alive(struct iwl_mld *mld)
 	bool alive_valid = false;
 	int ret;
 
+	lockdep_assert_wiphy(mld->wiphy);
+
 	iwl_init_notification_wait(&mld->notif_wait, &alive_wait,
 				   alive_cmd, ARRAY_SIZE(alive_cmd),
 				   iwl_alive_fn, &alive_valid);
@@ -243,6 +245,8 @@ int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld)
 		INIT_COMPLETE_NOTIF,
 	};
 	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
 
 	ret = iwl_mld_load_fw_wait_alive(mld);
 	if (ret)
@@ -303,8 +307,11 @@ init_failure:
 
 int iwl_mld_load_fw(struct iwl_mld *mld)
 {
-	int ret = iwl_trans_start_hw(mld->trans);
+	int ret;
 
+	lockdep_assert_wiphy(mld->wiphy);
+
+	ret = iwl_trans_start_hw(mld->trans);
 	if (ret)
 		return ret;
 

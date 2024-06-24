@@ -9,6 +9,9 @@ static inline int iwl_mld_send_cmd(struct iwl_mld *mld, struct iwl_host_cmd *cmd
 {
 	int ret;
 
+	if (!(cmd->flags & CMD_ASYNC))
+		lockdep_assert_wiphy(mld->wiphy);
+
 	/* Devices that need to shutdown immediately on rfkill are not
 	 * supported, so we can send all the cmds in rfkill
 	 */

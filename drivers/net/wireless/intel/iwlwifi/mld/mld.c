@@ -200,6 +200,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	struct ieee80211_hw *hw;
 	struct iwl_op_mode *op_mode;
 	struct iwl_mld *mld;
+	int ret;
 
 	if (WARN_ON(!iwl_is_mld_op_mode_supported(trans)))
 		return NULL;
@@ -224,7 +225,14 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	/* Configure transport layer with the opmode specific params */
 	iwl_mld_configure_trans(op_mode);
 
-	if (iwl_mld_load_fw(mld))
+	/* Needed for sending commands */
+	wiphy_lock(mld->wiphy);
+
+	ret = iwl_mld_load_fw(mld);
+
+	wiphy_unlock(mld->wiphy);
+
+	if (ret)
 		goto free_hw;
 
 	iwl_mld_stop_fw(mld);
