@@ -491,6 +491,10 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw, REDUCE_TX_POWER_CMD,
 					   IWL_FW_CMD_VER_UNKNOWN);
 
+	/* ver9 and above of the command does not support setting per band limits */
+	if (cmd_ver > 8)
+		return -EOPNOTSUPP;
+
 	tb = iwl_mvm_parse_vendor_data(data, data_len);
 	if (IS_ERR(tb))
 		return PTR_ERR(tb);

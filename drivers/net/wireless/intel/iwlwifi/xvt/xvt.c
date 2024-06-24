@@ -943,12 +943,25 @@ int iwl_xvt_sar_select_profile(struct iwl_xvt *xvt, int prof_a, int prof_b)
 	struct iwl_dev_tx_power_cmd_v3_v8 cmd = {
 		.common.set_mode = cpu_to_le32(IWL_TX_POWER_MODE_SET_CHAINS),
 	};
+	struct iwl_dev_tx_power_cmd cmd_v9_v10 = {
+		.common.set_mode = cpu_to_le32(IWL_TX_POWER_MODE_SET_CHAINS),
+	};
+
 	__le16 *per_chain;
 	u16 len = 0;
 	u32 n_subbands;
 	u8 cmd_ver = iwl_fw_lookup_cmd_ver(xvt->fw, cmd_id, 3);
+	void *cmd_data = &cmd;
 
-	if (cmd_ver >= 6) {
+	if (cmd_ver == 10) {
+		len = sizeof(cmd_v9_v10.v10);
+		n_subbands = IWL_NUM_SUB_BANDS_V2;
+		per_chain = &cmd_v9_v10.v10.per_chain[0][0][0];
+	} else if (cmd_ver == 9) {
+		len = sizeof(cmd_v9_v10.v9);
+		n_subbands = IWL_NUM_SUB_BANDS_V1;
+		per_chain = &cmd_v9_v10.v9.per_chain[0][0];
+	} else if (cmd_ver >= 6) {
 		len = sizeof(cmd.v6);
 		n_subbands = IWL_NUM_SUB_BANDS_V2;
 		per_chain = cmd.v6.per_chain[0][0];
@@ -973,15 +986,17 @@ int iwl_xvt_sar_select_profile(struct iwl_xvt *xvt, int prof_a, int prof_b)
 	/* all structs have the same common part, add its length */
 	len += sizeof(cmd.common);
 
-	/* all structs have the same per_band part, add its length */
-	len += sizeof(cmd.per_band);
+	if (cmd_ver < 9)
+		len += sizeof(cmd.per_band);
+	else
+		cmd_data = &cmd_v9_v10;
 
 	if (iwl_sar_fill_profile(&xvt->fwrt, per_chain, IWL_NUM_CHAIN_TABLES,
 				 n_subbands, prof_a, prof_b))
 		return -ENOENT;
 
 	IWL_DEBUG_RADIO(xvt, "Sending REDUCE_TX_POWER_CMD per chain\n");
-	return iwl_xvt_send_cmd_pdu(xvt, cmd_id, 0, len, &cmd);
+	return iwl_xvt_send_cmd_pdu(xvt, cmd_id, 0, len, cmd_data);
 }
 
 static int iwl_xvt_sar_init(struct iwl_xvt *xvt)
