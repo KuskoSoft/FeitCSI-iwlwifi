@@ -11,6 +11,7 @@
 #include "fw/pnvm.h"
 #include "hcmd.h"
 #include "iwl-nvm-parse.h"
+#include "power.h"
 
 static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
 {
@@ -350,6 +351,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+	ret = iwl_mld_power_update_device(mld);
+	if (ret)
+		return ret;
+
 	/* TODO:
 	 * - ptp
 	 * - testmode
@@ -358,7 +363,6 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	 * - thermal
 	 * - system_features_control
 	 * - regulatory cmds (need also to read bios tables on init)
-	 * - power cmd
 	 * - BT init
 	 * - scan init
 	 * - init mcc
