@@ -356,7 +356,7 @@ static void iwl_xvt_reclaim_and_free(struct iwl_xvt *xvt,
 		if (xvt->is_enhanced_tx) {
 			xvt->queue_data[txq_id].tx_counter++;
 			xvt->num_of_tx_resp++;
-		} else {
+		} else if (tx_data) {
 			tx_data->tx_counter++;
 		}
 
@@ -369,7 +369,7 @@ static void iwl_xvt_reclaim_and_free(struct iwl_xvt *xvt,
 	if (xvt->is_enhanced_tx &&
 	    xvt->expected_tx_amount == xvt->num_of_tx_resp)
 		wake_up_interruptible(&xvt->tx_done_wq);
-	else if (tx_data->tot_tx == tx_data->tx_counter)
+	else if (tx_data && tx_data->tot_tx == tx_data->tx_counter)
 		wake_up_interruptible(&tx_data->mod_tx_done_wq);
 }
 
@@ -397,10 +397,12 @@ iwl_xvt_rx_get_tx_meta_data(struct iwl_xvt *xvt, u16 txq_id)
 
 	lmac_id = XVT_LMAC_0_ID;
 verify:
-	if (WARN(txq_id != xvt->tx_meta_data[lmac_id].queue,
-		 "got TX_CMD from unidentified queue: (lmac %d) %d %d\n",
-		 lmac_id, txq_id, xvt->tx_meta_data[lmac_id].queue))
+	if (txq_id != xvt->tx_meta_data[lmac_id].queue) {
+		IWL_DEBUG_TX(xvt,
+			     "got TX_CMD from unidentified queue: (lmac %d) %d %d\n",
+			     lmac_id, txq_id, xvt->tx_meta_data[lmac_id].queue);
 		return NULL;
+	}
 
 	return &xvt->tx_meta_data[lmac_id];
 }
@@ -442,9 +444,6 @@ static void iwl_xvt_txpath_flush(struct iwl_xvt *xvt,
 		if (read_before != read_after &&
 		    xvt->queue_data[queue_num].txq_full != 1) {
 			tx_data = iwl_xvt_rx_get_tx_meta_data(xvt, queue_num);
-			if (!tx_data)
-				continue;
-
 			iwl_xvt_reclaim_and_free(xvt, tx_data, queue_num,
 						 read_after, true);
 		}
@@ -462,13 +461,10 @@ static void iwl_xvt_rx_tx_cmd_single(struct iwl_xvt *xvt,
 	u16 status = le16_to_cpu(iwl_xvt_get_agg_status(xvt, tx_resp)->status) &
 				 TX_STATUS_MSK;
 
-	tx_data = iwl_xvt_rx_get_tx_meta_data(xvt, txq_id);
-	if (!tx_data)
-		return;
-
 	if (unlikely(status != TX_STATUS_SUCCESS))
 		IWL_WARN(xvt, "got error TX_RSP status %#x\n", status);
 
+	tx_data = iwl_xvt_rx_get_tx_meta_data(xvt, txq_id);
 	iwl_xvt_reclaim_and_free(xvt, tx_data, txq_id, ssn, false);
 }
 
@@ -503,9 +499,6 @@ static void iwl_xvt_rx_ba_notif(struct iwl_xvt *xvt,
 		tfd_idx = le16_to_cpu(ba_res->tfd[0].tfd_index);
 
 		tx_data = iwl_xvt_rx_get_tx_meta_data(xvt, queue);
-		if (!tx_data)
-			return;
-
 		iwl_xvt_reclaim_and_free(xvt, tx_data, queue, tfd_idx, false);
 out:
 		IWL_DEBUG_TX_REPLY(xvt,
@@ -521,9 +514,6 @@ out:
 	scd_flow = le16_to_cpu(ba_notif->scd_flow);
 
 	tx_data = iwl_xvt_rx_get_tx_meta_data(xvt, scd_flow);
-	if (!tx_data)
-		return;
-
 	iwl_xvt_reclaim_and_free(xvt, tx_data, scd_flow, scd_ssn, false);
 
 	IWL_DEBUG_TX_REPLY(xvt, "ba_notif from %pM, sta_id = %d\n",
