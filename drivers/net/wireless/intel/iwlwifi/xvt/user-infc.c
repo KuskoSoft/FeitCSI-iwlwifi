@@ -1026,7 +1026,6 @@ static int iwl_xvt_send_packet(struct iwl_xvt *xvt,
 
 	if (time_remain <= 0) {
 		/* This should really not happen */
-		WARN_ON_ONCE(meta_tx->txq_full);
 		IWL_ERR(xvt, "Error while sending Tx\n");
 		*status = XVT_TX_DRIVER_QUEUE_FULL;
 		err = -EIO;
@@ -1034,7 +1033,6 @@ static int iwl_xvt_send_packet(struct iwl_xvt *xvt,
 	}
 
 	if (xvt->fw_error) {
-		WARN_ON_ONCE(meta_tx->txq_full);
 		IWL_ERR(xvt, "FW Error while sending Tx\n");
 		*status = XVT_TX_DRIVER_ABORTED;
 		err = -ENODEV;
@@ -1242,7 +1240,6 @@ static int iwl_xvt_transmit_packet(struct iwl_xvt *xvt,
 
 	if (time_remain <= 0) {
 		/* This should really not happen */
-		WARN_ON_ONCE(queue_data->txq_full);
 		IWL_ERR(xvt, "Error while sending Tx - queue full\n");
 		*status = XVT_TX_DRIVER_QUEUE_FULL;
 		err = -EIO;
@@ -1250,7 +1247,6 @@ static int iwl_xvt_transmit_packet(struct iwl_xvt *xvt,
 	}
 
 	if (xvt->fw_error) {
-		WARN_ON_ONCE(queue_data->txq_full);
 		IWL_ERR(xvt, "FW Error while sending packet\n");
 		*status = XVT_TX_DRIVER_ABORTED;
 		err = -ENODEV;
