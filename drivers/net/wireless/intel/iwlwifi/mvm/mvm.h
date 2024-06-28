@@ -1300,7 +1300,7 @@ struct iwl_mvm {
 	} tdls_cs;
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-	struct iwl_dev_tx_power_cmd txp_cmd;
+	struct iwl_dev_tx_power_cmd_v3_v8 txp_cmd;
 #endif
 
 	u32 ciphers[IWL_MVM_NUM_CIPHERS];

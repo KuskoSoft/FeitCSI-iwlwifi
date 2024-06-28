@@ -1998,9 +1998,9 @@ static ssize_t iwl_dbgfs_tx_power_status_read(struct file *file,
 	int pos = 0;
 	u32 mode = le32_to_cpu(mvm->txp_cmd.common.set_mode);
 	bool txp_cmd_valid = mode == IWL_TX_POWER_MODE_SET_DEVICE;
-	u16 val_24 = le16_to_cpu(mvm->txp_cmd.common.dev_24);
-	u16 val_52l = le16_to_cpu(mvm->txp_cmd.common.dev_52_low);
-	u16 val_52h = le16_to_cpu(mvm->txp_cmd.common.dev_52_high);
+	u16 val_24 = le16_to_cpu(mvm->txp_cmd.per_band.dev_24);
+	u16 val_52l = le16_to_cpu(mvm->txp_cmd.per_band.dev_52_low);
+	u16 val_52h = le16_to_cpu(mvm->txp_cmd.per_band.dev_52_high);
 	char buf_24[15] = "(not limited)";
 	char buf_52l[15] = "(not limited)";
 	char buf_52h[15] = "(not limited)";

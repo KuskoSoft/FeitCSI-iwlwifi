@@ -479,11 +479,11 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
-	struct iwl_dev_tx_power_cmd cmd = {
+	struct iwl_dev_tx_power_cmd_v3_v8 cmd = {
 		.common.set_mode = cpu_to_le32(IWL_TX_POWER_MODE_SET_DEVICE),
-		.common.dev_24 = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
-		.common.dev_52_low = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
-		.common.dev_52_high = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
+		.per_band.dev_24 = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
+		.per_band.dev_52_low = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
+		.per_band.dev_52_high = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
 	};
 	struct nlattr **tb;
 	int len;
@@ -502,7 +502,7 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 			err = -EINVAL;
 			goto free;
 		}
-		cmd.common.dev_24 = cpu_to_le16(txp);
+		cmd.per_band.dev_24 = cpu_to_le16(txp);
 	}
 
 	if (tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L]) {
@@ -512,7 +512,7 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 			err = -EINVAL;
 			goto free;
 		}
-		cmd.common.dev_52_low = cpu_to_le16(txp);
+		cmd.per_band.dev_52_low = cpu_to_le16(txp);
 	}
 
 	if (tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H]) {
@@ -522,7 +522,7 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 			err = -EINVAL;
 			goto free;
 		}
-		cmd.common.dev_52_high = cpu_to_le16(txp);
+		cmd.per_band.dev_52_high = cpu_to_le16(txp);
 	}
 
 	if (cmd_ver == 8)
@@ -538,8 +538,11 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 	else
 		len = sizeof(mvm->txp_cmd.v3);
 
-	/* all structs have the same common part, add it */
+	/* all structs have the same common part, add its length */
 	len += sizeof(cmd.common);
+
+	/* all structs have the same per_band part, add its length */
+	len += sizeof(cmd.per_band);
 
 	mutex_lock(&mvm->mutex);
 	if (iwl_mvm_firmware_running(mvm))

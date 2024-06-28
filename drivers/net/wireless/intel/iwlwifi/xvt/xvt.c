@@ -940,7 +940,7 @@ void iwl_xvt_lari_cfg(struct iwl_xvt *xvt)
 int iwl_xvt_sar_select_profile(struct iwl_xvt *xvt, int prof_a, int prof_b)
 {
 	u32 cmd_id = REDUCE_TX_POWER_CMD;
-	struct iwl_dev_tx_power_cmd cmd = {
+	struct iwl_dev_tx_power_cmd_v3_v8 cmd = {
 		.common.set_mode = cpu_to_le32(IWL_TX_POWER_MODE_SET_CHAINS),
 	};
 	__le16 *per_chain;
@@ -970,8 +970,11 @@ int iwl_xvt_sar_select_profile(struct iwl_xvt *xvt, int prof_a, int prof_b)
 		per_chain = cmd.v3.per_chain[0][0];
 	}
 
-	/* all structs have the same common part, add it */
+	/* all structs have the same common part, add its length */
 	len += sizeof(cmd.common);
+
+	/* all structs have the same per_band part, add its length */
+	len += sizeof(cmd.per_band);
 
 	if (iwl_sar_fill_profile(&xvt->fwrt, per_chain, IWL_NUM_CHAIN_TABLES,
 				 n_subbands, prof_a, prof_b))
