@@ -431,6 +431,15 @@ iwl_mld_mac80211_tx(struct ieee80211_hw *hw,
 	WARN_ON("Not supported yet\n");
 }
 
+static void
+iwl_mld_restart_cleanup(struct iwl_mld *mld)
+{
+	iwl_cleanup_mld(mld);
+
+	ieee80211_iterate_interfaces(mld->hw, IEEE80211_IFACE_ITER_ACTIVE,
+				     iwl_mld_cleanup_vif, NULL);
+}
+
 static
 int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 {
@@ -440,9 +449,13 @@ int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 	lockdep_assert_wiphy(mld->wiphy);
 
 	/* TODO:
-	 * 1. consider restart flow flags
-	 * 2. fast resume
+	 * 1. fast resume
 	 */
+
+	if (mld->fw_status.in_hw_restart) {
+		iwl_mld_stop_fw(mld);
+		iwl_mld_restart_cleanup(mld);
+	}
 
 	ret = iwl_mld_start_fw(mld);
 	if (ret)
@@ -452,6 +465,12 @@ int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 			       NULL);
 	iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_POINT_PERIODIC,
 			       NULL);
+
+	/* If we failed to restart the hw, there is nothing useful
+	 * we can do but indicate we are no longer in restart.
+	 */
+	if (ret)
+		mld->fw_status.in_hw_restart = false;
 
 	return ret;
 }
@@ -468,8 +487,7 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 
 	/* TODO:
 	 * 1. suspend
-	 * 2. consider restart flow flags
-	 * 3. ftm_initiator_smooth_stop
+	 * 2. ftm_initiator_smooth_stop
 	 */
 
 	if (suspend)
@@ -481,6 +499,11 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 	 * is stopped.
 	 */
 	wiphy_work_cancel(mld->wiphy, &mld->async_handlers_wk);
+
+	/* Clear in_hw_restart flag when stopping the hw, as mac80211 won't
+	 * execute the restart.
+	 */
+	mld->fw_status.in_hw_restart = false;
 }
 
 static
@@ -620,7 +643,9 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 				      struct ieee80211_vif *vif,
 				      u64 changes)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
 }
 
 static
@@ -643,6 +668,22 @@ int iwl_mld_mac80211_hw_scan(struct ieee80211_hw *hw,
 	return -EOPNOTSUPP;
 }
 
+static void
+iwl_mld_mac80211_reconfig_complete(struct ieee80211_hw *hw,
+				   enum ieee80211_reconfig_type reconfig_type)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	switch (reconfig_type) {
+	case IEEE80211_RECONFIG_TYPE_RESTART:
+		mld->fw_status.in_hw_restart = false;
+		/* TODO: send recovery cmd */
+		break;
+	case IEEE80211_RECONFIG_TYPE_SUSPEND:
+		break;
+	}
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -651,6 +692,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.add_interface = iwl_mld_mac80211_add_interface,
 	.remove_interface = iwl_mld_mac80211_remove_interface,
 	.configure_filter = iwl_mld_mac80211_configure_filter,
+	.reconfig_complete = iwl_mld_mac80211_reconfig_complete,
 	.wake_tx_queue = iwl_mld_mac80211_wake_tx_queue,
 	.add_chanctx = iwl_mld_add_chanctx,
 	.remove_chanctx = iwl_mld_remove_chanctx,

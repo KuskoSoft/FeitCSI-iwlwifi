@@ -300,23 +300,52 @@ iwl_mld_free_skb(struct iwl_op_mode *op_mode, struct sk_buff *skb)
 	WARN_ONCE(1, "Not supported yet\n");
 }
 
+static void iwl_mld_restart_nic(struct iwl_mld *mld)
+{
+	if (mld->fw_status.in_hw_restart) {
+		/* TODO nested restarts */
+		IWL_ERR(mld, "Nested restart. Not implemented\n");
+		return;
+	}
+
+	/* TODO: get error recovery buffer (task=DP) */
+
+	mld->fw_status.in_hw_restart = true;
+	mld->fwrt.trans->dbg.restart_required = false;
+
+	ieee80211_restart_hw(mld->hw);
+}
+
 static void
 iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+	bool trans_dead = test_bit(STATUS_TRANS_DEAD, &mld->trans->status);
 
-	mld->fw_status.running = false;
-
-	if (!test_bit(STATUS_TRANS_DEAD, &mld->trans->status) &&
-	    !mld->fw_status.do_not_dump_once)
+	if (!trans_dead && !mld->fw_status.do_not_dump_once)
 		iwl_fwrt_dump_error_logs(&mld->fwrt);
 
-	/* TODO: call WRT, but only if sync = true because this means we're
-	 * shutting down the device and we can't delay the data collection.
-	 *
-	 * TODO: restart the device.
-	 */
 	mld->fw_status.do_not_dump_once = false;
+
+	/* WRT */
+	iwl_fw_error_collect(&mld->fwrt, sync);
+
+	/* Do restart only in the following conditions are met:
+	 * 1. sync=false
+	 *    (true means that the device is going to be shut down now)
+	 * 2. trans is not dead
+	 * 3. we consider the FW as running
+	 *    (if 2 or 3 is not true -  there is nothing we can do anyway)
+	 * 4. fw restart is allowed by module parameter
+	 * 5. The trigger that brough us here is defined as one that requires
+	 *    a restart (in the debug TLVs)
+	 */
+	if (sync || trans_dead || !mld->fw_status.running ||
+	    !iwlwifi_mod_params.fw_restart ||
+	    !mld->fwrt.trans->dbg.restart_required)
+		return;
+
+	iwl_mld_restart_nic(mld);
 }
 
 static void

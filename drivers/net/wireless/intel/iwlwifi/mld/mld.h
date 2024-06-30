@@ -33,6 +33,7 @@
  * @async_handlers_wk: A work to run all async RX handlers from
  *	&async_handlers_list.
  * @fw_status: bitmap of fw status bits
+ * @fw_status.in_hw_restart: indicates that we are currently in restart flow.
  * @addresses: device MAC addresses.
  * @wowlan: WoWLAN support data.
  */
@@ -57,7 +58,8 @@ struct iwl_mld {
 
 	struct {
 		u32 running:1,
-		    do_not_dump_once:1;
+		    do_not_dump_once:1,
+		    in_hw_restart:1;
 	} fw_status;
 	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
 #ifdef CONFIG_PM

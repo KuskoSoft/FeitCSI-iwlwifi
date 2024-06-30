@@ -326,6 +326,8 @@ int iwl_mld_load_fw(struct iwl_mld *mld)
 
 void iwl_mld_stop_fw(struct iwl_mld *mld)
 {
+	iwl_abort_notification_waits(&mld->notif_wait);
+
 	iwl_fw_dbg_stop_sync(&mld->fwrt);
 
 	iwl_trans_stop_device(mld->trans);
