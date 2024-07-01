@@ -2286,6 +2286,18 @@ static void iwl_op_mode_mvm_time_point(struct iwl_op_mode *op_mode,
 	iwl_dbg_tlv_time_point(&mvm->fwrt, tp_id, tp_data);
 }
 
+static void iwl_op_mode_mvm_device_powered_off(struct iwl_op_mode *op_mode)
+{
+	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
+
+	mutex_lock(&mvm->mutex);
+	clear_bit(IWL_MVM_STATUS_IN_D3, &mvm->status);
+	mvm->trans->system_pm_mode = IWL_PLAT_PM_MODE_DISABLED;
+	iwl_mvm_stop_device(mvm);
+	mvm->fast_resume = false;
+	mutex_unlock(&mvm->mutex);
+}
+
 #define IWL_MVM_COMMON_OPS					\
 	/* these could be differentiated */			\
 	.queue_full = iwl_mvm_stop_sw_queue,			\
@@ -2298,7 +2310,8 @@ static void iwl_op_mode_mvm_time_point(struct iwl_op_mode *op_mode,
 	/* as we only register one, these MUST be common! */	\
 	.start = iwl_op_mode_mvm_start,				\
 	.stop = iwl_op_mode_mvm_stop,				\
-	.time_point = iwl_op_mode_mvm_time_point
+	.time_point = iwl_op_mode_mvm_time_point,		\
+	.device_powered_off = iwl_op_mode_mvm_device_powered_off
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #define IWL_MVM_COMMON_TEST_OPS					\
 	.test_ops = {						\

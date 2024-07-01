@@ -111,6 +111,10 @@ struct iwl_test_ops {
  *	May sleep
  * @wimax_active: invoked when WiMax becomes active. May sleep
  * @time_point: called when transport layer wants to collect debug data
+ * @device_powered_off: called upon resume from hibernation but not only.
+ *	Op_mode needs to reset its internal state because the device did not
+ *	survive the system state transition. The firmware is no longer running,
+ *	etc...
  */
 struct iwl_op_mode_ops {
 	struct iwl_op_mode *(*start)(struct iwl_trans *trans,
@@ -133,6 +137,7 @@ struct iwl_op_mode_ops {
 	void (*time_point)(struct iwl_op_mode *op_mode,
 			   enum iwl_fw_ini_time_point tp_id,
 			   union iwl_dbg_tlv_tp_data *tp_data);
+	void (*device_powered_off)(struct iwl_op_mode *op_mode);
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	/**
 	 * @test_ops: testmode methods
@@ -234,6 +239,13 @@ static inline void iwl_op_mode_time_point(struct iwl_op_mode *op_mode,
 	if (!op_mode || !op_mode->ops || !op_mode->ops->time_point)
 		return;
 	op_mode->ops->time_point(op_mode, tp_id, tp_data);
+}
+
+static inline void iwl_op_mode_device_powered_off(struct iwl_op_mode *op_mode)
+{
+	if (!op_mode || !op_mode->ops || !op_mode->ops->device_powered_off)
+		return;
+	op_mode->ops->device_powered_off(op_mode);
 }
 
 #endif /* __iwl_op_mode_h__ */
