@@ -751,7 +751,9 @@ static void __iterate_interfaces(struct ieee80211_local *local,
 	struct ieee80211_sub_if_data *sdata;
 	bool active_only = iter_flags & IEEE80211_IFACE_ITER_ACTIVE;
 
-	list_for_each_entry_rcu(sdata, &local->interfaces, list) {
+	list_for_each_entry_rcu(sdata, &local->interfaces, list,
+				lockdep_is_held(&local->iflist_mtx) ||
+				lockdep_is_held(&local->hw.wiphy->mtx)) {
 		switch (sdata->vif.type) {
 		case NL80211_IFTYPE_MONITOR:
 			if (!(sdata->u.mntr.flags & MONITOR_FLAG_ACTIVE))
@@ -3995,7 +3997,7 @@ int ieee80211_check_combinations(struct ieee80211_sub_if_data *sdata,
 		params.num_different_channels++;
 	}
 
-	list_for_each_entry_rcu(sdata_iter, &local->interfaces, list) {
+	list_for_each_entry(sdata_iter, &local->interfaces, list) {
 		struct wireless_dev *wdev_iter;
 
 		wdev_iter = &sdata_iter->wdev;
@@ -4046,7 +4048,7 @@ int ieee80211_max_num_channels(struct ieee80211_local *local)
 			ieee80211_chanctx_radar_detect(local, ctx);
 	}
 
-	list_for_each_entry_rcu(sdata, &local->interfaces, list)
+	list_for_each_entry(sdata, &local->interfaces, list)
 		params.iftype_num[sdata->wdev.iftype]++;
 
 	err = cfg80211_iter_combinations(local->hw.wiphy, &params,
