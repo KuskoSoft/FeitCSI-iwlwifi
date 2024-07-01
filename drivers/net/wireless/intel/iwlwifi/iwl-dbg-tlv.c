@@ -1272,6 +1272,9 @@ iwl_dbg_tlv_tp_trigger(struct iwl_fw_runtime *fwrt, bool sync,
 			fwrt->trans->dbg.restart_required = false;
 			fwrt->trans->dbg.last_tp_resetfw =
 				le32_to_cpu(dump_data.trig->reset_fw);
+		} else if (le32_to_cpu(dump_data.trig->reset_fw) ==
+			   IWL_FW_INI_RESET_FW_MODE_NOTHING) {
+			/* nothing */
 		} else {
 			IWL_ERR(fwrt, "WRT: wrong resetfw %d\n",
 				le32_to_cpu(dump_data.trig->reset_fw));
