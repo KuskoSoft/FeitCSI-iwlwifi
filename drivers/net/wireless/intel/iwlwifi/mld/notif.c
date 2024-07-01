@@ -147,12 +147,10 @@ struct iwl_async_handler_entry {
 	struct iwl_rx_cmd_buffer rxb;
 };
 
-void iwl_mld_rx_notif(struct iwl_op_mode *op_mode, struct napi_struct *napi,
-		      struct iwl_rx_cmd_buffer *rxb)
+static void iwl_mld_rx_notif(struct iwl_mld *mld,
+			     struct iwl_rx_cmd_buffer *rxb,
+			     struct iwl_rx_packet *pkt)
 {
-	struct iwl_rx_packet *pkt = rxb_addr(rxb);
-	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
-
 	/* Do the notification wait before RX handlers so
 	 * even if the RX handler consumes the RXB we have
 	 * access to it in the notification wait entry.
@@ -193,6 +191,19 @@ void iwl_mld_rx_notif(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 				 &mld->async_handlers_wk);
 		break;
 	}
+}
+
+void iwl_mld_rx(struct iwl_op_mode *op_mode, struct napi_struct *napi,
+		struct iwl_rx_cmd_buffer *rxb)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+	u16 cmd_id = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
+
+	if (likely(cmd_id == WIDE_ID(LEGACY_GROUP, REPLY_RX_MPDU_CMD)))
+		iwl_mld_rx_mpdu(mld, napi, rxb, 0);
+	else
+		iwl_mld_rx_notif(mld, rxb, pkt);
 }
 
 static void

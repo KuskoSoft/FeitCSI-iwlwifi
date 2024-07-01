@@ -11,6 +11,7 @@
 #include "fw/notif-wait.h"
 #include "fw/api/mac-cfg.h"
 #include "fw/api/mac.h"
+#include "fw/api/phy-ctxt.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
 
@@ -120,6 +121,10 @@ int iwl_mld_load_fw(struct iwl_mld *mld);
 void iwl_mld_stop_fw(struct iwl_mld *mld);
 int iwl_mld_start_fw(struct iwl_mld *mld);
 
+/* Rx */
+void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
+		     struct iwl_rx_cmd_buffer *rxb, int queue);
+
 static inline u8 iwl_mld_get_valid_tx_ant(const struct iwl_mld *mld)
 {
 	u8 tx_ant = mld->fw->valid_tx_ant;
@@ -138,6 +143,21 @@ static inline u8 iwl_mld_get_valid_rx_ant(const struct iwl_mld *mld)
 		rx_ant &= mld->nvm_data->valid_rx_ant;
 
 	return rx_ant;
+}
+
+static inline u8 iwl_mld_nl80211_band_from_phy(u8 phy_band)
+{
+	switch (phy_band) {
+	case PHY_BAND_24:
+		return NL80211_BAND_2GHZ;
+	case PHY_BAND_5:
+		return NL80211_BAND_5GHZ;
+	case PHY_BAND_6:
+		return NL80211_BAND_6GHZ;
+	default:
+		WARN_ONCE(1, "Unsupported phy band (%u)\n", phy_band);
+		return NL80211_BAND_5GHZ;
+	}
 }
 
 extern const struct ieee80211_ops iwl_mld_hw_ops;

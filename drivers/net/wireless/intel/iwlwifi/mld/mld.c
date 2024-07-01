@@ -400,7 +400,7 @@ iwl_mld_time_point(struct iwl_op_mode *op_mode,
 static const struct iwl_op_mode_ops iwl_mld_ops = {
 	.start = iwl_op_mode_mld_start,
 	.stop = iwl_op_mode_mld_stop,
-	.rx = iwl_mld_rx_notif,
+	.rx = iwl_mld_rx,
 	.rx_rss = iwl_mld_rx_rss,
 	.queue_full = iwl_mld_queue_full,
 	.queue_not_full = iwl_mld_queue_not_full,
