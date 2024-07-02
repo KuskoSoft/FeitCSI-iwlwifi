@@ -230,6 +230,7 @@ enum iwl_rfi_capabilites {
 	IWL_MVM_RFI_DDR_CAPA_SCAN	= BIT(3),
 	IWL_MVM_RFI_DDR_CAPA_ASSOC	= BIT(4),
 	IWL_MVM_RFI_DDR_CAPA_TPT	= BIT(5),
+	IWL_MVM_RFI_GET_LINKS_INFO_CAPA	= BIT(7),
 	IWL_MVM_RFI_DLVR_CAPA		= BIT(9),
 };
 
@@ -244,8 +245,8 @@ static int iwl_vendor_rfim_get_capa(struct wiphy *wiphy,
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	u16 capa = IWL_MVM_RFI_GET_LINKS_INFO_CAPA;
 	struct sk_buff *skb;
-	u16 capa = 0;
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 4);
 	if (!skb)
@@ -253,9 +254,9 @@ static int iwl_vendor_rfim_get_capa(struct wiphy *wiphy,
 
 	if (mvm->trans->trans_cfg->integrated) {
 		if (iwl_rfi_supported(mvm, mvm->force_enable_rfi, true))
-			capa = IWL_MVM_RFI_DDR_CAPA_ALL;
+			capa |= IWL_MVM_RFI_DDR_CAPA_ALL;
 		else
-			capa = IWL_MVM_RFI_DDR_CAPA_CNVI;
+			capa |= IWL_MVM_RFI_DDR_CAPA_CNVI;
 	}
 
 	if (iwl_rfi_supported(mvm, mvm->force_enable_rfi, false))
