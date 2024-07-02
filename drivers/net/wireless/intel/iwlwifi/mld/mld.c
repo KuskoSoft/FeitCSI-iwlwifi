@@ -107,6 +107,7 @@ static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
 	HCMD_NAME(UCODE_ALIVE_NTFY),
 	HCMD_NAME(INIT_COMPLETE_NOTIF),
 	HCMD_NAME(MFUART_LOAD_NOTIFICATION),
+	HCMD_NAME(MCC_UPDATE_CMD),
 };
 
 /* Please keep this array *SORTED* by hex value.

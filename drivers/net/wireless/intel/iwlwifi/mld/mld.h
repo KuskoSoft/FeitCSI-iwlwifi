@@ -45,6 +45,7 @@
  * @scan_cmd_size: size of %scan_cmd.
  * @scan_cmd: pointer to scan_cmd buffer (allocated once in op mode start).
  * @wowlan: WoWLAN support data.
+ * @mcc_src: the source id of the MCC, comes from the firmware
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -78,6 +79,7 @@ struct iwl_mld {
 #ifdef CONFIG_PM
 	struct wiphy_wowlan_support wowlan;
 #endif /* CONFIG_PM */
+	enum iwl_mcc_source mcc_src;
 };
 
 /* memset the part of the struct that requires cleanup on restart */
