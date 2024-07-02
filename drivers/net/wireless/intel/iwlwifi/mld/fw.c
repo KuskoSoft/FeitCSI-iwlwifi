@@ -6,6 +6,7 @@
 #include "mld.h"
 
 #include "fw/api/alive.h"
+#include "fw/api/scan.h"
 #include "fw/api/rx.h"
 #include "fw/dbg.h"
 #include "fw/pnvm.h"
@@ -47,6 +48,17 @@ static int iwl_mld_send_rss_cfg_cmd(struct iwl_mld *mld)
 	netdev_rss_key_fill(cmd.secret_key, sizeof(cmd.secret_key));
 
 	return iwl_mld_send_cmd_pdu(mld, RSS_CONFIG_CMD, &cmd);
+}
+
+static int iwl_mld_config_scan(struct iwl_mld *mld)
+{
+	struct iwl_scan_config cmd = {
+		.tx_chains = cpu_to_le32(iwl_mld_get_valid_tx_ant(mld)),
+		.rx_chains = cpu_to_le32(iwl_mld_get_valid_rx_ant(mld))
+	};
+
+	return iwl_mld_send_cmd_pdu(mld, WIDE_ID(LONG_GROUP, SCAN_CFG_CMD),
+				    &cmd);
 }
 
 static void iwl_mld_alive_imr_data(struct iwl_trans *trans,
@@ -356,6 +368,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 		return ret;
 
 	ret = iwl_mld_send_rss_cfg_cmd(mld);
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_config_scan(mld);
 	if (ret)
 		return ret;
 
