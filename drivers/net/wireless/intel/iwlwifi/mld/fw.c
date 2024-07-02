@@ -23,8 +23,7 @@ static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
 
 	IWL_DEBUG_FW(mld, "select valid tx ant: %u\n", cmd.valid);
 
-	return iwl_mld_send_cmd_pdu(mld, TX_ANT_CONFIGURATION_CMD,
-				    sizeof(cmd), &cmd);
+	return iwl_mld_send_cmd_pdu(mld, TX_ANT_CONFIGURATION_CMD, &cmd);
 }
 
 static int iwl_mld_send_rss_cfg_cmd(struct iwl_mld *mld)
@@ -47,7 +46,7 @@ static int iwl_mld_send_rss_cfg_cmd(struct iwl_mld *mld)
 			1 + (i % (mld->trans->num_rx_queues - 1));
 	netdev_rss_key_fill(cmd.secret_key, sizeof(cmd.secret_key));
 
-	return iwl_mld_send_cmd_pdu(mld, RSS_CONFIG_CMD, sizeof(cmd), &cmd);
+	return iwl_mld_send_cmd_pdu(mld, RSS_CONFIG_CMD, &cmd);
 }
 
 static void iwl_mld_alive_imr_data(struct iwl_trans *trans,
@@ -272,9 +271,9 @@ int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld)
 				   ARRAY_SIZE(init_complete),
 				   NULL, NULL);
 
-	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(SYSTEM_GROUP,
-						INIT_EXTENDED_CFG_CMD),
-				   sizeof(init_cfg), &init_cfg);
+	ret = iwl_mld_send_cmd_pdu(mld,
+				   WIDE_ID(SYSTEM_GROUP, INIT_EXTENDED_CFG_CMD),
+				   &init_cfg);
 	if (ret) {
 		IWL_ERR(mld, "Failed to send init config command: %d\n", ret);
 		iwl_remove_notification(&mld->notif_wait, &init_wait);

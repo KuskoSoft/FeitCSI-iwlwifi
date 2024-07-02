@@ -20,5 +20,5 @@ int iwl_mld_power_update_device(struct iwl_mld *mld)
 			"Sending device power command with flags = 0x%X\n",
 			cmd.flags);
 
-	return iwl_mld_send_cmd_pdu(mld, POWER_TABLE_CMD, sizeof(cmd), &cmd);
+	return iwl_mld_send_cmd_pdu(mld, POWER_TABLE_CMD, &cmd);
 }

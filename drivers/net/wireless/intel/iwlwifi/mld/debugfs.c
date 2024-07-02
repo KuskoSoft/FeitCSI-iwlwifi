@@ -61,8 +61,7 @@ static ssize_t iwl_dbgfs_fw_restart_write(struct iwl_mld *mld, char *buf,
 	/* take the return value to make compiler happy - it will
 	 * fail anyway
 	 */
-	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(LONG_GROUP, REPLY_ERROR),
-				   0, NULL);
+	ret = iwl_mld_send_cmd_empty(mld, WIDE_ID(LONG_GROUP, REPLY_ERROR));
 
 	wiphy_unlock(mld->wiphy);
 
