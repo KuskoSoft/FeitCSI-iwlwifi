@@ -6,6 +6,7 @@
 #include <net/mac80211.h>
 
 #include "fw/api/rx.h"
+#include "fw/api/scan.h"
 #include "fw/api/datapath.h"
 #include "fw/dbg.h"
 
@@ -189,6 +190,29 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 	iwl_trans_configure(trans, &trans_cfg);
 }
 
+static int
+iwl_mld_alloc_scan_cmd(struct iwl_mld *mld)
+{
+	u8 scan_cmd_ver = iwl_fw_lookup_cmd_ver(mld->fw, SCAN_REQ_UMAC,
+						IWL_FW_CMD_VER_UNKNOWN);
+	size_t scan_cmd_size;
+
+	if (scan_cmd_ver == 17) {
+		scan_cmd_size = sizeof(struct iwl_scan_req_umac_v17);
+	} else {
+		IWL_ERR(mld, "Unexpected scan cmd version %d\n", scan_cmd_ver);
+		return -EINVAL;
+	}
+
+	mld->scan_cmd = kmalloc(scan_cmd_size, GFP_KERNEL);
+	if (!mld->scan_cmd)
+		return -ENOMEM;
+
+	mld->scan_cmd_size = scan_cmd_size;
+
+	return 0;
+}
+
 /*
  *****************************************************
  * op mode ops functions
@@ -238,6 +262,9 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	iwl_mld_stop_fw(mld);
 
+	if (iwl_mld_alloc_scan_cmd(mld))
+		goto free_hw;
+
 	if (iwl_mld_register_hw(mld))
 		goto free_hw;
 
@@ -260,6 +287,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	iwl_trans_op_mode_leave(mld->trans);
 
 	kfree(mld->nvm_data);
+	kfree(mld->scan_cmd);
 
 	ieee80211_free_hw(mld->hw);
 }
