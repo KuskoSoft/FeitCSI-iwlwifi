@@ -10,6 +10,8 @@
 #include "fw/dbg.h"
 #include "fw/api/cmdhdr.h"
 
+#include "mcc.h"
+
 /**
  * enum iwl_rx_handler_context: context for Rx handler
  * @RX_HANDLER_SYNC: this means that it will be called in the Rx path
@@ -95,6 +97,8 @@ static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 
 CMD_VERSIONS(mfuart_notif,
 	     CMD_VER_ENTRY(2, iwl_mfuart_load_notif))
+CMD_VERSIONS(update_mcc,
+	     CMD_VER_ENTRY(1, iwl_mcc_chub_notif))
 
 /*
  * Handlers for fw notifications
@@ -104,6 +108,8 @@ CMD_VERSIONS(mfuart_notif,
  * The handler can be one from three contexts, see &iwl_rx_handler_context
  */
 static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
+	RX_HANDLER_SIZES(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
+			 RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION, mfuart_notif,
 			 RX_HANDLER_SYNC)
 };
