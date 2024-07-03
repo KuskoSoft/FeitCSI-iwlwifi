@@ -416,6 +416,8 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mac_hw_set_wiphy(mld);
 	iwl_mac_hw_set_misc(mld);
 
+	SET_IEEE80211_DEV(mld->hw, mld->trans->dev);
+
 	/* TODO:
 	 * 1. leds_init
 	 * 2. register vendor cmds
