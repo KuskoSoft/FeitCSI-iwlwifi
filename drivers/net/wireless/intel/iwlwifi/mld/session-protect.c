@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+/*
+ * Copyright (C) 2024 Intel Corporation
+ */
+#include "session-protect.h"
+#include "fw/api/time-event.h"
+#include "fw/api/context.h"
+#include "iface.h"
+#include <net/mac80211.h>
+#include "fw/dbg.h"
+
+void iwl_mld_handle_session_prot_notif(struct iwl_mld *mld,
+				       struct iwl_rx_packet *pkt)
+{
+	struct iwl_session_prot_notif *notif = (void *)pkt->data;
+	int fw_link_id = le32_to_cpu(notif->mac_link_id);
+	struct ieee80211_bss_conf *link_conf;
+	struct ieee80211_vif *vif;
+	struct iwl_mld_vif *mld_vif;
+	struct iwl_mld_session_protect *session_protect;
+
+	if (IWL_FW_CHECK(mld, fw_link_id >= ARRAY_SIZE(mld->fw_id_to_bss_conf),
+			 "Bad link index in session protection %d\n",
+			 fw_link_id))
+		return;
+
+	link_conf = wiphy_dereference(mld->wiphy,
+				      mld->fw_id_to_bss_conf[fw_link_id]);
+
+	if (WARN_ON(!link_conf))
+		return;
+
+	vif = link_conf->vif;
+	mld_vif = iwl_mld_vif_from_mac80211(vif);
+	session_protect = &mld_vif->session_protect;
+
+	if (!le32_to_cpu(notif->status))
+	// TODO assoc: iwl_mvm_te_check_disconnect
+		memset(session_protect, 0, sizeof(*session_protect));
+	else if (le32_to_cpu(notif->start)) {
+		session_protect->end_jiffies =
+			TU_TO_EXP_TIME(session_protect->duration);
+		/* !session_protect->end_jiffies means inactive session */
+		if (!session_protect->end_jiffies)
+			session_protect->end_jiffies = 1;
+	} else {
+		// TODO assoc: iwl_mvm_te_check_disconnect
+		memset(session_protect, 0, sizeof(*session_protect));
+	}
+}
+
+void iwl_mld_schedule_session_protection(struct iwl_mld *mld,
+					 struct ieee80211_vif *vif,
+					 u32 duration, u32 min_duration,
+					 int link_id)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_link *link =
+		iwl_mld_link_dereference_check(mld_vif, link_id);
+	struct iwl_mld_session_protect *session_protect =
+		&mld_vif->session_protect;
+	struct iwl_session_prot_cmd cmd = {
+		.id_and_color = cpu_to_le32(link->fw_id),
+		.action = cpu_to_le32(FW_CTXT_ACTION_ADD),
+		.conf_id = cpu_to_le32(SESSION_PROTECT_CONF_ASSOC),
+		.duration_tu = cpu_to_le32(MSEC_TO_TU(duration)),
+	};
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	WARN(hweight16(vif->active_links) > 1,
+	     "Session protection isn't allowed with more than one active link");
+
+	if (session_protect->end_jiffies &&
+	    time_after(session_protect->end_jiffies,
+		       TU_TO_EXP_TIME(min_duration))) {
+		IWL_DEBUG_TE(mld, "We have ample in the current session: %u\n",
+			     jiffies_to_msecs(session_protect->end_jiffies -
+					      jiffies));
+		return;
+	}
+
+	IWL_DEBUG_TE(mld, "Add a new session protection, duration %d TU\n",
+		     le32_to_cpu(cmd.duration_tu));
+
+	/* end_jiffies will be updated when handling session_prot_notif */
+	session_protect->end_jiffies = 0;
+	session_protect->duration = duration;
+
+	if (iwl_mld_send_cmd_pdu(mld,
+				 WIDE_ID(MAC_CONF_GROUP,
+					 SESSION_PROTECTION_CMD), &cmd))
+		IWL_ERR(mld,
+			"Couldn't send the SESSION_PROTECTION_CMD\n");
+}

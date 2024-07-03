@@ -9,6 +9,9 @@
 #include "fw/file.h"
 #include "fw/dbg.h"
 #include "fw/api/cmdhdr.h"
+#include "fw/api/mac-cfg.h"
+#include "session-protect.h"
+#include "fw/api/time-event.h"
 
 #include "mcc.h"
 
@@ -101,6 +104,8 @@ CMD_VERSIONS(mfuart_notif,
 	     CMD_VER_ENTRY(2, iwl_mfuart_load_notif))
 CMD_VERSIONS(update_mcc,
 	     CMD_VER_ENTRY(1, iwl_mcc_chub_notif))
+CMD_VERSIONS(session_prot_notif,
+	     CMD_VER_ENTRY(3, iwl_session_prot_notif))
 
 /*
  * Handlers for fw notifications
@@ -114,6 +119,9 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION, mfuart_notif,
 			 RX_HANDLER_SYNC)
+
+	RX_HANDLER_SIZES(MAC_CONF_GROUP, SESSION_PROTECTION_NOTIF,
+			 session_prot_notif, RX_HANDLER_ASYNC)
 };
 
 static bool

@@ -193,4 +193,6 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 	return -ENOSPC;									\
 }
 
+#define MSEC_TO_TU(_msec)	((_msec) * 1000 / 1024)
+
 #endif /* __iwl_mld_h__ */

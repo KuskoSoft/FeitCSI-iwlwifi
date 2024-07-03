@@ -7,6 +7,7 @@
 
 #include "mld.h"
 #include "link.h"
+#include "session-protect.h"
 
 /**
  * struct iwl_mld_vif - virtual interface (MAC context) configuration parameters
@@ -15,11 +16,13 @@
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
+ * @session_protect: session protection parameters
  */
 struct iwl_mld_vif {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
 		u8 fw_id;
+		struct iwl_mld_session_protect session_protect;
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld *mld;

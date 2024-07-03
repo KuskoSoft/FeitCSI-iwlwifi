@@ -736,6 +736,28 @@ iwl_mld_mac80211_reconfig_complete(struct ieee80211_hw *hw,
 	}
 }
 
+static
+void iwl_mld_mac80211_mgd_prepare_tx(struct ieee80211_hw *hw,
+				     struct ieee80211_vif *vif,
+				     struct ieee80211_prep_tx_info *info)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	u32 duration = IWL_MLD_SESSION_PROTECTION_ASSOC_TIME_MS;
+
+	/* After a successful association the connection is etalibeshed
+	 * and we can rely on the quota to send the disassociation frame.
+	 */
+	if (info->was_assoc)
+		return;
+
+	if (info->duration > duration)
+		duration = info->duration;
+
+	iwl_mld_schedule_session_protection(mld, vif, duration,
+					    IWL_MLD_SESSION_PROTECTION_MIN_TIME_MS,
+					    info->link_id);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -756,6 +778,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.vif_cfg_changed = iwl_mld_mac80211_vif_cfg_changed,
 	.set_key = iwl_mld_mac80211_set_key,
 	.hw_scan = iwl_mld_mac80211_hw_scan,
+	.mgd_prepare_tx = iwl_mld_mac80211_mgd_prepare_tx,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
