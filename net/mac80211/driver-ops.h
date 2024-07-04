@@ -1728,18 +1728,4 @@ drv_can_neg_ttlm(struct ieee80211_local *local,
 
 	return res;
 }
-
-static inline void drv_iface_usage(struct ieee80211_local *local,
-				   struct cfg80211_iface_usage *iface_usage)
-{
-	might_sleep();
-
-	lockdep_assert_wiphy(local->hw.wiphy);
-
-	trace_drv_iface_usage(local, iface_usage);
-	if (local->ops->iface_usage)
-		local->ops->iface_usage(&local->hw, iface_usage);
-
-	trace_drv_return_void(local);
-}
 #endif /* __MAC80211_DRIVER_OPS */

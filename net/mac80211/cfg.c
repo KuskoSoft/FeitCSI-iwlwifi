@@ -5085,17 +5085,6 @@ ieee80211_set_ttlm(struct wiphy *wiphy, struct net_device *dev,
 	return ieee80211_req_neg_ttlm(sdata, params);
 }
 
-static void
-ieee80211_iface_usage(struct wiphy *wiphy, struct net_device *dev,
-		      struct cfg80211_iface_usage *iface_usage)
-{
-	struct ieee80211_local *local = wiphy_priv(wiphy);
-
-	lockdep_assert_wiphy(wiphy);
-
-	drv_iface_usage(local, iface_usage);
-}
-
 const struct cfg80211_ops mac80211_config_ops = {
 	.add_virtual_intf = ieee80211_add_iface,
 	.del_virtual_intf = ieee80211_del_iface,
@@ -5209,5 +5198,4 @@ const struct cfg80211_ops mac80211_config_ops = {
 	.del_link_station = ieee80211_del_link_station,
 	.set_hw_timestamp = ieee80211_set_hw_timestamp,
 	.set_ttlm = ieee80211_set_ttlm,
-	.iface_usage = ieee80211_iface_usage,
 };
