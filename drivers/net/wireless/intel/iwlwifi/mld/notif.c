@@ -5,6 +5,7 @@
 
 #include "mld.h"
 #include "notif.h"
+#include "scan.h"
 #include "iwl-trans.h"
 #include "fw/file.h"
 #include "fw/dbg.h"
@@ -100,6 +101,10 @@ static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 		       le32_to_cpu(mfuart_notif->image_size));
 }
 
+CMD_VERSIONS(scan_complete_notif,
+	     CMD_VER_ENTRY(1, iwl_umac_scan_complete))
+CMD_VERSIONS(scan_iter_complete_notif,
+	     CMD_VER_ENTRY(2, iwl_umac_scan_iter_complete_notif))
 CMD_VERSIONS(mfuart_notif,
 	     CMD_VER_ENTRY(2, iwl_mfuart_load_notif))
 CMD_VERSIONS(update_mcc,
@@ -117,6 +122,11 @@ CMD_VERSIONS(session_prot_notif,
 static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_SIZES(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
 			 RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(LEGACY_GROUP, SCAN_COMPLETE_UMAC, scan_complete_notif,
+			 RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(LEGACY_GROUP, SCAN_ITERATION_COMPLETE_UMAC,
+			 scan_iter_complete_notif,
+			 RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION, mfuart_notif,
 			 RX_HANDLER_SYNC)
 

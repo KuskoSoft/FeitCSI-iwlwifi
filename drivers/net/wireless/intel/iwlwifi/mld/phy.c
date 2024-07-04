@@ -20,21 +20,6 @@ iwl_mld_get_chandef_from_chanctx(struct ieee80211_chanctx_conf *ctx)
 	return use_def ? &ctx->def : &ctx->min_def;
 }
 
-static u8 iwl_mld_nl80211_band_to_fw(enum nl80211_band band)
-{
-	switch (band) {
-	case NL80211_BAND_2GHZ:
-		return PHY_BAND_24;
-	case NL80211_BAND_5GHZ:
-		return PHY_BAND_5;
-	case NL80211_BAND_6GHZ:
-		return PHY_BAND_6;
-	default:
-		WARN_ONCE(1, "Unsupported band (%u)\n", band);
-		return PHY_BAND_5;
-	}
-}
-
 static u8
 iwl_mld_nl80211_width_to_fw(enum nl80211_chan_width width)
 {

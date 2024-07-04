@@ -6,6 +6,7 @@
 #define __iwl_mld_h__
 
 #include <linux/leds.h>
+#include <net/mac80211.h>
 
 #include <net/mac80211.h>
 
@@ -13,6 +14,8 @@
 #include "iwl-op-mode.h"
 #include "fw/runtime.h"
 #include "fw/notif-wait.h"
+#include "fw/api/commands.h"
+#include "fw/api/scan.h"
 #include "fw/api/mac-cfg.h"
 #include "fw/api/mac.h"
 #include "fw/api/phy-ctxt.h"
@@ -50,6 +53,11 @@
  * @addresses: device MAC addresses.
  * @scan.cmd_size: size of %scan.cmd
  * @scan.cmd: pointer to scan cmd buffer (allocated once in op mode start).
+ * @scan.status: scan status, a combination of %enum iwl_mld_scan_status,
+ *	reflects the %scan.uid_status array.
+ * @scan.uid_status: array to track the scan status per uid
+ * @scan.start_tsf: start time of last scan in TSF of the link that requested
+ *	the scan.
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
@@ -86,6 +94,9 @@ struct iwl_mld {
 	struct {
 		size_t cmd_size;
 		void *cmd;
+		unsigned int status;
+		u32 uid_status[IWL_MAX_UMAC_SCANS];
+		u64 start_tsf;
 	} scan;
 #ifdef CONFIG_PM_SLEEP
 	struct wiphy_wowlan_support wowlan;
@@ -159,6 +170,21 @@ static inline u8 iwl_mld_get_valid_rx_ant(const struct iwl_mld *mld)
 		rx_ant &= mld->nvm_data->valid_rx_ant;
 
 	return rx_ant;
+}
+
+static inline u8 iwl_mld_nl80211_band_to_fw(enum nl80211_band band)
+{
+	switch (band) {
+	case NL80211_BAND_2GHZ:
+		return PHY_BAND_24;
+	case NL80211_BAND_5GHZ:
+		return PHY_BAND_5;
+	case NL80211_BAND_6GHZ:
+		return PHY_BAND_6;
+	default:
+		WARN_ONCE(1, "Unsupported band (%u)\n", band);
+		return PHY_BAND_5;
+	}
 }
 
 static inline u8 iwl_mld_phy_band_to_nl80211(u8 phy_band)

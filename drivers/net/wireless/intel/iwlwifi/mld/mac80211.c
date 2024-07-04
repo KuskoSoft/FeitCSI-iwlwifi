@@ -11,6 +11,7 @@
 #include "iface.h"
 #include "power.h"
 #include "sta.h"
+#include "scan.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #ifdef CONFIG_PM_SLEEP
@@ -294,12 +295,8 @@ static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
 	 * infinite loop, so the maximum number of iterations is actually 254.
 	 */
 	wiphy->max_sched_scan_plan_iterations = 254;
-
-	/* driver create the 802.11 header (24 bytes), DS parameter (3 bytes)
-	 * and SSID IE (2 bytes).
-	 */
-	wiphy->max_sched_scan_ie_len = SCAN_OFFLOAD_PROBE_REQ_SIZE - 24 - 3 - 2;
-	wiphy->max_scan_ie_len = SCAN_OFFLOAD_PROBE_REQ_SIZE - 24 - 3 - 2;
+	wiphy->max_sched_scan_ie_len = iwl_mld_scan_max_template_size();
+	wiphy->max_scan_ie_len = iwl_mld_scan_max_template_size();
 	wiphy->max_sched_scan_ssids = PROBE_OPTION_MAX;
 	wiphy->max_scan_ssids = PROBE_OPTION_MAX;
 	wiphy->max_sched_scan_plans = IWL_MAX_SCHED_SCAN_PLANS;
@@ -516,6 +513,15 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 	 * execute the restart.
 	 */
 	mld->fw_status.in_hw_restart = false;
+
+	/* We shouldn't have any UIDs still set. Loop over all the UIDs to
+	 * make sure there's nothing left there and warn if any is found.
+	 */
+	for (int i = 0; i < ARRAY_SIZE(mld->scan.uid_status); i++)
+		if (WARN_ONCE(mld->scan.uid_status[i],
+			      "UMAC scan UID %d status was not cleaned (0x%x 0x%x)\n",
+			      i, mld->scan.uid_status[i], mld->scan.status))
+			mld->scan.uid_status[i] = 0;
 }
 
 static
@@ -837,13 +843,26 @@ int iwl_mld_mac80211_set_key(struct ieee80211_hw *hw,
 	return -EOPNOTSUPP;
 }
 
-static
-int iwl_mld_mac80211_hw_scan(struct ieee80211_hw *hw,
-			     struct ieee80211_vif *vif,
-			     struct ieee80211_scan_request *hw_req)
+static int
+iwl_mld_mac80211_hw_scan(struct ieee80211_hw *hw,
+			 struct ieee80211_vif *vif,
+			 struct ieee80211_scan_request *hw_req)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	if (WARN_ON(!hw_req->req.n_channels ||
+		    hw_req->req.n_channels >
+		    mld->fw->ucode_capa.n_scan_channels))
+		return -EINVAL;
+
+	return iwl_mld_regular_scan_start(mld, vif, &hw_req->req, &hw_req->ies);
+}
+
+static void
+iwl_mld_mac80211_cancel_hw_scan(struct ieee80211_hw *hw,
+				struct ieee80211_vif *vif)
 {
 	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
 }
 
 static void
@@ -969,6 +988,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.vif_cfg_changed = iwl_mld_mac80211_vif_cfg_changed,
 	.set_key = iwl_mld_mac80211_set_key,
 	.hw_scan = iwl_mld_mac80211_hw_scan,
+	.cancel_hw_scan = iwl_mld_mac80211_cancel_hw_scan,
 	.mgd_prepare_tx = iwl_mld_mac80211_mgd_prepare_tx,
 	.mgd_complete_tx = iwl_mld_mac_mgd_complete_tx,
 #ifdef CONFIG_PM_SLEEP
