@@ -226,12 +226,13 @@ free:
 }
 
 enum iwl_rfi_capabilites {
-	IWL_MVM_RFI_DDR_CAPA_CNVI	= BIT(2),
-	IWL_MVM_RFI_DDR_CAPA_SCAN	= BIT(3),
-	IWL_MVM_RFI_DDR_CAPA_ASSOC	= BIT(4),
-	IWL_MVM_RFI_DDR_CAPA_TPT	= BIT(5),
-	IWL_MVM_RFI_GET_LINKS_INFO_CAPA	= BIT(7),
-	IWL_MVM_RFI_DLVR_CAPA		= BIT(9),
+	IWL_MVM_RFI_DDR_CAPA_CNVI		= BIT(2),
+	IWL_MVM_RFI_DDR_CAPA_SCAN		= BIT(3),
+	IWL_MVM_RFI_DDR_CAPA_ASSOC		= BIT(4),
+	IWL_MVM_RFI_DDR_CAPA_TPT		= BIT(5),
+	IWL_MVM_RFI_GET_LINKS_INFO_CAPA		= BIT(7),
+	IWL_MVM_RFI_LINK_INFO_CHANGE_CAPA	= BIT(8),
+	IWL_MVM_RFI_DLVR_CAPA			= BIT(9),
 };
 
 #define IWL_MVM_RFI_DDR_CAPA_ALL (IWL_MVM_RFI_DDR_CAPA_CNVI	|\
@@ -243,9 +244,10 @@ static int iwl_vendor_rfim_get_capa(struct wiphy *wiphy,
 				    struct wireless_dev *wdev,
 				    const void *data, int data_len)
 {
+	u16 capa = IWL_MVM_RFI_GET_LINKS_INFO_CAPA |
+			IWL_MVM_RFI_LINK_INFO_CHANGE_CAPA;
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
-	u16 capa = IWL_MVM_RFI_GET_LINKS_INFO_CAPA;
 	struct sk_buff *skb;
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 4);
