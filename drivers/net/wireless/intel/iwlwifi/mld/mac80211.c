@@ -11,6 +11,7 @@
 #include "iface.h"
 #include "power.h"
 #include "fw/api/scan.h"
+#include "fw/api/context.h"
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
 #endif /* CONFIG_PM_SLEEP */
@@ -613,12 +614,41 @@ void iwl_mld_mac80211_wake_tx_queue(struct ieee80211_hw *hw,
 	WARN_ON("Not supported yet\n");
 }
 
+static int iwl_mld_allocate_fw_phy_id(struct iwl_mld *mld)
+{
+	int id;
+	unsigned long used = mld->used_phy_ids;
+
+	for_each_clear_bit(id, &used, NUM_PHY_CTX) {
+		mld->used_phy_ids |= BIT(id);
+		return id;
+	}
+
+	return -ENOSPC;
+}
+
 static
 int iwl_mld_add_chanctx(struct ieee80211_hw *hw,
 			struct ieee80211_chanctx_conf *ctx)
 {
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_phy *phy = iwl_mld_phy_from_mac80211(ctx);
+	int fw_id = iwl_mld_allocate_fw_phy_id(mld);
+	int ret;
+
+	if (fw_id < 0)
+		return fw_id;
+
+	phy->fw_id = fw_id;
+
+	ret = iwl_mld_phy_fw_action(mld, ctx, FW_CTXT_ACTION_ADD);
+	if (ret) {
+		mld->used_phy_ids &= ~BIT(phy->fw_id);
+		return ret;
+	}
+
+	/* TODO: remove on RLC offload */
+	return iwl_mld_send_rlc_cmd(mld, fw_id);
 }
 
 static

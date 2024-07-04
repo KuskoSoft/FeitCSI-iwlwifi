@@ -24,6 +24,8 @@
  *	ieee80211_bss_conf.
  * @fw_id_to_vif: maps a fw id of a MAC context to the corresponding
  *	ieee80211_vif. Mapping is valid only when the MAC exists in the fw.
+ * @used_phy_ids: a bitmap of the phy IDs used. If a bit is set, it means
+ *	that the index of this bit is already used as a PHY id.
  * @dev: pointer to device struct. For printing purposes
  * @trans: pointer to the transport layer
  * @cfg: pointer to the device configuration
@@ -55,6 +57,7 @@ struct iwl_mld {
 	struct_group(zeroed_on_hw_restart,
 		struct ieee80211_bss_conf __rcu *fw_id_to_bss_conf[IWL_FW_MAX_LINK_ID + 1];
 		struct ieee80211_vif __rcu *fw_id_to_vif[NUM_MAC_INDEX_DRIVER];
+		u8 used_phy_ids: NUM_PHY_CTX;
 	);
 	/* And here fields that survive a fw restart */
 	struct device *dev;

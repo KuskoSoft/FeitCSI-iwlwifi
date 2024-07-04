@@ -26,13 +26,6 @@ iwl_mld_phy_from_mac80211(struct ieee80211_chanctx_conf *channel)
 	return (void *)channel->drv_priv;
 }
 
-/* Constructor function for struct iwl_mld_phy */
-static inline void
-iwl_mld_init_phy(struct iwl_mld *mld, struct iwl_mld_phy *phy, u8 id)
-{
-	phy->fw_id = id;
-}
-
 /* Cleanup function for struct iwl_mld_phy, will be called in restart */
 static inline void
 iwl_mld_cleanup_phy(struct iwl_mld *mld, struct iwl_mld_phy *phy)
