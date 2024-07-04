@@ -116,6 +116,7 @@ static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
  * Access is done through binary search
  */
 static const struct iwl_hcmd_names iwl_mld_long_names[] = {
+	HCMD_NAME(PHY_CONTEXT_CMD),
 	HCMD_NAME(SCAN_CFG_CMD),
 	HCMD_NAME(POWER_TABLE_CMD),
 	HCMD_NAME(TX_ANT_CONFIGURATION_CMD),
