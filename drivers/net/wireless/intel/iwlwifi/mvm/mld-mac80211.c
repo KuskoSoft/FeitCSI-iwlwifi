@@ -1369,20 +1369,6 @@ iwl_mvm_mld_mac_pre_channel_switch(struct ieee80211_hw *hw,
 	return ret;
 }
 
-static void iwl_mvm_mld_iface_usage(struct ieee80211_hw *hw,
-				    struct cfg80211_iface_usage *iface_usage)
-{
-	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
-	u32 p2p_iftypes = BIT(NL80211_IFTYPE_P2P_GO) |
-		BIT(NL80211_IFTYPE_P2P_CLIENT);
-
-	IWL_DEBUG_MAC80211(mvm, "iface_usage_notif: mask=0x%x\n",
-			   iface_usage->types_mask);
-
-	if (iface_usage->types_mask & p2p_iftypes)
-		iwl_mvm_esr_non_bss_link(mvm, NULL, 0, true);
-}
-
 const struct ieee80211_ops iwl_mvm_mld_hw_ops = {
 	.tx = iwl_mvm_mac_tx,
 	.wake_tx_queue = iwl_mvm_mac_wake_tx_queue,
@@ -1483,5 +1469,4 @@ const struct ieee80211_ops iwl_mvm_mld_hw_ops = {
 	.change_sta_links = iwl_mvm_mld_change_sta_links,
 	.can_activate_links = iwl_mvm_mld_can_activate_links,
 	.can_neg_ttlm = iwl_mvm_mld_can_neg_ttlm,
-	.iface_usage = iwl_mvm_mld_iface_usage,
 };
