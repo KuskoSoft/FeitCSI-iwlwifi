@@ -848,11 +848,6 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_MLO_TTLM_DLINK] = NLA_POLICY_EXACT_LEN(sizeof(u16) * 8),
 	[NL80211_ATTR_MLO_TTLM_ULINK] = NLA_POLICY_EXACT_LEN(sizeof(u16) * 8),
 	[NL80211_ATTR_ASSOC_SPP_AMSDU] = { .type = NLA_FLAG },
-
-	/* Set the limits to not allow NL80211_IFTYPE_UNSPECIFIED */
-	[NL80211_ATTR_IFACE_USAGE_IFTYPES] =
-		NLA_POLICY_RANGE(NLA_U32, BIT(NL80211_IFTYPE_UNSPECIFIED + 1),
-				 BIT(NUM_NL80211_IFTYPES) - 2),
 };
 
 /* policy for the key attributes */
@@ -16367,31 +16362,6 @@ nl80211_set_ttlm(struct sk_buff *skb, struct genl_info *info)
 	return rdev_set_ttlm(rdev, dev, &params);
 }
 
-static int
-nl80211_iface_usage(struct sk_buff *skb, struct genl_info *info)
-{
-	struct cfg80211_iface_usage iface_usage = {};
-	struct cfg80211_registered_device *rdev = info->user_ptr[0];
-	struct net_device *dev = info->user_ptr[1];
-	struct wireless_dev *wdev = dev->ieee80211_ptr;
-
-	/* once the interface is up and running its type can no longer change */
-	if (wdev_running(wdev))
-		return -EINVAL;
-
-	if (!info->attrs[NL80211_ATTR_IFACE_USAGE_IFTYPES])
-		return -EINVAL;
-
-	iface_usage.types_mask =
-		nla_get_u32(info->attrs[NL80211_ATTR_IFACE_USAGE_IFTYPES]);
-
-	if (!(BIT(wdev->iftype) & iface_usage.types_mask))
-		return -EINVAL;
-
-	rdev_iface_usage(rdev, dev, &iface_usage);
-	return 0;
-}
-
 #define NL80211_FLAG_NEED_WIPHY		0x01
 #define NL80211_FLAG_NEED_NETDEV	0x02
 #define NL80211_FLAG_NEED_RTNL		0x04
@@ -17600,12 +17570,6 @@ static const struct genl_small_ops nl80211_small_ops[] = {
 		.doit = nl80211_set_ttlm,
 		.flags = GENL_UNS_ADMIN_PERM,
 		.internal_flags = IFLAGS(NL80211_FLAG_NEED_NETDEV_UP),
-	},
-	{
-		.cmd = NL80211_CMD_IFACE_USAGE_NOTIF,
-		.doit = nl80211_iface_usage,
-		.flags = GENL_UNS_ADMIN_PERM,
-		.internal_flags = IFLAGS(NL80211_FLAG_NEED_NETDEV),
 	},
 };
 

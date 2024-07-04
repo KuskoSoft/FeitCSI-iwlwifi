@@ -4189,15 +4189,6 @@ struct mgmt_frame_regs {
 };
 
 /**
- * struct cfg80211_iface_usage - Notify about intended interface usage
- *
- * @types_mask: mask of interface types that are going to be used.
- */
-struct cfg80211_iface_usage {
-	u32 types_mask;
-};
-
-/**
  * struct cfg80211_ops - backend description for wireless configuration
  *
  * This struct is registered by fullmac card drivers and/or wireless stacks
@@ -4598,7 +4589,6 @@ struct cfg80211_iface_usage {
  *
  * @set_hw_timestamp: Enable/disable HW timestamping of TM/FTM frames.
  * @set_ttlm: set the TID to link mapping.
- * @iface_usage: notify about intended usage of added interfaces.
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -4960,8 +4950,6 @@ struct cfg80211_ops {
 				    struct cfg80211_set_hw_timestamp *hwts);
 	int	(*set_ttlm)(struct wiphy *wiphy, struct net_device *dev,
 			    struct cfg80211_ttlm_params *params);
-	void    (*iface_usage)(struct wiphy *wiphy, struct net_device *dev,
-			       struct cfg80211_iface_usage *usage);
 };
 
 /*

@@ -3046,24 +3046,6 @@ TRACE_EVENT(rdev_set_ttlm,
 		  WIPHY_PR_ARG, NETDEV_PR_ARG)
 );
 
-TRACE_EVENT(rdev_iface_usage,
-	TP_PROTO(struct wiphy *wiphy, struct net_device *netdev,
-		 struct cfg80211_iface_usage *iface_usage),
-	TP_ARGS(wiphy, netdev, iface_usage),
-	TP_STRUCT__entry(
-		WIPHY_ENTRY
-		NETDEV_ENTRY
-		__field(u32, types_mask)
-	),
-	TP_fast_assign(
-		WIPHY_ASSIGN;
-		NETDEV_ASSIGN;
-		__entry->types_mask = iface_usage->types_mask;
-	),
-	TP_printk(WIPHY_PR_FMT ", " NETDEV_PR_FMT ", types_mask=0x%x",
-		  WIPHY_PR_ARG, NETDEV_PR_ARG, __entry->types_mask)
-);
-
 /*************************************************************
  *	     cfg80211 exported functions traces		     *
  *************************************************************/

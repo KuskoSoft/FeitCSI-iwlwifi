@@ -1329,15 +1329,6 @@
  *      %NL80211_ATTR_MLO_TTLM_ULINK attributes are used to specify the
  *      TID to Link mapping for downlink/uplink traffic.
  *
- * @NL80211_CMD_IFACE_USAGE_NOTIF: Notify kernel about the expected interface
- *      usage. Allows user space to indicate to the kernel that it intends to
- *      use the interface soon and what is the expected usage of the interface
- *      so resources could be prepared etc. This is useful in case an added
- *      interface is not going to be used immediately but soon, and its type
- *      might change. The %NL80211_ATTR_IFACE_USAGE_IFTYPES attribute is used to
- *      provide the mask of intended interface types (the current type must be
- *      included in the mask).
- *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
  */
@@ -1594,8 +1585,6 @@ enum nl80211_commands {
 	NL80211_CMD_LINKS_REMOVED,
 
 	NL80211_CMD_SET_TID_TO_LINK_MAPPING,
-
-	NL80211_CMD_IFACE_USAGE_NOTIF,
 
 	/* let this always be before all commands we haven't upstreamed yet */
 	__NL80211_CMD_NONUPSTREAM_START,
@@ -2870,9 +2859,6 @@ enum nl80211_commands {
  *	%NL80211_CMD_ASSOCIATE indicating the SPP A-MSDUs
  *	are used on this connection
  *
- * @NL80211_ATTR_IFACE_USAGE_IFTYPES: a bitmask of interface types that might be
- *      used with the interface.
- *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -3417,8 +3403,6 @@ enum nl80211_attrs {
 	NL80211_ATTR_MLO_TTLM_ULINK,
 
 	NL80211_ATTR_ASSOC_SPP_AMSDU,
-
-	NL80211_ATTR_IFACE_USAGE_IFTYPES,
 
 	/* add attributes here, update the policy in nl80211.c */
 
