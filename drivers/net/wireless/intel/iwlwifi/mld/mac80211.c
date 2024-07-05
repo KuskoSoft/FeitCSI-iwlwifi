@@ -656,7 +656,11 @@ static
 void iwl_mld_remove_chanctx(struct ieee80211_hw *hw,
 			    struct ieee80211_chanctx_conf *ctx)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_phy *phy = iwl_mld_phy_from_mac80211(ctx);
+
+	iwl_mld_phy_fw_action(mld, ctx, FW_CTXT_ACTION_REMOVE);
+	mld->used_phy_ids &= ~BIT(phy->fw_id);
 }
 
 static
