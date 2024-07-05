@@ -10,7 +10,7 @@
 /* TODO: remove on RLC offload */
 #include "fw/api/datapath.h"
 
-static struct cfg80211_chan_def *
+struct cfg80211_chan_def *
 iwl_mld_get_chandef_from_chanctx(struct ieee80211_chanctx_conf *ctx)
 {
 	bool use_def = cfg80211_channel_is_psc(ctx->def.chan) ||
@@ -90,9 +90,8 @@ static u8 iwl_mld_get_fw_ctrl_pos(const struct cfg80211_chan_def *chandef)
 int iwl_mld_phy_fw_action(struct iwl_mld *mld,
 			  struct ieee80211_chanctx_conf *ctx, u32 action)
 {
-	struct cfg80211_chan_def *chandef =
-		iwl_mld_get_chandef_from_chanctx(ctx);
 	struct iwl_mld_phy *phy = iwl_mld_phy_from_mac80211(ctx);
+	struct cfg80211_chan_def *chandef = &phy->chandef;
 	struct iwl_phy_context_cmd cmd = {
 		.id_and_color = cpu_to_le32(phy->fw_id),
 		.action = cpu_to_le32(action),

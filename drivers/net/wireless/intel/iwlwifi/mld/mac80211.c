@@ -640,6 +640,7 @@ int iwl_mld_add_chanctx(struct ieee80211_hw *hw,
 		return fw_id;
 
 	phy->fw_id = fw_id;
+	phy->chandef = *iwl_mld_get_chandef_from_chanctx(ctx);
 
 	ret = iwl_mld_phy_fw_action(mld, ctx, FW_CTXT_ACTION_ADD);
 	if (ret) {
@@ -662,7 +663,35 @@ static
 void iwl_mld_change_chanctx(struct ieee80211_hw *hw,
 			    struct ieee80211_chanctx_conf *ctx, u32 changed)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_phy *phy = iwl_mld_phy_from_mac80211(ctx);
+	struct cfg80211_chan_def *chandef =
+		iwl_mld_get_chandef_from_chanctx(ctx);
+
+	/* We don't care about these */
+	if (!(changed & ~(IEEE80211_CHANCTX_CHANGE_RX_CHAINS |
+			  IEEE80211_CHANCTX_CHANGE_RADAR |
+			  IEEE80211_CHANCTX_CHANGE_CHANNEL)))
+		return;
+
+	/* Check if a FW update is required */
+
+	if (changed & IEEE80211_CHANCTX_CHANGE_AP)
+		goto update;
+
+	if (chandef->chan == phy->chandef.chan &&
+	    chandef->center_freq1 == phy->chandef.center_freq1 &&
+	    chandef->punctured == phy->chandef.punctured) {
+		/* Check if we are toggling between HT and non-HT, no-op */
+		if (phy->chandef.width == chandef->width ||
+		    (phy->chandef.width <= NL80211_CHAN_WIDTH_20 &&
+		     chandef->width <= NL80211_CHAN_WIDTH_20))
+			return;
+	}
+update:
+	phy->chandef = *chandef;
+
+	iwl_mld_phy_fw_action(mld, ctx, FW_CTXT_ACTION_MODIFY);
 }
 
 static
