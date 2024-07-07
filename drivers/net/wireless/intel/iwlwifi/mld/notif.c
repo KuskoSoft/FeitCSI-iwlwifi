@@ -65,6 +65,13 @@ struct iwl_notif_struct_size {
 	 .n_sizes = ARRAY_SIZE(iwl_notif_struct_sizes_##_name),		\
 	},
 
+/* Use this for Rx handlers that do not need notification validation */
+#define RX_HANDLER_NO_VAL(_grp, _cmd, _name, _context)			\
+	{.cmd_id = WIDE_ID(_grp, _cmd),					\
+	 .context = _context,						\
+	 .fn = iwl_mld_handle_##_name,					\
+	},
+
 #define RX_HANDLER_VAL_FN(_grp, _cmd, _name, _context)			\
 	{ .cmd_id = WIDE_ID(_grp, _cmd),				\
 	  .context = _context,						\
@@ -108,9 +115,14 @@ iwl_mld_notif_is_valid(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
 	unsigned int size = iwl_rx_packet_payload_len(pkt);
 	size_t notif_ver;
 
-	/* n_sizes == 0 means that a validation function may be used */
-	if (!handler->n_sizes && handler->val_fn)
-		return handler->val_fn(mld, pkt);
+	/* If n_sizes == 0, it indicates that a validation function may be used
+	 * or that no validation is required.
+	 */
+	if (!handler->n_sizes) {
+		if (handler->val_fn)
+			return handler->val_fn(mld, pkt);
+		return true;
+	}
 
 	notif_ver = iwl_fw_lookup_notif_ver(mld->fw,
 					    iwl_cmd_groupid(handler->cmd_id),
