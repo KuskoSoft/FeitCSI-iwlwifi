@@ -17,6 +17,9 @@
  * @queue_params: QoS data from mac80211. This is updated with a call to
  *	drv_conf_tx per each AC, and then notified once with BSS_CHANGED_QOS.
  *	So we store it here and then send one link cmd for all the ACs.
+ * @chan_ctx: pointer to the channel context assigned to the link. If a link
+ *	has an assigned channel context it means that it is active.
+ * @he_ru_2mhz_block: 26-tone RU OFDMA transmissions should be blocked.
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
@@ -24,6 +27,8 @@ struct iwl_mld_link {
 		u8 fw_id;
 		bool active;
 		struct ieee80211_tx_queue_params queue_params[IEEE80211_NUM_ACS];
+		struct ieee80211_chanctx_conf __rcu *chan_ctx;
+		bool he_ru_2mhz_block;
 	);
 	/* And here fields that survive a fw restart */
 };
