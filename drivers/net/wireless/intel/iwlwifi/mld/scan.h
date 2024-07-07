@@ -16,6 +16,15 @@ void iwl_mld_handle_scan_iter_complete_notif(struct iwl_mld *mld,
 
 int iwl_mld_scan_stop(struct iwl_mld *mld, int type, bool notify);
 
+int iwl_mld_sched_scan_start(struct iwl_mld *mld,
+			     struct ieee80211_vif *vif,
+			     struct cfg80211_sched_scan_request *req,
+			     struct ieee80211_scan_ies *ies,
+			     int type);
+
+void iwl_mld_handle_match_found_notif(struct iwl_mld *mld,
+				      struct iwl_rx_packet *pkt);
+
 void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt);
 

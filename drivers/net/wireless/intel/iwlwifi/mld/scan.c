@@ -300,8 +300,8 @@ iwl_mld_scan_get_cmd_gen_flags(struct iwl_mld *mld,
 	if (!iwl_mld_scan_is_regular(params))
 		flags |= IWL_UMAC_SCAN_GEN_FLAGS_V2_PERIODIC;
 
-	/* TODO: check sched_scan_pass_all == SCHED_SCAN_PASS_ALL_ENABLED */
-	if (params->iter_notif)
+	if (params->iter_notif ||
+	    mld->scan.pass_all_sched_res == SCHED_SCAN_PASS_ALL_STATE_ENABLED)
 		flags |= IWL_UMAC_SCAN_GEN_FLAGS_V2_NTFY_ITER_COMPLETE;
 
 	if (scan_status == IWL_MLD_SCAN_SCHED ||
@@ -621,6 +621,90 @@ iwl_mld_scan_build_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	return uid;
 }
 
+static bool
+iwl_mld_scan_pass_all(struct iwl_mld *mld,
+		      struct cfg80211_sched_scan_request *req)
+{
+	if (req->n_match_sets && req->match_sets[0].ssid.ssid_len) {
+		IWL_DEBUG_SCAN(mld,
+			       "Sending scheduled scan with filtering, n_match_sets %d\n",
+			       req->n_match_sets);
+		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
+		return false;
+	}
+
+	IWL_DEBUG_SCAN(mld, "Sending Scheduled scan without filtering\n");
+	mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_ENABLED;
+
+	return true;
+}
+
+static int
+iwl_mld_config_sched_scan_profiles(struct iwl_mld *mld,
+				   struct cfg80211_sched_scan_request *req)
+{
+	struct iwl_host_cmd hcmd = {
+		.id = SCAN_OFFLOAD_UPDATE_PROFILES_CMD,
+		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
+	};
+	struct iwl_scan_offload_profile *profile;
+	struct iwl_scan_offload_profile_cfg_data *cfg_data;
+	struct iwl_scan_offload_profile_cfg *profile_cfg;
+	struct iwl_scan_offload_blocklist *blocklist;
+	u32 blocklist_size = IWL_SCAN_MAX_BLACKLIST_LEN * sizeof(*blocklist);
+	u32 cmd_size = blocklist_size + sizeof(*profile_cfg);
+	u8 *cmd;
+	int ret;
+
+	if (WARN_ON(req->n_match_sets > IWL_SCAN_MAX_PROFILES_V2))
+		return -EIO;
+
+	cmd = kzalloc(cmd_size, GFP_KERNEL);
+	if (!cmd)
+		return -ENOMEM;
+
+	hcmd.data[0] = cmd;
+	hcmd.len[0] = cmd_size;
+
+	blocklist = (struct iwl_scan_offload_blocklist *)cmd;
+	profile_cfg = (struct iwl_scan_offload_profile_cfg *)(cmd + blocklist_size);
+
+	/* No blocklist configuration */
+	cfg_data = &profile_cfg->data;
+	cfg_data->num_profiles = req->n_match_sets;
+	cfg_data->active_clients = SCAN_CLIENT_SCHED_SCAN;
+	cfg_data->pass_match = SCAN_CLIENT_SCHED_SCAN;
+	cfg_data->match_notify = SCAN_CLIENT_SCHED_SCAN;
+
+	if (!req->n_match_sets || !req->match_sets[0].ssid.ssid_len)
+		cfg_data->any_beacon_notify = SCAN_CLIENT_SCHED_SCAN;
+
+	for (int i = 0; i < req->n_match_sets; i++) {
+		profile = &profile_cfg->profiles[i];
+
+		/* Support any cipher and auth algorithm */
+		profile->unicast_cipher = 0xff;
+		profile->auth_alg = IWL_AUTH_ALGO_UNSUPPORTED |
+			IWL_AUTH_ALGO_NONE | IWL_AUTH_ALGO_PSK |
+			IWL_AUTH_ALGO_8021X | IWL_AUTH_ALGO_SAE |
+			IWL_AUTH_ALGO_8021X_SHA384 | IWL_AUTH_ALGO_OWE;
+		profile->network_type = IWL_NETWORK_TYPE_ANY;
+		profile->band_selection = IWL_SCAN_OFFLOAD_SELECT_ANY;
+		profile->client_bitmap = SCAN_CLIENT_SCHED_SCAN;
+		profile->ssid_index = i;
+	}
+
+	IWL_DEBUG_SCAN(mld,
+		       "Sending scheduled scan profile config (n_match_sets=%u)\n",
+		       req->n_match_sets);
+
+	ret = iwl_mld_send_cmd(mld, &hcmd);
+
+	kfree(cmd);
+
+	return ret;
+}
+
 static int
 _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			   struct cfg80211_scan_request *req,
@@ -810,6 +894,82 @@ return_no_wait:
 	return ret;
 }
 
+int iwl_mld_sched_scan_start(struct iwl_mld *mld,
+			     struct ieee80211_vif *vif,
+			     struct cfg80211_sched_scan_request *req,
+			     struct ieee80211_scan_ies *ies,
+			     int type)
+{
+	struct iwl_host_cmd hcmd = {
+		.id = WIDE_ID(LONG_GROUP, SCAN_REQ_UMAC),
+		.len = { mld->scan.cmd_size, },
+		.data = { mld->scan.cmd, },
+		.dataflags = { IWL_HCMD_DFL_NOCOPY, },
+	};
+	struct iwl_mld_scan_params params = {};
+	int ret, uid;
+
+	/* we should have failed registration if scan_cmd was NULL */
+	if (WARN_ON(!mld->scan.cmd))
+		return -ENOMEM;
+
+	/* FW supports only a single periodic scan */
+	if (mld->scan.status & (IWL_MLD_SCAN_SCHED | IWL_MLD_SCAN_NETDETECT))
+		return -EBUSY;
+
+	/* TODO: fill scan type based on vif type/low latency/traffic load
+	 * for now we can just assume TYPE_UNASSOC (task=low_latency)
+	 */
+	params.type = IWL_SCAN_TYPE_UNASSOC;
+	params.flags = req->flags;
+	params.n_ssids = req->n_ssids;
+	params.ssids = req->ssids;
+	params.n_channels = req->n_channels;
+	params.channels = req->channels;
+	params.mac_addr = req->mac_addr;
+	params.mac_addr_mask = req->mac_addr_mask;
+	params.no_cck = false;
+	params.pass_all =  iwl_mld_scan_pass_all(mld, req);
+	params.n_match_sets = req->n_match_sets;
+	params.match_sets = req->match_sets;
+	params.n_scan_plans = req->n_scan_plans;
+	params.scan_plans = req->scan_plans;
+
+	/* UMAC scan supports up to 16-bit delays, trim it down to 16-bits */
+	params.delay = req->delay > U16_MAX ? U16_MAX : req->delay;
+
+	eth_broadcast_addr(params.bssid);
+
+	ret = iwl_mld_config_sched_scan_profiles(mld, req);
+	if (ret)
+		return ret;
+
+	iwl_mld_scan_build_probe_req(mld, vif, ies, &params);
+
+	/* TODO: 6Ghz support */
+
+	if (!iwl_mld_scan_fits(mld, req->n_ssids, ies, params.n_channels))
+		return -ENOBUFS;
+
+	uid = iwl_mld_scan_build_cmd(mld, vif, &params, type);
+	if (uid < 0)
+		return uid;
+
+	ret = iwl_mld_send_cmd(mld, &hcmd);
+	if (!ret) {
+		IWL_DEBUG_SCAN(mld,
+			       "Sched scan request send success: type=%u, uid=%u\n",
+			       type, uid);
+		mld->scan.uid_status[uid] = type;
+		mld->scan.status |= type;
+	} else {
+		IWL_ERR(mld, "Sched scan failed! ret %d\n", ret);
+		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
+	}
+
+	return ret;
+}
+
 int iwl_mld_scan_stop(struct iwl_mld *mld, int type, bool notify)
 {
 	int ret;
@@ -844,9 +1004,10 @@ int iwl_mld_scan_stop(struct iwl_mld *mld, int type, bool notify)
 
 			ieee80211_scan_completed(mld->hw, &info);
 		}
+	} else if (notify) {
+		ieee80211_sched_scan_stopped(mld->hw);
+		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
 	}
-	/* TODO: ieee80211_sched_scan_stopped */
-	/* TODO: SCHED_SCAN_PASS_ALL_DISABLED */
 
 	return ret;
 }
@@ -872,9 +1033,22 @@ void iwl_mld_handle_scan_iter_complete_notif(struct iwl_mld *mld,
 		       "UMAC Scan iteration complete: status=0x%x scanned_channels=%d\n",
 		       notif->status, notif->scanned_channels);
 
+	if (mld->scan.pass_all_sched_res == SCHED_SCAN_PASS_ALL_STATE_FOUND) {
+		IWL_DEBUG_SCAN(mld, "Pass all scheduled scan results found\n");
+		ieee80211_sched_scan_results(mld->hw);
+		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_ENABLED;
+	}
+
 	IWL_DEBUG_SCAN(mld,
 		       "UMAC Scan iteration complete: scan started at %llu (TSF)\n",
 		       mld->scan.start_tsf);
+}
+
+void iwl_mld_handle_match_found_notif(struct iwl_mld *mld,
+				      struct iwl_rx_packet *pkt)
+{
+	IWL_DEBUG_SCAN(mld, "Scheduled scan results\n");
+	ieee80211_sched_scan_results(mld->hw);
 }
 
 void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
@@ -912,9 +1086,11 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 		/* TODO: set info.tsf_bssid from link_info->bssid */
 
 		ieee80211_scan_completed(mld->hw, &info);
+	} else if (mld->scan.uid_status[uid] == IWL_MLD_SCAN_SCHED) {
+		ieee80211_sched_scan_stopped(mld->hw);
+		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
 	}
 
-	/* TODO: mld->scan.uid_status[uid] == IWL_MLD_SCAN_SCHED */
 	/* TODO: mld->scan.uid_status[uid] == IWL_MLD_SCAN_INT_MLO (task=mlo)*/
 
 	mld->scan.status &= ~mld->scan.uid_status[uid];

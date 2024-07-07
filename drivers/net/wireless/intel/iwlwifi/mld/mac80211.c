@@ -875,6 +875,37 @@ iwl_mld_mac80211_cancel_hw_scan(struct ieee80211_hw *hw,
 		iwl_mld_scan_stop(mld, IWL_MLD_SCAN_REGULAR, true);
 }
 
+static int
+iwl_mld_mac80211_sched_scan_start(struct ieee80211_hw *hw,
+				  struct ieee80211_vif *vif,
+				  struct cfg80211_sched_scan_request *req,
+				  struct ieee80211_scan_ies *ies)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	return iwl_mld_sched_scan_start(mld, vif, req, ies, IWL_MLD_SCAN_SCHED);
+}
+
+static int
+iwl_mld_mac80211_sched_scan_stop(struct ieee80211_hw *hw,
+				 struct ieee80211_vif *vif)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* Due to a race condition, it's possible that mac80211 asks
+	 * us to stop a sched_scan when it's already stopped. This
+	 * can happen, for instance, if we stopped the scan ourselves,
+	 * called ieee80211_sched_scan_stopped() and the userspace called
+	 * stop sched scan before ieee80211_sched_scan_stopped_work()
+	 * could run. To handle this, simply return if the scan is
+	 * not running.
+	 */
+	if (mld->scan.status & IWL_MLD_SCAN_SCHED)
+		return iwl_mld_scan_stop(mld, IWL_MLD_SCAN_SCHED, true);
+
+	return 0;
+}
+
 static void
 iwl_mld_mac80211_reconfig_complete(struct ieee80211_hw *hw,
 				   enum ieee80211_reconfig_type reconfig_type)
@@ -999,6 +1030,8 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.set_key = iwl_mld_mac80211_set_key,
 	.hw_scan = iwl_mld_mac80211_hw_scan,
 	.cancel_hw_scan = iwl_mld_mac80211_cancel_hw_scan,
+	.sched_scan_start = iwl_mld_mac80211_sched_scan_start,
+	.sched_scan_stop = iwl_mld_mac80211_sched_scan_stop,
 	.mgd_prepare_tx = iwl_mld_mac80211_mgd_prepare_tx,
 	.mgd_complete_tx = iwl_mld_mac_mgd_complete_tx,
 #ifdef CONFIG_PM_SLEEP

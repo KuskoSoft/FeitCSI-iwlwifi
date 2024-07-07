@@ -22,6 +22,21 @@
 
 #define IWL_MLD_MAX_ADDRESSES		5
 
+/* enum iwl_mld_pass_all_sched_results_states - Defines the states for
+ * handling/passing scheduled scan results to mac80211
+ * @SCHED_SCAN_PASS_ALL_STATE_DISABLED: Don't pass all scan results, only when
+ *	a match found.
+ * @SCHED_SCAN_PASS_ALL_STATE_ENABLED: Pass all scan results is enabled
+ *	(no filtering).
+ * @SCHED_SCAN_PASS_ALL_STATE_FOUND: A scan result is found, pass it on the
+ *	next scan iteration complete notification.
+ */
+enum iwl_mld_pass_all_sched_results_states {
+	SCHED_SCAN_PASS_ALL_STATE_DISABLED,
+	SCHED_SCAN_PASS_ALL_STATE_ENABLED,
+	SCHED_SCAN_PASS_ALL_STATE_FOUND,
+};
+
 /**
  * struct iwl_mld - MLD op mode
  *
@@ -59,6 +74,7 @@
  * @scan.start_tsf: start time of last scan in TSF of the link that requested
  *	the scan.
  * @scan.last_ebs_failed: true if the last EBS (Energy Based Scan) failed.
+ * @scan.pass_all_sched_res: see %enum iwl_mld_pass_all_sched_results_states
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
@@ -99,6 +115,7 @@ struct iwl_mld {
 		u32 uid_status[IWL_MAX_UMAC_SCANS];
 		u64 start_tsf;
 		bool last_ebs_failed;
+		enum iwl_mld_pass_all_sched_results_states pass_all_sched_res;
 	} scan;
 #ifdef CONFIG_PM_SLEEP
 	struct wiphy_wowlan_support wowlan;

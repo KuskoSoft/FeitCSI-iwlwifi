@@ -127,6 +127,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_SIZES(LEGACY_GROUP, SCAN_ITERATION_COMPLETE_UMAC,
 			 scan_iter_complete_notif,
 			 RX_HANDLER_SYNC)
+	RX_HANDLER_NO_VAL(LEGACY_GROUP, MATCH_FOUND_NOTIFICATION,
+			  match_found_notif, RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION, mfuart_notif,
 			 RX_HANDLER_SYNC)
 

@@ -90,12 +90,13 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	}
 
 	/* management stuff on default queue */
-	if (!queue) {
-		if (unlikely(ieee80211_is_beacon(hdr->frame_control) ||
-			     ieee80211_is_probe_resp(hdr->frame_control)))
-			rx_status->boottime_ns = ktime_get_boottime_ns();
+	if (!queue &&
+	    unlikely(ieee80211_is_beacon(hdr->frame_control) ||
+		     ieee80211_is_probe_resp(hdr->frame_control))) {
+		rx_status->boottime_ns = ktime_get_boottime_ns();
 
-		/* TODO: SCHED_SCAN_PASS_ALL_FOUND */
+		if (mld->scan.pass_all_sched_res == SCHED_SCAN_PASS_ALL_STATE_ENABLED)
+			mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_FOUND;
 	}
 
 	band = BAND_IN_RX_STATUS(mpdu_desc->mac_phy_idx);
