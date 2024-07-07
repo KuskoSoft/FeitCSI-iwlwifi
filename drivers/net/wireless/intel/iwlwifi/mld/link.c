@@ -142,7 +142,41 @@ static void iwl_mld_fill_rates(struct iwl_mld *mld,
 	*ofdm_rates = cpu_to_le32((u32)ofdm);
 }
 
-static void iwl_mld_fill_pretection_flags(void) {}
+static void iwl_mld_fill_pretection_flags(struct iwl_mld *mld,
+					  struct ieee80211_bss_conf *link,
+					  __le32 *protection_flags)
+{
+	u8 protection_mode = link->ht_operation_mode &
+				IEEE80211_HT_OP_MODE_PROTECTION;
+	u8 ht_flag = LINK_PROT_FLG_HT_PROT | LINK_PROT_FLG_FAT_PROT;
+
+	IWL_DEBUG_RATE(mld, "HT protection mode: %d\n", protection_mode);
+
+	if (link->use_cts_prot)
+		*protection_flags |= cpu_to_le32(LINK_PROT_FLG_TGG_PROTECT);
+
+	/* See section 9.23.3.1 of IEEE 80211-2012.
+	 * Nongreenfield HT STAs Present is not supported.
+	 */
+	switch (protection_mode) {
+	case IEEE80211_HT_OP_MODE_PROTECTION_NONE:
+		break;
+	case IEEE80211_HT_OP_MODE_PROTECTION_NONMEMBER:
+	case IEEE80211_HT_OP_MODE_PROTECTION_NONHT_MIXED:
+		*protection_flags |= cpu_to_le32(ht_flag);
+		break;
+	case IEEE80211_HT_OP_MODE_PROTECTION_20MHZ:
+		/* Protect when channel wider than 20MHz */
+		if (link->chanreq.oper.width > NL80211_CHAN_WIDTH_20)
+			*protection_flags |= cpu_to_le32(ht_flag);
+		break;
+	default:
+		IWL_ERR(mld, "Illegal protection mode %d\n",
+			protection_mode);
+		break;
+	}
+}
+
 
 static void iwl_mld_fill_qos_params(void) {}
 
@@ -188,7 +222,7 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 	cmd.cck_short_preamble = cpu_to_le32(link->use_short_preamble);
 	cmd.short_slot = cpu_to_le32(link->use_short_slot);
 
-	iwl_mld_fill_pretection_flags();
+	iwl_mld_fill_pretection_flags(mld, link, &cmd.protection_flags);
 
 	iwl_mld_fill_qos_params();
 
