@@ -142,6 +142,7 @@ static const struct iwl_hcmd_names iwl_mld_reg_and_nvm_names[] = {
  */
 static const struct iwl_hcmd_names iwl_mld_debug_names[] = {
 	HCMD_NAME(HOST_EVENT_CFG),
+	HCMD_NAME(DBGC_SUSPEND_RESUME),
 };
 
 /* Please keep this array *SORTED* by hex value.
