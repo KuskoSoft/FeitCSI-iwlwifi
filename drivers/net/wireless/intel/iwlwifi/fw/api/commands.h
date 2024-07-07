@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
- * Copyright (C) 2018-2023 Intel Corporation
+ * Copyright (C) 2018-2024 Intel Corporation
  */
 #ifndef __iwl_fw_api_commands_h__
 #define __iwl_fw_api_commands_h__
@@ -474,7 +474,7 @@ enum iwl_legacy_cmds {
 	MARKER_CMD = 0xcb,
 
 	/**
-	 * @BT_PROFILE_NOTIFICATION: &struct iwl_bt_coex_profile_notif
+	 * @BT_PROFILE_NOTIFICATION: &struct iwl_bt_coex_prof_old_notif
 	 */
 	BT_PROFILE_NOTIFICATION = 0xce,
 
