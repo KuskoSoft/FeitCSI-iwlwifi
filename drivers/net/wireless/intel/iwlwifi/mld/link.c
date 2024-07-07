@@ -7,6 +7,7 @@
 #include "iface.h"
 #include "hcmd.h"
 #include "phy.h"
+#include "fw/api/rs.h"
 
 #include "fw/api/context.h"
 
@@ -54,7 +55,92 @@ static int iwl_mld_add_link_to_fw(struct iwl_mld *mld,
 	return iwl_mld_send_link_cmd(mld, &cmd, FW_CTXT_ACTION_ADD);
 }
 
-static void iwl_mld_fill_rates(void) {}
+/* Get the basic rates of the used band and add the mandatory ones */
+static void iwl_mld_fill_rates(struct iwl_mld *mld,
+			       struct ieee80211_bss_conf *link,
+			       struct ieee80211_chanctx_conf *chan_ctx,
+			       __le32 *cck_rates, __le32 *ofdm_rates)
+{
+	struct cfg80211_chan_def *chandef =
+		iwl_mld_get_chandef_from_chanctx(chan_ctx);
+	struct ieee80211_supported_band *sband =
+		mld->hw->wiphy->bands[chandef->chan->band];
+	unsigned long basic = link->basic_rates;
+	int lowest_present_ofdm = 100;
+	int lowest_present_cck = 100;
+	u32 cck = 0;
+	u32 ofdm = 0;
+	int i;
+
+	for_each_set_bit(i, &basic, BITS_PER_LONG) {
+		int hw = sband->bitrates[i].hw_value;
+
+		if (hw >= IWL_FIRST_OFDM_RATE) {
+			ofdm |= BIT(hw - IWL_FIRST_OFDM_RATE);
+			if (lowest_present_ofdm > hw)
+				lowest_present_ofdm = hw;
+		} else {
+			BUILD_BUG_ON(IWL_FIRST_CCK_RATE != 0);
+
+			cck |= BIT(hw);
+			if (lowest_present_cck > hw)
+				lowest_present_cck = hw;
+		}
+	}
+
+	/* Now we've got the basic rates as bitmaps in the ofdm and cck
+	 * variables. This isn't sufficient though, as there might not
+	 * be all the right rates in the bitmap. E.g. if the only basic
+	 * rates are 5.5 Mbps and 11 Mbps, we still need to add 1 Mbps
+	 * and 6 Mbps because the 802.11-2007 standard says in 9.6:
+	 *
+	 *    [...] a STA responding to a received frame shall transmit
+	 *    its Control Response frame [...] at the highest rate in the
+	 *    BSSBasicRateSet parameter that is less than or equal to the
+	 *    rate of the immediately previous frame in the frame exchange
+	 *    sequence ([...]) and that is of the same modulation class
+	 *    ([...]) as the received frame. If no rate contained in the
+	 *    BSSBasicRateSet parameter meets these conditions, then the
+	 *    control frame sent in response to a received frame shall be
+	 *    transmitted at the highest mandatory rate of the PHY that is
+	 *    less than or equal to the rate of the received frame, and
+	 *    that is of the same modulation class as the received frame.
+	 *
+	 * As a consequence, we need to add all mandatory rates that are
+	 * lower than all of the basic rates to these bitmaps.
+	 */
+
+	if (lowest_present_ofdm > IWL_RATE_24M_INDEX)
+		ofdm |= IWL_RATE_BIT_MSK(24) >> IWL_FIRST_OFDM_RATE;
+	if (lowest_present_ofdm > IWL_RATE_12M_INDEX)
+		ofdm |= IWL_RATE_BIT_MSK(12) >> IWL_FIRST_OFDM_RATE;
+	/* 6M already there or needed so always add */
+	ofdm |= IWL_RATE_BIT_MSK(6) >> IWL_FIRST_OFDM_RATE;
+
+	/* CCK is a bit more complex with DSSS vs. HR/DSSS vs. ERP.
+	 * Note, however:
+	 *  - if no CCK rates are basic, it must be ERP since there must
+	 *    be some basic rates at all, so they're OFDM => ERP PHY
+	 *    (or we're in 5 GHz, and the cck bitmap will never be used)
+	 *  - if 11M is a basic rate, it must be ERP as well, so add 5.5M
+	 *  - if 5.5M is basic, 1M and 2M are mandatory
+	 *  - if 2M is basic, 1M is mandatory
+	 *  - if 1M is basic, that's the only valid ACK rate.
+	 * As a consequence, it's not as complicated as it sounds, just add
+	 * any lower rates to the ACK rate bitmap.
+	 */
+	if (lowest_present_cck > IWL_RATE_11M_INDEX)
+		cck |= IWL_RATE_BIT_MSK(11) >> IWL_FIRST_CCK_RATE;
+	if (lowest_present_cck > IWL_RATE_5M_INDEX)
+		cck |= IWL_RATE_BIT_MSK(5) >> IWL_FIRST_CCK_RATE;
+	if (lowest_present_cck > IWL_RATE_2M_INDEX)
+		cck |= IWL_RATE_BIT_MSK(2) >> IWL_FIRST_CCK_RATE;
+	/* 1M already there or needed so always add */
+	cck |= IWL_RATE_BIT_MSK(1) >> IWL_FIRST_CCK_RATE;
+
+	*cck_rates = cpu_to_le32((u32)cck);
+	*ofdm_rates = cpu_to_le32((u32)ofdm);
+}
 
 static void iwl_mld_fill_pretection_flags(void) {}
 
@@ -94,7 +180,10 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 	if (vif->type == NL80211_IFTYPE_ADHOC && link->bssid)
 		ether_addr_copy(cmd.ibss_bssid_addr, link->bssid);
 
-	iwl_mld_fill_rates();
+	/* Channel context is needed to get the rates */
+	if (!WARN_ON((changes & LINK_CONTEXT_MODIFY_RATES_INFO) && !chan_ctx))
+		iwl_mld_fill_rates(mld, link, chan_ctx, &cmd.cck_rates,
+				   &cmd.ofdm_rates);
 
 	cmd.cck_short_preamble = cpu_to_le32(link->use_short_preamble);
 	cmd.short_slot = cpu_to_le32(link->use_short_slot);
