@@ -699,6 +699,158 @@ _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	return 0;
 }
 
+static int
+iwl_mld_scan_send_abort_cmd_status(struct iwl_mld *mld, int uid, u32 *status)
+{
+	struct iwl_umac_scan_abort abort_cmd = {
+		.uid = cpu_to_le32(uid),
+	};
+	struct iwl_host_cmd cmd = {
+		.id = WIDE_ID(LONG_GROUP, SCAN_ABORT_UMAC),
+		.flags = CMD_WANT_SKB,
+		.data = { &abort_cmd },
+		.len[0] = sizeof(abort_cmd),
+	};
+	struct iwl_rx_packet *pkt;
+	struct iwl_cmd_response *resp;
+	u32 resp_len;
+	int ret;
+
+	ret = iwl_mld_send_cmd(mld, &cmd);
+	if (ret)
+		return ret;
+
+	pkt = cmd.resp_pkt;
+
+	resp_len = iwl_rx_packet_payload_len(pkt);
+	if (IWL_FW_CHECK(mld, resp_len != sizeof(*resp),
+			 "Scan Abort: unexpected response length %d\n",
+			 resp_len)) {
+		ret = -EIO;
+		goto out;
+	}
+
+	resp = (void *)pkt->data;
+	*status = le32_to_cpu(resp->status);
+
+out:
+	iwl_free_resp(&cmd);
+	return ret;
+}
+
+static int
+iwl_mld_scan_abort(struct iwl_mld *mld, int type, bool *wait)
+{
+	int uid, ret;
+	enum iwl_umac_scan_abort_status status;
+
+	*wait = true;
+
+	/* We should always get a valid index here, because we already
+	 * checked that this type of scan was running in the generic
+	 * code.
+	 */
+	uid = iwl_mld_scan_uid_by_status(mld, type);
+	if (WARN_ON_ONCE(uid < 0))
+		return uid;
+
+	IWL_DEBUG_SCAN(mld, "Sending scan abort, uid %u\n", uid);
+
+	ret = iwl_mld_scan_send_abort_cmd_status(mld, uid, &status);
+
+	mld->scan.uid_status[uid] = type << IWL_MLD_SCAN_STOPPING_SHIFT;
+
+	IWL_DEBUG_SCAN(mld, "Scan abort: ret=%d status=%u\n", ret, status);
+
+	/* We don't need to wait to scan complete in the following cases:
+	 * 1. Driver failed to send the scan abort cmd.
+	 * 2. The FW is no longer familiar with the scan that needs to be
+	 *    stopped. It is expected that the scan complete notification was
+	 *    already received but not yet processed.
+	 *
+	 * In both cases the flow should continue similar to the case that the
+	 * scan was really aborted.
+	 */
+	if (ret || status == IWL_UMAC_SCAN_ABORT_STATUS_NOT_FOUND)
+		*wait = false;
+
+	return ret;
+}
+
+static int
+iwl_mld_scan_stop_wait(struct iwl_mld *mld, int type)
+{
+	struct iwl_notification_wait wait_scan_done;
+	static const u16 scan_comp_notif[] = { SCAN_COMPLETE_UMAC };
+	bool wait = true;
+	int ret;
+
+	iwl_init_notification_wait(&mld->notif_wait, &wait_scan_done,
+				   scan_comp_notif,
+				   ARRAY_SIZE(scan_comp_notif),
+				   NULL, NULL);
+
+	IWL_DEBUG_SCAN(mld, "Preparing to stop scan, type=%x\n", type);
+
+	ret = iwl_mld_scan_abort(mld, type, &wait);
+	if (ret) {
+		IWL_DEBUG_SCAN(mld, "couldn't stop scan type=%d\n", type);
+		goto return_no_wait;
+	}
+
+	if (!wait) {
+		IWL_DEBUG_SCAN(mld, "no need to wait for scan type=%d\n", type);
+		goto return_no_wait;
+	}
+
+	return iwl_wait_notification(&mld->notif_wait, &wait_scan_done, HZ);
+
+return_no_wait:
+	iwl_remove_notification(&mld->notif_wait, &wait_scan_done);
+	return ret;
+}
+
+int iwl_mld_scan_stop(struct iwl_mld *mld, int type, bool notify)
+{
+	int ret;
+
+	IWL_DEBUG_SCAN(mld,
+		       "Request to stop scan: type=0x%x, status=0x%x\n",
+		       type, mld->scan.status);
+
+	if (!(mld->scan.status & type))
+		return 0;
+
+	/* TODO: consider to return here in rfkill (task=rfkill) */
+
+	ret = iwl_mld_scan_stop_wait(mld, type);
+	if (!ret)
+		mld->scan.status |= type << IWL_MLD_SCAN_STOPPING_SHIFT;
+	else
+		IWL_DEBUG_SCAN(mld, "Failed to stop scan\n");
+
+	/* Clear the scan status so the next scan requests will
+	 * succeed and mark the scan as stopping, so that the Rx
+	 * handler doesn't do anything, as the scan was stopped from
+	 * above.
+	 */
+	mld->scan.status &= ~type;
+
+	if (type == IWL_MLD_SCAN_REGULAR) {
+		if (notify) {
+			struct cfg80211_scan_info info = {
+			    .aborted = true,
+			};
+
+			ieee80211_scan_completed(mld->hw, &info);
+		}
+	}
+	/* TODO: ieee80211_sched_scan_stopped */
+	/* TODO: SCHED_SCAN_PASS_ALL_DISABLED */
+
+	return ret;
+}
+
 int iwl_mld_regular_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			       struct cfg80211_scan_request *req,
 			       struct ieee80211_scan_ies *ies)

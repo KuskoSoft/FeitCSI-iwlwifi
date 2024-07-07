@@ -862,7 +862,17 @@ static void
 iwl_mld_mac80211_cancel_hw_scan(struct ieee80211_hw *hw,
 				struct ieee80211_vif *vif)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* Due to a race condition, it's possible that mac80211 asks
+	 * us to stop a hw_scan when it's already stopped. This can
+	 * happen, for instance, if we stopped the scan ourselves,
+	 * called ieee80211_scan_completed() and the userspace called
+	 * cancel scan before ieee80211_scan_work() could run.
+	 * To handle that, simply return if the scan is not running.
+	 */
+	if (mld->scan.status & IWL_MLD_SCAN_REGULAR)
+		iwl_mld_scan_stop(mld, IWL_MLD_SCAN_REGULAR, true);
 }
 
 static void
