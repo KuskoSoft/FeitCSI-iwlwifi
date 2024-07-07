@@ -701,11 +701,52 @@ update:
 static
 int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 			       struct ieee80211_vif *vif,
-			       struct ieee80211_bss_conf *link_conf,
+			       struct ieee80211_bss_conf *link,
 			       struct ieee80211_chanctx_conf *ctx)
 {
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (WARN_ON(!mld_link))
+		return -EINVAL;
+
+	/* TODO: for AP, send mac ctxt cmd to update HE cap (or in start_ap?)
+	 * (task=AP)
+	 */
+
+	rcu_assign_pointer(mld_link->chan_ctx, ctx);
+
+	/* TODO: detect entering EMLSR (task=EMLSR) */
+
+	/* First send the link command with the phy context ID.
+	 * Now that we have the phy, we know the band so also the rates
+	 */
+	ret = iwl_mld_change_link_in_fw(mld, link,
+					LINK_CONTEXT_MODIFY_RATES_INFO);
+	if (ret)
+		goto err;
+
+	/* TODO: Initialize rate control for the AP station, since we might be
+	 * doing a link switch here - we cannot initialize it before since
+	 * this needs the phy context assigned (and in FW?), and we cannot
+	 * do it later because it needs to be initialized as soon as we're
+	 * able to TX on the link, i.e. when active. (task=link-switch)
+	 */
+
+	/* TODO: send ap_tx_power_constraint_cmd for STA (task=6GHZ)*/
+
+	/* Now activate the link */
+	ret = iwl_mld_activate_link(mld, link);
+	if (ret)
+		goto err;
+
+	return 0;
+err:
+	RCU_INIT_POINTER(mld_link->chan_ctx, NULL);
+	return ret;
 }
 
 static

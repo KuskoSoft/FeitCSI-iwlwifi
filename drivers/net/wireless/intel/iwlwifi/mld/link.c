@@ -243,7 +243,7 @@ static bool iwl_mld_fill_mu_edca(const struct iwl_mld_link *mld_link,
 	return true;
 }
 
-static int
+int
 iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 			  u32 changes)
 {
@@ -338,6 +338,27 @@ send_cmd:
 	cmd.flags = cpu_to_le32(flags);
 
 	return iwl_mld_send_link_cmd(mld, &cmd, FW_CTXT_ACTION_MODIFY);
+}
+
+int iwl_mld_activate_link(struct iwl_mld *mld,
+			  struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (WARN_ON(!mld_link))
+		return -EINVAL;
+
+	mld_link->active = true;
+
+	ret = iwl_mld_change_link_in_fw(mld, link,
+					LINK_CONTEXT_MODIFY_ACTIVE);
+	if (ret)
+		mld_link->active = false;
+
+	return ret;
 }
 
 static int
