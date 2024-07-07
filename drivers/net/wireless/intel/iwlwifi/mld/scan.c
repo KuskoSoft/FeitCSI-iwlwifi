@@ -1611,6 +1611,41 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 	/* TODO: trig_link_selection_work (task=mlo)*/
 }
 
+/* This function is used in nic restart flow, to inform mac80211 about scans
+ * that were aborted by restart flow or by an assert.
+ */
+void iwl_mld_report_scan_aborted(struct iwl_mld *mld)
+{
+	int uid;
+
+	uid = iwl_mld_scan_uid_by_status(mld, IWL_MLD_SCAN_REGULAR);
+	if (uid >= 0) {
+		struct cfg80211_scan_info info = {
+			.aborted = true,
+		};
+
+		ieee80211_scan_completed(mld->hw, &info);
+		mld->scan.uid_status[uid] = 0;
+	}
+
+	uid = iwl_mld_scan_uid_by_status(mld, IWL_MLD_SCAN_SCHED);
+	if (uid >= 0) {
+		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
+		mld->scan.uid_status[uid] = 0;
+
+		/* sched scan will be restarted by mac80211 in reconfig.
+		 * report to mac80211 that sched scan stopped only if we won't
+		 * restart the firmware.
+		 */
+		if (!iwlwifi_mod_params.fw_restart)
+			ieee80211_sched_scan_stopped(mld->hw);
+	}
+
+	/* TODO: IWL_MLD_SCAN_INT_MLO */
+
+	memset(mld->scan.uid_status, 0, sizeof(mld->scan.uid_status));
+}
+
 int iwl_mld_alloc_scan_cmd(struct iwl_mld *mld)
 {
 	u8 scan_cmd_ver = iwl_fw_lookup_cmd_ver(mld->fw, SCAN_REQ_UMAC,

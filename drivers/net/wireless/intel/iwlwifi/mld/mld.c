@@ -374,6 +374,14 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
 	/* WRT */
 	iwl_fw_error_collect(&mld->fwrt, sync);
 
+	/* It is necessary to abort any os scan here because mac80211 requires
+	 * having the scan cleared before restarting.
+	 * We'll reset the scan_status to NONE in restart cleanup in
+	 * the next drv_start() call from mac80211. If ieee80211_hw_restart
+	 * isn't called scan status will stay busy.
+	 */
+	iwl_mld_report_scan_aborted(mld);
+
 	/* Do restart only in the following conditions are met:
 	 * 1. sync=false
 	 *    (true means that the device is going to be shut down now)

@@ -45,6 +45,8 @@ static inline int iwl_mld_scan_max_template_size(void)
 	return SCAN_OFFLOAD_PROBE_REQ_SIZE - DRIVER_TOTAL_IES_LEN;
 }
 
+void iwl_mld_report_scan_aborted(struct iwl_mld *mld);
+
 #define IWL_MLD_SCAN_STOPPING_SHIFT	8
 
 enum iwl_mld_scan_status {
