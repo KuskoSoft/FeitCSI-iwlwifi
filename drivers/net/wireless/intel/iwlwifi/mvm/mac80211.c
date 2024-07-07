@@ -1585,8 +1585,7 @@ int iwl_mvm_set_tx_power(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 			cpu_to_le32(iwl_mvm_vif_from_mac80211(vif)->id),
 	};
 	struct iwl_dev_tx_power_cmd cmd_v9_v10;
-	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw, cmd_id,
-					   IWL_FW_CMD_VER_UNKNOWN);
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw, cmd_id, 3);
 	u16 u_tx_power = tx_power == IWL_DEFAULT_MAX_TX_POWER ?
 		IWL_DEV_MAX_TX_POWER : 8 * tx_power;
 	void *cmd_data = &cmd;
