@@ -14,12 +14,16 @@
  *
  * @fw_id: the fw id of the link.
  * @active: if the link is active or not.
+ * @queue_params: QoS data from mac80211. This is updated with a call to
+ *	drv_conf_tx per each AC, and then notified once with BSS_CHANGED_QOS.
+ *	So we store it here and then send one link cmd for all the ACs.
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
 		u8 fw_id;
 		bool active;
+		struct ieee80211_tx_queue_params queue_params[IEEE80211_NUM_ACS];
 	);
 	/* And here fields that survive a fw restart */
 };

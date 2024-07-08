@@ -855,6 +855,36 @@ void iwl_mld_mac_mgd_complete_tx(struct ieee80211_hw *hw,
 	iwl_mld_cancel_session_protection(mld, vif, info->link_id);
 }
 
+static int
+iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
+			 struct ieee80211_vif *vif,
+			 unsigned int link_id, u16 ac,
+			 const struct ieee80211_tx_queue_params *params)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_link *link;
+
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return 0;
+	}
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	link = iwl_mld_link_dereference_check(mld_vif, link_id);
+	if (!link)
+		return -EINVAL;
+
+	link->queue_params[ac] = *params;
+
+	/* No need to update right away, we'll get BSS_CHANGED_QOS
+	 * The exception is P2P_DEVICE interface which needs immediate update.
+	 */
+	/* TODO: change link for p2p device (task=P2P) */
+	return 0;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -862,6 +892,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.config = iwl_mld_mac80211_config,
 	.add_interface = iwl_mld_mac80211_add_interface,
 	.remove_interface = iwl_mld_mac80211_remove_interface,
+	.conf_tx = iwl_mld_mac80211_conf_tx,
 	.configure_filter = iwl_mld_mac80211_configure_filter,
 	.reconfig_complete = iwl_mld_mac80211_reconfig_complete,
 	.wake_tx_queue = iwl_mld_mac80211_wake_tx_queue,
