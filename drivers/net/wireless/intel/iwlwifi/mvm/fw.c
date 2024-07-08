@@ -987,8 +987,6 @@ int iwl_mvm_sar_select_profile(struct iwl_mvm *mvm, int prof_a, int prof_b)
 		len = sizeof(cmd_v9_v10.v9);
 		n_subbands = IWL_NUM_SUB_BANDS_V1;
 		per_chain = &cmd_v9_v10.v9.per_chain[0][0];
-		cmd_v9_v10.v9.flags =
-			cpu_to_le32(mvm->fwrt.reduced_power_flags);
 	} else if (cmd_ver >= 7) {
 		len = sizeof(cmd.v7);
 		n_subbands = IWL_NUM_SUB_BANDS_V2;

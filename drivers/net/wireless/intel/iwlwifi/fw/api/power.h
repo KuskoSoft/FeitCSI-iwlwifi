@@ -452,15 +452,13 @@ struct iwl_dev_tx_power_cmd_v3_v8 {
  * @reserved1: reserved (padding)
  * @timer_period: timer in milliseconds. if expires FW will change to default
  *	BIOS values. relevant if setMode is IWL_TX_POWER_MODE_SET_SAR_TIMER
- * @flags: reduce power flags.
  */
 struct iwl_dev_tx_power_cmd_v9 {
 	__le16 reserved;
 	__le16 per_chain[IWL_NUM_CHAIN_LIMITS][IWL_NUM_SUB_BANDS_V1];
 	u8 per_chain_restriction_changed;
-	__le16 reserved1;
+	u8 reserved1[3];
 	__le32 timer_period;
-	__le32 flags;
 } __packed; /* TX_REDUCED_POWER_API_S_VER_9 */
 
 /**
@@ -484,15 +482,17 @@ struct iwl_dev_tx_power_cmd_v10 {
 } __packed; /* TX_REDUCED_POWER_API_S_VER_10 */
 
 /*
- * struct iwl_dev_tx_power_cmd_v3_v8 - TX power reduction command (multiversion)
+ * struct iwl_dev_tx_power_cmd - TX power reduction command (multiversion)
  * @common: common part of the command
  * @v9: version 9 part of the command
  * @v10: version 10 part of the command
  */
 struct iwl_dev_tx_power_cmd {
 	struct iwl_dev_tx_power_common common;
-	struct iwl_dev_tx_power_cmd_v9 v9;
-	struct iwl_dev_tx_power_cmd_v10 v10;
+	union {
+		struct iwl_dev_tx_power_cmd_v9 v9;
+		struct iwl_dev_tx_power_cmd_v10 v10;
+	};
 } __packed; /* TX_REDUCED_POWER_API_S_VER_9_VER10 */
 
 #define IWL_NUM_GEO_PROFILES		3
