@@ -7,6 +7,8 @@
 
 #include <linux/leds.h>
 
+#include <net/mac80211.h>
+
 #include "iwl-trans.h"
 #include "iwl-op-mode.h"
 #include "fw/runtime.h"
@@ -204,5 +206,22 @@ void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
 			      struct ieee80211_vif *vif,
 			      struct ieee80211_bss_conf *link_conf,
 			      struct dentry *dir);
+
+/* Utilities */
+
+static inline u8 iwl_mld_mac80211_ac_to_fw_tx_fifo(enum ieee80211_ac_numbers ac)
+{
+	static const u8 mac80211_ac_to_fw_tx_fifo[] = {
+		IWL_BZ_EDCA_TX_FIFO_VO,
+		IWL_BZ_EDCA_TX_FIFO_VI,
+		IWL_BZ_EDCA_TX_FIFO_BE,
+		IWL_BZ_EDCA_TX_FIFO_BK,
+		IWL_BZ_TRIG_TX_FIFO_VO,
+		IWL_BZ_TRIG_TX_FIFO_VI,
+		IWL_BZ_TRIG_TX_FIFO_BE,
+		IWL_BZ_TRIG_TX_FIFO_BK,
+	};
+	return mac80211_ac_to_fw_tx_fifo[ac];
+}
 
 #endif /* __iwl_mld_h__ */

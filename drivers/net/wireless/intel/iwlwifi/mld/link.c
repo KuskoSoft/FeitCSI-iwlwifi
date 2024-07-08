@@ -8,6 +8,8 @@
 #include "hcmd.h"
 #include "phy.h"
 #include "fw/api/rs.h"
+#include "fw/api/txq.h"
+#include "fw/api/mac.h"
 
 #include "fw/api/context.h"
 
@@ -177,8 +179,45 @@ static void iwl_mld_fill_pretection_flags(struct iwl_mld *mld,
 	}
 }
 
+static u8 iwl_mld_mac80211_ac_to_fw_ac(enum ieee80211_ac_numbers ac)
+{
+	static const u8 mac80211_ac_to_fw[] = {
+		AC_VO,
+		AC_VI,
+		AC_BE,
+		AC_BK
+	};
 
-static void iwl_mld_fill_qos_params(void) {}
+	return mac80211_ac_to_fw[ac];
+}
+
+static void iwl_mld_fill_qos_params(struct ieee80211_bss_conf *link,
+				    struct iwl_ac_qos *ac, __le32 *qos_flags)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+
+	/* no need to check mld_link since it is done in the caller */
+
+	for (int mac_ac = 0; mac_ac < IEEE80211_NUM_ACS; mac_ac++) {
+		u8 txf = iwl_mld_mac80211_ac_to_fw_tx_fifo(mac_ac);
+		u8 fw_ac = iwl_mld_mac80211_ac_to_fw_ac(mac_ac);
+
+		ac[fw_ac].cw_min =
+			cpu_to_le16(mld_link->queue_params[mac_ac].cw_min);
+		ac[fw_ac].cw_max =
+			cpu_to_le16(mld_link->queue_params[mac_ac].cw_max);
+		ac[fw_ac].edca_txop =
+			cpu_to_le16(mld_link->queue_params[mac_ac].txop * 32);
+		ac[fw_ac].aifsn = mld_link->queue_params[mac_ac].aifs;
+		ac[fw_ac].fifos_mask = BIT(txf);
+	}
+
+	if (link->qos)
+		*qos_flags |= cpu_to_le32(MAC_QOS_FLG_UPDATE_EDCA);
+
+	if (link->chanreq.oper.width != NL80211_CHAN_WIDTH_20_NOHT)
+		*qos_flags |= cpu_to_le32(MAC_QOS_FLG_TGN);
+}
 
 static void iwl_mld_fill_mu_edca(void) {}
 
@@ -224,7 +263,7 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 
 	iwl_mld_fill_pretection_flags(mld, link, &cmd.protection_flags);
 
-	iwl_mld_fill_qos_params();
+	iwl_mld_fill_qos_params(link, cmd.ac, &cmd.qos_flags);
 
 	cmd.bi = cpu_to_le32(link->beacon_int);
 	cmd.dtim_interval = cpu_to_le32(link->beacon_int * link->dtim_period);
