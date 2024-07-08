@@ -219,7 +219,29 @@ static void iwl_mld_fill_qos_params(struct ieee80211_bss_conf *link,
 		*qos_flags |= cpu_to_le32(MAC_QOS_FLG_TGN);
 }
 
-static void iwl_mld_fill_mu_edca(void) {}
+static bool iwl_mld_fill_mu_edca(const struct iwl_mld_link *mld_link,
+				 struct iwl_he_backoff_conf *trig_based_txf)
+{
+	for (int mac_ac = 0; mac_ac < IEEE80211_NUM_ACS; mac_ac++) {
+		const struct ieee80211_he_mu_edca_param_ac_rec *mu_edca =
+			&mld_link->queue_params[mac_ac].mu_edca_param_rec;
+		u8 fw_ac = iwl_mld_mac80211_ac_to_fw_ac(mac_ac);
+
+		if (!mld_link->queue_params[mac_ac].mu_edca)
+			return false;
+
+		trig_based_txf[fw_ac].cwmin =
+			cpu_to_le16(mu_edca->ecw_min_max & 0xf);
+		trig_based_txf[fw_ac].cwmax =
+			cpu_to_le16((mu_edca->ecw_min_max & 0xf0) >> 4);
+		trig_based_txf[fw_ac].aifsn =
+			cpu_to_le16(mu_edca->aifsn & 0xf);
+		trig_based_txf[fw_ac].mu_time =
+			cpu_to_le16(mu_edca->mu_edca_timer);
+	}
+
+	return true;
+}
 
 static int
 iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
@@ -284,7 +306,8 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 		cmd.rand_alloc_ecwmax = (link->uora_ocw_range >> 3) & 0x7;
 	}
 
-	iwl_mld_fill_mu_edca();
+	if (iwl_mld_fill_mu_edca(mld_link, cmd.trig_based_txf))
+		flags |= LINK_FLG_MU_EDCA_CW;
 
 	cmd.bss_color = link->he_bss_color.color;
 
