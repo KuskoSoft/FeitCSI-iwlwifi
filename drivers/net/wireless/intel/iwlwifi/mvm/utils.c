@@ -1296,7 +1296,7 @@ bool iwl_mvm_vif_is_active(struct iwl_mvm_vif *mvmvif)
 	return false;
 }
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 int iwl_mvm_send_csi_cmd(struct iwl_mvm *mvm)
 {
 	/*
@@ -1331,4 +1331,4 @@ int iwl_mvm_send_csi_cmd(struct iwl_mvm *mvm)
 
 	return iwl_mvm_send_cmd_pdu(mvm, id, 0, size, &cfg);
 }
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */

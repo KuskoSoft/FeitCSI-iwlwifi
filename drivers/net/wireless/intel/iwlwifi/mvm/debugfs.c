@@ -1987,7 +1987,7 @@ iwl_dbgfs_uapsd_noagg_bssids_read(struct file *file, char __user *user_buf,
 	return simple_read_from_buffer(user_buf, count, ppos, buf, pos);
 }
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 static ssize_t iwl_dbgfs_tx_power_status_read(struct file *file,
 					      char __user *user_buf,
 					      size_t count, loff_t *ppos)
@@ -2280,7 +2280,7 @@ static ssize_t iwl_dbgfs_csi_addresses_write(struct iwl_mvm *mvm, char *buf,
 
 	return count;
 }
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 
 static ssize_t
 iwl_dbgfs_ltr_config_write(struct iwl_mvm *mvm,
@@ -2447,7 +2447,7 @@ MVM_DEBUGFS_WRITE_FILE_OPS(indirection_tbl,
 MVM_DEBUGFS_WRITE_FILE_OPS(inject_packet, 512);
 MVM_DEBUGFS_WRITE_FILE_OPS(inject_beacon_ie, 512);
 MVM_DEBUGFS_WRITE_FILE_OPS(inject_beacon_ie_restore, 512);
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 MVM_DEBUGFS_READ_FILE_OPS(tx_power_status);
 MVM_DEBUGFS_READ_WRITE_FILE_OPS(csi_enabled, 8);
 MVM_DEBUGFS_READ_WRITE_FILE_OPS(csi_count, 32);
@@ -2679,7 +2679,7 @@ void iwl_mvm_dbgfs_register(struct iwl_mvm *mvm)
 	MVM_DEBUGFS_ADD_FILE(sar_geo_profile, mvm->debugfs_dir, 0400);
 	MVM_DEBUGFS_ADD_FILE(wifi_6e_enable, mvm->debugfs_dir, 0400);
 #endif
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	MVM_DEBUGFS_ADD_FILE(tx_power_status, mvm->debugfs_dir, 0400);
 
 	if (fw_has_capa(&mvm->fw->ucode_capa,

@@ -279,7 +279,7 @@ int iwl_sar_fill_profile(struct iwl_fw_runtime *fwrt,
 			break;
 	}
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	fwrt->sar_chain_a_profile = prof_a;
 	fwrt->sar_chain_b_profile = prof_b;
 #endif

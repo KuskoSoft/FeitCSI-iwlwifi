@@ -932,7 +932,7 @@ struct iwl_mvm_dqa_txq_info {
 	enum iwl_mvm_queue_status status;
 };
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 struct iwl_csi_data_buffer {
 	struct page *page;
 	unsigned int offset;
@@ -1309,7 +1309,7 @@ struct iwl_mvm {
 		} peer;
 	} tdls_cs;
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	struct iwl_dev_tx_power_cmd_v3_v8 txp_cmd;
 #endif
 
@@ -1329,7 +1329,7 @@ struct iwl_mvm {
 
 	struct list_head resp_pasn_list;
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	struct iwl_mcast_filter_cmd *mcast_active_filter_cmd;
 	u8 rx_filters;
 
@@ -1353,14 +1353,14 @@ struct iwl_mvm {
 	unsigned int csi_portid;
 
 	struct list_head list;
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 
 	struct ptp_data ptp_data;
 
 	struct {
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 		u8 csi_notif;
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 		u8 range_resp;
 	} cmd_ver;
 
@@ -2629,7 +2629,7 @@ void iwl_mvm_event_frame_timeout_callback(struct iwl_mvm *mvm,
 					  const struct ieee80211_sta *sta,
 					  u16 tid);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 void iwl_mvm_recalc_multicast(struct iwl_mvm *mvm);
 
 void iwl_mvm_active_rx_filters(struct iwl_mvm *mvm);

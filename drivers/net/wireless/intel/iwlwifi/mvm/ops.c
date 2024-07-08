@@ -80,7 +80,7 @@ static int __init iwl_mvm_init(void)
 	if (ret)
 		pr_err("Unable to register MVM op_mode: %d\n", ret);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	iwl_mvm_vendor_cmd_init();
 #endif
 
@@ -92,7 +92,7 @@ static void __exit iwl_mvm_exit(void)
 {
 	iwl_opmode_deregister("iwlmvm");
 	iwl_mvm_rate_control_unregister();
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	iwl_mvm_vendor_cmd_exit();
 #endif
 }
@@ -356,13 +356,13 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 		       iwl_mvm_tlc_update_notif, RX_HANDLER_SYNC,
 		       struct iwl_tlc_update_notif),
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	RX_HANDLER_GRP_NO_SIZE(LOCATION_GROUP, CSI_HEADER_NOTIFICATION,
 			       iwl_mvm_rx_csi_header, RX_HANDLER_ASYNC_LOCKED),
 	RX_HANDLER_GRP(LOCATION_GROUP, CSI_CHUNKS_NOTIFICATION,
 		       iwl_mvm_rx_csi_chunk, RX_HANDLER_ASYNC_LOCKED,
 		       struct iwl_csi_chunk_notification),
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 
 	RX_HANDLER(BT_PROFILE_NOTIFICATION, iwl_mvm_rx_bt_coex_old_notif,
 		   RX_HANDLER_ASYNC_LOCKED_WIPHY,
@@ -462,14 +462,14 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 	RX_HANDLER_GRP(DATA_PATH_GROUP, STA_PM_NOTIF,
 		       iwl_mvm_sta_pm_notif, RX_HANDLER_SYNC,
 		       struct iwl_mvm_pm_state_notification),
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	RX_HANDLER_GRP(NAN_GROUP, NAN_DISCOVERY_TERMINATE_NOTIF,
 		       iwl_mvm_nan_de_term_notif, RX_HANDLER_SYNC,
 		       struct iwl_nan_de_term),
 	RX_HANDLER_GRP(NAN_GROUP, NAN_DISCOVERY_EVENT_NOTIF,
 		       iwl_mvm_nan_match, RX_HANDLER_SYNC,
 		       struct iwl_nan_disc_evt_notify_v1),
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 	RX_HANDLER_GRP(MAC_CONF_GROUP, PROBE_RESPONSE_DATA_NOTIF,
 		       iwl_mvm_probe_resp_data_notif,
 		       RX_HANDLER_ASYNC_LOCKED,
@@ -1230,7 +1230,7 @@ static void iwl_mvm_mei_roaming_forbidden(void *priv, bool forbidden)
 	if (!mvm->hw_registered || !mvm->csme_vif)
 		return;
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	iwl_mvm_send_roaming_forbidden_event(mvm, mvm->csme_vif, forbidden);
 #endif
 }
@@ -1461,13 +1461,13 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	init_waitqueue_head(&mvm->rx_sync_waitq);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	/*
 	 * by default capture all frame types
 	 * (but of course leave it disabled)
 	 */
 	mvm->csi_cfg.frame_types = ~0ULL;
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 
 	mvm->queue_sync_state = 0;
 
@@ -1479,13 +1479,13 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	mvm->tcm.ll_ts = jiffies;
 	mvm->tcm.uapsd_nonagg_ts = jiffies;
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	mvm->rx_filters = IWL_MVM_VENDOR_RXFILTER_EINVAL;
 #endif
 
 	INIT_DELAYED_WORK(&mvm->cs_tx_unblock_dwork, iwl_mvm_tx_unblock_dwork);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	/* set command/notification versions we care about */
 	mvm->cmd_ver.csi_notif =
 		iwl_fw_lookup_notif_ver(mvm->fw, LOCATION_GROUP,
@@ -1722,13 +1722,13 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	kfree(mvm->error_recovery_buf);
 	mvm->error_recovery_buf = NULL;
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	kfree(mvm->mcast_active_filter_cmd);
 	mvm->mcast_active_filter_cmd = NULL;
 
 	if (mvm->hw_registered)
 		iwl_mvm_vendor_cmds_unregister(mvm);
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 
 	iwl_mvm_ptp_remove(mvm);
 

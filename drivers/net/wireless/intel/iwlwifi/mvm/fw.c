@@ -1480,7 +1480,7 @@ void iwl_mvm_send_recovery_cmd(struct iwl_mvm *mvm, u32 flags)
 
 static int iwl_mvm_sar_init(struct iwl_mvm *mvm)
 {
-#if defined(CPTCFG_IWLMVM_VENDOR_CMDS) && defined(CONFIG_ACPI)
+#if defined(CPTCFG_IWL_VENDOR_CMDS) && defined(CONFIG_ACPI)
 	/*
 	 * if no profile was chosen by the user yet, choose profile 1 (WRDS) as
 	 * default for both chains
@@ -1731,7 +1731,7 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 			goto error;
 	}
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	/* set_mode must be IWL_TX_POWER_MODE_SET_DEVICE if this was
 	 * ever initialized.
 	 */
@@ -1760,7 +1760,7 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 					 len, &mvm->txp_cmd))
 			IWL_ERR(mvm, "failed to update TX power\n");
 	}
-#endif /* CPTCFG_IWLMVM_VENDOR_CMDS */
+#endif /* CPTCFG_IWL_VENDOR_CMDS */
 
 	if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
 		iwl_mvm_send_recovery_cmd(mvm, ERROR_RECOVERY_UPDATE_DB);

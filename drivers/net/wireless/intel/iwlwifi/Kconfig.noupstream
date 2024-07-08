@@ -41,9 +41,9 @@ config IWLWIFI_FORCE_OFDM_RATE
 
 	  If unsure say N, Say Y if you have this code and want to transmit OFDM low rate.
 
-config IWLMVM_VENDOR_CMDS
+config IWL_VENDOR_CMDS
 	bool "enable vendor commands"
-	depends on IWLMVM
+	depends on IWLMVM || IWLMLD
 	default y
 	help
 	  This option enables support for vendor commands, including some

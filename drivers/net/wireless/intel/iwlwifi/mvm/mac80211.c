@@ -832,7 +832,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 		wiphy_ext_feature_set(hw->wiphy,
 				      NL80211_EXT_FEATURE_MU_MIMO_AIR_SNIFFER);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	iwl_mvm_vendor_cmds_register(mvm);
 #endif
 
@@ -870,7 +870,7 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 
 	ret = ieee80211_register_hw(mvm->hw);
 	if (ret) {
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 		iwl_mvm_vendor_cmds_unregister(mvm);
 #endif
 		iwl_mvm_leds_exit(mvm);
@@ -1432,7 +1432,7 @@ static void iwl_mvm_restart_complete(struct iwl_mvm *mvm)
 		IWL_ERR(mvm, "Failed to update quotas after restart (%d)\n",
 			ret);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	if (mvm->csi_cfg.flags & IWL_CHANNEL_ESTIMATION_ENABLE)
 		iwl_mvm_send_csi_cmd(mvm);
 #endif
@@ -2143,7 +2143,7 @@ static void iwl_mvm_mc_iface_iterator(void *_data, u8 *mac,
 	};
 	int ret, len;
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	if (!(mvm->rx_filters & IWL_MVM_VENDOR_RXFILTER_EINVAL) &&
 	    mvm->mcast_active_filter_cmd)
 		cmd = mvm->mcast_active_filter_cmd;
@@ -2169,7 +2169,7 @@ static void iwl_mvm_mc_iface_iterator(void *_data, u8 *mac,
 		IWL_ERR(mvm, "mcast filter cmd error. ret=%d\n", ret);
 }
 
-#ifndef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifndef CPTCFG_IWL_VENDOR_CMDS
 static
 #endif
 void iwl_mvm_recalc_multicast(struct iwl_mvm *mvm)
@@ -2264,7 +2264,7 @@ void iwl_mvm_configure_filter(struct ieee80211_hw *hw,
 	if (cmd->pass_all)
 		cmd->count = 0;
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	iwl_mvm_active_rx_filters(mvm);
 #endif
 	iwl_mvm_recalc_multicast(mvm);

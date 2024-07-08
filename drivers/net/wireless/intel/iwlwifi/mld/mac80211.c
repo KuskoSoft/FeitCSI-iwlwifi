@@ -14,6 +14,9 @@
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
 #endif /* CONFIG_PM_SLEEP */
+#ifdef CPTCFG_IWL_VENDOR_CMDS
+#include "vendor-cmd.h"
+#endif
 
 #define IWL_MLD_LIMITS(ap)					\
 	{							\
@@ -421,8 +424,11 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 
 	/* TODO:
 	 * 1. leds_init
-	 * 2. register vendor cmds
 	 */
+
+#ifdef CPTCFG_IWL_VENDOR_CMDS
+	iwl_mld_vendor_cmds_register(mld);
+#endif
 
 	return ieee80211_register_hw(mld->hw);
 }
