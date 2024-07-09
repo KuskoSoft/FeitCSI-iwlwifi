@@ -48,6 +48,9 @@ enum iwl_mld_pass_all_sched_results_states {
  *	ieee80211_vif. Mapping is valid only when the MAC exists in the fw.
  * @used_phy_ids: a bitmap of the phy IDs used. If a bit is set, it means
  *	that the index of this bit is already used as a PHY id.
+ * @fw_id_to_link_sta: maps a fw id of a sta to the corresponding
+ *	ieee80211_link_sta. This is not cleaned up on restart since we want to
+ *	preserve the fw sta ids during a restart (for SN/PN restoring).
  * @dev: pointer to device struct. For printing purposes
  * @trans: pointer to the transport layer
  * @cfg: pointer to the device configuration
@@ -92,6 +95,7 @@ struct iwl_mld {
 		struct ieee80211_vif __rcu *fw_id_to_vif[NUM_MAC_INDEX_DRIVER];
 		u8 used_phy_ids: NUM_PHY_CTX;
 	);
+	struct ieee80211_link_sta __rcu *fw_id_to_link_sta[IWL_STATION_COUNT_MAX];
 	/* And here fields that survive a fw restart */
 	struct device *dev;
 	struct iwl_trans *trans;
