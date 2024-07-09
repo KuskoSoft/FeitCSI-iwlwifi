@@ -46,4 +46,18 @@ void iwl_mld_schedule_session_protection(struct iwl_mld *mld,
 					 u32 duration, u32 min_duration,
 					 int link_id);
 
+/**
+ * iwl_mld_cancel_session_protection - cancel the session protection.
+ * @mld: the mld component
+ * @vif: the virtual interface for which the session is issued
+ * @link_id: cancel the session protection for given link
+ *
+ * This functions cancels the session protection which is an act of good
+ * citizenship. If it is not needed any more it should be canceled because
+ * the other mac contexts wait for the medium during that time.
+ */
+int iwl_mld_cancel_session_protection(struct iwl_mld *mld,
+				      struct ieee80211_vif *vif,
+				      int link_id);
+
 #endif /* __session_protect_h__ */

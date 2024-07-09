@@ -93,3 +93,39 @@ void iwl_mld_schedule_session_protection(struct iwl_mld *mld,
 		IWL_ERR(mld,
 			"Couldn't send the SESSION_PROTECTION_CMD\n");
 }
+
+int iwl_mld_cancel_session_protection(struct iwl_mld *mld,
+				      struct ieee80211_vif *vif,
+				      int link_id)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_link *link =
+		iwl_mld_link_dereference_check(mld_vif, link_id);
+	struct iwl_mld_session_protect *session_protect =
+		&mld_vif->session_protect;
+	struct iwl_session_prot_cmd cmd = {
+		.id_and_color = cpu_to_le32(link->fw_id),
+		.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE),
+		.conf_id = cpu_to_le32(SESSION_PROTECT_CONF_ASSOC),
+	};
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* If there isn't an active session on this link do nothing */
+	if (!session_protect->end_jiffies)
+		return 0;
+
+	ret = iwl_mld_send_cmd_pdu(mld,
+				   WIDE_ID(MAC_CONF_GROUP,
+					   SESSION_PROTECTION_CMD), &cmd);
+	if (ret) {
+		IWL_ERR(mld,
+			"Couldn't send the SESSION_PROTECTION_CMD\n");
+		return ret;
+	}
+
+	memset(session_protect, 0, sizeof(*session_protect));
+
+	return 0;
+}

@@ -758,6 +758,40 @@ void iwl_mld_mac80211_mgd_prepare_tx(struct ieee80211_hw *hw,
 					    info->link_id);
 }
 
+static
+void iwl_mld_mac_mgd_complete_tx(struct ieee80211_hw *hw,
+				 struct ieee80211_vif *vif,
+				 struct ieee80211_prep_tx_info *info)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* Successful authentication is the only case that requires to let the
+	 * the session protection go. We'll need it for the upcoming
+	 * association. For all the other cases, we need to cancel the session
+	 * protection.
+	 * After successful association the connection is established and
+	 * further mgd tx can rely on the quota.
+	 */
+	if (info->success && info->subtype == IEEE80211_STYPE_AUTH)
+		return;
+
+	/* The firmware will be on medium after we configure the vif as
+	 * associated. Removing the session protection allows the firmware
+	 * to stop being on medium. In order to ensure the continuity of our
+	 * presence on medium, we need first to configure the vif as associated
+	 * and only then, remove the session protection.
+	 * Currently, mac80211 calls vif_cfg_changed() first and then,
+	 * drv_mgd_complete_tx(). Ensure that this assumption stays true by
+	 * a warning.
+	 */
+	WARN_ON(info->success &&
+		(info->subtype == IEEE80211_STYPE_ASSOC_REQ ||
+		 info->subtype == IEEE80211_STYPE_REASSOC_REQ) &&
+		!vif->cfg.assoc);
+
+	iwl_mld_cancel_session_protection(mld, vif, info->link_id);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -779,6 +813,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.set_key = iwl_mld_mac80211_set_key,
 	.hw_scan = iwl_mld_mac80211_hw_scan,
 	.mgd_prepare_tx = iwl_mld_mac80211_mgd_prepare_tx,
+	.mgd_complete_tx = iwl_mld_mac_mgd_complete_tx,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,

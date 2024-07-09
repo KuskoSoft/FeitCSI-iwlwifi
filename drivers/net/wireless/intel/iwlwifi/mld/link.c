@@ -89,7 +89,10 @@ static int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* TODO: remove session protection for that link, if any */
+	ret = iwl_mld_cancel_session_protection(mld, link->vif, link->link_id);
+
+	if (ret)
+		return ret;
 
 	ret = iwl_mld_change_link_in_fw(mld, link,
 					LINK_CONTEXT_MODIFY_ACTIVE,
