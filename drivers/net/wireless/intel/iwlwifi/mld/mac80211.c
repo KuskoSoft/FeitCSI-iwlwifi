@@ -10,6 +10,7 @@
 #include "phy.h"
 #include "iface.h"
 #include "power.h"
+#include "sta.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #ifdef CONFIG_PM_SLEEP
@@ -374,9 +375,9 @@ static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
 
 	hw->chanctx_data_size = sizeof(struct iwl_mld_phy);
 	hw->vif_data_size = sizeof(struct iwl_mld_vif);
+	hw->sta_data_size = sizeof(struct iwl_mld_sta);
 	/* TODO set:
-	 * 1. hw->sta_data_size
-	 * 2. hw->txq_data_size
+	 * hw->txq_data_size
 	 */
 }
 
@@ -444,6 +445,9 @@ iwl_mld_restart_cleanup(struct iwl_mld *mld)
 
 	ieee80211_iterate_interfaces(mld->hw, IEEE80211_IFACE_ITER_ACTIVE,
 				     iwl_mld_cleanup_vif, NULL);
+
+	ieee80211_iterate_stations_atomic(mld->hw,
+					  iwl_mld_cleanup_sta, NULL);
 }
 
 static
