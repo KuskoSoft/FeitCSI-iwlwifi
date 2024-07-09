@@ -752,10 +752,28 @@ err:
 static
 void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 				  struct ieee80211_vif *vif,
-				  struct ieee80211_bss_conf *link_conf,
+				  struct ieee80211_bss_conf *link,
 				  struct ieee80211_chanctx_conf *ctx)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	int ret;
+
+	if (WARN_ON(!mld_link))
+		return;
+
+	ret = iwl_mld_deactivate_link(mld, link);
+	if (ret)
+		return;
+
+	/* TODO: detect exiting EMLSR (task=EMLSR)*/
+
+	RCU_INIT_POINTER(mld_link->chan_ctx, NULL);
+
+	/* TODO: when vif is not mld, and we are not associated, and the ap
+	 * sta doesn't exist, remove and add the default link to clean its
+	 * state in FW. (task=STA)
+	 */
 }
 
 #ifdef CONFIG_PM_SLEEP

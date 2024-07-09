@@ -46,6 +46,8 @@ int iwl_mld_remove_link(struct iwl_mld *mld,
 			struct ieee80211_bss_conf *bss_conf);
 int iwl_mld_activate_link(struct iwl_mld *mld,
 			  struct ieee80211_bss_conf *link);
+int iwl_mld_deactivate_link(struct iwl_mld *mld,
+			    struct ieee80211_bss_conf *link);
 int iwl_mld_change_link_in_fw(struct iwl_mld *mld,
 			      struct ieee80211_bss_conf *link, u32 changes);
 #endif /* __iwl_mld_link_h__ */

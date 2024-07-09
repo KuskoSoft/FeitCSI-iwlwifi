@@ -361,6 +361,32 @@ int iwl_mld_activate_link(struct iwl_mld *mld,
 	return ret;
 }
 
+int iwl_mld_deactivate_link(struct iwl_mld *mld,
+			    struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (WARN_ON(!mld_link))
+		return -EINVAL;
+
+	ret = iwl_mld_cancel_session_protection(mld, link->vif, link->link_id);
+	if (ret)
+		return ret;
+
+	mld_link->active = false;
+
+	ret = iwl_mld_change_link_in_fw(mld, link,
+					LINK_CONTEXT_MODIFY_ACTIVE);
+
+	if (ret)
+		mld_link->active = true;
+
+	return ret;
+}
+
 static int
 iwl_mld_rm_link_from_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link)
 {
@@ -377,24 +403,6 @@ iwl_mld_rm_link_from_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link)
 	cmd.phy_id = cpu_to_le32(FW_CTXT_INVALID);
 
 	return iwl_mld_send_link_cmd(mld, &cmd, FW_CTXT_ACTION_REMOVE);
-}
-
-static int iwl_mld_deactivate_link_in_fw(struct iwl_mld *mld,
-					 struct ieee80211_bss_conf *link)
-{
-	int ret;
-
-	lockdep_assert_wiphy(mld->wiphy);
-
-	ret = iwl_mld_cancel_session_protection(mld, link->vif, link->link_id);
-
-	if (ret)
-		return ret;
-
-	ret = iwl_mld_change_link_in_fw(mld, link,
-					LINK_CONTEXT_MODIFY_ACTIVE);
-
-	return ret;
 }
 
 IWL_MLD_ALLOC_FN(link, bss_conf)
@@ -435,10 +443,9 @@ int iwl_mld_remove_link(struct iwl_mld *mld,
 	int ret;
 
 	if (link->active) {
-		ret = iwl_mld_deactivate_link_in_fw(mld, bss_conf);
+		ret = iwl_mld_deactivate_link(mld, bss_conf);
 		if (ret)
 			return ret;
-		link->active = false;
 	}
 
 	ret = iwl_mld_rm_link_from_fw(mld, bss_conf);
