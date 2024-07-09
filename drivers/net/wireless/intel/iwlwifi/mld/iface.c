@@ -228,15 +228,16 @@ IWL_MLD_ALLOC_FN(vif, vif)
 
 /* Constructor function for struct iwl_mld_vif */
 static int
-iwl_mld_init_vif(struct iwl_mld *mld, struct iwl_mld_vif *mld_vif)
+iwl_mld_init_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 {
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
 	mld_vif->mld = mld;
 
-	ret = iwl_mld_allocate_vif_fw_id(mld, mld_vif);
+	ret = iwl_mld_allocate_vif_fw_id(mld, mld_vif, vif);
 	if (ret)
 		return ret;
 
@@ -255,7 +256,7 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
 
-	ret = iwl_mld_init_vif(mld, mld_vif);
+	ret = iwl_mld_init_vif(mld, vif);
 	if (ret)
 		return ret;
 

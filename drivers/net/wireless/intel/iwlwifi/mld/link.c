@@ -102,9 +102,10 @@ IWL_MLD_ALLOC_FN(link, bss_conf)
 
 /* Constructor function for struct iwl_mld_link */
 static int
-iwl_mld_init_link(struct iwl_mld *mld, struct iwl_mld_link *link)
+iwl_mld_init_link(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
+		  struct iwl_mld_link *mld_link)
 {
-	return iwl_mld_allocate_link_fw_id(mld, link);
+	return iwl_mld_allocate_link_fw_id(mld, mld_link, link);
 }
 
 /* Initializes the link structure, maps fw id to the ieee80211_bss_conf, and
@@ -116,7 +117,7 @@ int iwl_mld_add_link(struct iwl_mld *mld,
 	struct iwl_mld_link *link = iwl_mld_link_from_mac80211(bss_conf);
 	int ret;
 
-	ret = iwl_mld_init_link(mld, link);
+	ret = iwl_mld_init_link(mld, bss_conf, link);
 	if (ret)
 		return ret;
 
