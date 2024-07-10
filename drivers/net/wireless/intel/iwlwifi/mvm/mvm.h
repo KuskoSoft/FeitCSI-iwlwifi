@@ -1419,6 +1419,7 @@ struct iwl_mvm {
 	struct iwl_rfi_config_cmd *iwl_prev_rfi_config_cmd;
 	bool bios_enable_rfi;
 	void *iwl_rfi_subset_table;
+	u32 bios_enable_puncturing;
 };
 
 /* Extract MVM priv from op_mode and _hw */
