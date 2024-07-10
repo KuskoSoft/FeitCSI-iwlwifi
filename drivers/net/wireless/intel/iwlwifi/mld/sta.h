@@ -17,10 +17,14 @@
  * Embedded in ieee80211_sta.
  *
  * @vif: pointer the vif object.
+ * @sta_state: station state according to enum %ieee80211_sta_state
+ * @sta_type: type of this station. See &enum iwl_fw_sta_type
  */
 struct iwl_mld_sta {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
+		enum ieee80211_sta_state sta_state;
+		enum iwl_fw_sta_type sta_type;
 	);
 	struct ieee80211_vif *vif;
 	/* And here fields that survive a fw restart */
@@ -41,7 +45,7 @@ iwl_mld_cleanup_sta(void *data, struct ieee80211_sta *sta)
 }
 
 int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
-		    struct ieee80211_vif *vif);
+		    struct ieee80211_vif *vif, enum iwl_fw_sta_type type);
 int iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta);
 
 #endif /* __iwl_mld_sta_h__ */
