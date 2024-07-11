@@ -462,18 +462,20 @@ int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 
 	ret = iwl_mld_start_fw(mld);
 	if (ret)
-		return ret;
+		goto error;
 
 	iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_POINT_POST_INIT,
 			       NULL);
 	iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_POINT_PERIODIC,
 			       NULL);
 
+	return 0;
+
+error:
 	/* If we failed to restart the hw, there is nothing useful
 	 * we can do but indicate we are no longer in restart.
 	 */
-	if (ret)
-		mld->fw_status.in_hw_restart = false;
+	mld->fw_status.in_hw_restart = false;
 
 	return ret;
 }
