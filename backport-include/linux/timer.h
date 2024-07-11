@@ -79,4 +79,16 @@ static inline int timer_shutdown_sync(struct timer_list *t)
 }
 #endif
 
+/* This was backported to 4.19.312 and 5,4,274, but we do not support such high minor numbers use 255 instead. */
+#if LINUX_VERSION_IS_LESS(6,1,84) &&			\
+	!LINUX_VERSION_IN_RANGE(4,19,255, 4,20,0) &&	\
+	!LINUX_VERSION_IN_RANGE(5,4,255, 5,5,0) &&	\
+	!LINUX_VERSION_IN_RANGE(5,10,215, 5,11,0) &&	\
+	!LINUX_VERSION_IN_RANGE(5,15,154, 5,16,0)
+static inline int timer_delete_sync(struct timer_list *timer)
+{
+	return del_timer_sync(timer);
+}
+#endif /* < 6.1.84 */
+
 #endif /* _BACKPORT_TIMER_H */

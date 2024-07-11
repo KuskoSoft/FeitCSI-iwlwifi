@@ -10,10 +10,6 @@
 #include <crypto/public_key.h>
 #include <keys/asymmetric-type.h>
 
-#define x509_decode_time LINUX_BACKPORT(x509_decode_time)
-#define x509_cert_parse LINUX_BACKPORT(x509_cert_parse)
-#define x509_free_certificate LINUX_BACKPORT(x509_free_certificate)
-
 struct x509_certificate {
 	struct x509_certificate *next;
 	struct x509_certificate *signer;	/* Certificate that signed this one */

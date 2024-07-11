@@ -38,9 +38,8 @@ NOSTDINC_FLAGS += \
 endif
 
 subdir-ccflags-y := $(call cc-option, -fno-pie) $(call cc-option, -no-pie)
-ifeq ($(CPTCFG_KERNEL_4_3),y)
-subdir-ccflags-y += -Wno-pointer-sign
-endif
+
+subdir-ccflags-y += -std=gnu11
 
 # upstream moved, move the driver for a few constructions such as
 # variable declarations in for loops

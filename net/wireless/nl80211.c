@@ -471,13 +471,24 @@ static const struct netlink_range_validation nl80211_punct_bitmap_range = {
 	.min = 0,
 	.max = 0xffff,
 };
+
+static const struct netlink_range_validation q_range = {
+	.max = INT_MAX,
+};
 #else
+
 static struct netlink_range_validation nl80211_punct_bitmap_range = {
 	.min = 0,
 	.max = 0xffff,
 };
+
+static struct netlink_range_validation q_range = {
+	.max = INT_MAX,
+};
+
 #endif
 #endif
+
 
 static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[0] = { .strict_start_type = NL80211_ATTR_HE_OBSS_PD },
@@ -773,7 +784,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 
 	[NL80211_ATTR_TXQ_LIMIT] = { .type = NLA_U32 },
 	[NL80211_ATTR_TXQ_MEMORY_LIMIT] = { .type = NLA_U32 },
-	[NL80211_ATTR_TXQ_QUANTUM] = { .type = NLA_U32 },
+	[NL80211_ATTR_TXQ_QUANTUM] = NLA_POLICY_FULL_RANGE(NLA_U32, &q_range),
 	[NL80211_ATTR_HE_CAPABILITY] =
 		NLA_POLICY_VALIDATE_FN(NLA_BINARY, validate_he_capa,
 				       NL80211_HE_MAX_CAPABILITY_LEN),
@@ -17590,7 +17601,9 @@ static struct genl_family nl80211_fam __ro_after_init = {
 	.n_small_ops = ARRAY_SIZE(nl80211_small_ops),
 #endif
 #if LINUX_VERSION_IS_GEQ(6,1,0)
+#if LINUX_VERSION_IS_GEQ(6,1,0)
 	.resv_start_op = NL80211_CMD_REMOVE_LINK_STA + 1,
+#endif
 #endif
 	.mcgrps = nl80211_mcgrps,
 	.n_mcgrps = ARRAY_SIZE(nl80211_mcgrps),

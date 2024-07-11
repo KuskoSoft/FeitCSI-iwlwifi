@@ -8,11 +8,14 @@
 #define pr_fmt(fmt) "X.509: "fmt
 #include <crypto/hash.h>
 #include <crypto/sm2.h>
+#include <keys/asymmetric-parser.h>
+#include <keys/asymmetric-subtype.h>
 #include <keys/system_keyring.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/string.h>
+#include "asymmetric_keys.h"
 #include "x509_parser.h"
 
 /*
@@ -153,7 +156,6 @@ not_self_signed:
 	return 0;
 }
 
-#if 0
 /*
  * Attempt to parse a data blob for a key as an X509 certificate.
  */
@@ -263,4 +265,3 @@ module_exit(x509_key_exit);
 MODULE_DESCRIPTION("X.509 certificate parser");
 MODULE_AUTHOR("Red Hat, Inc.");
 MODULE_LICENSE("GPL");
-#endif

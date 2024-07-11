@@ -89,4 +89,16 @@ LINUX_BACKPORT(kfree_skb_reason)(struct sk_buff *skb, u32 reason)
 #define kfree_skb_reason LINUX_BACKPORT(kfree_skb_reason)
 #endif
 
+#if LINUX_VERSION_IS_LESS(5,11,0)
+#define napi_build_skb build_skb
+#endif
+
+#if LINUX_VERSION_IS_LESS(5,18,6)
+static inline struct sk_buff *LINUX_BACKPORT(skb_recv_datagram)(struct sock *sk, unsigned int flags, int *err)
+{
+	return skb_recv_datagram(sk, flags & ~MSG_DONTWAIT, flags & MSG_DONTWAIT, err);
+}
+#define skb_recv_datagram LINUX_BACKPORT(skb_recv_datagram)
+#endif /* < 5.17 */
+
 #endif /* __BACKPORT_SKBUFF_H */

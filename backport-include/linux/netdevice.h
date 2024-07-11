@@ -5,24 +5,6 @@
 #include <backport/magic.h>
 
 
-#if LINUX_VERSION_IS_LESS(6,1,0)
-static inline void backport_netif_napi_add(struct net_device *dev,
-					   struct napi_struct *napi,
-					   int (*poll)(struct napi_struct *, int))
-{
-	netif_napi_add(dev, napi, poll, NAPI_POLL_WEIGHT);
-}
-#define netif_napi_add LINUX_BACKPORT(netif_napi_add)
-
-static inline void backport_netif_napi_add_tx(struct net_device *dev,
-					      struct napi_struct *napi,
-					      int (*poll)(struct napi_struct *, int))
-{
-	netif_tx_napi_add(dev, napi, poll, NAPI_POLL_WEIGHT);
-}
-#define netif_napi_add_tx LINUX_BACKPORT(netif_napi_add_tx)
-#endif /* < 6.1 */
-
 #if LINUX_VERSION_IS_LESS(4,15,0)
 static inline int _bp_netdev_upper_dev_link(struct net_device *dev,
 					    struct net_device *upper_dev)
@@ -281,5 +263,52 @@ static inline void LINUX_BACKPORT(free_netdev)(struct net_device *dev)
 }
 #define free_netdev LINUX_BACKPORT(free_netdev)
 #endif /* 6.10.0 */
+#if LINUX_VERSION_IS_LESS(5,19,0)
+
+#define netif_napi_add_weight LINUX_BACKPORT(netif_napi_add_weight)
+static inline void netif_napi_add_weight(struct net_device *dev,
+				   struct napi_struct *napi,
+				   int (*poll)(struct napi_struct *, int),
+				   int weight)
+{
+	netif_napi_add(dev, napi, poll, weight);
+}
+#endif /* < 5.19.0 */
+
+#if LINUX_VERSION_IS_LESS(6,1,0)
+static inline void backport_netif_napi_add(struct net_device *dev,
+					   struct napi_struct *napi,
+					   int (*poll)(struct napi_struct *, int))
+{
+	netif_napi_add(dev, napi, poll, NAPI_POLL_WEIGHT);
+}
+#define netif_napi_add LINUX_BACKPORT(netif_napi_add)
+
+static inline void backport_netif_napi_add_tx(struct net_device *dev,
+					      struct napi_struct *napi,
+					      int (*poll)(struct napi_struct *, int))
+{
+	netif_tx_napi_add(dev, napi, poll, NAPI_POLL_WEIGHT);
+}
+#define netif_napi_add_tx LINUX_BACKPORT(netif_napi_add_tx)
+#endif /* < 6.1 */
+
+#if LINUX_VERSION_IS_LESS(5,15,0)
+#define dev_addr_mod LINUX_BACKPORT(dev_addr_mod)
+static inline void
+dev_addr_mod(struct net_device *dev, unsigned int offset,
+	const void *addr, size_t len)
+{
+	memcpy(&dev->dev_addr[offset], addr, len);
+}
+#endif /* < 5.15 */
+
+#if LINUX_VERSION_IS_LESS(5,13,0)
+#define dev_set_threaded LINUX_BACKPORT(dev_set_threaded)
+static inline int dev_set_threaded(struct net_device *dev, bool threaded)
+{
+	return -EOPNOTSUPP;
+}
+#endif /* < 5.13 */
 
 #endif /* __BACKPORT_NETDEVICE_H */

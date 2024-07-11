@@ -13,4 +13,9 @@
 #define __ns_const const
 #endif
 
+#ifndef DEVICE_ATTR_ADMIN_RO
+#define DEVICE_ATTR_ADMIN_RO(_name) \
+	struct device_attribute dev_attr_##_name = __ATTR_RO_MODE(_name, 0400)
+#endif
+
 #endif /* __BACKPORT_DEVICE_H_ */

@@ -6362,7 +6362,10 @@ static struct genl_family hwsim_genl_family __ro_after_init = {
 	.n_ops = ARRAY_SIZE(hwsim_ops),
 #endif
 #if LINUX_VERSION_IS_GEQ(6,1,0)
-	.resv_start_op = HWSIM_CMD_REPORT_PMSR + 1, // match with __HWSIM_CMD_MAX
+#if LINUX_VERSION_IS_GEQ(6,1,0)
+	.resv_start_op = HWSIM_CMD_REPORT_PMSR + 1,
+#endif
+ // match with __HWSIM_CMD_MAX
 #endif
 	.mcgrps = hwsim_mcgrps,
 	.n_mcgrps = ARRAY_SIZE(hwsim_mcgrps),
