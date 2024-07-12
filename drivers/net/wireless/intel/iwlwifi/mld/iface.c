@@ -237,7 +237,7 @@ iwl_mld_init_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	mld_vif->mld = mld;
 
-	ret = iwl_mld_allocate_vif_fw_id(mld, mld_vif, vif);
+	ret = iwl_mld_allocate_vif_fw_id(mld, &mld_vif->fw_id, vif);
 	if (ret)
 		return ret;
 

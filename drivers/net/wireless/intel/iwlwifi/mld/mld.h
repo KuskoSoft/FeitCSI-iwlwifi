@@ -188,13 +188,13 @@ extern const unsigned int global_iwl_mld_goups_size;
 #define IWL_MLD_ALLOC_FN(_type, _mac80211_type)						\
 static int										\
 iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
-				 struct iwl_mld_##_type *ptr,				\
+				 u8 *fw_id,				\
 				 struct ieee80211_##_mac80211_type *mac80211_ptr)	\
 {											\
 	for (int i = 0; i < ARRAY_SIZE(mld->fw_id_to_##_mac80211_type); i++) {		\
 		if (rcu_access_pointer(mld->fw_id_to_##_mac80211_type[i]))		\
 			continue;							\
-		ptr->fw_id = i;								\
+		*fw_id = i;								\
 		rcu_assign_pointer(mld->fw_id_to_##_mac80211_type[i], mac80211_ptr);	\
 		return 0;								\
 	}										\
