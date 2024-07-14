@@ -301,4 +301,11 @@ static inline u8 iwl_mld_mac80211_ac_to_fw_tx_fifo(enum ieee80211_ac_numbers ac)
 	return mac80211_ac_to_fw_tx_fifo[ac];
 }
 
+/* Check if we had an error, but reconfig flow didn't start yet */
+static inline bool iwl_mld_error_before_recovery(struct iwl_mld *mld)
+{
+	return mld->fw_status.in_hw_restart &&
+		!iwl_trans_fw_running(mld->trans);
+}
+
 #endif /* __iwl_mld_h__ */

@@ -1010,6 +1010,83 @@ iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
 	return 0;
 }
 
+static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
+				     struct ieee80211_vif *vif,
+				     struct ieee80211_sta *sta,
+				     enum ieee80211_sta_state old_state,
+				     enum ieee80211_sta_state new_state)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	if (old_state == IEEE80211_STA_NOTEXIST &&
+	    new_state == IEEE80211_STA_NONE) {
+		ret = iwl_mld_add_sta(mld, sta, vif, STATION_TYPE_PEER);
+		if (ret)
+			return ret;
+
+		if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
+			mld_vif->ap_sta = sta;
+	} else {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
+		return -EINVAL;
+	}
+	return ret;
+}
+
+static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
+				       struct ieee80211_vif *vif,
+				       struct ieee80211_sta *sta,
+				       enum ieee80211_sta_state old_state,
+				       enum ieee80211_sta_state new_state)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	if (old_state == IEEE80211_STA_NONE &&
+	    new_state == IEEE80211_STA_NOTEXIST) {
+		mld_vif->ap_sta = NULL;
+		ret = iwl_mld_remove_sta(mld, sta);
+	} else {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
+		return -EINVAL;
+	}
+
+	/* Avoid a warning in __sta_info_destroy_part2 if we had an
+	 * assert, but the FW is not alive yet
+	 */
+	if (ret && iwl_mld_error_before_recovery(mld))
+		ret = 0;
+	return ret;
+}
+
+static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
+				      struct ieee80211_vif *vif,
+				      struct ieee80211_sta *sta,
+				      enum ieee80211_sta_state old_state,
+				      enum ieee80211_sta_state new_state)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+
+	IWL_DEBUG_MAC80211(mld, "station %pM state change %d->%d\n",
+			   sta->addr, old_state, new_state);
+
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET %s\n", __func__);
+		return -EINVAL;
+	}
+
+	mld_sta->sta_state = new_state;
+
+	if (old_state < new_state)
+		return iwl_mld_move_sta_state_up(mld, vif, sta, old_state,
+						 new_state);
+	else
+		return iwl_mld_move_sta_state_down(mld, vif, sta, old_state,
+						   new_state);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1036,6 +1113,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.sched_scan_stop = iwl_mld_mac80211_sched_scan_stop,
 	.mgd_prepare_tx = iwl_mld_mac80211_mgd_prepare_tx,
 	.mgd_complete_tx = iwl_mld_mac_mgd_complete_tx,
+	.sta_state = iwl_mld_mac80211_sta_state,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
