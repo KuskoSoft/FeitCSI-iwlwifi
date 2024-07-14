@@ -254,7 +254,10 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return 0;
+	}
 
 	ret = iwl_mld_init_vif(mld, vif);
 	if (ret)

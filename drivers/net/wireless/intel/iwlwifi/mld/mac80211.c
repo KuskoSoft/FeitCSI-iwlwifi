@@ -526,7 +526,10 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return 0;
+	}
 
 	/* Construct mld_vif, add it to fw, and map its ID to ieee80211_vif */
 	ret = iwl_mld_add_vif(mld, vif);
@@ -569,7 +572,10 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return;
+	}
 
 	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
 		vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER |
