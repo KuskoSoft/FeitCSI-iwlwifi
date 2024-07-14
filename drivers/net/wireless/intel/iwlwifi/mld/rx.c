@@ -99,7 +99,7 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	}
 
 	band = BAND_IN_RX_STATUS(mpdu_desc->mac_phy_idx);
-	rx_status->band = iwl_mld_nl80211_band_from_phy(band);
+	rx_status->band = iwl_mld_phy_band_to_nl80211(band);
 	rx_status->freq = ieee80211_channel_to_frequency(phy_data->channel,
 							 rx_status->band);
 	iwl_mld_fill_signal(mld, rx_status, phy_data);

@@ -147,7 +147,7 @@ static inline u8 iwl_mld_get_valid_rx_ant(const struct iwl_mld *mld)
 	return rx_ant;
 }
 
-static inline u8 iwl_mld_nl80211_band_from_phy(u8 phy_band)
+static inline u8 iwl_mld_phy_band_to_nl80211(u8 phy_band)
 {
 	switch (phy_band) {
 	case PHY_BAND_24:
