@@ -3,9 +3,13 @@
  * Copyright (C) 2024 Intel Corporation
  */
 
+#include <linux/ieee80211.h>
+
 #include "sta.h"
 #include "hcmd.h"
 #include "iface.h"
+#include "fw/api/sta.h"
+#include "fw/api/mac.h"
 
 static int
 iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
@@ -25,16 +29,81 @@ iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
 
 static void
 iwl_mld_fill_ampdu_size_and_dens(struct ieee80211_link_sta *link_sta,
+				 struct ieee80211_bss_conf *link,
 				 __le32 *tx_ampdu_max_size,
 				 __le32 *tx_ampdu_spacing)
 {
-	/* TODO */
+	u32 agg_size = 0, mpdu_dens = 0;
+
+	if (WARN_ON(!link_sta || !link))
+		return;
+
+	/* Note that we always use only legacy & highest supported PPDUs, so
+	 * of Draft P802.11be D.30 Table 10-12a--Fields used for calculating
+	 * the maximum A-MPDU size of various PPDU types in different bands,
+	 * we only need to worry about the highest supported PPDU type here.
+	 */
+
+	if (link_sta->ht_cap.ht_supported) {
+		agg_size = link_sta->ht_cap.ampdu_factor;
+		mpdu_dens = link_sta->ht_cap.ampdu_density;
+	}
+
+	if (link->chanreq.oper.chan->band == NL80211_BAND_6GHZ) {
+		/* overwrite HT values on 6 GHz */
+		mpdu_dens =
+			le16_get_bits(link_sta->he_6ghz_capa.capa,
+				      IEEE80211_HE_6GHZ_CAP_MIN_MPDU_START);
+		agg_size =
+			le16_get_bits(link_sta->he_6ghz_capa.capa,
+				      IEEE80211_HE_6GHZ_CAP_MAX_AMPDU_LEN_EXP);
+	} else if (link_sta->vht_cap.vht_supported) {
+		/* if VHT supported overwrite HT value */
+		agg_size =
+			u32_get_bits(link_sta->vht_cap.cap,
+				     IEEE80211_VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
+	}
+
+	/* D6.0 10.12.2 A-MPDU length limit rules
+	 * A STA indicates the maximum length of the A-MPDU preEOF padding
+	 * that it can receive in an HE PPDU in the Maximum A-MPDU Length
+	 * Exponent field in its HT Capabilities, VHT Capabilities,
+	 * and HE 6 GHz Band Capabilities elements (if present) and the
+	 * Maximum AMPDU Length Exponent Extension field in its HE
+	 * Capabilities element
+	 */
+	if (link_sta->he_cap.has_he)
+		agg_size +=
+			u8_get_bits(link_sta->he_cap.he_cap_elem.mac_cap_info[3],
+				    IEEE80211_HE_MAC_CAP3_MAX_AMPDU_LEN_EXP_MASK);
+
+	if (link_sta->eht_cap.has_eht)
+		agg_size +=
+			u8_get_bits(link_sta->eht_cap.eht_cap_elem.mac_cap_info[1],
+				    IEEE80211_EHT_MAC_CAP1_MAX_AMPDU_LEN_MASK);
+
+	/* Limit to max A-MPDU supported by FW */
+	agg_size = min_t(u32, agg_size,
+			 STA_FLG_MAX_AGG_SIZE_4M >> STA_FLG_MAX_AGG_SIZE_SHIFT);
+
+	*tx_ampdu_max_size = cpu_to_le32(agg_size);
+	*tx_ampdu_spacing = cpu_to_le32(mpdu_dens);
 }
 
 static u8 iwl_mld_get_uapsd_acs(struct ieee80211_sta *sta)
 {
-	/* TODO */
-	return 0;
+	u8 uapsd_acs = 0;
+
+	if (sta->uapsd_queues & IEEE80211_WMM_IE_STA_QOSINFO_AC_BK)
+		uapsd_acs |= BIT(AC_BK);
+	if (sta->uapsd_queues & IEEE80211_WMM_IE_STA_QOSINFO_AC_BE)
+		uapsd_acs |= BIT(AC_BE);
+	if (sta->uapsd_queues & IEEE80211_WMM_IE_STA_QOSINFO_AC_VI)
+		uapsd_acs |= BIT(AC_VI);
+	if (sta->uapsd_queues & IEEE80211_WMM_IE_STA_QOSINFO_AC_VO)
+		uapsd_acs |= BIT(AC_VO);
+
+	return uapsd_acs | uapsd_acs << 4;
 }
 
 static void iwl_mld_fill_pkt_ext(struct ieee80211_link_sta *link_sta,
@@ -45,8 +114,34 @@ static void iwl_mld_fill_pkt_ext(struct ieee80211_link_sta *link_sta,
 
 static u32 iwl_mld_get_htc_flags(struct ieee80211_link_sta *link_sta)
 {
-	/* TODO */
-	return 0;
+	u8 *mac_cap_info =
+		&link_sta->he_cap.he_cap_elem.mac_cap_info[0];
+	u32 htc_flags = 0;
+
+	if (mac_cap_info[0] & IEEE80211_HE_MAC_CAP0_HTC_HE)
+		htc_flags |= IWL_HE_HTC_SUPPORT;
+	if ((mac_cap_info[1] & IEEE80211_HE_MAC_CAP1_LINK_ADAPTATION) ||
+	    (mac_cap_info[2] & IEEE80211_HE_MAC_CAP2_LINK_ADAPTATION)) {
+		u8 link_adap =
+			((mac_cap_info[2] &
+			  IEEE80211_HE_MAC_CAP2_LINK_ADAPTATION) << 1) +
+			 (mac_cap_info[1] &
+			  IEEE80211_HE_MAC_CAP1_LINK_ADAPTATION);
+
+		if (link_adap == 2)
+			htc_flags |=
+				IWL_HE_HTC_LINK_ADAP_UNSOLICITED;
+		else if (link_adap == 3)
+			htc_flags |= IWL_HE_HTC_LINK_ADAP_BOTH;
+	}
+	if (mac_cap_info[2] & IEEE80211_HE_MAC_CAP2_BSR)
+		htc_flags |= IWL_HE_HTC_BSR_SUPP;
+	if (mac_cap_info[3] & IEEE80211_HE_MAC_CAP3_OMI_CONTROL)
+		htc_flags |= IWL_HE_HTC_OMI_SUPP;
+	if (mac_cap_info[4] & IEEE80211_HE_MAC_CAP4_BQR)
+		htc_flags |= IWL_HE_HTC_BQR_SUPP;
+
+	return htc_flags;
 }
 
 static int iwl_mld_send_sta_cmd(struct iwl_mld *mld,
@@ -120,7 +215,8 @@ iwl_mld_add_modify_sta_cmd(struct iwl_mld *mld,
 		break;
 	}
 
-	iwl_mld_fill_ampdu_size_and_dens(link_sta, &cmd.tx_ampdu_max_size,
+	iwl_mld_fill_ampdu_size_and_dens(link_sta, link,
+					 &cmd.tx_ampdu_max_size,
 					 &cmd.tx_ampdu_spacing);
 
 	if (sta->wme) {
