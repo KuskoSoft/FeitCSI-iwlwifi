@@ -269,16 +269,35 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	return ret;
 }
 
+static int iwl_mld_rm_sta_from_fw(struct iwl_mld *mld, u8 fw_sta_id)
+{
+	struct iwl_remove_sta_cmd cmd = {
+		.sta_id = cpu_to_le32(fw_sta_id),
+	};
+	int ret;
+
+	ret = iwl_mld_send_cmd_pdu(mld,
+				   WIDE_ID(MAC_CONF_GROUP, STA_REMOVE_CMD),
+				   &cmd);
+	if (ret)
+		IWL_ERR(mld, "Failed to remove station. Id=%d\n", fw_sta_id);
+
+	return ret;
+}
+
 static int
 iwl_mvm_remove_link_sta(struct iwl_mld *mld,
 			struct ieee80211_link_sta *link_sta)
 {
 	int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+	int ret;
 
 	if (WARN_ON(fw_id < 0))
 		return fw_id;
 
-	/* TODO: send command to remove from FW */
+	ret = iwl_mld_rm_sta_from_fw(mld, fw_id);
+	if (ret)
+		return ret;
 
 	RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
 
