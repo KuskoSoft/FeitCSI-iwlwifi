@@ -84,6 +84,8 @@ enum iwl_mld_pass_all_sched_results_states {
  *	in jiffies
  * @scan.last_start_time_jiffies: stores the last start time in jiffies.
  *	(interface up/reset/resume)
+ * @scan.fw_link_id: the current (regular) scan fw link id, used by scan
+ *	complete notif.
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
@@ -128,6 +130,7 @@ struct iwl_mld {
 		enum iwl_mld_pass_all_sched_results_states pass_all_sched_res;
 		unsigned long last_6ghz_passive_jiffies;
 		unsigned long last_start_time_jiffies;
+		u8 fw_link_id;
 	} scan;
 #ifdef CONFIG_PM_SLEEP
 	struct wiphy_wowlan_support wowlan;

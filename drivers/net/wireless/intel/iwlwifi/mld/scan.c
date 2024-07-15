@@ -7,6 +7,7 @@
 #include "mld.h"
 #include "scan.h"
 #include "hcmd.h"
+#include "iface.h"
 
 #include "fw/api/scan.h"
 #include "fw/dbg.h"
@@ -99,7 +100,7 @@ struct iwl_mld_scan_params {
 	struct cfg80211_sched_scan_plan *scan_plans;
 	bool iter_notif;
 	/* TODO: respect_p2p_go (task=p2p)*/
-	s8 tsf_report_link_id;
+	s8 fw_link_id;
 	struct cfg80211_scan_6ghz_params *scan_6ghz_params;
 	u32 n_6ghz_params;
 	bool scan_6ghz;
@@ -421,7 +422,8 @@ iwl_mld_scan_cmd_set_gen_params(struct iwl_mld *mld,
 	if (gen_flags & IWL_UMAC_SCAN_GEN_FLAGS_V2_FRAGMENTED_LMAC1)
 		gp->num_of_fragments[SCAN_LB_LMAC_IDX] = IWL_SCAN_NUM_OF_FRAGS;
 
-	/* TODO: set gp->scan_start_mac_or_link_id based on link_info */
+	if (params->fw_link_id != IWL_MLD_INVALID_FW_ID)
+		gp->scan_start_mac_or_link_id = params->fw_link_id;
 }
 
 static int
@@ -1193,6 +1195,36 @@ iwl_mld_scan_6ghz_passive_scan(struct iwl_mld *mld,
 	params->enable_6ghz_passive = true;
 }
 
+static void
+iwl_mld_scan_set_link_id(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			 struct iwl_mld_scan_params *params,
+			 s8 tsf_report_link_id,
+			 enum iwl_mld_scan_status scan_status)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_link *link;
+
+	if (tsf_report_link_id < 0) {
+		if (vif->active_links)
+			tsf_report_link_id = __ffs(vif->active_links);
+		else
+			tsf_report_link_id = 0;
+	}
+
+	link = iwl_mld_link_dereference_check(mld_vif, tsf_report_link_id);
+	if (!WARN_ON(!link)) {
+		params->fw_link_id = link->fw_id;
+		/* we to store fw_link_id only for regular scan,
+		 * and use it in scan complete notif
+		 */
+		if (scan_status == IWL_MLD_SCAN_REGULAR)
+			mld->scan.fw_link_id = link->fw_id;
+	} else {
+		mld->scan.fw_link_id = IWL_MLD_INVALID_FW_ID;
+		params->fw_link_id = IWL_MLD_INVALID_FW_ID;
+	}
+}
+
 static int
 _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			   struct cfg80211_scan_request *req,
@@ -1246,13 +1278,8 @@ _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	if (req->duration)
 		params.iter_notif = true;
 
-	params.tsf_report_link_id = req->tsf_report_link_id;
-	if (params.tsf_report_link_id < 0) {
-		if (vif->active_links)
-			params.tsf_report_link_id = __ffs(vif->active_links);
-		else
-			params.tsf_report_link_id = 0;
-	}
+	iwl_mld_scan_set_link_id(mld, vif, &params, req->tsf_report_link_id,
+				 scan_status);
 
 	iwl_mld_scan_build_probe_req(mld, vif, ies, &params);
 
@@ -1587,8 +1614,21 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 			.aborted = aborted,
 			.scan_start_tsf = mld->scan.start_tsf,
 		};
+		int fw_link_id = mld->scan.fw_link_id;
+		struct ieee80211_bss_conf *link_conf = NULL;
 
-		/* TODO: set info.tsf_bssid from link_info->bssid */
+		if (fw_link_id != IWL_MLD_INVALID_FW_ID)
+			link_conf =
+				wiphy_dereference(mld->wiphy,
+						  mld->fw_id_to_bss_conf[fw_link_id]);
+
+		/* It is possible that by the time the scan is complete the
+		 * link was already removed and is not valid.
+		 */
+		if (link_conf)
+			ether_addr_copy(info.tsf_bssid, link_conf->bssid);
+		else
+			IWL_DEBUG_SCAN(mld, "Scan link is no longer valid\n");
 
 		ieee80211_scan_completed(mld->hw, &info);
 	} else if (mld->scan.uid_status[uid] == IWL_MLD_SCAN_SCHED) {
