@@ -248,8 +248,9 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 			  u32 changes)
 {
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
-	struct ieee80211_chanctx_conf *chan_ctx;
 	struct ieee80211_vif *vif = link->vif;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct ieee80211_chanctx_conf *chan_ctx;
 	struct iwl_link_config_cmd cmd = {};
 	u32 flags = 0;
 
@@ -260,7 +261,7 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 
 	cmd.link_id = cpu_to_le32(mld_link->fw_id);
 	cmd.spec_link_id = link->link_id;
-	cmd.mac_id = cpu_to_le32(iwl_mld_vif_from_mac80211(vif)->fw_id);
+	cmd.mac_id = cpu_to_le32(mld_vif->fw_id);
 
 	chan_ctx = wiphy_dereference(mld->wiphy, mld_link->chan_ctx);
 
@@ -297,6 +298,18 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 	    (vif->type == NL80211_IFTYPE_STATION && !vif->cfg.assoc)) {
 		changes &= ~LINK_CONTEXT_MODIFY_HE_PARAMS;
 		goto send_cmd;
+	}
+
+	/* ap_sta may be NULL if we're disconnecting */
+	if (mld_vif->ap_sta) {
+		struct ieee80211_link_sta *link_sta =
+			link_sta_dereference_check(mld_vif->ap_sta,
+						   link->link_id);
+
+		if (!WARN_ON(!link_sta) && link_sta->he_cap.has_he &&
+		    link_sta->he_cap.he_cap_elem.mac_cap_info[5] &
+		    IEEE80211_HE_MAC_CAP5_OM_CTRL_UL_MU_DATA_DIS_RX)
+			cmd.ul_mu_data_disable = 1;
 	}
 
 	cmd.htc_trig_based_pkt_ext = link->htc_trig_based_pkt_ext;
