@@ -3253,7 +3253,7 @@ static int iwl_mvm_umac_scan_abort(struct iwl_mvm *mvm, int type, bool *wait)
 	};
 
 	int uid, ret;
-	u32 status;
+	u32 status = IWL_UMAC_SCAN_ABORT_STATUS_NOT_FOUND;
 
 	lockdep_assert_held(&mvm->mutex);
 
