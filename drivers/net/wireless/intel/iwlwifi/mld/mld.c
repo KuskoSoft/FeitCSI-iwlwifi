@@ -163,6 +163,7 @@ static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
  * Access is done through binary search
  */
 static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
+	HCMD_NAME(RLC_CONFIG_CMD),
 	HCMD_NAME(RFH_QUEUE_CONFIG_CMD),
 };
 
