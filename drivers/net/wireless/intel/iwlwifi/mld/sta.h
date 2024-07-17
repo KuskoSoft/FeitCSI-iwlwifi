@@ -9,6 +9,7 @@
 #include <net/mac80211.h>
 
 #include "mld.h"
+#include "tx.h"
 
 /**
  * struct iwl_mld_sta - representation of a station in the driver.
@@ -40,6 +41,9 @@ static inline void
 iwl_mld_cleanup_sta(void *data, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+
+	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
+		CLEANUP_STRUCT(iwl_mld_txq_from_mac80211(sta->txq[i]));
 
 	CLEANUP_STRUCT(mld_sta);
 }

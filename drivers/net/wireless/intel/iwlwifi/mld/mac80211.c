@@ -373,9 +373,7 @@ static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
 	hw->chanctx_data_size = sizeof(struct iwl_mld_phy);
 	hw->vif_data_size = sizeof(struct iwl_mld_vif);
 	hw->sta_data_size = sizeof(struct iwl_mld_sta);
-	/* TODO set:
-	 * hw->txq_data_size
-	 */
+	hw->txq_data_size = sizeof(struct iwl_mld_txq);
 }
 
 static int iwl_mld_hw_verify_preconditions(struct iwl_mld *mld)
