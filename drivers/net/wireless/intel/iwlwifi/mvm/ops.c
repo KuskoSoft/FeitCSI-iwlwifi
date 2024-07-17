@@ -182,6 +182,31 @@ static void iwl_mvm_rx_esr_mode_notif(struct iwl_mvm *mvm,
 				  iwl_mvm_get_primary_link(vif));
 }
 
+static void iwl_mvm_rx_esr_trans_fail_notif(struct iwl_mvm *mvm,
+					    struct iwl_rx_cmd_buffer *rxb)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_esr_trans_fail_notif *notif = (void *)pkt->data;
+	struct ieee80211_vif *vif = iwl_mvm_get_bss_vif(mvm);
+
+	if (IS_ERR_OR_NULL(vif))
+		return;
+
+	IWL_DEBUG_INFO(mvm, "Failed to %s eSR on link %d, reason %d\n",
+		       le32_to_cpu(notif->activation) ? "enter" : "exit",
+		       le32_to_cpu(notif->link_id),
+		       le32_to_cpu(notif->err_code));
+	/* If we couldn't exit EMLSR, the AP may send us data on the link we
+	 * removed so we don't have much choice, just disconnect...
+	 * If we can't enter EMLSR, go back to single link.
+	 */
+	if (le32_to_cpu(notif->activation))
+		iwl_mvm_exit_esr(mvm, vif, IWL_MVM_ESR_EXIT_FAIL_ENTRY,
+				 iwl_mvm_get_primary_link(vif));
+	else
+		iwl_mvm_connection_loss(mvm, vif, "emlsr exit failed");
+}
+
 static void iwl_mvm_rx_monitor_notif(struct iwl_mvm *mvm,
 				     struct iwl_rx_cmd_buffer *rxb)
 {
@@ -527,6 +552,10 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 	RX_HANDLER_GRP(SCAN_GROUP, CHANNEL_SURVEY_NOTIF,
 		       iwl_mvm_rx_channel_survey_notif, RX_HANDLER_ASYNC_LOCKED,
 		       struct iwl_umac_scan_channel_survey_notif),
+	RX_HANDLER_GRP(MAC_CONF_GROUP, EMLSR_TRANS_FAIL_NOTIF,
+		       iwl_mvm_rx_esr_trans_fail_notif,
+		       RX_HANDLER_ASYNC_LOCKED_WIPHY,
+		       struct iwl_esr_trans_fail_notif),
 };
 #undef RX_HANDLER
 #undef RX_HANDLER_GRP
@@ -658,6 +687,7 @@ static const struct iwl_hcmd_names iwl_mvm_mac_conf_names[] = {
 	HCMD_NAME(STA_REMOVE_CMD),
 	HCMD_NAME(STA_DISABLE_TX_CMD),
 	HCMD_NAME(ROC_CMD),
+	HCMD_NAME(EMLSR_TRANS_FAIL_NOTIF),
 	HCMD_NAME(ROC_NOTIF),
 	HCMD_NAME(CHANNEL_SWITCH_ERROR_NOTIF),
 	HCMD_NAME(MISSED_VAP_NOTIF),
