@@ -14,6 +14,7 @@
 #include "iwl-nvm-parse.h"
 #include "power.h"
 #include "mcc.h"
+#include "led.h"
 
 static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
 {
@@ -384,10 +385,11 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+	iwl_mld_led_config_fw(mld);
+
 	/* TODO:
 	 * - ptp
 	 * - testmode
-	 * - leds
 	 * - vendor cmds
 	 * - thermal
 	 * - system_features_control

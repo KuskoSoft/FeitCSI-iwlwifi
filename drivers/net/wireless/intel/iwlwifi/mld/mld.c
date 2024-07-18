@@ -13,6 +13,7 @@
 #include "mld.h"
 #include "notif.h"
 #include "mac80211.h"
+#include "led.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -106,6 +107,7 @@ iwl_mld_construct_fw_runtime(struct iwl_mld *mld, struct iwl_trans *trans,
 static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
 	HCMD_NAME(UCODE_ALIVE_NTFY),
 	HCMD_NAME(INIT_COMPLETE_NOTIF),
+	HCMD_NAME(LEDS_CMD),
 	HCMD_NAME(MFUART_LOAD_NOTIFICATION),
 	HCMD_NAME(MCC_UPDATE_CMD),
 };
@@ -274,14 +276,20 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	iwl_mld_stop_fw(mld);
 
-	if (iwl_mld_alloc_scan_cmd(mld))
+	ret = iwl_mld_leds_init(mld);
+	if (ret)
 		goto free_hw;
 
+	if (iwl_mld_alloc_scan_cmd(mld))
+		goto leds_exit;
+
 	if (iwl_mld_register_hw(mld))
-		goto free_hw;
+		goto leds_exit;
 
 	return op_mode;
 
+leds_exit:
+	iwl_mld_leds_exit(mld);
 free_hw:
 	ieee80211_free_hw(mld->hw);
 	return NULL;
@@ -291,6 +299,8 @@ static void
 iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	iwl_mld_leds_exit(mld);
 
 	ieee80211_unregister_hw(mld->hw);
 

@@ -4,6 +4,7 @@ obj-$(CPTCFG_IWLWIFI_KUNIT_TESTS) += tests/
 
 iwlmld-y += mld.o notif.o mac80211.o fw.o power.o iface.o link.o rx.o mcc.o
 iwlmld-$(CPTCFG_IWLWIFI_DEBUGFS) += debugfs.o
+iwlmld-$(CPTCFG_IWLWIFI_LEDS) += led.o
 
 # non-upstream things
 iwlmld-$(CPTCFG_IWL_VENDOR_CMDS) += vendor-cmd.o

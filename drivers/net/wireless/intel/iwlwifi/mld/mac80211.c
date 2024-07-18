@@ -422,10 +422,6 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 
 	SET_IEEE80211_DEV(mld->hw, mld->trans->dev);
 
-	/* TODO:
-	 * 1. leds_init
-	 */
-
 #ifdef CPTCFG_IWL_VENDOR_CMDS
 	iwl_mld_vendor_cmds_register(mld);
 #endif

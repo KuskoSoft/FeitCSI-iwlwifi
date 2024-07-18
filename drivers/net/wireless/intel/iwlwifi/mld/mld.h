@@ -5,6 +5,8 @@
 #ifndef __iwl_mld_h__
 #define __iwl_mld_h__
 
+#include <linux/leds.h>
+
 #include "iwl-trans.h"
 #include "iwl-op-mode.h"
 #include "fw/runtime.h"
@@ -45,6 +47,7 @@
  * @scan_cmd_size: size of %scan_cmd.
  * @scan_cmd: pointer to scan_cmd buffer (allocated once in op mode start).
  * @wowlan: WoWLAN support data.
+ * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
  */
 struct iwl_mld {
@@ -79,6 +82,9 @@ struct iwl_mld {
 #ifdef CONFIG_PM
 	struct wiphy_wowlan_support wowlan;
 #endif /* CONFIG_PM */
+#ifdef CPTCFG_IWLWIFI_LEDS
+	struct led_classdev led;
+#endif
 	enum iwl_mcc_source mcc_src;
 };
 
