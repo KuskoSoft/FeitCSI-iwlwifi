@@ -375,8 +375,10 @@ iwl_mld_queue_not_full(struct iwl_op_mode *op_mode, int hw_queue)
 static bool
 iwl_mld_set_hw_rfkill_state(struct iwl_op_mode *op_mode, bool state)
 {
-	/* TODO */
-	WARN_ONCE(1, "Not supported yet\n");
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	wiphy_rfkill_set_hw_state(mld->wiphy, state);
+
 	return false;
 }
 
