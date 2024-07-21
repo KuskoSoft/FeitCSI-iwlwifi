@@ -87,9 +87,11 @@ static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 	struct iwl_mfuart_load_notif *mfuart_notif = (void *)pkt->data;
 
 	IWL_DEBUG_INFO(mld,
-		       "MFUART: installed ver: 0x%08x, external ver: 0x%08x, status: 0x%08x, duration: 0x%08x image size: 0x%08x\n",
+		       "MFUART: installed ver: 0x%08x, external ver: 0x%08x\n",
 		       le32_to_cpu(mfuart_notif->installed_ver),
-		       le32_to_cpu(mfuart_notif->external_ver),
+		       le32_to_cpu(mfuart_notif->external_ver));
+	IWL_DEBUG_INFO(mld,
+		       "MFUART: status: 0x%08x, duration: 0x%08x image size: 0x%08x\n",
 		       le32_to_cpu(mfuart_notif->status),
 		       le32_to_cpu(mfuart_notif->duration),
 		       le32_to_cpu(mfuart_notif->image_size));
