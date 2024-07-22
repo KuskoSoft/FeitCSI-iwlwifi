@@ -735,6 +735,19 @@ struct ieee80211_parsed_tpe {
  *	beamformee
  * @eht_mu_beamformer: in AP-mode, does this BSS enable operation as an EHT MU
  *	beamformer
+ * @bss_param_ch_cnt: in BSS-mode, the BSS params change count. This
+ *	information is the latest known value. It can come from this link's
+ *	beacon or from a beacon sent by another link.
+ * @bss_param_ch_cnt_link_id: in BSS-mode, the link_id to which the beacon
+ *	that updated &bss_param_ch_cnt belongs. E.g. if link 1 doesn't hear
+ *	its beacons, and link 2 sent a beacon with an RNR element that updated
+ *	link 1's BSS params change count, then, link 1's
+ *	bss_param_ch_cnt_link_id will be 2. That means that link 1 knows that
+ *	link 2 was the link that updated its bss_param_ch_cnt value.
+ *	In case link 1 hears its beacon again, bss_param_ch_cnt_link_id will
+ *	be updated to 1, even if bss_param_ch_cnt didn't change. This allows
+ *	the link to know that it heard the latest value from its own beacon
+ *	(as opposed to hearing its value from another link's beacon).
  */
 struct ieee80211_bss_conf {
 	struct ieee80211_vif *vif;
@@ -828,6 +841,8 @@ struct ieee80211_bss_conf {
 	bool eht_su_beamformer;
 	bool eht_su_beamformee;
 	bool eht_mu_beamformer;
+	u8 bss_param_ch_cnt;
+	u8 bss_param_ch_cnt_link_id;
 };
 
 /**
