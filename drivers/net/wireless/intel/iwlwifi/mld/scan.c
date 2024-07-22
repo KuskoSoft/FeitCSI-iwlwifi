@@ -37,6 +37,7 @@
 
 #define SCAN_TIMEOUT_MSEC (30000 * HZ * CPTCFG_IWL_TIMEOUT_FACTOR)
 #define IWL_MLD_6GHZ_PASSIVE_SCAN_TIMEOUT 3000 /* in seconds */
+#define IWL_MLD_6GHZ_PASSIVE_SCAN_ASSOC_TIMEOUT 60 /* in seconds */
 
 /* minimal number of 2GHz and 5GHz channels in the regular scan request */
 #define IWL_MLD_6GHZ_PASSIVE_SCAN_MIN_CHANS 4
@@ -1130,13 +1131,16 @@ iwl_mld_scan_6ghz_passive_scan(struct iwl_mld *mld,
 		return;
 	}
 
-	/* 6 GHz passive scan is allowed in a defined time interval while not
-	 * associated and a large interval has passed since the last 6GHz
-	 * passive scan.
+	/* 6 GHz passive scan is allowed in a defined time interval following
+	 * HW reset or resume flow, or while not associated and a large
+	 * interval has passed since the last 6 GHz passive scan.
 	 */
-	if (vif->cfg.assoc ||
-	    time_after(mld->scan.last_6ghz_passive_jiffies +
-			(IWL_MLD_6GHZ_PASSIVE_SCAN_TIMEOUT * HZ), jiffies)) {
+	if ((vif->cfg.assoc ||
+	     time_after(mld->scan.last_6ghz_passive_jiffies +
+			(IWL_MLD_6GHZ_PASSIVE_SCAN_TIMEOUT * HZ), jiffies)) &&
+	    (time_before(mld->scan.last_start_time_jiffies +
+			 (IWL_MLD_6GHZ_PASSIVE_SCAN_ASSOC_TIMEOUT * HZ),
+			 jiffies))) {
 		IWL_DEBUG_SCAN(mld, "6GHz passive scan: %s\n",
 			       vif->cfg.assoc ? "associated" :
 			       "timeout did not expire");

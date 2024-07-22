@@ -456,7 +456,7 @@ int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 	lockdep_assert_wiphy(mld->wiphy);
 
 	/* TODO:
-	 * 1. fast resume
+	 * 1. fast resume (set also mld->scan.last_start_time_jiffies)
 	 */
 
 	if (mld->fw_status.in_hw_restart) {
@@ -467,6 +467,8 @@ int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 	ret = iwl_mld_start_fw(mld);
 	if (ret)
 		goto error;
+
+	mld->scan.last_start_time_jiffies = jiffies;
 
 	iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_POINT_POST_INIT,
 			       NULL);
