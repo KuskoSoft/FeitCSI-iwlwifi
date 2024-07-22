@@ -286,10 +286,12 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		goto leds_exit;
 
 	if (iwl_mld_register_hw(mld))
-		goto leds_exit;
+		goto free_scan_cmd;
 
 	return op_mode;
 
+free_scan_cmd:
+	kfree(mld->scan_cmd);
 leds_exit:
 	iwl_mld_leds_exit(mld);
 free_hw:
