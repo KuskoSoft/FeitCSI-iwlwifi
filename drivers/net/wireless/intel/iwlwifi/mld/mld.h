@@ -48,8 +48,8 @@
  * @fw_status: bitmap of fw status bits
  * @fw_status.in_hw_restart: indicates that we are currently in restart flow.
  * @addresses: device MAC addresses.
- * @scan_cmd_size: size of %scan_cmd.
- * @scan_cmd: pointer to scan_cmd buffer (allocated once in op mode start).
+ * @scan.cmd_size: size of %scan.cmd
+ * @scan.cmd: pointer to scan cmd buffer (allocated once in op mode start).
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
@@ -82,8 +82,11 @@ struct iwl_mld {
 		    in_hw_restart:1;
 	} fw_status;
 	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
-	size_t scan_cmd_size;
-	void *scan_cmd;
+
+	struct {
+		size_t cmd_size;
+		void *cmd;
+	} scan;
 #ifdef CONFIG_PM_SLEEP
 	struct wiphy_wowlan_support wowlan;
 #endif /* CONFIG_PM_SLEEP */
