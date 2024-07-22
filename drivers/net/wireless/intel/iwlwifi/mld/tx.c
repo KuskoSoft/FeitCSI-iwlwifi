@@ -16,7 +16,7 @@ void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 			list_first_entry(&mld->txqs_to_add, struct iwl_mld_txq,
 					 list);
 
-		/* TODO: allocate the queue */
+		/* TODO: allocate the queue and set mld_txq->status.allocated */
 
 		local_bh_disable();
 		spin_lock(&mld->add_txqs_lock);

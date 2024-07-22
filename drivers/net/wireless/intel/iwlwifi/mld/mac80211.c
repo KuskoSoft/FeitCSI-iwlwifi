@@ -20,6 +20,7 @@
 #ifdef CPTCFG_IWL_VENDOR_CMDS
 #include "vendor-cmd.h"
 #endif
+#include "iwl-trans.h"
 
 #define IWL_MLD_LIMITS(ap)					\
 	{							\
@@ -623,7 +624,32 @@ static
 void iwl_mld_mac80211_wake_tx_queue(struct ieee80211_hw *hw,
 				    struct ieee80211_txq *txq)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_txq *mld_txq = iwl_mld_txq_from_mac80211(txq);
+
+	if (likely(mld_txq->status.allocated) || !txq->sta) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET!\n");
+		/* TODO iwl_mvm_mac_itxq_xmit */
+		return;
+	}
+
+	/* We don't support TSPEC tids. %IEEE80211_NUM_TIDS is for mgmt */
+	if (txq->tid != IEEE80211_NUM_TIDS && txq->tid >= IWL_MAX_TID_COUNT) {
+		IWL_DEBUG_MAC80211(mld, "TID %d is not supported\n", txq->tid);
+		return;
+	}
+
+	/* The worker will handle any packets we leave on the txq now */
+
+	spin_lock_bh(&mld->add_txqs_lock);
+	/* The list is being deleted only after the queue is fully allocated. */
+	if (list_empty(&mld_txq->list) &&
+	    /* recheck under lock, otherwise it can be added twice */
+	    !mld_txq->status.allocated) {
+		list_add_tail(&mld_txq->list, &mld->txqs_to_add);
+		wiphy_work_queue(mld->wiphy, &mld->add_txqs_wk);
+	}
+	spin_unlock_bh(&mld->add_txqs_lock);
 }
 
 static int iwl_mld_allocate_fw_phy_id(struct iwl_mld *mld)
