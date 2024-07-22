@@ -14,6 +14,7 @@
 #include "mac80211.h"
 #include "led.h"
 #include "scan.h"
+#include "tx.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -67,6 +68,11 @@ iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	INIT_LIST_HEAD(&mld->async_handlers_list);
 	wiphy_work_init(&mld->async_handlers_wk,
 			iwl_mld_async_handlers_wk);
+
+	/* Dynamic Queue Allocation */
+	spin_lock_init(&mld->add_txqs_lock);
+	INIT_LIST_HEAD(&mld->txqs_to_add);
+	wiphy_work_init(&mld->add_txqs_wk, iwl_mld_add_txqs_wk);
 }
 
 static void __acquires(&mld->wiphy->mtx)

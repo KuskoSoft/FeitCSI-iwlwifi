@@ -110,6 +110,9 @@ struct iwl_mld_scan {
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
+ * @txqs_to_add: a list of &ieee80211_txq's to allocate in &add_txqs_wk
+ * @add_txqs_wk: a worker to allocate txqs.
+ * @add_txqs_lock: to lock the &txqs_to_add list.
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -148,6 +151,10 @@ struct iwl_mld {
 	struct led_classdev led;
 #endif
 	enum iwl_mcc_source mcc_src;
+
+	struct list_head txqs_to_add;
+	struct wiphy_work add_txqs_wk;
+	spinlock_t add_txqs_lock;
 };
 
 /* memset the part of the struct that requires cleanup on restart */

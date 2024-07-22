@@ -494,6 +494,8 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 	/* execute all pending notifications (async handlers)*/
 	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
 
+	wiphy_work_cancel(mld->wiphy, &mld->add_txqs_wk);
+
 	/* TODO:
 	 * 1. suspend
 	 * 2. ftm_initiator_smooth_stop
