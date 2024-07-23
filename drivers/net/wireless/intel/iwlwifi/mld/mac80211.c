@@ -628,8 +628,7 @@ void iwl_mld_mac80211_wake_tx_queue(struct ieee80211_hw *hw,
 	struct iwl_mld_txq *mld_txq = iwl_mld_txq_from_mac80211(txq);
 
 	if (likely(mld_txq->status.allocated) || !txq->sta) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET!\n");
-		/* TODO iwl_mvm_mac_itxq_xmit */
+		iwl_mld_tx_from_txq(mld, txq);
 		return;
 	}
 

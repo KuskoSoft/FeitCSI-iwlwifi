@@ -86,6 +86,7 @@ void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 {
 	struct iwl_mld *mld = container_of(wk, struct iwl_mld,
 					   add_txqs_wk);
+	int failed;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -98,13 +99,18 @@ void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 		txq = container_of((void *)mld_txq, struct ieee80211_txq,
 				   drv_priv);
 
-		iwl_mld_add_txq(mld, txq);
+		failed = iwl_mld_add_txq(mld, txq);
 
 		local_bh_disable();
 		spin_lock(&mld->add_txqs_lock);
 		list_del_init(&mld_txq->list);
 		spin_unlock(&mld->add_txqs_lock);
-		/* TODO: iwl_mvm_mac_itxq_xmit if queue was allocated successfully */
+		/* If the queue allocation failed, we can't transmit. Leave the
+		 * frames on the txq, maybe the attempt to allocate the queue
+		 * will succeed.
+		 */
+		if (!failed)
+			iwl_mld_tx_from_txq(mld, txq);
 		local_bh_enable();
 	}
 }
@@ -144,4 +150,45 @@ void iwl_mld_remove_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 	iwl_mld_free_txq(mld, txq);
 	RCU_INIT_POINTER(mld->fw_id_to_txq[mld_txq->fw_id], NULL);
 	mld_txq->status.allocated = false;
+}
+
+void iwl_mld_tx_from_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
+{
+	struct iwl_mld_txq *mld_txq = iwl_mld_txq_from_mac80211(txq);
+	struct sk_buff *skb = NULL;
+	u8 zero_addr[ETH_ALEN] = {};
+
+	/*
+	 * No need for threads to be pending here, they can leave the first
+	 * taker all the work.
+	 *
+	 * mld_txq->tx_request logic:
+	 *
+	 * If 0, no one is currently TXing, set to 1 to indicate current thread
+	 * will now start TX and other threads should quit.
+	 *
+	 * If 1, another thread is currently TXing, set to 2 to indicate to
+	 * that thread that there was another request. Since that request may
+	 * have raced with the check whether the queue is empty, the TXing
+	 * thread should check the queue's status one more time before leaving.
+	 * This check is done in order to not leave any TX hanging in the queue
+	 * until the next TX invocation (which may not even happen).
+	 *
+	 * If 2, another thread is currently TXing, and it will already double
+	 * check the queue, so do nothing.
+	 */
+	if (atomic_fetch_add_unless(&mld_txq->tx_request, 1, 2))
+		return;
+
+	rcu_read_lock();
+	do {
+		while ((skb = ieee80211_tx_dequeue(mld->hw, txq))) {
+			/* TODO: iwl_mvm_tx_skb(mvm, skb, txq->sta); */
+		}
+	} while (atomic_dec_return(&mld_txq->tx_request));
+
+	IWL_DEBUG_TX(mld, "TXQ of sta %pM tid %d is now empty\n",
+		     txq->sta ? txq->sta->addr : zero_addr, txq->tid);
+
+	rcu_read_unlock();
 }
