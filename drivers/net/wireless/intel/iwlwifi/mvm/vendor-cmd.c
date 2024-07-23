@@ -233,6 +233,7 @@ enum iwl_rfi_capabilites {
 	IWL_MVM_RFI_GET_LINKS_INFO_CAPA		= BIT(7),
 	IWL_MVM_RFI_LINK_INFO_CHANGE_CAPA	= BIT(8),
 	IWL_MVM_RFI_DLVR_CAPA			= BIT(9),
+	IWL_MVM_RFI_DDR_DESENSE_CAPA		= BIT(12),
 };
 
 #define IWL_MVM_RFI_DDR_CAPA_ALL (IWL_MVM_RFI_DDR_CAPA_CNVI	|\
@@ -255,10 +256,13 @@ static int iwl_vendor_rfim_get_capa(struct wiphy *wiphy,
 		return -ENOMEM;
 
 	if (mvm->trans->trans_cfg->integrated) {
-		if (iwl_rfi_supported(mvm, mvm->force_enable_rfi, true))
+		if (iwl_rfi_supported(mvm, mvm->force_enable_rfi, true)) {
 			capa |= IWL_MVM_RFI_DDR_CAPA_ALL;
-		else
+			if (iwl_mvm_rfi_desense_supported(mvm))
+				capa |= IWL_MVM_RFI_DDR_DESENSE_CAPA;
+		} else {
 			capa |= IWL_MVM_RFI_DDR_CAPA_CNVI;
+		}
 	}
 
 	if (iwl_rfi_supported(mvm, mvm->force_enable_rfi, false))
