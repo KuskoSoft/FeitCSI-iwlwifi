@@ -802,6 +802,10 @@ enum iwl_vendor_auth_akm_mode {
  *	&PHY_BAND_5 for 5 GHz band, &PHY_BAND_24 for 2.4 GHz band and
  *	&PHY_BAND_6 for 6 GHz band.
  * @IWL_MVM_VENDOR_ATTR_RSSI: average beacon rssi (u8)
+ * @IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE: chain a desense values
+ * @IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE: chain b desense values
+ * @IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD: SNR threshold for RSSI based
+ *	DDR RFIM.
  *
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
@@ -922,6 +926,9 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_CHANNEL				= 0x7b,
 	IWL_MVM_VENDOR_ATTR_PHY_BAND				= 0x7c,
 	IWL_MVM_VENDOR_ATTR_RSSI				= 0x7d,
+	IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE		= 0x7e,
+	IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE		= 0x7f,
+	IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD		= 0x80,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,

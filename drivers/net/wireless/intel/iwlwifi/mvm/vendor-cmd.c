@@ -337,9 +337,11 @@ static int iwl_vendor_rfi_ddr_set_table(struct wiphy *wiphy,
 					const void *data, int data_len)
 {
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_rfi_desense_lut_entry *desense_table = NULL;
 	struct iwl_rfi_config_info *rfi_config_info = NULL;
 	struct iwl_rfi_ddr_lut_entry *rfi_ddr_table = NULL;
 	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	bool has_rfi_desense_support;
 	struct nlattr *attr;
 	struct nlattr **tb;
 	int rem, err = 0;
@@ -368,29 +370,66 @@ static int iwl_vendor_rfi_ddr_set_table(struct wiphy *wiphy,
 	       sizeof(rfi_config_info->desense_table));
 	rfi_config_info->snr_threshold = cpu_to_le32(IWL_RFI_DDR_SNR_THRESHOLD);
 
+	has_rfi_desense_support = iwl_mvm_rfi_desense_supported(mvm);
 	rfi_ddr_table = rfi_config_info->ddr_table;
+	desense_table = rfi_config_info->desense_table;
+
+	BUILD_BUG_ON(ARRAY_SIZE(rfi_config_info->ddr_table) !=
+		     ARRAY_SIZE(rfi_config_info->desense_table));
 	nla_for_each_nested(attr, tb[IWL_MVM_VENDOR_ATTR_RFIM_INFO], rem) {
 		switch (nla_type(attr)) {
 		case IWL_MVM_VENDOR_ATTR_RFIM_FREQ:
 			row_idx++;
+			if (row_idx >= ARRAY_SIZE(rfi_config_info->ddr_table)) {
+				err = -EINVAL;
+				goto out;
+			}
 			rfi_ddr_table[row_idx].freq =
 				cpu_to_le16(nla_get_u16(attr));
 			break;
 		case IWL_MVM_VENDOR_ATTR_RFIM_CHANNELS:
-			if (row_idx < 0) {
+			if (row_idx < 0 ||
+			    nla_len(attr) != sizeof(rfi_ddr_table[0].channels)) {
 				err = -EINVAL;
 				goto out;
 			}
 			memcpy(rfi_ddr_table[row_idx].channels, nla_data(attr),
-			       ARRAY_SIZE(rfi_ddr_table[row_idx].channels));
+			       sizeof(rfi_ddr_table[0].channels));
 			break;
 		case IWL_MVM_VENDOR_ATTR_RFIM_BANDS:
-			if (row_idx < 0) {
+			if (row_idx < 0 ||
+			    nla_len(attr) != sizeof(rfi_ddr_table[0].bands)) {
 				err = -EINVAL;
 				goto out;
 			}
 			memcpy(rfi_ddr_table[row_idx].bands, nla_data(attr),
-			       ARRAY_SIZE(rfi_ddr_table[row_idx].bands));
+			       sizeof(rfi_ddr_table[0].bands));
+			break;
+		case IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE:
+			if (row_idx < 0 || !has_rfi_desense_support ||
+			    nla_len(attr) != sizeof(desense_table[0].chain_a)) {
+				err = -EINVAL;
+				goto out;
+			}
+			memcpy(desense_table[row_idx].chain_a, nla_data(attr),
+			       sizeof(desense_table[0].chain_a));
+			break;
+		case IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE:
+			if (row_idx < 0 || !has_rfi_desense_support ||
+			    nla_len(attr) != sizeof(desense_table[0].chain_b)) {
+				err = -EINVAL;
+				goto out;
+			}
+			memcpy(desense_table[row_idx].chain_b, nla_data(attr),
+			       sizeof(desense_table[0].chain_b));
+			break;
+		case IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD:
+			if (!has_rfi_desense_support) {
+				err = -EINVAL;
+				goto out;
+			}
+			rfi_config_info->snr_threshold =
+				cpu_to_le32(nla_get_u32(attr));
 			break;
 		default:
 			IWL_ERR(mvm, "Invalid attribute %d\n", nla_type(attr));
