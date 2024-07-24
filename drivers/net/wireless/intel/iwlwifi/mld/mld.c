@@ -214,6 +214,8 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
  * op mode ops functions
  *****************************************************
  */
+
+#define NUM_FW_LOAD_RETRIES	3
 static struct iwl_op_mode *
 iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		      const struct iwl_fw *fw, struct dentry *dbgfs_dir)
@@ -249,7 +251,11 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	/* Needed for sending commands */
 	wiphy_lock(mld->wiphy);
 
-	ret = iwl_mld_load_fw(mld);
+	for (int i = 0; i < NUM_FW_LOAD_RETRIES; i++) {
+		ret = iwl_mld_load_fw(mld);
+		if (!ret)
+			break;
+	}
 
 	wiphy_unlock(mld->wiphy);
 
