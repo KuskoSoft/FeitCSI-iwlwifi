@@ -270,6 +270,7 @@ void iwl_mld_handle_update_mcc(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
 	enum iwl_mcc_source src;
 	char mcc[3];
 	struct ieee80211_regdomain *regd;
+	bool changed;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -283,12 +284,13 @@ void iwl_mld_handle_update_mcc(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
 	IWL_DEBUG_LAR(mld,
 		      "RX: received chub update mcc cmd (mcc '%s' src %d)\n",
 		      mcc, src);
-	regd = iwl_mld_get_regdomain(mld, mcc, src, NULL);
+	regd = iwl_mld_get_regdomain(mld, mcc, src, &changed);
 	if (IS_ERR_OR_NULL(regd))
 		return;
 
 	/* TODO: SAR iwl_mvm_get_sar_geo_profile */
 
-	regulatory_set_wiphy_regd(mld->hw->wiphy, regd);
+	if (changed)
+		regulatory_set_wiphy_regd(mld->hw->wiphy, regd);
 	kfree(regd);
 }
