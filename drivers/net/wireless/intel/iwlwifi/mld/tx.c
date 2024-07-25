@@ -2,10 +2,13 @@
 /*
  * Copyright (C) 2024 Intel Corporation
  */
+#include <net/ip.h>
+
 #include "tx.h"
 #include "sta.h"
 #include "hcmd.h"
 
+#include "fw/api/tx.h"
 #include "fw/api/txq.h"
 #include "fw/api/datapath.h"
 
@@ -152,6 +155,222 @@ void iwl_mld_remove_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 	mld_txq->status.allocated = false;
 }
 
+#define OPT_HDR(type, skb, off) \
+	(type *)(skb_network_header(skb) + (off))
+
+static __le32
+iwl_mld_get_offload_assist(struct sk_buff *skb)
+{
+	struct ieee80211_hdr *hdr = (void *)skb->data;
+	u16 mh_len = ieee80211_hdrlen(hdr->frame_control);
+	u16 offload_assist = 0;
+	bool amsdu = false;
+#if IS_ENABLED(CONFIG_INET)
+	u8 protocol = 0;
+
+	/* Do not compute checksum if already computed */
+	if (skb->ip_summed != CHECKSUM_PARTIAL)
+		goto out;
+
+	/* We do not expect to be requested to csum stuff we do not support */
+
+	/* TBD: do we also need to check
+	 * !(mvm->hw->netdev_features & IWL_TX_CSUM_NETIF_FLAGS) now that all
+	 * the devices we support has this flags?
+	 */
+	if (WARN_ONCE(skb->protocol != htons(ETH_P_IP) &&
+		      skb->protocol != htons(ETH_P_IPV6),
+		      "No support for requested checksum\n")) {
+		skb_checksum_help(skb);
+		goto out;
+	}
+
+	if (skb->protocol == htons(ETH_P_IP)) {
+		protocol = ip_hdr(skb)->protocol;
+	} else {
+#if IS_ENABLED(CONFIG_IPV6)
+		struct ipv6hdr *ipv6h =
+			(struct ipv6hdr *)skb_network_header(skb);
+		unsigned int off = sizeof(*ipv6h);
+
+		protocol = ipv6h->nexthdr;
+		while (protocol != NEXTHDR_NONE && ipv6_ext_hdr(protocol)) {
+			struct ipv6_opt_hdr *hp;
+
+			/* only supported extension headers */
+			if (protocol != NEXTHDR_ROUTING &&
+			    protocol != NEXTHDR_HOP &&
+			    protocol != NEXTHDR_DEST) {
+				skb_checksum_help(skb);
+				goto out;
+			}
+
+			hp = OPT_HDR(struct ipv6_opt_hdr, skb, off);
+			protocol = hp->nexthdr;
+			off += ipv6_optlen(hp);
+		}
+		/* if we get here - protocol now should be TCP/UDP */
+#endif
+	}
+
+	if (protocol != IPPROTO_TCP && protocol != IPPROTO_UDP) {
+		WARN_ON_ONCE(1);
+		skb_checksum_help(skb);
+		goto out;
+	}
+
+	/* enable L4 csum */
+	offload_assist |= BIT(TX_CMD_OFFLD_L4_EN);
+
+	/* Set offset to IP header (snap).
+	 * We don't support tunneling so no need to take care of inner header.
+	 * Size is in words.
+	 */
+	offload_assist |= (4 << TX_CMD_OFFLD_IP_HDR);
+
+	/* Do IPv4 csum for AMSDU only (no IP csum for Ipv6) */
+	if (skb->protocol == htons(ETH_P_IP) && amsdu) {
+		ip_hdr(skb)->check = 0;
+		offload_assist |= BIT(TX_CMD_OFFLD_L3_EN);
+	}
+
+	/* reset UDP/TCP header csum */
+	if (protocol == IPPROTO_TCP)
+		tcp_hdr(skb)->check = 0;
+	else
+		udp_hdr(skb)->check = 0;
+
+out:
+#endif
+	mh_len /= 2;
+	offload_assist |= mh_len << TX_CMD_OFFLD_MH_SIZE;
+
+	if (ieee80211_is_data_qos(hdr->frame_control)) {
+		u8 *qc = ieee80211_get_qos_ctl(hdr);
+
+		amsdu = *qc & IEEE80211_QOS_CTL_A_MSDU_PRESENT;
+	}
+
+	if (amsdu)
+		offload_assist |= BIT(TX_CMD_OFFLD_AMSDU);
+	else if (ieee80211_hdrlen(hdr->frame_control) % 4)
+		/* padding is inserted later in transport */
+		offload_assist |= BIT(TX_CMD_OFFLD_PAD);
+
+	return cpu_to_le32(offload_assist);
+}
+
+static void
+iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
+		    struct iwl_device_tx_cmd *dev_tx_cmd,
+		    struct ieee80211_sta *sta)
+{
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	struct ieee80211_hdr *hdr = (void *)skb->data;
+	struct iwl_mld_sta *mld_sta = sta ? iwl_mld_sta_from_mac80211(sta) :
+					    NULL;
+	struct iwl_tx_cmd_gen3 *tx_cmd;
+	u16 flags = 0;
+
+	dev_tx_cmd->hdr.cmd = TX_CMD;
+
+	/* TODO: set rate_n_flags for non sta or injected frames */
+
+	if (!info->control.hw_key)
+		flags |= IWL_TX_FLAGS_ENCRYPT_DIS;
+
+	if (!ieee80211_is_data(hdr->frame_control) ||
+	    (mld_sta && mld_sta->sta_state < IEEE80211_STA_AUTHORIZED)) {
+		/* These are important frames */
+		flags |= IWL_TX_FLAGS_HIGH_PRI;
+	}
+
+	tx_cmd = (void *)dev_tx_cmd->payload;
+
+	tx_cmd->offload_assist = iwl_mld_get_offload_assist(skb);
+
+	/* Total # bytes to be transmitted */
+	tx_cmd->len = cpu_to_le16((u16)skb->len);
+
+	/* Copy MAC header from skb into command buffer */
+	memcpy(tx_cmd->hdr, hdr, ieee80211_hdrlen(hdr->frame_control));
+
+	tx_cmd->flags = cpu_to_le16(flags);
+}
+
+/* This function must be called with BHs disabled */
+static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
+			   struct ieee80211_txq *txq)
+{
+	struct ieee80211_hdr *hdr = (void *)skb->data;
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	struct ieee80211_sta *sta = txq ? txq->sta : NULL;
+	struct iwl_device_tx_cmd *dev_tx_cmd;
+	int txq_id = -1;
+
+	/* to be removed when non-txq tx is implemented */
+	if (WARN_ON(!txq || !sta))
+		return -1;
+
+	if (unlikely(ieee80211_is_any_nullfunc(hdr->frame_control)))
+		return -1;
+
+	dev_tx_cmd = iwl_trans_alloc_tx_cmd(mld->trans);
+	if (unlikely(!dev_tx_cmd))
+		return -1;
+
+	/* TODO: iwl_mvm_probe_resp_set_noa */
+
+	iwl_mld_fill_tx_cmd(mld, skb, dev_tx_cmd, sta);
+
+	if (txq)
+		txq_id = iwl_mld_txq_from_mac80211(txq)->fw_id;
+
+	/* TODO: get_internal_txq_id for non-txq*/
+
+	if (WARN_ONCE(txq_id < 0, "Invalid TXQ id"))
+		goto err;
+
+	/* TODO: get_internal_sta_id (task=soft_ap)*/
+	IWL_DEBUG_TX(mld, "TX to sta mask: 0x%x, from Q:%d. Len %d\n",
+		     iwl_mld_fw_sta_id_mask(mld, sta),
+		     txq_id, skb->len);
+
+	/* From now on, we cannot access info->control */
+	memset(&info->status, 0, sizeof(info->status));
+	memset(info->driver_data, 0, sizeof(info->driver_data));
+
+	info->driver_data[1] = dev_tx_cmd;
+
+	if (iwl_trans_tx(mld->trans, skb, dev_tx_cmd, txq_id))
+		goto err;
+
+	return 0;
+
+err:
+	iwl_trans_free_tx_cmd(mld->trans, dev_tx_cmd);
+	/* TODO: get_internal_sta_id */
+	IWL_DEBUG_TX(mld, "TX to sta 0x%x, from Q:%d dropped\n",
+		     iwl_mld_fw_sta_id_mask(mld, sta),
+		     txq_id);
+	return -1;
+}
+
+static void iwl_mld_tx_skb(struct iwl_mld *mld, struct sk_buff *skb,
+			   struct ieee80211_txq *txq)
+{
+	if (skb_is_gso(skb)) {
+		IWL_ERR(mld, "GSO is not implemented\n");
+		goto err;
+	}
+
+	if (likely(!iwl_mld_tx_mpdu(mld, skb, txq)))
+		return;
+
+err:
+	ieee80211_free_txskb(mld->hw, skb);
+}
+
 void iwl_mld_tx_from_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 {
 	struct iwl_mld_txq *mld_txq = iwl_mld_txq_from_mac80211(txq);
@@ -182,9 +401,8 @@ void iwl_mld_tx_from_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 
 	rcu_read_lock();
 	do {
-		while ((skb = ieee80211_tx_dequeue(mld->hw, txq))) {
-			/* TODO: iwl_mvm_tx_skb(mvm, skb, txq->sta); */
-		}
+		while ((skb = ieee80211_tx_dequeue(mld->hw, txq)))
+			iwl_mld_tx_skb(mld, skb, txq);
 	} while (atomic_dec_return(&mld_txq->tx_request));
 
 	IWL_DEBUG_TX(mld, "TXQ of sta %pM tid %d is now empty\n",

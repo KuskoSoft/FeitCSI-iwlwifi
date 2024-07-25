@@ -113,9 +113,11 @@ iwl_mld_construct_fw_runtime(struct iwl_mld *mld, struct iwl_trans *trans,
 static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
 	HCMD_NAME(UCODE_ALIVE_NTFY),
 	HCMD_NAME(INIT_COMPLETE_NOTIF),
+	HCMD_NAME(TX_CMD),
 	HCMD_NAME(LEDS_CMD),
 	HCMD_NAME(SCAN_OFFLOAD_UPDATE_PROFILES_CMD),
 	HCMD_NAME(MFUART_LOAD_NOTIFICATION),
+	HCMD_NAME(REPLY_RX_MPDU_CMD),
 	HCMD_NAME(MCC_UPDATE_CMD),
 };
 
@@ -201,6 +203,7 @@ static void
 iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 {
 	const struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+	static const u8 no_reclaim_cmds[] = {TX_CMD};
 	struct iwl_trans_config trans_cfg = {
 		.op_mode = op_mode,
 		/* Rx is not supported yet, but add it to avoid warnings */
@@ -213,6 +216,8 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 					      WIDE_ID(DATA_PATH_GROUP,
 						      SCD_QUEUE_CONFIG_CMD),
 					      0),
+		.no_reclaim_cmds = no_reclaim_cmds,
+		.n_no_reclaim_cmds = ARRAY_SIZE(no_reclaim_cmds),
 	};
 	struct iwl_trans *trans = mld->trans;
 
