@@ -188,6 +188,8 @@ static void iwl_mvm_rx_esr_trans_fail_notif(struct iwl_mvm *mvm,
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	struct iwl_esr_trans_fail_notif *notif = (void *)pkt->data;
 	struct ieee80211_vif *vif = iwl_mvm_get_bss_vif(mvm);
+	u8 fw_link_id = le32_to_cpu(notif->link_id);
+	struct ieee80211_bss_conf *bss_conf;
 
 	if (IS_ERR_OR_NULL(vif))
 		return;
@@ -196,15 +198,25 @@ static void iwl_mvm_rx_esr_trans_fail_notif(struct iwl_mvm *mvm,
 		       le32_to_cpu(notif->activation) ? "enter" : "exit",
 		       le32_to_cpu(notif->link_id),
 		       le32_to_cpu(notif->err_code));
-	/* If we couldn't exit EMLSR, the AP may send us data on the link we
-	 * removed so we don't have much choice, just disconnect...
-	 * If we can't enter EMLSR, go back to single link.
-	 */
-	if (le32_to_cpu(notif->activation))
-		iwl_mvm_exit_esr(mvm, vif, IWL_MVM_ESR_EXIT_FAIL_ENTRY,
-				 iwl_mvm_get_primary_link(vif));
-	else
+
+	/* we couldn't go back to single link, disconnect */
+	if (!le32_to_cpu(notif->activation)) {
 		iwl_mvm_connection_loss(mvm, vif, "emlsr exit failed");
+		return;
+	}
+
+	bss_conf = iwl_mvm_rcu_fw_link_id_to_link_conf(mvm, fw_link_id, false);
+	if (IWL_FW_CHECK(mvm, !bss_conf,
+			 "FW reported failure to activate EMLSR on a non-existing link: %d\n",
+			 fw_link_id))
+		return;
+
+	/*
+	 * We failed to activate the second link and enter EMLSR, we need to go
+	 * back to single link.
+	 */
+	iwl_mvm_exit_esr(mvm, vif, IWL_MVM_ESR_EXIT_FAIL_ENTRY,
+			 bss_conf->link_id);
 }
 
 static void iwl_mvm_rx_monitor_notif(struct iwl_mvm *mvm,
