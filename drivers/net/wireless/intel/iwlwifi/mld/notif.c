@@ -156,10 +156,10 @@ iwl_mld_notif_is_valid(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
 		return true;
 	}
 
-	IWL_ERR(mld,
-		"notification 0x%04x version %ld doesn't have an expected size, using the size of version %d\n",
-		handler->cmd_id, notif_ver,
-		handler->sizes[handler->n_sizes].ver);
+	IWL_FW_CHECK_FAILED(mld,
+			    "notif 0x%04x ver %ld missing expected size, use version %d size\n",
+			    handler->cmd_id, notif_ver,
+			    handler->sizes[handler->n_sizes - 1].ver);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/* Drop the notification in non-upstream builds to force adding
