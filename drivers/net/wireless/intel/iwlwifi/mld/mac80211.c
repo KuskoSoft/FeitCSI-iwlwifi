@@ -1052,11 +1052,15 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 
 		if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
 			mld_vif->ap_sta = sta;
+
+		return ret;
+	} else if (old_state == IEEE80211_STA_NONE &&
+		   new_state == IEEE80211_STA_AUTH) {
+		return 0;
 	} else {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
 		return -EINVAL;
 	}
-	return ret;
 }
 
 static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
@@ -1067,8 +1071,11 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 
-	if (old_state == IEEE80211_STA_NONE &&
-	    new_state == IEEE80211_STA_NOTEXIST) {
+	if (old_state == IEEE80211_STA_AUTH &&
+	    new_state == IEEE80211_STA_NONE) {
+		/* nothing */
+	} else if (old_state == IEEE80211_STA_NONE &&
+		   new_state == IEEE80211_STA_NOTEXIST) {
 		mld_vif->ap_sta = NULL;
 		iwl_mld_remove_sta(mld, sta);
 	} else {
