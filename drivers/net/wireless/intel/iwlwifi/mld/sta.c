@@ -302,6 +302,21 @@ iwl_mvm_remove_link_sta(struct iwl_mld *mld,
 	RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
 }
 
+int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
+				     struct ieee80211_sta *sta)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct ieee80211_link_sta *link_sta;
+	int link_id;
+
+	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
+		int ret = iwl_mld_add_modify_sta_cmd(mld, link_sta);
+			if (ret)
+				return ret;
+	}
+	return 0;
+}
+
 static void
 iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 		 struct ieee80211_vif *vif, enum iwl_fw_sta_type type)

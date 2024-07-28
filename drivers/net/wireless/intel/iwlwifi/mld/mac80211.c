@@ -1057,6 +1057,9 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 	} else if (old_state == IEEE80211_STA_NONE &&
 		   new_state == IEEE80211_STA_AUTH) {
 		return 0;
+	} else if (old_state == IEEE80211_STA_AUTH &&
+		   new_state == IEEE80211_STA_ASSOC) {
+		return iwl_mld_update_all_link_stations(mld, sta);
 	} else {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
 		return -EINVAL;
@@ -1071,8 +1074,11 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 
-	if (old_state == IEEE80211_STA_AUTH &&
-	    new_state == IEEE80211_STA_NONE) {
+	if (old_state == IEEE80211_STA_ASSOC &&
+	    new_state == IEEE80211_STA_AUTH) {
+		/* nothing */
+	} else if (old_state == IEEE80211_STA_AUTH &&
+		   new_state == IEEE80211_STA_NONE) {
 		/* nothing */
 	} else if (old_state == IEEE80211_STA_NONE &&
 		   new_state == IEEE80211_STA_NOTEXIST) {
