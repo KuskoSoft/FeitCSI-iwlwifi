@@ -1060,6 +1060,22 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 	} else if (old_state == IEEE80211_STA_AUTH &&
 		   new_state == IEEE80211_STA_ASSOC) {
 		return iwl_mld_update_all_link_stations(mld, sta);
+	} else if (old_state == IEEE80211_STA_ASSOC &&
+		   new_state == IEEE80211_STA_AUTHORIZED) {
+		mld_vif->authorized = true;
+
+		/* clear COEX_HIGH_PRIORITY_ENABLE */
+		ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_MODIFY);
+		if (ret)
+			return ret;
+
+		/* MFP is set by default before the station is authorized.
+		 * Clear it here in case it's not used.
+		 */
+		if (!sta->mfp)
+			ret = iwl_mld_update_all_link_stations(mld, sta);
+
+		return ret;
 	} else {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
 		return -EINVAL;
@@ -1074,8 +1090,11 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 
-	if (old_state == IEEE80211_STA_ASSOC &&
-	    new_state == IEEE80211_STA_AUTH) {
+	if (old_state == IEEE80211_STA_AUTHORIZED &&
+	    new_state == IEEE80211_STA_ASSOC) {
+		mld_vif->authorized = false;
+	} else if (old_state == IEEE80211_STA_ASSOC &&
+		   new_state == IEEE80211_STA_AUTH) {
 		/* nothing */
 	} else if (old_state == IEEE80211_STA_AUTH &&
 		   new_state == IEEE80211_STA_NONE) {
@@ -1103,7 +1122,8 @@ static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
 	IWL_DEBUG_MAC80211(mld, "station %pM state change %d->%d\n",
 			   sta->addr, old_state, new_state);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION ||
+	    sta->tdls) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET %s\n", __func__);
 		return -EINVAL;
 	}

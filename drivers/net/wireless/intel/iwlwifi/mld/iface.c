@@ -158,9 +158,9 @@ static void iwl_mld_fill_mac_cmd_sta(struct iwl_mld *mld,
 	if (vif->cfg.assoc && action != FW_CTXT_ACTION_ADD) {
 		cmd->client.is_assoc = 1;
 
-		/* TODO: set this only before authorized (task=ASSOC) */
-		cmd->client.data_policy |=
-			cpu_to_le16(COEX_HIGH_PRIORITY_ENABLE);
+		if (!iwl_mld_vif_from_mac80211(vif)->authorized)
+			cmd->client.data_policy |=
+				cpu_to_le16(COEX_HIGH_PRIORITY_ENABLE);
 	} else {
 		/* Allow beacons to pass through as long as we are not
 		 * associated

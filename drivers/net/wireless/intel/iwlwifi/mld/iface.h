@@ -15,6 +15,7 @@
  * @fw_id: fw id of the mac context.
  * @ap_sta: pointer to AP sta, for easier access to it.
  *	Relevant only for STA vifs.
+ * @authorized: indicates the AP station was set to authorized
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
@@ -26,6 +27,7 @@ struct iwl_mld_vif {
 		u8 fw_id;
 		struct iwl_mld_session_protect session_protect;
 		struct ieee80211_sta *ap_sta;
+		bool authorized;
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld *mld;
