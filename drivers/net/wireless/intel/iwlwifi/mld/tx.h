@@ -46,4 +46,6 @@ iwl_mld_txq_from_mac80211(struct ieee80211_txq *txq)
 void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk);
 void iwl_mld_remove_txq(struct iwl_mld *mld, struct ieee80211_txq *txq);
 void iwl_mld_tx_from_txq(struct iwl_mld *mld, struct ieee80211_txq *txq);
+void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
+				 struct iwl_rx_packet *pkt);
 #endif /* __iwl_mld_tx_h__ */

@@ -410,3 +410,66 @@ void iwl_mld_tx_from_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 
 	rcu_read_unlock();
 }
+
+void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
+				 struct iwl_rx_packet *pkt)
+{
+	struct iwl_tx_resp *tx_resp = (void *)pkt->data;
+	int txq_id = le16_to_cpu(tx_resp->tx_queue);
+	struct agg_tx_status *agg_status = &tx_resp->status;
+	u32 status = le16_to_cpu(agg_status->status);
+	u16 ssn = le32_to_cpup((__le32 *)agg_status + tx_resp->frame_count)
+				& 0xFFFF;
+	struct sk_buff_head skbs;
+	u8 skb_freed = 0;
+
+	WARN_ON(tx_resp->frame_count != 1);
+
+	/* TODO: validate the size of the variable part of the notif */
+
+	__skb_queue_head_init(&skbs);
+
+	/* we can free until ssn % q.n_bd not inclusive */
+	iwl_trans_reclaim(mld->trans, txq_id, ssn, &skbs, false);
+
+	while (!skb_queue_empty(&skbs)) {
+		struct sk_buff *skb = __skb_dequeue(&skbs);
+		struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+
+		skb_freed++;
+
+		iwl_trans_free_tx_cmd(mld->trans, info->driver_data[1]);
+
+		memset(&info->status, 0, sizeof(info->status));
+
+		info->flags &= ~(IEEE80211_TX_STAT_ACK | IEEE80211_TX_STAT_TX_FILTERED);
+
+		/* inform mac80211 about what happened with the frame */
+		switch (status & TX_STATUS_MSK) {
+		case TX_STATUS_SUCCESS:
+		case TX_STATUS_DIRECT_DONE:
+			info->flags |= IEEE80211_TX_STAT_ACK;
+			break;
+		default:
+			break;
+		}
+
+		/* If we are freeing multiple frames, mark all the frames
+		 * but the first one as acked, since they were acknowledged
+		 * before
+		 */
+		if (skb_freed > 1)
+			info->flags |= IEEE80211_TX_STAT_ACK;
+
+		/* TODO: iwl_mvm_tx_status_check_trigger (task=DP) */
+		/* TODO: iwl_mvm_hwrate_to_tx_rate (task=DP)*/
+
+		ieee80211_tx_status_skb(mld->hw, skb);
+	}
+
+	IWL_DEBUG_TX_REPLY(mld,
+			   "TXQ %d status 0x%08x ssn=%d\n",
+			   txq_id, status, ssn);
+
+	/* TODO: print more info here */
+}

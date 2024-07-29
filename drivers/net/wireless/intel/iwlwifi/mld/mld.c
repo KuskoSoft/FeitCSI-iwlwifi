@@ -218,6 +218,8 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 					      0),
 		.no_reclaim_cmds = no_reclaim_cmds,
 		.n_no_reclaim_cmds = ARRAY_SIZE(no_reclaim_cmds),
+		.cb_data_offs = offsetof(struct ieee80211_tx_info,
+					 driver_data[2]),
 	};
 	struct iwl_trans *trans = mld->trans;
 

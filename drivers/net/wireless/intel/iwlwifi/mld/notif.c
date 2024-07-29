@@ -13,9 +13,11 @@
 #include "fw/api/mac-cfg.h"
 #include "session-protect.h"
 #include "fw/api/time-event.h"
+#include "fw/api/tx.h"
 
 #include "mcc.h"
 #include "link.h"
+#include "tx.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
@@ -114,6 +116,8 @@ CMD_VERSIONS(session_prot_notif,
 	     CMD_VER_ENTRY(3, iwl_session_prot_notif))
 CMD_VERSIONS(missed_beacon_notif,
 	     CMD_VER_ENTRY(5, iwl_missed_beacons_notif))
+CMD_VERSIONS(tx_resp_notif,
+	     CMD_VER_ENTRY(7, iwl_tx_resp))
 
 /*
  * Handlers for fw notifications
@@ -123,6 +127,8 @@ CMD_VERSIONS(missed_beacon_notif,
  * The handler can be one from three contexts, see &iwl_rx_handler_context
  */
 static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
+	RX_HANDLER_SIZES(LEGACY_GROUP, TX_CMD, tx_resp_notif,
+			 RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
 			 RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(LEGACY_GROUP, SCAN_COMPLETE_UMAC, scan_complete_notif,
