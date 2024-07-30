@@ -82,9 +82,9 @@ struct iwl_mld {
 	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
 	size_t scan_cmd_size;
 	void *scan_cmd;
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
 	struct wiphy_wowlan_support wowlan;
-#endif /* CONFIG_PM */
+#endif /* CONFIG_PM_SLEEP */
 #ifdef CPTCFG_IWLWIFI_LEDS
 	struct led_classdev led;
 #endif
