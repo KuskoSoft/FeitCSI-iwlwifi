@@ -344,13 +344,29 @@ int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	return iwl_mld_add_link_sta(mld, &sta->deflink);
 }
 
+static void iwl_mld_flush_sta_txqs(struct iwl_mld *mld,
+				  struct ieee80211_sta *sta)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct ieee80211_link_sta *link_sta;
+	int link_id;
+
+	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
+		u32 fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+
+		iwl_mld_flush_link_sta_txqs(mld, fw_sta_id);
+	}
+}
+
 void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct ieee80211_link_sta *link_sta;
 	u8 link_id;
 
-	/* TODO: flush the queues and wait for them to emtpy */
+	iwl_mld_flush_sta_txqs(mld, sta);
+
+	/* TODO: wait for them to emtpy */
 
 	/* Remove all the queues */
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)

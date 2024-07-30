@@ -8,6 +8,8 @@
 #include "sta.h"
 #include "hcmd.h"
 
+#include "fw/dbg.h"
+
 #include "fw/api/tx.h"
 #include "fw/api/txq.h"
 #include "fw/api/datapath.h"
@@ -472,4 +474,98 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 			   txq_id, status, ssn);
 
 	/* TODO: print more info here */
+}
+
+static void iwl_mld_tx_reclaim_txq(struct iwl_mld *mld, int txq, int index)
+{
+	struct sk_buff_head reclaimed_skbs;
+
+	__skb_queue_head_init(&reclaimed_skbs);
+
+	iwl_trans_reclaim(mld->trans, txq, index, &reclaimed_skbs, true);
+
+	while (!skb_queue_empty(&reclaimed_skbs)) {
+		struct sk_buff *skb = __skb_dequeue(&reclaimed_skbs);
+		struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+
+		iwl_trans_free_tx_cmd(mld->trans, info->driver_data[1]);
+
+		memset(&info->status, 0, sizeof(info->status));
+
+		info->flags &= ~IEEE80211_TX_STAT_ACK;
+		ieee80211_tx_status_skb(mld->hw, skb);
+	}
+}
+
+int iwl_mld_flush_link_sta_txqs(struct iwl_mld *mld, u32 fw_sta_id)
+{
+	struct iwl_tx_path_flush_cmd_rsp *rsp;
+	struct iwl_tx_path_flush_cmd flush_cmd = {
+		.sta_id = cpu_to_le32(fw_sta_id),
+		.tid_mask = cpu_to_le16(0xffff),
+	};
+	struct iwl_host_cmd cmd = {
+		.id = TXPATH_FLUSH,
+		.len = { sizeof(flush_cmd), },
+		.data = { &flush_cmd, },
+		.flags = CMD_WANT_SKB,
+	};
+	int ret, num_flushed_queues;
+	u32 resp_len;
+
+	IWL_DEBUG_TX_QUEUES(mld, "flush for sta id %d tid mask 0x%x\n",
+			    fw_sta_id, 0xffff);
+
+	ret = iwl_mld_send_cmd(mld, &cmd);
+	if (ret) {
+		IWL_ERR(mld, "Failed to send flush command (%d)\n", ret);
+		return ret;
+	}
+
+	resp_len = iwl_rx_packet_payload_len(cmd.resp_pkt);
+	if (IWL_FW_CHECK(mld, resp_len != sizeof(*rsp),
+			 "Invalid TXPATH_FLUSH response len: %d\n",
+			 resp_len)) {
+		ret = -EIO;
+		goto free_rsp;
+	}
+
+	rsp = (void *)cmd.resp_pkt->data;
+
+	if (IWL_FW_CHECK(mld, le16_to_cpu(rsp->sta_id) != fw_sta_id,
+			 "sta_id %d != rsp_sta_id %d\n", fw_sta_id,
+			 le16_to_cpu(rsp->sta_id))) {
+		ret = -EIO;
+		goto free_rsp;
+	}
+
+	num_flushed_queues = le16_to_cpu(rsp->num_flushed_queues);
+	if (IWL_FW_CHECK(mld, num_flushed_queues > IWL_TX_FLUSH_QUEUE_RSP,
+			 "num_flushed_queues %d\n", num_flushed_queues)) {
+		ret = -EIO;
+		goto free_rsp;
+	}
+
+	for (int i = 0; i < num_flushed_queues; i++) {
+		struct iwl_flush_queue_info *queue_info = &rsp->queues[i];
+		int read_after = le16_to_cpu(queue_info->read_after_flush);
+		int txq_id = le16_to_cpu(queue_info->queue_num);
+
+		if (IWL_FW_CHECK(mld,
+				 txq_id >= ARRAY_SIZE(mld->fw_id_to_txq),
+				 "Invalid txq id %d\n", txq_id))
+			continue;
+
+		IWL_DEBUG_TX_QUEUES(mld,
+				    "tid %d txq_id %d read-before %d read-after %d\n",
+				    le16_to_cpu(queue_info->tid), txq_id,
+				    le16_to_cpu(queue_info->read_before_flush),
+				    read_after);
+
+		iwl_mld_tx_reclaim_txq(mld, txq_id, read_after);
+	}
+
+free_rsp:
+	iwl_free_resp(&cmd);
+	return ret;
 }
