@@ -553,3 +553,11 @@ void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
 		IWL_ERR(mld, "Not implemented, exist EMLSR\n");
 	}
 }
+
+int iwl_mld_link_set_associated(struct iwl_mld *mld, struct ieee80211_vif *vif,
+				struct ieee80211_bss_conf *link)
+{
+	return iwl_mld_change_link_in_fw(mld, link, LINK_CONTEXT_MODIFY_ALL &
+					 ~(LINK_CONTEXT_MODIFY_ACTIVE |
+					   LINK_CONTEXT_MODIFY_EHT_PARAMS));
+}

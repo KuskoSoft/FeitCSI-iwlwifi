@@ -860,8 +860,28 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 				      u64 changes)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
 
-	IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return;
+	}
+
+	if (changes & BSS_CHANGED_ASSOC) {
+		ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_MODIFY);
+		if (ret)
+			IWL_ERR(mld, "failed to update context\n");
+
+		if (vif->cfg.assoc)
+			iwl_mld_set_vif_associated(mld, vif);
+			/* todo: if assoc request statistics (task=statistics)
+			 */
+	}
+
+	//todo: BSS_CHANGED_PS - power_update_mac
+	//todo: BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM - mlo_int_scan_wk
 }
 
 static

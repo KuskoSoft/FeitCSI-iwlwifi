@@ -291,3 +291,19 @@ int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	return ret;
 }
+
+void iwl_mld_set_vif_associated(struct iwl_mld *mld,
+				struct ieee80211_vif *vif)
+{
+	struct ieee80211_bss_conf *link;
+	unsigned int link_id;
+
+	for_each_vif_active_link(vif, link, link_id) {
+		if (iwl_mld_link_set_associated(mld, vif, link))
+			IWL_ERR(mld, "failed to update link %d\n", link_id);
+	}
+	/* todo:  update_mu_groups
+	 * todo: recalc_multicast
+	 * todo: coex: coex_vif_change and reset ave_beacon_signal
+	 */
+}

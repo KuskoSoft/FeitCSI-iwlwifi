@@ -67,4 +67,6 @@ int iwl_mld_mac_fw_action(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			  u32 action);
 int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif);
 int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif);
+void iwl_mld_set_vif_associated(struct iwl_mld *mld,
+				struct ieee80211_vif *vif);
 #endif /* __iwl_mld_iface_h__ */

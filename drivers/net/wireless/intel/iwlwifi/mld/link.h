@@ -52,5 +52,6 @@ int iwl_mld_change_link_in_fw(struct iwl_mld *mld,
 			      struct ieee80211_bss_conf *link, u32 changes);
 void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt);
-
+int iwl_mld_link_set_associated(struct iwl_mld *mld, struct ieee80211_vif *vif,
+				struct ieee80211_bss_conf *link);
 #endif /* __iwl_mld_link_h__ */
