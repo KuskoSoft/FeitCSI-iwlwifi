@@ -358,17 +358,41 @@ static void iwl_mld_flush_sta_txqs(struct iwl_mld *mld,
 	}
 }
 
+static void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld,
+				       struct ieee80211_sta *sta)
+{
+	/* Avoid a warning in iwl_trans_wait_txq_empty if are anyway on the way
+	 * to a restart.
+	 */
+	if (iwl_mld_error_before_recovery(mld))
+		return;
+
+	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++) {
+		struct iwl_mld_txq *mld_txq =
+			iwl_mld_txq_from_mac80211(sta->txq[i]);
+
+		if (!mld_txq->status.allocated)
+			continue;
+
+		iwl_trans_wait_txq_empty(mld->trans, mld_txq->fw_id);
+	}
+}
+
 void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct ieee80211_link_sta *link_sta;
 	u8 link_id;
 
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* Tell the HW to flush the queues */
 	iwl_mld_flush_sta_txqs(mld, sta);
 
-	/* TODO: wait for them to emtpy */
+	/* Wait for trans to empty its queues */
+	iwl_mld_wait_sta_txqs_empty(mld, sta);
 
-	/* Remove all the queues */
+	/* Now we can remove the queues */
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		iwl_mld_remove_txq(mld, sta->txq[i]);
 
