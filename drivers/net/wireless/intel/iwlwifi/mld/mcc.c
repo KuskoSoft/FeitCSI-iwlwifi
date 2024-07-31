@@ -264,6 +264,27 @@ int iwl_mld_init_mcc(struct iwl_mld *mld)
 	return retval;
 }
 
+static void iwl_mld_find_assoc_vif_iterator(void *data, u8 *mac,
+					    struct ieee80211_vif *vif)
+{
+	bool *assoc = data;
+
+	if (vif->type == NL80211_IFTYPE_STATION &&
+	    vif->cfg.assoc)
+		*assoc = true;
+}
+
+static bool iwl_mld_is_a_vif_assoc(struct iwl_mld *mld)
+{
+	bool assoc = false;
+
+	ieee80211_iterate_active_interfaces_atomic(mld->hw,
+						   IEEE80211_IFACE_ITER_NORMAL,
+						   iwl_mld_find_assoc_vif_iterator,
+						   &assoc);
+	return assoc;
+}
+
 void iwl_mld_handle_update_mcc(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
 {
 	struct iwl_mcc_chub_notif *notif = (void *)pkt->data;
@@ -274,7 +295,11 @@ void iwl_mld_handle_update_mcc(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* TODO: task=assoc ignore if we're assoc'ed, see code in mvm */
+	if (iwl_mld_is_a_vif_assoc(mld) &&
+	    notif->source_id == MCC_SOURCE_WIFI) {
+		IWL_DEBUG_LAR(mld, "Ignore mcc update while associated\n");
+		return;
+	}
 
 	mcc[0] = le16_to_cpu(notif->mcc) >> 8;
 	mcc[1] = le16_to_cpu(notif->mcc) & 0xff;
