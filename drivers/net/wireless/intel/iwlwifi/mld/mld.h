@@ -19,6 +19,7 @@
 #include "fw/api/mac-cfg.h"
 #include "fw/api/mac.h"
 #include "fw/api/phy-ctxt.h"
+#include "fw/dbg.h"
 
 #include "notif.h"
 
@@ -273,6 +274,17 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 		return 0;								\
 	}										\
 	return -ENOSPC;									\
+}
+
+static inline struct ieee80211_bss_conf *
+iwl_mld_fw_id_to_link_conf(struct iwl_mld *mld, u8 fw_link_id)
+{
+	if (IWL_FW_CHECK(mld, fw_link_id >= ARRAY_SIZE(mld->fw_id_to_bss_conf),
+			 "Invalid fw_link_id: %d\n", fw_link_id))
+		return NULL;
+
+	return wiphy_dereference(mld->wiphy,
+				 mld->fw_id_to_bss_conf[fw_link_id]);
 }
 
 #define MSEC_TO_TU(_msec)	((_msec) * 1000 / 1024)

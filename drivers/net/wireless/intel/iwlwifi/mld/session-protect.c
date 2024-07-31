@@ -7,25 +7,17 @@
 #include "fw/api/context.h"
 #include "iface.h"
 #include <net/mac80211.h>
-#include "fw/dbg.h"
 
 void iwl_mld_handle_session_prot_notif(struct iwl_mld *mld,
 				       struct iwl_rx_packet *pkt)
 {
 	struct iwl_session_prot_notif *notif = (void *)pkt->data;
 	int fw_link_id = le32_to_cpu(notif->mac_link_id);
-	struct ieee80211_bss_conf *link_conf;
+	struct ieee80211_bss_conf *link_conf =
+		iwl_mld_fw_id_to_link_conf(mld, fw_link_id);
 	struct ieee80211_vif *vif;
 	struct iwl_mld_vif *mld_vif;
 	struct iwl_mld_session_protect *session_protect;
-
-	if (IWL_FW_CHECK(mld, fw_link_id >= ARRAY_SIZE(mld->fw_id_to_bss_conf),
-			 "Bad link index in session protection %d\n",
-			 fw_link_id))
-		return;
-
-	link_conf = wiphy_dereference(mld->wiphy,
-				      mld->fw_id_to_bss_conf[fw_link_id]);
 
 	if (WARN_ON(!link_conf))
 		return;

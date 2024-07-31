@@ -15,6 +15,7 @@
 #include "fw/api/time-event.h"
 
 #include "mcc.h"
+#include "link.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
@@ -111,6 +112,8 @@ CMD_VERSIONS(update_mcc,
 	     CMD_VER_ENTRY(1, iwl_mcc_chub_notif))
 CMD_VERSIONS(session_prot_notif,
 	     CMD_VER_ENTRY(3, iwl_session_prot_notif))
+CMD_VERSIONS(missed_beacon_notif,
+	     CMD_VER_ENTRY(5, iwl_missed_beacons_notif))
 
 /*
  * Handlers for fw notifications
@@ -134,6 +137,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 
 	RX_HANDLER_SIZES(MAC_CONF_GROUP, SESSION_PROTECTION_NOTIF,
 			 session_prot_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(MAC_CONF_GROUP, MISSED_BEACONS_NOTIF,
+			 missed_beacon_notif, RX_HANDLER_ASYNC)
 };
 
 static bool

@@ -3,6 +3,7 @@
  * Copyright (C) 2024 Intel Corporation
  */
 
+#include "constants.h"
 #include "link.h"
 #include "iface.h"
 #include "hcmd.h"
@@ -12,6 +13,7 @@
 #include "fw/api/mac.h"
 
 #include "fw/api/context.h"
+#include "fw/dbg.h"
 
 static int iwl_mld_send_link_cmd(struct iwl_mld *mld,
 				 struct iwl_link_config_cmd *cmd,
@@ -471,4 +473,83 @@ int iwl_mld_remove_link(struct iwl_mld *mld,
 	RCU_INIT_POINTER(mld->fw_id_to_bss_conf[link->fw_id], NULL);
 
 	return 0;
+}
+
+void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
+					struct iwl_rx_packet *pkt)
+{
+	const struct iwl_missed_beacons_notif *notif = (const void *)pkt->data;
+	union iwl_dbg_tlv_tp_data tp_data = { .fw_pkt = pkt };
+	u32 link_id = le32_to_cpu(notif->link_id);
+	u32 missed_bcon = le32_to_cpu(notif->consec_missed_beacons);
+	u32 missed_bcon_since_rx =
+		le32_to_cpu(notif->consec_missed_beacons_since_last_rx);
+	u32 scnd_lnk_bcn_lost =
+		le32_to_cpu(notif->consec_missed_beacons_other_link);
+	struct ieee80211_bss_conf *link_conf =
+		iwl_mld_fw_id_to_link_conf(mld, link_id);
+	u32 bss_param_ch_cnt_link_id;
+	struct ieee80211_vif *vif;
+
+	if (WARN_ON(!link_conf))
+		return;
+
+	vif = link_conf->vif;
+	bss_param_ch_cnt_link_id = link_conf->bss_param_ch_cnt_link_id;
+
+	IWL_DEBUG_INFO(mld,
+		       "missed bcn link_id=%u, %u consecutive=%u\n",
+		       link_id, missed_bcon, missed_bcon_since_rx);
+
+	if (WARN_ON(!vif))
+		return;
+
+	mld->trans->dbg.dump_file_name_ext_valid = true;
+	snprintf(mld->trans->dbg.dump_file_name_ext, IWL_FW_INI_MAX_NAME,
+		 "LinkId_%d_MacType_%d", link_id,
+		 iwl_mld_mac80211_iftype_to_fw(vif));
+
+	iwl_dbg_tlv_time_point(&mld->fwrt,
+			       IWL_FW_INI_TIME_POINT_MISSED_BEACONS, &tp_data);
+
+	if (missed_bcon >= IWL_MLD_MISSED_BEACONS_THRESHOLD_LONG) {
+		if (missed_bcon_since_rx >=
+		    IWL_MLD_MISSED_BEACONS_SINCE_RX_THOLD) {
+			ieee80211_connection_loss(vif);
+			return;
+		}
+		IWL_WARN(mld,
+			 "missed beacons exceeds threshold, but receiving data. Stay connected, Expect bugs.\n");
+		return;
+	}
+
+	if (missed_bcon_since_rx > IWL_MLD_MISSED_BEACONS_THRESHOLD)
+		ieee80211_cqm_beacon_loss_notify(vif, GFP_ATOMIC);
+
+	/* no more logic if we're not in EMLSR */
+	if (hweight16(vif->active_links) <= 1)
+		return;
+
+	if (IWL_FW_CHECK(mld,
+			 le32_to_cpu(notif->other_link_id) == FW_CTXT_ID_INVALID,
+			 "No data for other link id but we are in EMLSR. active_links: 0x%x\n",
+			 vif->active_links))
+		return;
+
+	/* Exit EMLSR if we lost more than
+	 * IWL_MLD_MISSED_BEACONS_EXIT_ESR_THRESH beacons on boths links
+	 * OR more than IWL_MLD_BCN_LOSS_EXIT_ESR_THRESH on current link.
+	 * OR more than IWL_MLD_BCN_LOSS_EXIT_ESR_THRESH_BSS_PARAM_CHANGED
+	 * on current link and the link's bss_param_ch_count has changed on
+	 * the other link's beacon.
+	 */
+	if ((missed_bcon >= IWL_MLD_BCN_LOSS_EXIT_ESR_THRESH_2_LINKS &&
+	     scnd_lnk_bcn_lost >= IWL_MLD_BCN_LOSS_EXIT_ESR_THRESH_2_LINKS) ||
+	    missed_bcon >= IWL_MLD_BCN_LOSS_EXIT_ESR_THRESH ||
+	    (bss_param_ch_cnt_link_id != link_id &&
+	     missed_bcon >=
+	     IWL_MLD_BCN_LOSS_EXIT_ESR_THRESH_BSS_PARAM_CHANGED)) {
+		/* TODO EMLSR: exit esr */
+		IWL_ERR(mld, "Not implemented, exist EMLSR\n");
+	}
 }
