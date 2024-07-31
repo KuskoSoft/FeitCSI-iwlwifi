@@ -38,8 +38,7 @@ static int iwl_mld_send_mac_cmd(struct iwl_mld *mld,
 	return ret;
 }
 
-static int iwl_mld_mac80211_iftype_to_fw(struct iwl_mld *mld,
-					 struct ieee80211_vif *vif)
+int iwl_mld_mac80211_iftype_to_fw(const struct ieee80211_vif *vif)
 {
 	switch (vif->type) {
 	case NL80211_IFTYPE_STATION:
@@ -92,7 +91,7 @@ static void iwl_mld_mac_cmd_fill_common(struct iwl_mld *mld,
 	cmd->action = cpu_to_le32(action);
 
 	cmd->mac_type =
-		cpu_to_le32(iwl_mld_mac80211_iftype_to_fw(mld, vif));
+		cpu_to_le32(iwl_mld_mac80211_iftype_to_fw(vif));
 
 	memcpy(cmd->local_mld_addr, vif->addr, ETH_ALEN);
 
