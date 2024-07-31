@@ -47,7 +47,7 @@ static int iwl_mld_add_link_to_fw(struct iwl_mld *mld,
 	cmd.link_id = cpu_to_le32(link->fw_id);
 	cmd.mac_id = cpu_to_le32(mld_vif->fw_id);
 	cmd.spec_link_id = link_conf->link_id;
-	cmd.phy_id = cpu_to_le32(FW_CTXT_INVALID);
+	cmd.phy_id = cpu_to_le32(FW_CTXT_ID_INVALID);
 
 	ether_addr_copy(cmd.local_link_addr, link_conf->addr);
 
@@ -266,7 +266,7 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 
 	cmd.phy_id = cpu_to_le32(chan_ctx ?
 		iwl_mld_phy_from_mac80211(chan_ctx)->fw_id :
-		FW_CTXT_INVALID);
+		FW_CTXT_ID_INVALID);
 
 	ether_addr_copy(cmd.local_link_addr, link->addr);
 
@@ -400,7 +400,7 @@ iwl_mld_rm_link_from_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link)
 
 	cmd.link_id = cpu_to_le32(mld_link->fw_id);
 	cmd.spec_link_id = link->link_id;
-	cmd.phy_id = cpu_to_le32(FW_CTXT_INVALID);
+	cmd.phy_id = cpu_to_le32(FW_CTXT_ID_INVALID);
 
 	return iwl_mld_send_link_cmd(mld, &cmd, FW_CTXT_ACTION_REMOVE);
 }
