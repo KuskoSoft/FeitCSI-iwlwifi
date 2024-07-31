@@ -793,6 +793,7 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 				  struct ieee80211_chanctx_conf *ctx)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
 	int ret;
 
@@ -807,10 +808,14 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 
 	RCU_INIT_POINTER(mld_link->chan_ctx, NULL);
 
-	/* TODO: when vif is not mld, and we are not associated, and the ap
-	 * sta doesn't exist, remove and add the default link to clean its
-	 * state in FW. (task=STA)
+	/* in the non-MLO case, remove/re-add the link to clean up FW state.
+	 * In MLO, it'll be done in drv_change_vif_link
 	 */
+	if (!ieee80211_vif_is_mld(vif) && !mld_vif->ap_sta &&
+	    !WARN_ON_ONCE(vif->cfg.assoc)) {
+		iwl_mld_remove_link(mld, link);
+		iwl_mld_add_link(mld, link);
+	}
 }
 
 #ifdef CONFIG_PM_SLEEP
