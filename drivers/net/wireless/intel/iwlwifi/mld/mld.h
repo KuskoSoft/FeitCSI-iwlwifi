@@ -58,6 +58,7 @@
  * @scan.uid_status: array to track the scan status per uid
  * @scan.start_tsf: start time of last scan in TSF of the link that requested
  *	the scan.
+ * @scan.last_ebs_failed: true if the last EBS (Energy Based Scan) failed.
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
@@ -97,6 +98,7 @@ struct iwl_mld {
 		unsigned int status;
 		u32 uid_status[IWL_MAX_UMAC_SCANS];
 		u64 start_tsf;
+		bool last_ebs_failed;
 	} scan;
 #ifdef CONFIG_PM_SLEEP
 	struct wiphy_wowlan_support wowlan;

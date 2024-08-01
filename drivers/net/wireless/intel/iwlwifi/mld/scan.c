@@ -491,6 +491,29 @@ iwl_mld_scan_cmd_set_probe_params(struct iwl_mld_scan_params *params,
 	iwl_mld_scan_cmd_build_ssids(params, pp->direct_scan, bitmap_ssid);
 }
 
+static inline bool
+iwl_mld_scan_use_ebs(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	const struct iwl_ucode_capabilities *capa = &mld->fw->ucode_capa;
+	bool low_latency = false;
+
+	/* TODO: get low_latency mode (task=low_latency) */
+
+	/* We can only use EBS if:
+	 *	1. the feature is supported.
+	 *	2. the last EBS was successful.
+	 *	3. it's not a p2p find operation.
+	 *	4. we are not in low latency mode,
+	 *	   or if fragmented ebs is supported by the FW
+	 *	5. the VIF is not an AP interface (scan wants survey results)
+	 */
+	return ((capa->flags & IWL_UCODE_TLV_FLAGS_EBS_SUPPORT) &&
+		!mld->scan.last_ebs_failed &&
+		vif->type != NL80211_IFTYPE_P2P_DEVICE &&
+		(!low_latency || fw_has_api(capa, IWL_UCODE_TLV_API_FRAG_EBS)) &&
+		ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP);
+}
+
 static u8
 iwl_mld_scan_cmd_set_chan_flags(struct iwl_mld *mld,
 				struct iwl_mld_scan_params *params,
@@ -500,10 +523,10 @@ iwl_mld_scan_cmd_set_chan_flags(struct iwl_mld *mld,
 
 	flags |= IWL_SCAN_CHANNEL_FLAG_ENABLE_CHAN_ORDER;
 
-	/* TODO: scan_use_ebs
-	 * IWL_SCAN_CHANNEL_FLAG_EBS | IWL_SCAN_CHANNEL_FLAG_EBS_ACCURATE |
-	 * IWL_SCAN_CHANNEL_FLAG_CACHE_ADD
-	 */
+	if (iwl_mld_scan_use_ebs(mld, vif))
+		flags |= IWL_SCAN_CHANNEL_FLAG_EBS |
+			 IWL_SCAN_CHANNEL_FLAG_EBS_ACCURATE |
+			 IWL_SCAN_CHANNEL_FLAG_CACHE_ADD;
 
 	/* set fragmented ebs for fragmented scan */
 	if (iwl_mld_scan_is_fragmented(params->type))
@@ -749,7 +772,10 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 
 	mld->scan.uid_status[uid] = 0;
 
-	/* TODO: check ebs_status and set last_ebs_successful */
+	if (notif->ebs_status != IWL_SCAN_EBS_SUCCESS &&
+	    notif->ebs_status != IWL_SCAN_EBS_INACTIVE)
+		mld->scan.last_ebs_failed = true;
+
 	/* TODO: trig_link_selection_work (task=mlo)*/
 }
 
