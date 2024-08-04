@@ -20,6 +20,8 @@
 #include "fw/api/mac.h"
 #include "fw/api/phy-ctxt.h"
 
+#include "notif.h"
+
 #define IWL_MLD_MAX_ADDRESSES		5
 
 /* enum iwl_mld_pass_all_sched_results_states - Defines the states for
@@ -142,6 +144,11 @@ static inline void
 iwl_cleanup_mld(struct iwl_mld *mld)
 {
 	CLEANUP_STRUCT(mld);
+
+	/* Empty the list of async notification handlers so we won't process
+	 * notifications from the dead fw after the reconfig flow.
+	 */
+	iwl_mld_purge_async_handlers_list(mld);
 }
 
 enum iwl_power_scheme {

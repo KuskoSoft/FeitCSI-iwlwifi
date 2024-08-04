@@ -280,3 +280,16 @@ void iwl_mld_async_handlers_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 		kfree(entry);
 	}
 }
+
+void iwl_mld_purge_async_handlers_list(struct iwl_mld *mld)
+{
+	struct iwl_async_handler_entry *entry, *tmp;
+
+	spin_lock_bh(&mld->async_handlers_lock);
+	list_for_each_entry_safe(entry, tmp, &mld->async_handlers_list, list) {
+		iwl_free_rxb(&entry->rxb);
+		list_del(&entry->list);
+		kfree(entry);
+	}
+	spin_unlock_bh(&mld->async_handlers_lock);
+}

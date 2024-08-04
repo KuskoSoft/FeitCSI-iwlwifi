@@ -11,7 +11,6 @@
 #include "fw/dbg.h"
 
 #include "mld.h"
-#include "notif.h"
 #include "mac80211.h"
 #include "led.h"
 #include "scan.h"

@@ -5,9 +5,13 @@
 #ifndef __iwl_mld_notif_h__
 #define __iwl_mld_notif_h__
 
+struct iwl_mld;
+
 void iwl_mld_rx(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 		struct iwl_rx_cmd_buffer *rxb);
 
 void iwl_mld_async_handlers_wk(struct wiphy *wiphy, struct wiphy_work *wk);
+
+void iwl_mld_purge_async_handlers_list(struct iwl_mld *mld);
 
 #endif /* __iwl_mld_notif_h__ */
