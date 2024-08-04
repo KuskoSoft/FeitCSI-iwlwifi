@@ -456,6 +456,22 @@ iwl_mld_time_point(struct iwl_op_mode *op_mode,
 	iwl_dbg_tlv_time_point(&mld->fwrt, tp_id, tp_data);
 }
 
+#ifdef CONFIG_PM_SLEEP
+static void iwl_mld_device_powered_off(struct iwl_op_mode *op_mode)
+{
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	wiphy_lock(mld->wiphy);
+	mld->trans->system_pm_mode = IWL_PLAT_PM_MODE_DISABLED;
+	iwl_mld_stop_fw(mld);
+	mld->fw_status.in_d3 = false;
+	wiphy_unlock(mld->wiphy);
+}
+#else
+static void iwl_mld_device_powered_off(struct iwl_op_mode *op_mode)
+{}
+#endif
+
 static const struct iwl_op_mode_ops iwl_mld_ops = {
 	.start = iwl_op_mode_mld_start,
 	.stop = iwl_op_mode_mld_stop,
@@ -467,6 +483,7 @@ static const struct iwl_op_mode_ops iwl_mld_ops = {
 	.free_skb = iwl_mld_free_skb,
 	.nic_error = iwl_mld_nic_error,
 	.time_point = iwl_mld_time_point,
+	.device_powered_off = pm_sleep_ptr(iwl_mld_device_powered_off),
 };
 
 struct iwl_mld_mod_params iwlmld_mod_params = {

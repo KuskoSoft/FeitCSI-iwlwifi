@@ -25,10 +25,19 @@
 #define MLD_DEBUGFS_ADD_FILE(name, parent, mode)			\
 	MLD_DEBUGFS_ADD_FILE_ALIAS(#name, name, parent, mode)
 
+static bool iwl_mld_dbgfs_fw_cmd_disabled(struct iwl_mld *mld)
+{
+#ifdef CONFIG_PM_SLEEP
+	return !mld->fw_status.running || mld->fw_status.in_d3;
+#else
+	return !mld->fw_status.running;
+#endif /* CONFIG_PM_SLEEP */
+}
+
 static ssize_t iwl_dbgfs_fw_nmi_write(struct iwl_mld *mld, char *buf,
 				      size_t count)
 {
-	if (!mld->fw_status.running)
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
 		return -EIO;
 
 	IWL_ERR(mld, "Triggering an NMI from debugfs\n");
@@ -49,7 +58,7 @@ static ssize_t iwl_dbgfs_fw_restart_write(struct iwl_mld *mld, char *buf,
 	if (!iwlwifi_mod_params.fw_restart)
 		return -EPERM;
 
-	if (!mld->fw_status.running)
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
 		return -EIO;
 
 	wiphy_lock(mld->wiphy);

@@ -129,6 +129,8 @@ struct iwl_mld_baid_data {
  *	&async_handlers_list.
  * @fw_status: bitmap of fw status bits
  * @fw_status.in_hw_restart: indicates that we are currently in restart flow.
+ * @fw_status.in_d3: indicates FW is in suspend mode and should be resumed
+ *	rather than restarted. Should be unset upon restart.
  * @addresses: device MAC addresses.
  * @wowlan: WoWLAN support data.
  * @led: the led device
@@ -169,7 +171,11 @@ struct iwl_mld {
 	struct {
 		u32 running:1,
 		    do_not_dump_once:1,
+#ifdef CONFIG_PM_SLEEP
+		    in_d3:1,
+#endif
 		    in_hw_restart:1;
+
 	} fw_status;
 	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
 	struct iwl_mld_scan scan;
@@ -210,6 +216,7 @@ iwl_cleanup_mld(struct iwl_mld *mld)
 	CLEANUP_STRUCT(mld);
 	CLEANUP_STRUCT(&mld->scan);
 
+	mld->fw_status.in_d3 = false;
 	/* Empty the list of async notification handlers so we won't process
 	 * notifications from the dead fw after the reconfig flow.
 	 */

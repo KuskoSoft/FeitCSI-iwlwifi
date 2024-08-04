@@ -1003,10 +1003,10 @@ struct iwl_wowlan_wake_pkt_notif {
 } __packed; /* WOWLAN_WAKE_PKT_NTFY_API_S_VER_1 */
 
 /**
- * struct iwl_mvm_d3_end_notif -  d3 end notification
+ * struct iwl_d3_end_notif -  d3 end notification
  * @flags: See &enum iwl_d0i3_flags
  */
-struct iwl_mvm_d3_end_notif {
+struct iwl_d3_end_notif {
 	__le32 flags;
 } __packed;
 

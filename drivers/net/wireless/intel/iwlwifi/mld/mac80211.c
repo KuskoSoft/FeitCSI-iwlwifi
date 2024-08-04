@@ -12,6 +12,7 @@
 #include "power.h"
 #include "sta.h"
 #include "scan.h"
+#include "d3.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #ifdef CONFIG_PM_SLEEP
@@ -451,21 +452,36 @@ int iwl_mld_mac80211_start(struct ieee80211_hw *hw)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	int ret;
+	bool in_d3 = false;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* TODO:
-	 * 1. fast resume (set also mld->scan.last_start_time_jiffies)
+#ifdef CONFIG_PM_SLEEP
+	/* Unless the host goes into hibernate the FW always stays on and
+	 * the d3_resume flow is used. When wowlan is configured, mac80211
+	 * would call it's resume callback and the wowlan_resume flow
+	 * would be used.
 	 */
+
+	in_d3 = mld->fw_status.in_d3;
+	if (in_d3) {
+		/* mac80211 already cleaned up the state, no need for cleanup */
+		ret = iwl_mld_no_wowlan_resume(mld);
+		if (ret)
+			iwl_mld_stop_fw(mld);
+	}
+#endif /* CONFIG_PM_SLEEP */
 
 	if (mld->fw_status.in_hw_restart) {
 		iwl_mld_stop_fw(mld);
 		iwl_mld_restart_cleanup(mld);
 	}
 
-	ret = iwl_mld_start_fw(mld);
-	if (ret)
-		goto error;
+	if (!in_d3 || ret) {
+		ret = iwl_mld_start_fw(mld);
+		if (ret)
+			goto error;
+	}
 
 	mld->scan.last_start_time_jiffies = jiffies;
 
@@ -498,13 +514,13 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 	wiphy_work_cancel(mld->wiphy, &mld->add_txqs_wk);
 
 	/* TODO:
-	 * 1. suspend
-	 * 2. ftm_initiator_smooth_stop
+	 * ftm_initiator_smooth_stop
 	 */
 
-	if (suspend)
-		WARN_ON(1);
-	else
+	/* if the suspend flow fails the fw is in error. Stop it here, and it
+	 * will be started upon wakeup
+	 */
+	if (!suspend || iwl_mld_no_wowlan_suspend(mld))
 		iwl_mld_stop_fw(mld);
 
 	/* the work might have been scheduled again - cancel it now as the hw
