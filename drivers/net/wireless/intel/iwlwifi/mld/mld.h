@@ -40,6 +40,41 @@ enum iwl_mld_pass_all_sched_results_states {
 };
 
 /**
+ * struct iwl_mld_scan - Scan data
+ * @status: scan status, a combination of %enum iwl_mld_scan_status,
+ *	reflects the %scan.uid_status array.
+ * @uid_status: array to track the scan status per uid.
+ * @start_tsf: start time of last scan in TSF of the link that requested
+ *	the scan.
+ * @last_ebs_failed: true if the last EBS (Energy Based Scan) failed.
+ * @pass_all_sched_res: see %enum iwl_mld_pass_all_sched_results_states.
+ * @fw_link_id: the current (regular) scan fw link id, used by scan
+ *	complete notif.
+ * @cmd_size: size of %cmd.
+ * @cmd: pointer to scan cmd buffer (allocated once in op mode start).
+ * @last_6ghz_passive_jiffies: stores the last 6GHz passive scan time
+ *	in jiffies.
+ * @last_start_time_jiffies: stores the last start time in jiffies
+ *	(interface up/reset/resume).
+ */
+struct iwl_mld_scan {
+	/* Add here fields that need clean up on restart */
+	struct_group(zeroed_on_hw_restart,
+		unsigned int status;
+		u32 uid_status[IWL_MAX_UMAC_SCANS];
+		u64 start_tsf;
+		bool last_ebs_failed;
+		enum iwl_mld_pass_all_sched_results_states pass_all_sched_res;
+		u8 fw_link_id;
+	);
+	/* And here fields that survive a fw restart */
+	size_t cmd_size;
+	void *cmd;
+	unsigned long last_6ghz_passive_jiffies;
+	unsigned long last_start_time_jiffies;
+};
+
+/**
  * struct iwl_mld - MLD op mode
  *
  * @fw_id_to_bss_conf: maps a fw id of a link to the corresponding
@@ -71,21 +106,6 @@ enum iwl_mld_pass_all_sched_results_states {
  * @fw_status: bitmap of fw status bits
  * @fw_status.in_hw_restart: indicates that we are currently in restart flow.
  * @addresses: device MAC addresses.
- * @scan.cmd_size: size of %scan.cmd
- * @scan.cmd: pointer to scan cmd buffer (allocated once in op mode start).
- * @scan.status: scan status, a combination of %enum iwl_mld_scan_status,
- *	reflects the %scan.uid_status array.
- * @scan.uid_status: array to track the scan status per uid
- * @scan.start_tsf: start time of last scan in TSF of the link that requested
- *	the scan.
- * @scan.last_ebs_failed: true if the last EBS (Energy Based Scan) failed.
- * @scan.pass_all_sched_res: see %enum iwl_mld_pass_all_sched_results_states
- * @scan.last_6ghz_passive_jiffies: stores the last 6GHz passive scan time
- *	in jiffies
- * @scan.last_start_time_jiffies: stores the last start time in jiffies.
- *	(interface up/reset/resume)
- * @scan.fw_link_id: the current (regular) scan fw link id, used by scan
- *	complete notif.
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
@@ -119,19 +139,7 @@ struct iwl_mld {
 		    in_hw_restart:1;
 	} fw_status;
 	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
-
-	struct {
-		size_t cmd_size;
-		void *cmd;
-		unsigned int status;
-		u32 uid_status[IWL_MAX_UMAC_SCANS];
-		u64 start_tsf;
-		bool last_ebs_failed;
-		enum iwl_mld_pass_all_sched_results_states pass_all_sched_res;
-		unsigned long last_6ghz_passive_jiffies;
-		unsigned long last_start_time_jiffies;
-		u8 fw_link_id;
-	} scan;
+	struct iwl_mld_scan scan;
 #ifdef CONFIG_PM_SLEEP
 	struct wiphy_wowlan_support wowlan;
 #endif /* CONFIG_PM_SLEEP */
@@ -142,15 +150,16 @@ struct iwl_mld {
 };
 
 /* memset the part of the struct that requires cleanup on restart */
-#define CLEANUP_STRUCT(_ptr)				\
-	memset((void *)&_ptr->zeroed_on_hw_restart, 0,	\
-	       sizeof(_ptr->zeroed_on_hw_restart))
+#define CLEANUP_STRUCT(_ptr)                             \
+	memset((void *)&(_ptr)->zeroed_on_hw_restart, 0, \
+	       sizeof((_ptr)->zeroed_on_hw_restart))
 
 /* Cleanup function for struct iwl_mld_vif, will be called in restart */
 static inline void
 iwl_cleanup_mld(struct iwl_mld *mld)
 {
 	CLEANUP_STRUCT(mld);
+	CLEANUP_STRUCT(&mld->scan);
 
 	/* Empty the list of async notification handlers so we won't process
 	 * notifications from the dead fw after the reconfig flow.
