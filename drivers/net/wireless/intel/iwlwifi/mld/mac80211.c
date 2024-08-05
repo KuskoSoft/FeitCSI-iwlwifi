@@ -1171,6 +1171,15 @@ static void iwl_mld_mac80211_flush(struct ieee80211_hw *hw,
 	}
 }
 
+static void iwl_mld_mac80211_flush_sta(struct ieee80211_hw *hw,
+				       struct ieee80211_vif *vif,
+				       struct ieee80211_sta *sta)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	iwl_mld_flush_sta_txqs(mld, sta);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1199,6 +1208,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.mgd_complete_tx = iwl_mld_mac_mgd_complete_tx,
 	.sta_state = iwl_mld_mac80211_sta_state,
 	.flush = iwl_mld_mac80211_flush,
+	.flush_sta = iwl_mld_mac80211_flush_sta,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
