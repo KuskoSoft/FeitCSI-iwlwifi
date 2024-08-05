@@ -202,6 +202,11 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG(int, MVM_ENTER_ESR_TPT_THRESH)
 
 #endif /* CPTCFG_IWLMVM */
+#if IS_ENABLED(CPTCFG_IWLMLD)
+	IWL_DBG_CFG_NODEF(bool, MLD_RANDOM_NMI_ENABLE)
+	IWL_DBG_CFG_DEF(u8, MLD_RANDOM_NMI_CEIL, U8_MAX)
+	IWL_DBG_CFG_NODEF(u8, MLD_RANDOM_NMI_FLOOR)
+#endif /* CPTCFG_IWLMLD */
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	IWL_DBG_CFG_NODEF(u32, dnt_out_mode)
 	/* XXX: should be dbgm_ or dbg_mon_ for consistency? */

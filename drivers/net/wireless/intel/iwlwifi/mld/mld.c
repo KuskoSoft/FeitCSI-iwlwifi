@@ -47,6 +47,24 @@ iwl_is_mld_op_mode_supported(struct iwl_trans *trans)
 	return trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ;
 }
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+static void iwl_mld_debug_setup_random_nmi(struct iwl_mld *mld)
+{
+	if (mld->trans->dbg_cfg.MLD_RANDOM_NMI_ENABLE) {
+		u8 ceil = mld->trans->dbg_cfg.MLD_RANDOM_NMI_CEIL;
+		u8 floor = mld->trans->dbg_cfg.MLD_RANDOM_NMI_FLOOR;
+
+		if (WARN_ON(floor >= ceil))
+			return;
+
+		/* Avoid 0, since this means that random nmi is disabled */
+		mld->nmi_thresh = get_random_u8() % (ceil - floor) + 1;
+		IWL_WARN(mld, "NMI will be forced on hcmd number: %d\n",
+			 mld->nmi_thresh);
+	}
+}
+#endif
+
 VISIBLE_IF_IWLWIFI_KUNIT
 void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 		       const struct iwl_cfg *cfg, const struct iwl_fw *fw,
@@ -71,6 +89,10 @@ void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	spin_lock_init(&mld->add_txqs_lock);
 	INIT_LIST_HEAD(&mld->txqs_to_add);
 	wiphy_work_init(&mld->add_txqs_wk, iwl_mld_add_txqs_wk);
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	iwl_mld_debug_setup_random_nmi(mld);
+#endif
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_construct_mld);
 

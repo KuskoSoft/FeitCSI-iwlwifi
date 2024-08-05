@@ -5,8 +5,26 @@
 #ifndef __iwl_mld_hcmd_h__
 #define __iwl_mld_hcmd_h__
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#include "iwl-io.h"
+static void iwl_mld_check_random_nmi(struct iwl_mld *mld)
+{
+	/* this is paused in restart */
+	if (mld->fw_status.in_hw_restart ||
+	    ++mld->hcmd_counter != mld->nmi_thresh)
+            return;
+
+	mld->hcmd_counter = 0;
+	iwl_force_nmi(mld->trans);
+}
+#endif
+
 static inline int iwl_mld_send_cmd(struct iwl_mld *mld, struct iwl_host_cmd *cmd)
 {
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	iwl_mld_check_random_nmi(mld);
+#endif
+
 	if (!(cmd->flags & CMD_ASYNC))
 		lockdep_assert_wiphy(mld->wiphy);
 

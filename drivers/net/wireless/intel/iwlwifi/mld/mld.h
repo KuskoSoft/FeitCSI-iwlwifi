@@ -109,6 +109,13 @@ struct iwl_mld {
 	struct list_head txqs_to_add;
 	struct wiphy_work add_txqs_wk;
 	spinlock_t add_txqs_lock;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/* the hcmd number on which nmi will be triggered */
+	u8 nmi_thresh;
+	/* counts the number of hcmd sent */
+	u32 hcmd_counter;
+#endif
 };
 
 /* memset the part of the struct that requires cleanup on restart */
