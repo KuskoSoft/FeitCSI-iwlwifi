@@ -344,8 +344,7 @@ int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	return iwl_mld_add_link_sta(mld, &sta->deflink);
 }
 
-static void iwl_mld_flush_sta_txqs(struct iwl_mld *mld,
-				  struct ieee80211_sta *sta)
+void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct ieee80211_link_sta *link_sta;
@@ -358,8 +357,7 @@ static void iwl_mld_flush_sta_txqs(struct iwl_mld *mld,
 	}
 }
 
-static void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld,
-				       struct ieee80211_sta *sta)
+void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld, struct ieee80211_sta *sta)
 {
 	/* Avoid a warning in iwl_trans_wait_txq_empty if are anyway on the way
 	 * to a restart.

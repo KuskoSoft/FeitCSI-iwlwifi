@@ -1143,6 +1143,34 @@ static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
 						   new_state);
 }
 
+static void iwl_mld_mac80211_flush(struct ieee80211_hw *hw,
+				   struct ieee80211_vif *vif,
+				   u32 queues, bool drop)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* Make sure we're done with the deferred traffic before flushing */
+	wiphy_work_flush(mld->wiphy, &mld->add_txqs_wk);
+
+	for (int i = 0; i < mld->fw->ucode_capa.num_stations; i++) {
+		struct ieee80211_link_sta *link_sta =
+			wiphy_dereference(mld->wiphy,
+					  mld->fw_id_to_link_sta[i]);
+
+		if (!link_sta)
+			continue;
+
+		/* Check that the sta belongs to the given vif */
+		if (vif && vif != iwl_mld_sta_from_mac80211(link_sta->sta)->vif)
+			continue;
+
+		if (drop)
+			iwl_mld_flush_sta_txqs(mld, link_sta->sta);
+		else
+			iwl_mld_wait_sta_txqs_empty(mld, link_sta->sta);
+	}
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1170,6 +1198,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.mgd_prepare_tx = iwl_mld_mac80211_mgd_prepare_tx,
 	.mgd_complete_tx = iwl_mld_mac_mgd_complete_tx,
 	.sta_state = iwl_mld_mac80211_sta_state,
+	.flush = iwl_mld_mac80211_flush,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,

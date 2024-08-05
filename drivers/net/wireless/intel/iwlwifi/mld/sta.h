@@ -54,4 +54,7 @@ void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta);
 u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta);
 int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
 				     struct ieee80211_sta *sta);
+void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta);
+void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld,
+				struct ieee80211_sta *sta);
 #endif /* __iwl_mld_sta_h__ */
