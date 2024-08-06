@@ -1545,7 +1545,7 @@ void iwl_mld_handle_scan_iter_complete_notif(struct iwl_mld *mld,
 
 	IWL_DEBUG_SCAN(mld,
 		       "UMAC Scan iteration complete: scan started at %llu (TSF)\n",
-		       mld->scan.start_tsf);
+		       le64_to_cpu(notif->start_tsf));
 }
 
 void iwl_mld_handle_match_found_notif(struct iwl_mld *mld,
