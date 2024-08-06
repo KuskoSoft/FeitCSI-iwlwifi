@@ -120,7 +120,10 @@ static int iwl_mld_create_skb(struct iwl_mld *mld, struct sk_buff *skb,
 	u8 mic_crc_len = u8_get_bits(desc->mac_flags1,
 				     IWL_RX_MPDU_MFLG1_MIC_CRC_LEN_MASK) << 1;
 
-	/* TODO: handle IWL_RX_MPDU_MFLG2_PAD */
+	if (desc->mac_flags2 & IWL_RX_MPDU_MFLG2_PAD) {
+		len -= 2;
+		pad_len = 2;
+	}
 
 	/* For non monitor interface strip the bytes the RADA might not have
 	 * removed (it might be disabled, e.g. for mgmt frames). As a monitor
@@ -218,7 +221,14 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 
 	iwl_mld_fill_phy_data(mpdu_desc, &phy_data);
 
-	/* TODO: IWL_RX_MPDU_MFLG2_PAD */
+	if (mpdu_desc->mac_flags2 & IWL_RX_MPDU_MFLG2_PAD) {
+		/* If the device inserted padding it means that (it thought)
+		 * the 802.11 header wasn't a multiple of 4 bytes long. In
+		 * this case, reserve two bytes at the start of the SKB to
+		 * align the payload properly in case we end up copying it.
+		 */
+		skb_reserve(skb, 2);
+	}
 
 	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue);
 
