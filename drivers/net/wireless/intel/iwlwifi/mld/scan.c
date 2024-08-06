@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2024 Intel Corporation
  */
+#include <linux/crc32.h>
 
 #include "mld.h"
 #include "scan.h"
