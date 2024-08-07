@@ -42,6 +42,12 @@ struct iwl_rfi_ddr_lut_entry iwl_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 	       PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
 	       PHY_BAND_6,}},
 
+	/* frequency 3133MHz */
+	{cpu_to_le16(188), {31, 47, 55, 57, 59, 61, 63, 65, 67, 71, 79, 95},
+	      {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
+	       PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
+	       PHY_BAND_6, PHY_BAND_6,}},
+
 	/* frequency 3200MHz */
 	{cpu_to_le16(192), {63, 79, 83, 85, 87, 89, 91, 95},
 	      {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
@@ -90,11 +96,6 @@ struct iwl_rfi_ddr_lut_entry iwl_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 	      {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
 	       PHY_BAND_6, PHY_BAND_6,}},
 
-	/* frequency 4800MHz */
-	{cpu_to_le16(288), {1, 3, 5, 7, 9, 11, 13, 15},
-	      {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
-	       PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,}},
-
 	/* frequency 5200MHz */
 	{cpu_to_le16(312), {34, 36, 38, 40, 42, 50},
 	       {PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5,
@@ -125,6 +126,12 @@ struct iwl_rfi_ddr_lut_entry iwl_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
 		PHY_BAND_6,}},
 
+	/* frequency 6267MHz */
+	{cpu_to_le16(376), {31, 47, 55, 57, 59, 61, 63, 65, 67, 71, 79, 95},
+	       {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
+		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
+		PHY_BAND_6, PHY_BAND_6,}},
+
 	/* frequency 6400MHz */
 	{cpu_to_le16(384), {63, 79, 83, 85, 87, 89, 91, 95,},
 	       {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
@@ -137,6 +144,11 @@ struct iwl_rfi_ddr_lut_entry iwl_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
 		PHY_BAND_6,}},
 
+	/* frequency 6667MHz */
+	{cpu_to_le16(400), {127, 135, 137, 139, 141, 143, 145, 147, 151, 159},
+	       {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
+		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,}},
+
 	/* frequency 6800MHz */
 	{cpu_to_le16(408), {159, 163, 165, 167, 169, 171, 175, 191},
 	       {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
@@ -148,6 +160,24 @@ struct iwl_rfi_ddr_lut_entry iwl_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 	       {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
 		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
 		PHY_BAND_6,}},
+
+	/* frequency 10400MHz */
+	{cpu_to_le16(624), {34, 36, 38, 40, 42, 50},
+	       {PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5,
+		PHY_BAND_5,}},
+
+	/* frequency 11200MHz */
+	{cpu_to_le16(672), {114, 116, 118, 120, 122},
+	      {PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5,}},
+
+	/* frequency 11800MHz */
+	{cpu_to_le16(708), {163, 171, 173, 175, 177},
+	      {PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5,}},
+
+	/* frequency 12800MHz */
+	{cpu_to_le16(768), {63, 79, 83, 85, 87, 89, 91, 95,},
+	       {PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,
+		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,}},
 };
 
 static inline bool iwl_rfi_enabled_by_mac_type(struct iwl_mvm *mvm,
