@@ -841,17 +841,59 @@ int iwl_mld_mac80211_set_rts_threshold(struct ieee80211_hw *hw, u32 value)
 }
 
 static
+u32 iwl_mld_link_changed_mapping(struct ieee80211_vif *vif,
+				 struct ieee80211_bss_conf *link_conf,
+				 u64 changes)
+{
+	u32 link_changes = 0;
+	bool has_he, has_eht;
+
+	if (changes & BSS_CHANGED_QOS && vif->cfg.assoc && link_conf->qos)
+		link_changes |= LINK_CONTEXT_MODIFY_QOS_PARAMS;
+
+	if (changes & (BSS_CHANGED_ERP_PREAMBLE | BSS_CHANGED_BASIC_RATES |
+		       BSS_CHANGED_ERP_SLOT))
+		link_changes |= LINK_CONTEXT_MODIFY_RATES_INFO;
+
+	if (changes & (BSS_CHANGED_HT | BSS_CHANGED_ERP_CTS_PROT))
+		link_changes |= LINK_CONTEXT_MODIFY_PROTECT_FLAGS;
+
+	/* todo: check mac80211's HE flags and if command is needed every time
+	 * there's a link change. Currently used flags are
+	 * BSS_CHANGED_HE_OBSS_PD and BSS_CHANGED_HE_BSS_COLOR.
+	 */
+	has_he = link_conf->he_support && !iwlwifi_mod_params.disable_11ax;
+	has_eht = link_conf->eht_support && !iwlwifi_mod_params.disable_11be;
+
+	if (vif->cfg.assoc && (has_he || has_eht))
+		link_changes |= LINK_CONTEXT_MODIFY_HE_PARAMS;
+
+	return link_changes;
+}
+
+static
 void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 					struct ieee80211_vif *vif,
 					struct ieee80211_bss_conf *link_conf,
 					u64 changes)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	u32 link_changes;
 
-	/* TODO: for now just log the function is not implemented */
-	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return;
+	}
 
-	return;
+	link_changes = iwl_mld_link_changed_mapping(vif, link_conf, changes);
+	if (link_changes)
+		iwl_mld_change_link_in_fw(mld, link_conf, link_changes);
+
+	// todo: BSS_CHANGED_BEACON_INFO (task=beacon_filter, power)
+	// todo: BSS_CHANGED_BANDWIDTH (task=EMLSR)
+	// todo: BSS_CHANGED_CQM
+	// todo: BSS_CHANGED_TPE (task=power)
+	// todo: BSS_CHANGED_TXPOWER (task=power)
 }
 
 static
