@@ -18,7 +18,14 @@
 /* stores relevant PHY data fields extracted from iwl_rx_mpdu_desc */
 struct iwl_mld_rx_phy_data {
 	enum iwl_rx_phy_info_type info_type;
+	__le32 data0;
 	__le32 data1;
+	__le32 data2;
+	__le32 data3;
+	__le16 data4;
+	bool first_subframe;
+	bool with_data;
+	__le32 rx_vec[4];
 	u32 rate_n_flags;
 	u32 gp2_on_air_rise;
 	u16 phy_info;
@@ -27,8 +34,9 @@ struct iwl_mld_rx_phy_data {
 	/* TODO: add more fields */
 };
 
-static void iwl_mld_fill_phy_data(struct iwl_rx_mpdu_desc *desc,
-				  struct iwl_mld_rx_phy_data *phy_data)
+static void
+iwl_mld_fill_phy_data(struct iwl_rx_mpdu_desc *desc,
+		      struct iwl_mld_rx_phy_data *phy_data)
 {
 	phy_data->phy_info = le16_to_cpu(desc->phy_info);
 	phy_data->rate_n_flags = le32_to_cpu(desc->v3.rate_n_flags);
@@ -36,7 +44,12 @@ static void iwl_mld_fill_phy_data(struct iwl_rx_mpdu_desc *desc,
 	phy_data->channel = desc->v3.channel;
 	phy_data->energy_a = desc->v3.energy_a;
 	phy_data->energy_b = desc->v3.energy_b;
+	phy_data->data0 = desc->v3.phy_data0;
 	phy_data->data1 = desc->v3.phy_data1;
+	phy_data->data2 = desc->v3.phy_data2;
+	phy_data->data3 = desc->v3.phy_data3;
+	phy_data->data4 = desc->phy_data4;
+	phy_data->with_data = true;
 }
 
 static inline int iwl_mld_check_pn(struct iwl_mld *mld, struct sk_buff *skb,
@@ -149,6 +162,581 @@ static void iwl_mld_fill_signal(struct iwl_mld *mld,
 	rx_status->chain_signal[1] = energy_b;
 }
 
+static void
+iwl_mld_decode_he_phy_ru_alloc(struct iwl_mld_rx_phy_data *phy_data,
+			       struct ieee80211_radiotap_he *he,
+			       struct ieee80211_radiotap_he_mu *he_mu,
+			       struct ieee80211_rx_status *rx_status)
+{
+	/* Unfortunately, we have to leave the mac80211 data
+	 * incorrect for the case that we receive an HE-MU
+	 * transmission and *don't* have the HE phy data (due
+	 * to the bits being used for TSF). This shouldn't
+	 * happen though as management frames where we need
+	 * the TSF/timers are not be transmitted in HE-MU.
+	 */
+	u8 ru = le32_get_bits(phy_data->data1, IWL_RX_PHY_DATA1_HE_RU_ALLOC_MASK);
+	u32 rate_n_flags = phy_data->rate_n_flags;
+	u32 he_type = rate_n_flags & RATE_MCS_HE_TYPE_MSK;
+	u8 offs = 0;
+
+	rx_status->bw = RATE_INFO_BW_HE_RU;
+
+	he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_BW_RU_ALLOC_KNOWN);
+
+	switch (ru) {
+	case 0 ... 36:
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_26;
+		offs = ru;
+		break;
+	case 37 ... 52:
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_52;
+		offs = ru - 37;
+		break;
+	case 53 ... 60:
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_106;
+		offs = ru - 53;
+		break;
+	case 61 ... 64:
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_242;
+		offs = ru - 61;
+		break;
+	case 65 ... 66:
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_484;
+		offs = ru - 65;
+		break;
+	case 67:
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_996;
+		break;
+	case 68:
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_2x996;
+		break;
+	}
+	he->data2 |= le16_encode_bits(offs,
+				      IEEE80211_RADIOTAP_HE_DATA2_RU_OFFSET);
+	he->data2 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_PRISEC_80_KNOWN |
+				 IEEE80211_RADIOTAP_HE_DATA2_RU_OFFSET_KNOWN);
+	if (phy_data->data1 & cpu_to_le32(IWL_RX_PHY_DATA1_HE_RU_ALLOC_SEC80))
+		he->data2 |=
+			cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_PRISEC_80_SEC);
+
+#define CHECK_BW(bw) \
+	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_ ## bw ## MHZ != \
+		     RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS); \
+	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW_ ## bw ## MHZ != \
+		     RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS)
+	CHECK_BW(20);
+	CHECK_BW(40);
+	CHECK_BW(80);
+	CHECK_BW(160);
+
+	if (he_mu)
+		he_mu->flags2 |=
+			le16_encode_bits(u32_get_bits(rate_n_flags,
+						      RATE_MCS_CHAN_WIDTH_MSK),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW);
+	else if (he_type == RATE_MCS_HE_TYPE_TRIG)
+		he->data6 |=
+			cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW_KNOWN) |
+			le16_encode_bits(u32_get_bits(rate_n_flags,
+						      RATE_MCS_CHAN_WIDTH_MSK),
+					 IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW);
+}
+
+static void
+iwl_mld_decode_he_mu_ext(struct iwl_mld_rx_phy_data *phy_data,
+			 struct ieee80211_radiotap_he_mu *he_mu)
+{
+	u32 phy_data2 = le32_to_cpu(phy_data->data2);
+	u32 phy_data3 = le32_to_cpu(phy_data->data3);
+	u16 phy_data4 = le16_to_cpu(phy_data->data4);
+	u32 rate_n_flags = phy_data->rate_n_flags;
+
+	if (u32_get_bits(phy_data4, IWL_RX_PHY_DATA4_HE_MU_EXT_CH1_CRC_OK)) {
+		he_mu->flags1 |=
+			cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS1_CH1_RU_KNOWN |
+				    IEEE80211_RADIOTAP_HE_MU_FLAGS1_CH1_CTR_26T_RU_KNOWN);
+
+		he_mu->flags1 |=
+			le16_encode_bits(u32_get_bits(phy_data4,
+						      IWL_RX_PHY_DATA4_HE_MU_EXT_CH1_CTR_RU),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS1_CH1_CTR_26T_RU);
+
+		he_mu->ru_ch1[0] = u32_get_bits(phy_data2,
+						IWL_RX_PHY_DATA2_HE_MU_EXT_CH1_RU0);
+		he_mu->ru_ch1[1] = u32_get_bits(phy_data3,
+						IWL_RX_PHY_DATA3_HE_MU_EXT_CH1_RU1);
+		he_mu->ru_ch1[2] = u32_get_bits(phy_data2,
+						IWL_RX_PHY_DATA2_HE_MU_EXT_CH1_RU2);
+		he_mu->ru_ch1[3] = u32_get_bits(phy_data3,
+						IWL_RX_PHY_DATA3_HE_MU_EXT_CH1_RU3);
+	}
+
+	if (u32_get_bits(phy_data4, IWL_RX_PHY_DATA4_HE_MU_EXT_CH2_CRC_OK) &&
+	    (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) != RATE_MCS_CHAN_WIDTH_20) {
+		he_mu->flags1 |=
+			cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS1_CH2_RU_KNOWN |
+				    IEEE80211_RADIOTAP_HE_MU_FLAGS1_CH2_CTR_26T_RU_KNOWN);
+
+		he_mu->flags2 |=
+			le16_encode_bits(u32_get_bits(phy_data4,
+						      IWL_RX_PHY_DATA4_HE_MU_EXT_CH2_CTR_RU),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_CH2_CTR_26T_RU);
+
+		he_mu->ru_ch2[0] = u32_get_bits(phy_data2,
+						IWL_RX_PHY_DATA2_HE_MU_EXT_CH2_RU0);
+		he_mu->ru_ch2[1] = u32_get_bits(phy_data3,
+						IWL_RX_PHY_DATA3_HE_MU_EXT_CH2_RU1);
+		he_mu->ru_ch2[2] = u32_get_bits(phy_data2,
+						IWL_RX_PHY_DATA2_HE_MU_EXT_CH2_RU2);
+		he_mu->ru_ch2[3] = u32_get_bits(phy_data3,
+						IWL_RX_PHY_DATA3_HE_MU_EXT_CH2_RU3);
+	}
+}
+
+static void
+iwl_mld_decode_he_phy_data(struct iwl_mld_rx_phy_data *phy_data,
+			   struct ieee80211_radiotap_he *he,
+			   struct ieee80211_radiotap_he_mu *he_mu,
+			   struct ieee80211_rx_status *rx_status,
+			   int queue)
+{
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_NONE:
+	case IWL_RX_PHY_INFO_TYPE_CCK:
+	case IWL_RX_PHY_INFO_TYPE_OFDM_LGCY:
+	case IWL_RX_PHY_INFO_TYPE_HT:
+	case IWL_RX_PHY_INFO_TYPE_VHT_SU:
+	case IWL_RX_PHY_INFO_TYPE_VHT_MU:
+	case IWL_RX_PHY_INFO_TYPE_EHT_MU:
+	case IWL_RX_PHY_INFO_TYPE_EHT_TB:
+	case IWL_RX_PHY_INFO_TYPE_EHT_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_EHT_TB_EXT:
+		return;
+	case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE2_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE3_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE4_KNOWN);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->data2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE1),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE1);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->data2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE2),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE2);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->data2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE3),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE3);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->data2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE4),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE4);
+		fallthrough;
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB:
+		/* HE common */
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_LDPC_XSYMSEG_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_DOPPLER_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_BSS_COLOR_KNOWN);
+		he->data2 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_PRE_FEC_PAD_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA2_PE_DISAMBIG_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA2_TXOP_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA2_NUM_LTF_SYMS_KNOWN);
+		he->data3 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_BSS_COLOR_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA3_BSS_COLOR);
+		if (phy_data->info_type != IWL_RX_PHY_INFO_TYPE_HE_TB &&
+		    phy_data->info_type != IWL_RX_PHY_INFO_TYPE_HE_TB_EXT) {
+			he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_UL_DL_KNOWN);
+			he->data3 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_UPLINK),
+						      IEEE80211_RADIOTAP_HE_DATA3_UL_DL);
+		}
+		he->data3 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_LDPC_EXT_SYM),
+					      IEEE80211_RADIOTAP_HE_DATA3_LDPC_XSYMSEG);
+		he->data5 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_PRE_FEC_PAD_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA5_PRE_FEC_PAD);
+		he->data5 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_PE_DISAMBIG),
+					      IEEE80211_RADIOTAP_HE_DATA5_PE_DISAMBIG);
+		he->data5 |= le16_encode_bits(le32_get_bits(phy_data->data1,
+							    IWL_RX_PHY_DATA1_HE_LTF_NUM_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA5_NUM_LTF_SYMS);
+		he->data6 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_TXOP_DUR_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA6_TXOP);
+		he->data6 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_DOPPLER),
+					      IEEE80211_RADIOTAP_HE_DATA6_DOPPLER);
+		break;
+	}
+
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE_KNOWN);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_SPATIAL_REUSE_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA4_SU_MU_SPTL_REUSE);
+		break;
+	default:
+		/* nothing here */
+		break;
+	}
+
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+		he_mu->flags1 |=
+			le16_encode_bits(le16_get_bits(phy_data->data4,
+						       IWL_RX_PHY_DATA4_HE_MU_EXT_SIGB_DCM),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_DCM);
+		he_mu->flags1 |=
+			le16_encode_bits(le16_get_bits(phy_data->data4,
+						       IWL_RX_PHY_DATA4_HE_MU_EXT_SIGB_MCS_MASK),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_MCS);
+		he_mu->flags2 |=
+			le16_encode_bits(le16_get_bits(phy_data->data4,
+						       IWL_RX_PHY_DATA4_HE_MU_EXT_PREAMBLE_PUNC_TYPE_MASK),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_PUNC_FROM_SIG_A_BW);
+		iwl_mld_decode_he_mu_ext(phy_data, he_mu);
+		fallthrough;
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+		he_mu->flags2 |=
+			le16_encode_bits(le32_get_bits(phy_data->data1,
+						       IWL_RX_PHY_DATA1_HE_MU_SIBG_SYM_OR_USER_NUM_MASK),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_SIG_B_SYMS_USERS);
+		he_mu->flags2 |=
+			le16_encode_bits(le32_get_bits(phy_data->data1,
+						       IWL_RX_PHY_DATA1_HE_MU_SIGB_COMPRESSION),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_SIG_B_COMP);
+		fallthrough;
+	case IWL_RX_PHY_INFO_TYPE_HE_TB:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
+		iwl_mld_decode_he_phy_ru_alloc(phy_data, he, he_mu, rx_status);
+		break;
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_BEAM_CHANGE_KNOWN);
+		he->data3 |= le16_encode_bits(le32_get_bits(phy_data->data0,
+							    IWL_RX_PHY_DATA0_HE_BEAM_CHNG),
+					      IEEE80211_RADIOTAP_HE_DATA3_BEAM_CHANGE);
+		break;
+	default:
+		/* nothing */
+		break;
+	}
+}
+
+static void iwl_mld_rx_he(struct iwl_mld *mld, struct sk_buff *skb,
+			  struct iwl_mld_rx_phy_data *phy_data,
+			  int queue)
+{
+	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	struct ieee80211_radiotap_he *he = NULL;
+	struct ieee80211_radiotap_he_mu *he_mu = NULL;
+	u32 rate_n_flags = phy_data->rate_n_flags;
+	u32 he_type = rate_n_flags & RATE_MCS_HE_TYPE_MSK;
+	u8 ltf;
+	static const struct ieee80211_radiotap_he known = {
+		.data1 = cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_DATA_MCS_KNOWN |
+				     IEEE80211_RADIOTAP_HE_DATA1_DATA_DCM_KNOWN |
+				     IEEE80211_RADIOTAP_HE_DATA1_STBC_KNOWN	|
+				     IEEE80211_RADIOTAP_HE_DATA1_CODING_KNOWN),
+		.data2 = cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_GI_KNOWN |
+				     IEEE80211_RADIOTAP_HE_DATA2_TXBF_KNOWN),
+	};
+	static const struct ieee80211_radiotap_he_mu mu_known = {
+		.flags1 = cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_MCS_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_DCM_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_SYMS_USERS_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_COMP_KNOWN),
+		.flags2 = cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS2_PUNC_FROM_SIG_A_BW_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_KNOWN),
+	};
+	u16 phy_info = phy_data->phy_info;
+
+	he = skb_put_data(skb, &known, sizeof(known));
+	rx_status->flag |= RX_FLAG_RADIOTAP_HE;
+
+	if (phy_data->info_type == IWL_RX_PHY_INFO_TYPE_HE_MU ||
+	    phy_data->info_type == IWL_RX_PHY_INFO_TYPE_HE_MU_EXT) {
+		he_mu = skb_put_data(skb, &mu_known, sizeof(mu_known));
+		rx_status->flag |= RX_FLAG_RADIOTAP_HE_MU;
+	}
+
+	/* report the AMPDU-EOF bit on single frames */
+	if (!queue && !(phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
+		rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
+		rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT_KNOWN;
+		if (phy_data->data0 & cpu_to_le32(IWL_RX_PHY_DATA0_HE_DELIM_EOF))
+			rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT;
+	}
+
+	if (phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD)
+		iwl_mld_decode_he_phy_data(phy_data, he, he_mu, rx_status,
+					   queue);
+
+	/* update aggregation data for monitor sake on default queue */
+	if (!queue && (phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD) &&
+	    (phy_info & IWL_RX_MPDU_PHY_AMPDU) && phy_data->first_subframe) {
+		rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT_KNOWN;
+		if (phy_data->data0 & cpu_to_le32(IWL_RX_PHY_DATA0_EHT_DELIM_EOF))
+			rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT;
+	}
+
+	if (he_type == RATE_MCS_HE_TYPE_EXT_SU &&
+	    rate_n_flags & RATE_MCS_HE_106T_MSK) {
+		rx_status->bw = RATE_INFO_BW_HE_RU;
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_106;
+	}
+
+	/* actually data is filled in mac80211 */
+	if (he_type == RATE_MCS_HE_TYPE_SU ||
+	    he_type == RATE_MCS_HE_TYPE_EXT_SU)
+		he->data1 |=
+			cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_BW_RU_ALLOC_KNOWN);
+
+#define CHECK_TYPE(F)							\
+	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_ ## F !=	\
+		     (RATE_MCS_HE_TYPE_ ## F >> RATE_MCS_HE_TYPE_POS))
+
+	CHECK_TYPE(SU);
+	CHECK_TYPE(EXT_SU);
+	CHECK_TYPE(MU);
+	CHECK_TYPE(TRIG);
+
+	he->data1 |= cpu_to_le16(he_type >> RATE_MCS_HE_TYPE_POS);
+
+	if (rate_n_flags & RATE_MCS_BF_MSK)
+		he->data5 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA5_TXBF);
+
+	switch ((rate_n_flags & RATE_MCS_HE_GI_LTF_MSK) >>
+		RATE_MCS_HE_GI_LTF_POS) {
+	case 0:
+		if (he_type == RATE_MCS_HE_TYPE_TRIG)
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
+		else
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
+		if (he_type == RATE_MCS_HE_TYPE_MU)
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		else
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_1X;
+		break;
+	case 1:
+		if (he_type == RATE_MCS_HE_TYPE_TRIG)
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
+		else
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
+		break;
+	case 2:
+		if (he_type == RATE_MCS_HE_TYPE_TRIG) {
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_3_2;
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		} else {
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
+		}
+		break;
+	case 3:
+		rx_status->he_gi = NL80211_RATE_INFO_HE_GI_3_2;
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		break;
+	case 4:
+		rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		break;
+	default:
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_UNKNOWN;
+	}
+
+	he->data5 |= le16_encode_bits(ltf,
+				      IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE);
+}
+
+static void iwl_mld_decode_lsig(struct sk_buff *skb,
+				struct iwl_mld_rx_phy_data *phy_data)
+{
+	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	struct ieee80211_radiotap_lsig *lsig;
+
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_HT:
+	case IWL_RX_PHY_INFO_TYPE_VHT_SU:
+	case IWL_RX_PHY_INFO_TYPE_VHT_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB:
+	case IWL_RX_PHY_INFO_TYPE_EHT_MU:
+	case IWL_RX_PHY_INFO_TYPE_EHT_TB:
+	case IWL_RX_PHY_INFO_TYPE_EHT_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_EHT_TB_EXT:
+		lsig = skb_put(skb, sizeof(*lsig));
+		lsig->data1 = cpu_to_le16(IEEE80211_RADIOTAP_LSIG_DATA1_LENGTH_KNOWN);
+		lsig->data2 = le16_encode_bits(le32_get_bits(phy_data->data1,
+							     IWL_RX_PHY_DATA1_LSIG_LEN_MASK),
+					       IEEE80211_RADIOTAP_LSIG_DATA2_LENGTH);
+		rx_status->flag |= RX_FLAG_RADIOTAP_LSIG;
+		break;
+	default:
+		break;
+	}
+}
+
+/* Put a TLV on the skb and return data pointer
+ *
+ * Also pad the len to 4 and zero out all data part
+ */
+static void *
+iwl_mld_radiotap_put_tlv(struct sk_buff *skb, u16 type, u16 len)
+{
+	struct ieee80211_radiotap_tlv *tlv;
+
+	tlv = skb_put(skb, sizeof(*tlv));
+	tlv->type = cpu_to_le16(type);
+	tlv->len = cpu_to_le16(len);
+	return skb_put_zero(skb, ALIGN(len, 4));
+}
+
+static void iwl_mld_rx_eht(struct sk_buff *skb,
+			   struct iwl_mld_rx_phy_data *phy_data,
+			   int queue)
+{
+	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	struct ieee80211_radiotap_eht *eht;
+	struct ieee80211_radiotap_eht_usig *usig;
+	size_t eht_len = sizeof(*eht);
+
+	u32 rate_n_flags = phy_data->rate_n_flags;
+	u32 he_type = rate_n_flags & RATE_MCS_HE_TYPE_MSK;
+	/* EHT and HE have the same values for LTF */
+	u8 ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_UNKNOWN;
+	u16 phy_info = phy_data->phy_info;
+	u32 bw;
+
+	/* u32 for 1 user_info */
+	if (phy_data->with_data)
+		eht_len += sizeof(u32);
+
+	eht = iwl_mld_radiotap_put_tlv(skb, IEEE80211_RADIOTAP_EHT, eht_len);
+
+	usig = iwl_mld_radiotap_put_tlv(skb, IEEE80211_RADIOTAP_EHT_USIG,
+					sizeof(*usig));
+	rx_status->flag |= RX_FLAG_RADIOTAP_TLV_AT_END;
+	usig->common |=
+		cpu_to_le32(IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW_KNOWN);
+
+	/* specific handling for 320MHz */
+	bw = u32_get_bits(rate_n_flags, RATE_MCS_CHAN_WIDTH_MSK);
+	if (bw == RATE_MCS_CHAN_WIDTH_320_VAL)
+		bw += le32_get_bits(phy_data->data0,
+				    IWL_RX_PHY_DATA0_EHT_BW320_SLOT);
+
+	usig->common |= cpu_to_le32
+		(FIELD_PREP(IEEE80211_RADIOTAP_EHT_USIG_COMMON_BW, bw));
+
+	/* report the AMPDU-EOF bit on single frames */
+	if (!queue && !(phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
+		rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
+		rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT_KNOWN;
+		if (phy_data->data0 &
+		    cpu_to_le32(IWL_RX_PHY_DATA0_EHT_DELIM_EOF))
+			rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT;
+	}
+
+	/* TODO: update agg data and decode eht phy data (task=sniffer) */
+
+#define CHECK_TYPE(F)							\
+	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_ ## F !=	\
+		     (RATE_MCS_HE_TYPE_ ## F >> RATE_MCS_HE_TYPE_POS))
+
+	CHECK_TYPE(SU);
+	CHECK_TYPE(EXT_SU);
+	CHECK_TYPE(MU);
+	CHECK_TYPE(TRIG);
+
+	switch (u32_get_bits(rate_n_flags, RATE_MCS_HE_GI_LTF_MSK)) {
+	case 0:
+		if (he_type == RATE_MCS_HE_TYPE_TRIG) {
+			rx_status->eht.gi = NL80211_RATE_INFO_EHT_GI_1_6;
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_1X;
+		} else {
+			rx_status->eht.gi = NL80211_RATE_INFO_EHT_GI_0_8;
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
+		}
+		break;
+	case 1:
+		rx_status->eht.gi = NL80211_RATE_INFO_EHT_GI_1_6;
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
+		break;
+	case 2:
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		if (he_type == RATE_MCS_HE_TYPE_TRIG)
+			rx_status->eht.gi = NL80211_RATE_INFO_EHT_GI_3_2;
+		else
+			rx_status->eht.gi = NL80211_RATE_INFO_EHT_GI_0_8;
+		break;
+	case 3:
+		if (he_type != RATE_MCS_HE_TYPE_TRIG) {
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+			rx_status->eht.gi = NL80211_RATE_INFO_EHT_GI_3_2;
+		}
+		break;
+	default:
+		/* nothing here */
+		break;
+	}
+
+	if (ltf != IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_UNKNOWN) {
+		eht->known |= cpu_to_le32(IEEE80211_RADIOTAP_EHT_KNOWN_GI);
+		eht->data[0] |= cpu_to_le32
+			(FIELD_PREP(IEEE80211_RADIOTAP_EHT_DATA0_LTF,
+				    ltf) |
+			 FIELD_PREP(IEEE80211_RADIOTAP_EHT_DATA0_GI,
+				    rx_status->eht.gi));
+	}
+
+	if (!phy_data->with_data) {
+		eht->known |= cpu_to_le32(IEEE80211_RADIOTAP_EHT_KNOWN_NSS_S |
+					  IEEE80211_RADIOTAP_EHT_KNOWN_BEAMFORMED_S);
+		eht->data[7] |=
+			le32_encode_bits(le32_get_bits(phy_data->rx_vec[2],
+						       RX_NO_DATA_RX_VEC2_EHT_NSTS_MSK),
+					 IEEE80211_RADIOTAP_EHT_DATA7_NSS_S);
+		if (rate_n_flags & RATE_MCS_BF_MSK)
+			eht->data[7] |=
+				cpu_to_le32(IEEE80211_RADIOTAP_EHT_DATA7_BEAMFORMED_S);
+	} else {
+		eht->user_info[0] |=
+			cpu_to_le32(IEEE80211_RADIOTAP_EHT_USER_INFO_MCS_KNOWN |
+				    IEEE80211_RADIOTAP_EHT_USER_INFO_CODING_KNOWN |
+				    IEEE80211_RADIOTAP_EHT_USER_INFO_NSS_KNOWN_O |
+				    IEEE80211_RADIOTAP_EHT_USER_INFO_BEAMFORMING_KNOWN_O |
+				    IEEE80211_RADIOTAP_EHT_USER_INFO_DATA_FOR_USER);
+
+		if (rate_n_flags & RATE_MCS_BF_MSK)
+			eht->user_info[0] |=
+				cpu_to_le32(IEEE80211_RADIOTAP_EHT_USER_INFO_BEAMFORMING_O);
+
+		if (rate_n_flags & RATE_MCS_LDPC_MSK)
+			eht->user_info[0] |=
+				cpu_to_le32(IEEE80211_RADIOTAP_EHT_USER_INFO_CODING);
+
+		eht->user_info[0] |= cpu_to_le32
+			(FIELD_PREP(IEEE80211_RADIOTAP_EHT_USER_INFO_MCS,
+				    u32_get_bits(rate_n_flags,
+						 RATE_VHT_MCS_RATE_CODE_MSK)) |
+			 FIELD_PREP(IEEE80211_RADIOTAP_EHT_USER_INFO_NSS_O,
+				    u32_get_bits(rate_n_flags,
+						 RATE_MCS_NSS_MSK)));
+	}
+}
+
 static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 				   struct iwl_mld_rx_phy_data *phy_data,
 				   struct iwl_rx_mpdu_desc *mpdu_desc,
@@ -207,6 +795,7 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 							 rx_status->band);
 	iwl_mld_fill_signal(mld, rx_status, phy_data);
 
+	/* This may be overridden by iwl_mld_rx_he() to HE_RU */
 	switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
 	case RATE_MCS_CHAN_WIDTH_20:
 		break;
@@ -224,12 +813,23 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 		break;
 	}
 
-	/* TODO: rx_he before L-SIG (task=sniffer)*/
-	/* TODO: decode_lsig (task=sniffer)*/
-	/* TODO: rx_eht (task=sniffer)*/
 	/* TODO: RX_FLAG_MACTIME_IS_RTAP_TS64 (task=ptp)*/
 
+	/* must be before L-SIG data */
+	if (format == RATE_MCS_HE_MSK)
+		iwl_mld_rx_he(mld, skb, phy_data, queue);
+
+	iwl_mld_decode_lsig(skb, phy_data);
+
 	rx_status->device_timestamp = phy_data->gp2_on_air_rise;
+
+	/* TODO: adj time (task=ptp) */
+
+	/* using TLV format and must be after all fixed len fields */
+	if (format == RATE_MCS_EHT_MSK)
+		iwl_mld_rx_eht(skb, phy_data, queue);
+
+	/* TODO: radtio tap sniffer config (task=sniffer) */
 
 	if (format != RATE_MCS_CCK_MSK && is_sgi)
 		rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
@@ -747,10 +1347,8 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		skb_reserve(skb, 2);
 	}
 
+	/* TODO: update aggregation data (task=sniffer) */
 	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue);
-
-	/* TODO: update aggregation data (task=monitor) */
-	/* TODO: handle crypto */
 
 	rcu_read_lock();
 
