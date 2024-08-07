@@ -51,5 +51,5 @@ iwl_mld_cleanup_sta(void *data, struct ieee80211_sta *sta)
 int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 		    struct ieee80211_vif *vif, enum iwl_fw_sta_type type);
 void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta);
-
+u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta);
 #endif /* __iwl_mld_sta_h__ */

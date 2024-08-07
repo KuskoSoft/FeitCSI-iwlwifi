@@ -177,6 +177,7 @@ static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
 static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
 	HCMD_NAME(RLC_CONFIG_CMD),
 	HCMD_NAME(RFH_QUEUE_CONFIG_CMD),
+	HCMD_NAME(SCD_QUEUE_CONFIG_CMD),
 };
 
 VISIBLE_IF_IWLWIFI_KUNIT
@@ -199,6 +200,7 @@ EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(global_iwl_mld_goups_size);
 static void
 iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 {
+	const struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 	struct iwl_trans_config trans_cfg = {
 		.op_mode = op_mode,
 		/* Rx is not supported yet, but add it to avoid warnings */
@@ -206,8 +208,12 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 		.command_groups = iwl_mld_groups,
 		.command_groups_size = ARRAY_SIZE(iwl_mld_groups),
 		.fw_reset_handshake = true,
+		.queue_alloc_cmd_ver =
+			iwl_fw_lookup_cmd_ver(mld->fw,
+					      WIDE_ID(DATA_PATH_GROUP,
+						      SCD_QUEUE_CONFIG_CMD),
+					      0),
 	};
-	const struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 	struct iwl_trans *trans = mld->trans;
 
 	trans->rx_mpdu_cmd = REPLY_RX_MPDU_CMD;

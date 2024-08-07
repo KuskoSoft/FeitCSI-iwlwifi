@@ -82,6 +82,8 @@ struct iwl_mld_scan {
  *	ieee80211_bss_conf.
  * @fw_id_to_vif: maps a fw id of a MAC context to the corresponding
  *	ieee80211_vif. Mapping is valid only when the MAC exists in the fw.
+ * @fw_id_to_txq: maps a fw id of a txq to the corresponding
+ *	ieee80211_txq.
  * @used_phy_ids: a bitmap of the phy IDs used. If a bit is set, it means
  *	that the index of this bit is already used as a PHY id.
  * @fw_id_to_link_sta: maps a fw id of a sta to the corresponding
@@ -119,6 +121,7 @@ struct iwl_mld {
 	struct_group(zeroed_on_hw_restart,
 		struct ieee80211_bss_conf __rcu *fw_id_to_bss_conf[IWL_FW_MAX_LINK_ID + 1];
 		struct ieee80211_vif __rcu *fw_id_to_vif[NUM_MAC_INDEX_DRIVER];
+		struct ieee80211_txq __rcu *fw_id_to_txq[IWL_MAX_TVQM_QUEUES];
 		u8 used_phy_ids: NUM_PHY_CTX;
 	);
 	struct ieee80211_link_sta __rcu *fw_id_to_link_sta[IWL_STATION_COUNT_MAX];

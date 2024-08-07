@@ -345,3 +345,26 @@ void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id)
 		iwl_mvm_remove_link_sta(mld, link_sta);
 }
+
+u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
+{
+	struct ieee80211_vif *vif = iwl_mld_sta_from_mac80211(sta)->vif;
+	struct ieee80211_link_sta *link_sta;
+	unsigned int link_id;
+	u32 result = 0;
+	u8 fw_id;
+
+	/* it's easy when the STA is not an MLD */
+	if (!sta->valid_links) {
+		fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, &sta->deflink);
+		return BIT(fw_id);
+	}
+
+	/* but if it is an MLD, get the mask of all the FW STAs it has ... */
+	for_each_sta_active_link(vif, sta, link_sta, link_id) {
+		fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+		result |= BIT(fw_id);
+	}
+
+	return result;
+}
