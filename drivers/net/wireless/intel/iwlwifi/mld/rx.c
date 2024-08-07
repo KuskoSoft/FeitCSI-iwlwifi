@@ -12,7 +12,10 @@
 
 /* stores relevant PHY data fields extracted from iwl_rx_mpdu_desc */
 struct iwl_mld_rx_phy_data {
+	enum iwl_rx_phy_info_type info_type;
+	__le32 data1;
 	u32 rate_n_flags;
+	u32 gp2_on_air_rise;
 	u16 phy_info;
 	u8 energy_a, energy_b;
 	u8 channel;
@@ -24,9 +27,11 @@ static void iwl_mld_fill_phy_data(struct iwl_rx_mpdu_desc *desc,
 {
 	phy_data->phy_info = le16_to_cpu(desc->phy_info);
 	phy_data->rate_n_flags = le32_to_cpu(desc->v3.rate_n_flags);
+	phy_data->gp2_on_air_rise = le32_to_cpu(desc->v3.gp2_on_air_rise);
 	phy_data->channel = desc->v3.channel;
 	phy_data->energy_a = desc->v3.energy_a;
 	phy_data->energy_b = desc->v3.energy_b;
+	phy_data->data1 = desc->v3.phy_data1;
 }
 
 /* iwl_mld_pass_packet_to_mac80211 - passes the packet for mac80211 */
@@ -62,6 +67,21 @@ static void iwl_mld_fill_signal(struct iwl_mld *mld,
 	rx_status->chain_signal[1] = energy_b;
 }
 
+static int
+iwl_mld_legacy_hw_idx_to_mac80211_idx(u32 rate_n_flags,
+				      enum nl80211_band band)
+{
+	int format = rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
+	int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
+	bool is_lb = band == NL80211_BAND_2GHZ;
+
+	if (format == RATE_MCS_LEGACY_OFDM_MSK)
+		return is_lb ? rate + IWL_FIRST_OFDM_RATE : rate;
+
+	/* CCK is not allowed in 5 GHz */
+	return is_lb ? rate : -1;
+}
+
 static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 				   struct iwl_mld_rx_phy_data *phy_data,
 				   struct iwl_rx_mpdu_desc *mpdu_desc,
@@ -69,6 +89,10 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 				   int queue)
 {
 	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	u32 format = phy_data->rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
+	u32 rate_n_flags = phy_data->rate_n_flags;
+	u8 stbc = u32_get_bits(rate_n_flags, RATE_MCS_STBC_MSK);
+	bool is_sgi = rate_n_flags & RATE_MCS_SGI_MSK;
 	u8 band;
 
 	/* Keep packets with CRC errors (and with overrun) for monitor mode
@@ -81,12 +105,18 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 		rx_status->flag |= RX_FLAG_FAILED_FCS_CRC;
 	}
 
+	phy_data->info_type = IWL_RX_PHY_INFO_TYPE_NONE;
+
 	if (likely(!(phy_data->phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD))) {
 		rx_status->mactime =
 			le64_to_cpu(mpdu_desc->v3.tsf_on_air_rise);
 
 		/* TSF as indicated by the firmware is at INA time */
 		rx_status->flag |= RX_FLAG_MACTIME_PLCP_START;
+	} else {
+		phy_data->info_type =
+			le32_get_bits(phy_data->data1,
+				      IWL_RX_PHY_DATA1_INFO_TYPE_MASK);
 	}
 
 	/* management stuff on default queue */
@@ -99,13 +129,90 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 			mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_FOUND;
 	}
 
+	/* set the preamble flag if appropriate */
+	if (format == RATE_MCS_CCK_MSK &&
+	    phy_data->phy_info & IWL_RX_MPDU_PHY_SHORT_PREAMBLE)
+		rx_status->enc_flags |= RX_ENC_FLAG_SHORTPRE;
+
 	band = BAND_IN_RX_STATUS(mpdu_desc->mac_phy_idx);
 	rx_status->band = iwl_mld_phy_band_to_nl80211(band);
 	rx_status->freq = ieee80211_channel_to_frequency(phy_data->channel,
 							 rx_status->band);
 	iwl_mld_fill_signal(mld, rx_status, phy_data);
 
-	/* TODO: fill more fields */
+	switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
+	case RATE_MCS_CHAN_WIDTH_20:
+		break;
+	case RATE_MCS_CHAN_WIDTH_40:
+		rx_status->bw = RATE_INFO_BW_40;
+		break;
+	case RATE_MCS_CHAN_WIDTH_80:
+		rx_status->bw = RATE_INFO_BW_80;
+		break;
+	case RATE_MCS_CHAN_WIDTH_160:
+		rx_status->bw = RATE_INFO_BW_160;
+		break;
+	case RATE_MCS_CHAN_WIDTH_320:
+		rx_status->bw = RATE_INFO_BW_320;
+		break;
+	}
+
+	/* TODO: rx_he before L-SIG (task=sniffer)*/
+	/* TODO: decode_lsig (task=sniffer)*/
+	/* TODO: rx_eht (task=sniffer)*/
+	/* TODO: RX_FLAG_MACTIME_IS_RTAP_TS64 (task=ptp)*/
+
+	rx_status->device_timestamp = phy_data->gp2_on_air_rise;
+
+	if (format != RATE_MCS_CCK_MSK && is_sgi)
+		rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
+
+	if (rate_n_flags & RATE_MCS_LDPC_MSK)
+		rx_status->enc_flags |= RX_ENC_FLAG_LDPC;
+
+	switch (format) {
+	case RATE_MCS_HT_MSK:
+		rx_status->encoding = RX_ENC_HT;
+		rx_status->rate_idx = RATE_HT_MCS_INDEX(rate_n_flags);
+		rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
+		break;
+	case RATE_MCS_VHT_MSK:
+	case RATE_MCS_HE_MSK:
+	case RATE_MCS_EHT_MSK:
+		if (format == RATE_MCS_VHT_MSK) {
+			rx_status->encoding = RX_ENC_VHT;
+		} else if (format == RATE_MCS_HE_MSK) {
+			rx_status->encoding = RX_ENC_HE;
+			rx_status->he_dcm =
+				!!(rate_n_flags & RATE_HE_DUAL_CARRIER_MODE_MSK);
+		} else if (format == RATE_MCS_EHT_MSK) {
+			rx_status->encoding = RX_ENC_EHT;
+		}
+
+		rx_status->nss = u32_get_bits(rate_n_flags, RATE_MCS_NSS_MSK) + 1;
+		rx_status->rate_idx = rate_n_flags & RATE_MCS_CODE_MSK;
+		rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
+		break;
+	default: {
+		int rate =
+		    iwl_mld_legacy_hw_idx_to_mac80211_idx(rate_n_flags,
+							  rx_status->band);
+
+		/* valid rate */
+		if (rate >= 0 && rate <= 0xFF) {
+			rx_status->rate_idx = rate;
+			break;
+		}
+
+		/* invalid rate */
+		rx_status->rate_idx = 0;
+
+		if (net_ratelimit())
+			IWL_ERR(mld, "invalid rate_n_flags=0x%x, band=%d\n",
+				rate_n_flags, rx_status->band);
+		break;
+		}
+	}
 }
 
 /* iwl_mld_create_skb adds the rxb to a new skb */
@@ -232,8 +339,6 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 
 	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue);
 
-	/* TODO: RATE_MCS_MOD_TYPE_MSK */
-	/* TODO: RX_ENC_FLAG_SHORTPRE */
 	/* TODO: update aggregation data (task=monitor) */
 	/* TODO: IWL_RX_MPDU_STATUS_SRC_STA_FOUND case */
 	/* TODO: !multicast_addr case */
