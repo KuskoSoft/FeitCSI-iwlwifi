@@ -6,6 +6,7 @@
 #include <net/mac80211.h>
 
 #include "mld.h"
+#include "sta.h"
 #include "fw/dbg.h"
 #include "fw/api/rx.h"
 #include "fw/api/rs.h"
@@ -304,11 +305,84 @@ static int iwl_mld_create_skb(struct iwl_mld *mld, struct sk_buff *skb,
 	return 0;
 }
 
+/* returns true if a packet is a duplicate or invalid tid and
+ * should be dropped. Updates AMSDU PN tracking info
+ */
+static bool
+iwl_mld_is_dup(struct iwl_mld *mld, struct ieee80211_sta *sta,
+	       struct ieee80211_hdr *hdr,
+	       const struct iwl_rx_mpdu_desc *mpdu_desc,
+	       struct ieee80211_rx_status *rx_status, int queue)
+{
+	struct iwl_mld_sta *mld_sta;
+	struct iwl_mld_rxq_dup_data *dup_data;
+	u8 tid, sub_frame_idx;
+
+	if (WARN_ON(!sta))
+		return false;
+
+	mld_sta = iwl_mld_sta_from_mac80211(sta);
+
+	if (WARN_ON_ONCE(!mld_sta->dup_data))
+		return false;
+
+	dup_data = &mld_sta->dup_data[queue];
+
+	/* Drop duplicate 802.11 retransmissions
+	 * (IEEE 802.11-2020: 10.3.2.14 "Duplicate detection and recovery")
+	 */
+	if (ieee80211_is_ctl(hdr->frame_control) ||
+	    ieee80211_is_any_nullfunc(hdr->frame_control) ||
+	    is_multicast_ether_addr(hdr->addr1))
+		return false;
+
+	if (ieee80211_is_data_qos(hdr->frame_control)) {
+		/* frame has qos control */
+		tid = ieee80211_get_tid(hdr);
+		if (tid >= IWL_MAX_TID_COUNT)
+			return true;
+	} else {
+		tid = IWL_MAX_TID_COUNT;
+	}
+
+	/* If this wasn't a part of an A-MSDU the sub-frame index will be 0 */
+	sub_frame_idx = mpdu_desc->amsdu_info &
+		IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
+
+	if (IWL_FW_CHECK(mld,
+			 sub_frame_idx > 0 &&
+			 !(mpdu_desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU),
+			 "got sub_frame_idx=%d but A-MSDU flag is not set\n",
+			 sub_frame_idx))
+		return true;
+
+	if (unlikely(ieee80211_has_retry(hdr->frame_control) &&
+		     dup_data->last_seq[tid] == hdr->seq_ctrl &&
+		     dup_data->last_sub_frame_idx[tid] >= sub_frame_idx))
+		return true;
+
+	/* Allow same PN as the first subframe for following sub frames */
+	if (dup_data->last_seq[tid] == hdr->seq_ctrl &&
+	    sub_frame_idx > dup_data->last_sub_frame_idx[tid])
+		rx_status->flag |= RX_FLAG_ALLOW_SAME_PN;
+
+	dup_data->last_seq[tid] = hdr->seq_ctrl;
+	dup_data->last_sub_frame_idx[tid] = sub_frame_idx;
+
+	rx_status->flag |= RX_FLAG_DUP_VALIDATED;
+
+	return false;
+}
+
+/* Processes received packets for a station.
+ * Sets *drop to true if the packet should be dropped.
+ * Returns the station if found, or NULL otherwise.
+ */
 static struct ieee80211_sta *
 iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 		    struct sk_buff *skb,
 		    const struct iwl_rx_mpdu_desc *mpdu_desc,
-		    const struct iwl_rx_packet *pkt)
+		    const struct iwl_rx_packet *pkt, int queue, bool *drop)
 {
 	struct ieee80211_sta *sta = NULL;
 	struct ieee80211_link_sta *link_sta = NULL;
@@ -353,7 +427,12 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 		skb->csum = csum_unfold(~(__force __sum16)hwsum);
 	}
 
-	/* TODO: is_dup (task=DP) */
+	if (iwl_mld_is_dup(mld, sta, hdr, mpdu_desc, rx_status, queue)) {
+		IWL_DEBUG_DROP(mld, "Dropping duplicate packet 0x%x\n",
+			       le16_to_cpu(hdr->seq_ctrl));
+		*drop = true;
+		return NULL;
+	}
 
 	return sta;
 }
@@ -368,6 +447,7 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	struct ieee80211_hdr *hdr;
 	struct sk_buff *skb;
 	size_t mpdu_desc_size = sizeof(*mpdu_desc);
+	bool drop = false;
 	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
 	u32 mpdu_len;
 
@@ -413,7 +493,11 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 
 	rcu_read_lock();
 
-	sta = iwl_mld_rx_with_sta(mld, hdr, skb, mpdu_desc, pkt);
+	sta = iwl_mld_rx_with_sta(mld, hdr, skb, mpdu_desc, pkt, queue, &drop);
+	if (drop) {
+		kfree_skb(skb);
+		goto unlock;
+	}
 
 	/* TODO: pass crypto len */
 	if (iwl_mld_create_skb(mld, skb, hdr, mpdu_len, 0, rxb)) {
