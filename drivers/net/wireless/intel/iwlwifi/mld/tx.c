@@ -4,8 +4,10 @@
  */
 #include "tx.h"
 #include "sta.h"
+#include "hcmd.h"
 
 #include "fw/api/txq.h"
+#include "fw/api/datapath.h"
 
 static int
 iwl_mld_get_queue_size(struct iwl_mld *mld, struct ieee80211_txq *txq)
@@ -107,5 +109,39 @@ void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 	}
 }
 
+static void iwl_mld_free_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
+{
+	struct iwl_mld_txq *mld_txq = iwl_mld_txq_from_mac80211(txq);
+	u32 fw_sta_mask = iwl_mld_fw_sta_id_mask(mld, txq->sta);
+	struct iwl_scd_queue_cfg_cmd remove_cmd = {
+		.operation = cpu_to_le32(IWL_SCD_QUEUE_REMOVE),
+		.u.remove.tid = cpu_to_le32(txq->tid == IEEE80211_NUM_TIDS ?
+							IWL_MGMT_TID :
+							txq->tid),
+		.u.remove.sta_mask = cpu_to_le32(fw_sta_mask),
+	};
+
+	iwl_mld_send_cmd_pdu(mld,
+			     WIDE_ID(DATA_PATH_GROUP, SCD_QUEUE_CONFIG_CMD),
+			     &remove_cmd);
+
+	iwl_trans_txq_free(mld->trans, mld_txq->fw_id);
+}
+
 void iwl_mld_remove_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
-{}
+{
+	struct iwl_mld_txq *mld_txq = iwl_mld_txq_from_mac80211(txq);
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* Have all pending allocations done */
+	wiphy_work_flush(mld->wiphy, &mld->add_txqs_wk);
+
+	if (!mld_txq->status.allocated ||
+	    WARN_ON(mld_txq->fw_id >= ARRAY_SIZE(mld->fw_id_to_txq)))
+		return;
+
+	iwl_mld_free_txq(mld, txq);
+	RCU_INIT_POINTER(mld->fw_id_to_txq[mld_txq->fw_id], NULL);
+	mld_txq->status.allocated = false;
+}
