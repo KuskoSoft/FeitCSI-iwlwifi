@@ -321,7 +321,40 @@ int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
 	return 0;
 }
 
-static void
+static void iwl_mld_destroy_sta(struct ieee80211_sta *sta)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+
+	kfree(mld_sta->dup_data);
+}
+
+static int
+iwl_mld_alloc_dup_data(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta)
+{
+	struct iwl_mld_rxq_dup_data *dup_data;
+
+	dup_data = kcalloc(mld->trans->num_rx_queues, sizeof(*dup_data),
+			   GFP_KERNEL);
+	if (!dup_data)
+		return -ENOMEM;
+
+	/* Initialize all the last_seq values to 0xffff which can never
+	 * compare equal to the frame's seq_ctrl in the check in
+	 * iwl_mld_is_dup() since the lower 4 bits are the fragment
+	 * number and fragmented packets don't reach that function.
+	 *
+	 * This thus allows receiving a packet with seqno 0 and the
+	 * retry bit set as the very first packet on a new TID.
+	 */
+	for (int q = 0; q < mld->trans->num_rx_queues; q++)
+		memset(dup_data[q].last_seq, 0xff,
+		       sizeof(dup_data[q].last_seq));
+	mld_sta->dup_data = dup_data;
+
+	return 0;
+}
+
+static int
 iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 		 struct ieee80211_vif *vif, enum iwl_fw_sta_type type)
 {
@@ -332,6 +365,8 @@ iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		iwl_mld_init_txq(iwl_mld_txq_from_mac80211(sta->txq[i]));
+
+	return iwl_mld_alloc_dup_data(mld, mld_sta);
 }
 
 int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
@@ -340,19 +375,28 @@ int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct ieee80211_link_sta *link_sta;
 	int link_id;
+	int ret;
 
-	iwl_mld_init_sta(mld, sta, vif, type);
+	ret = iwl_mld_init_sta(mld, sta, vif, type);
+	if (ret)
+		return ret;
 
 	/* We could have add only the deflink link_sta, but it will not work
 	 * in the restart case if the single link that is active during
 	 * reconfig is not the deflink one.
 	 */
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
-		int ret = iwl_mld_add_link_sta(mld, link_sta);
-			if (ret)
-				return ret;
+		ret = iwl_mld_add_link_sta(mld, link_sta);
+		if (ret)
+			goto destroy_sta;
 	}
+
 	return 0;
+
+destroy_sta:
+	iwl_mld_destroy_sta(sta);
+
+	return ret;
 }
 
 void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta)
@@ -408,6 +452,8 @@ void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	/* Remove all link_sta's*/
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id)
 		iwl_mvm_remove_link_sta(mld, link_sta);
+
+	iwl_mld_destroy_sta(sta);
 }
 
 u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)

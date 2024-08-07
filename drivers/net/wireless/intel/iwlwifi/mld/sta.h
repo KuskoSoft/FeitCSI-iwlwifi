@@ -12,6 +12,17 @@
 #include "tx.h"
 
 /**
+ * struct iwl_mld_rxq_dup_data - Duplication detection data, per STA & Rx queue
+ * @last_seq: last sequence per tid.
+ * @last_sub_frame_idx: the index of the last subframe in an A-MSDU. This value
+ *	will be zero if the packet is not part of an A-MSDU.
+ */
+struct iwl_mld_rxq_dup_data {
+	__le16 last_seq[IWL_MAX_TID_COUNT + 1];
+	u8 last_sub_frame_idx[IWL_MAX_TID_COUNT + 1];
+} ____cacheline_aligned_in_smp;
+
+/**
  * struct iwl_mld_sta - representation of a station in the driver.
  *
  * This represent the MLD-level sta, and will not be added to the FW.
@@ -20,6 +31,7 @@
  * @vif: pointer the vif object.
  * @sta_state: station state according to enum %ieee80211_sta_state
  * @sta_type: type of this station. See &enum iwl_fw_sta_type
+ * @dup_data: per queue duplicate packet detection data
  */
 struct iwl_mld_sta {
 	/* Add here fields that need clean up on restart */
@@ -29,6 +41,7 @@ struct iwl_mld_sta {
 	);
 	struct ieee80211_vif *vif;
 	/* And here fields that survive a fw restart */
+	struct iwl_mld_rxq_dup_data *dup_data;
 };
 
 static inline struct iwl_mld_sta *
