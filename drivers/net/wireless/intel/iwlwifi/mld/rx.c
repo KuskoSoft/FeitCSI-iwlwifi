@@ -274,7 +274,22 @@ static int iwl_mld_create_skb(struct iwl_mld *mld, struct sk_buff *skb,
 	skb_put_data(skb, hdr, hdrlen);
 	skb_put_data(skb, (u8 *)hdr + hdrlen + pad_len, headlen - hdrlen);
 
-	/* TODO: CHECKSUM_COMPLETE (task=DP) */
+	if (skb->ip_summed == CHECKSUM_COMPLETE) {
+		struct {
+			u8 hdr[6];
+			__be16 type;
+		} __packed *shdr = (void *)((u8 *)hdr + hdrlen + pad_len);
+
+		if (unlikely(headlen - hdrlen < sizeof(*shdr) ||
+			     !ether_addr_equal(shdr->hdr, rfc1042_header) ||
+			     (shdr->type != htons(ETH_P_IP) &&
+			      shdr->type != htons(ETH_P_ARP) &&
+			      shdr->type != htons(ETH_P_IPV6) &&
+			      shdr->type != htons(ETH_P_8021Q) &&
+			      shdr->type != htons(ETH_P_PAE) &&
+			      shdr->type != htons(ETH_P_TDLS))))
+			skb->ip_summed = CHECKSUM_NONE;
+	}
 
 	fraglen = len - headlen;
 
@@ -289,13 +304,67 @@ static int iwl_mld_create_skb(struct iwl_mld *mld, struct sk_buff *skb,
 	return 0;
 }
 
+static struct ieee80211_sta *
+iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
+		    struct sk_buff *skb,
+		    const struct iwl_rx_mpdu_desc *mpdu_desc,
+		    const struct iwl_rx_packet *pkt)
+{
+	struct ieee80211_sta *sta = NULL;
+	struct ieee80211_link_sta *link_sta = NULL;
+	struct ieee80211_rx_status *rx_status;
+
+	if (mpdu_desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_SRC_STA_FOUND)) {
+		u8 sta_id = le32_get_bits(mpdu_desc->status,
+					  IWL_RX_MPDU_STATUS_STA_ID);
+
+		if (IWL_FW_CHECK(mld,
+				 sta_id >= mld->fw->ucode_capa.num_stations,
+				 "rx_mpdu: invalid sta_id %d\n", sta_id))
+			return NULL;
+
+		link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
+		if (link_sta)
+			sta = link_sta->sta;
+	} else if (!is_multicast_ether_addr(hdr->addr2)) {
+		/* Passing NULL is fine since we prevent two stations with the
+		 * same address from being added.
+		 */
+		sta = ieee80211_find_sta_by_ifaddr(mld->hw, hdr->addr2, NULL);
+	}
+
+	/* we may not have any station yet */
+	if (!sta)
+		return NULL;
+
+	rx_status = IEEE80211_SKB_RXCB(skb);
+
+	if (link_sta && sta->valid_links) {
+		rx_status->link_valid = true;
+		rx_status->link_id = link_sta->link_id;
+	}
+
+	/* fill checksum */
+	if (ieee80211_is_data(hdr->frame_control) &&
+	    pkt->len_n_flags & cpu_to_le32(FH_RSCSR_RPA_EN)) {
+		u16 hwsum = be16_to_cpu(mpdu_desc->v3.raw_xsum);
+
+		skb->ip_summed = CHECKSUM_COMPLETE;
+		skb->csum = csum_unfold(~(__force __sum16)hwsum);
+	}
+
+	/* TODO: is_dup (task=DP) */
+
+	return sta;
+}
+
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		     struct iwl_rx_cmd_buffer *rxb, int queue)
 {
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	struct iwl_mld_rx_phy_data phy_data = {};
 	struct iwl_rx_mpdu_desc *mpdu_desc = (void *)pkt->data;
-	struct ieee80211_sta *sta = NULL;
+	struct ieee80211_sta *sta;
 	struct ieee80211_hdr *hdr;
 	struct sk_buff *skb;
 	size_t mpdu_desc_size = sizeof(*mpdu_desc);
@@ -340,14 +409,17 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue);
 
 	/* TODO: update aggregation data (task=monitor) */
-	/* TODO: IWL_RX_MPDU_STATUS_SRC_STA_FOUND case */
-	/* TODO: !multicast_addr case */
 	/* TODO: handle crypto */
-	/* TODO: handle sta found */
+
+	rcu_read_lock();
+
+	sta = iwl_mld_rx_with_sta(mld, hdr, skb, mpdu_desc, pkt);
 
 	/* TODO: pass crypto len */
-	if (iwl_mld_create_skb(mld, skb, hdr, mpdu_len, 0, rxb))
-		goto out_free;
+	if (iwl_mld_create_skb(mld, skb, hdr, mpdu_len, 0, rxb)) {
+		kfree_skb(skb);
+		goto unlock;
+	}
 
 	/* TODO: verify the following before passing frames to mac80211:
 	 * 1. reorder buffer
@@ -358,8 +430,6 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 
 	iwl_mld_pass_packet_to_mac80211(mld, napi, skb, sta);
 
-	return;
-
-out_free:
-	kfree_skb(skb);
+unlock:
+	rcu_read_unlock();
 }
