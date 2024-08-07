@@ -113,12 +113,22 @@ static int iwl_mld_create_skb(struct iwl_mld *mld, struct sk_buff *skb,
 			      struct ieee80211_hdr *hdr, u16 len, u8 crypt_len,
 			      struct iwl_rx_cmd_buffer *rxb)
 {
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_rx_mpdu_desc *desc = (void *)pkt->data;
 	unsigned int headlen, fraglen, pad_len = 0;
 	unsigned int hdrlen = ieee80211_hdrlen(hdr->frame_control);
+	u8 mic_crc_len = u8_get_bits(desc->mac_flags1,
+				     IWL_RX_MPDU_MFLG1_MIC_CRC_LEN_MASK) << 1;
 
 	/* TODO: handle IWL_RX_MPDU_MFLG2_PAD */
 
-	/* TODO: strip mic_crc_len for non monitor interface */
+	/* For non monitor interface strip the bytes the RADA might not have
+	 * removed (it might be disabled, e.g. for mgmt frames). As a monitor
+	 * interface cannot exist with other interfaces, this removal is safe
+	 * and sufficient, in monitor mode there's no decryption being done.
+	 */
+	if (len > mic_crc_len && !ieee80211_hw_check(mld->hw, RX_INCLUDES_FCS))
+		len -= mic_crc_len;
 
 	/* If frame is small enough to fit in skb->head, pull it completely.
 	 * If not, only pull ieee80211_hdr (including crypto if present, and
