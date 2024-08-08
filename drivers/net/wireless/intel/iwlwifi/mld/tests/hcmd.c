@@ -7,7 +7,7 @@
 #include <kunit/test.h>
 
 #include <iwl-trans.h>
-#include "../mld.h"
+#include "mld.h"
 
 MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
 
