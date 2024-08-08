@@ -285,23 +285,21 @@ static int iwl_mld_rm_sta_from_fw(struct iwl_mld *mld, u8 fw_sta_id)
 	return ret;
 }
 
-static int
+static void
 iwl_mvm_remove_link_sta(struct iwl_mld *mld,
 			struct ieee80211_link_sta *link_sta)
 {
 	int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
-	int ret;
 
 	if (WARN_ON(fw_id < 0))
-		return fw_id;
+		return;
 
-	ret = iwl_mld_rm_sta_from_fw(mld, fw_id);
-	if (ret)
-		return ret;
+	iwl_mld_rm_sta_from_fw(mld, fw_id);
 
+	/* This will not be set to NULL upon reconfig, so set it also when
+	 * failed to remove from fw
+	 */
 	RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
-
-	return 0;
 }
 
 static void
@@ -331,12 +329,11 @@ int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	return iwl_mld_add_link_sta(mld, &sta->deflink);
 }
 
-int iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
+void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct ieee80211_link_sta *link_sta;
 	u8 link_id;
-	int ret;
 
 	/* TODO: flush the queues and wait for them to emtpy */
 
@@ -345,10 +342,6 @@ int iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 		iwl_mld_remove_txq(mld, sta->txq[i]);
 
 	/* Remove all link_sta's*/
-	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
-		ret = iwl_mvm_remove_link_sta(mld, link_sta);
-		if (ret)
-			break;
-	}
-	return ret;
+	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id)
+		iwl_mvm_remove_link_sta(mld, link_sta);
 }

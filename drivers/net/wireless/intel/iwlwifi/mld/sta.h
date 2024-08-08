@@ -50,6 +50,6 @@ iwl_mld_cleanup_sta(void *data, struct ieee80211_sta *sta)
 
 int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 		    struct ieee80211_vif *vif, enum iwl_fw_sta_type type);
-int iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta);
+void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta);
 
 #endif /* __iwl_mld_sta_h__ */

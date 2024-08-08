@@ -1041,23 +1041,16 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 				       enum ieee80211_sta_state new_state)
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
-	int ret;
 
 	if (old_state == IEEE80211_STA_NONE &&
 	    new_state == IEEE80211_STA_NOTEXIST) {
 		mld_vif->ap_sta = NULL;
-		ret = iwl_mld_remove_sta(mld, sta);
+		iwl_mld_remove_sta(mld, sta);
 	} else {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
 		return -EINVAL;
 	}
-
-	/* Avoid a warning in __sta_info_destroy_part2 if we had an
-	 * assert, but the FW is not alive yet
-	 */
-	if (ret && iwl_mld_error_before_recovery(mld))
-		ret = 0;
-	return ret;
+	return 0;
 }
 
 static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
