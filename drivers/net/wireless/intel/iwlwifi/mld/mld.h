@@ -19,12 +19,69 @@
 #include "fw/api/mac-cfg.h"
 #include "fw/api/mac.h"
 #include "fw/api/phy-ctxt.h"
+#include "fw/api/datapath.h"
 #include "fw/dbg.h"
 
 #include "notif.h"
 #include "scan.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
+
+/**
+ * struct iwl_mld_reorder_buffer - per ra/tid/queue reorder buffer
+ * @head_sn: reorder window head sequence number
+ * @num_stored: number of MPDUs stored in the buffer
+ * @queue: queue of this reorder buffer
+ * @last_amsdu_sn: track last A-MSDU sequence number for duplication detection
+ * @valid: true if reordering is valid for this queue
+ */
+struct iwl_mld_reorder_buffer {
+	u16 head_sn;
+	u16 num_stored;
+	int queue;
+	u16 last_amsdu_sn;
+	bool valid;
+} ____cacheline_aligned_in_smp;
+
+/**
+ * struct iwl_mld_reorder_buf_entry - reorder buffer entry per-queue/per-seqno
+ * @frames: list of skbs stored. a list is necessary because in an A-MSDU,
+ *	all sub-frames share the same sequence number, so they are stored
+ *	together in the same list.
+ */
+struct iwl_mld_reorder_buf_entry {
+	struct sk_buff_head frames;
+}
+#ifndef __CHECKER__
+/* sparse doesn't like this construct: "bad integer constant expression" */
+__aligned(roundup_pow_of_two(sizeof(struct sk_buff_head)))
+#endif
+;
+
+/**
+ * struct iwl_mld_baid_data - Block Ack session data
+ * @rcu_head: RCU head for freeing this data
+ * @sta_mask: station mask for the BAID
+ * @tid: tid of the session
+ * @baid: baid of the session
+ * @buf_size: the reorder buffer size as set by the last ADDBA request
+ * @entries_per_queue: number of buffers per queue, this actually gets
+ *	aligned up to avoid cache line sharing between queues
+ * @mld: mld pointer, needed for timer context
+ * @reorder_buf: reorder buffer, allocated per queue
+ * @entries: data
+ */
+struct iwl_mld_baid_data {
+	struct rcu_head rcu_head;
+	u32 sta_mask;
+	u8 tid;
+	u8 baid;
+	u16 buf_size;
+	u16 entries_per_queue;
+	struct iwl_mld *mld;
+	struct iwl_mld_reorder_buffer reorder_buf[IWL_MAX_RX_HW_QUEUES];
+	struct iwl_mld_reorder_buf_entry entries[] ____cacheline_aligned_in_smp;
+};
 
 /**
  * struct iwl_mld - MLD op mode
@@ -63,6 +120,10 @@
  * @wowlan: WoWLAN support data.
  * @led: the led device
  * @mcc_src: the source id of the MCC, comes from the firmware
+ * @fw_id_to_ba: maps a fw (BA) id to a corresponding Block Ack session data.
+ * @num_rx_ba_sessions: tracks the number of active Rx Block Ack (BA) sessions.
+ *	the driver ensures that new BA sessions are blocked once the maximum
+ *	supported by the firmware is reached, preventing firmware asserts.
  * @txqs_to_add: a list of &ieee80211_txq's to allocate in &add_txqs_wk
  * @add_txqs_wk: a worker to allocate txqs.
  * @add_txqs_lock: to lock the &txqs_to_add list.
@@ -105,6 +166,9 @@ struct iwl_mld {
 	struct led_classdev led;
 #endif
 	enum iwl_mcc_source mcc_src;
+
+	struct iwl_mld_baid_data __rcu *fw_id_to_ba[IWL_MAX_BAID];
+	u8 num_rx_ba_sessions;
 
 	struct list_head txqs_to_add;
 	struct wiphy_work add_txqs_wk;

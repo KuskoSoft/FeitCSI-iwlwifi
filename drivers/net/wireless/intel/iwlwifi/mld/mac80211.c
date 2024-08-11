@@ -1236,6 +1236,44 @@ static void iwl_mld_mac80211_flush_sta(struct ieee80211_hw *hw,
 	iwl_mld_flush_sta_txqs(mld, sta);
 }
 
+static int
+iwl_mld_mac80211_ampdu_action(struct ieee80211_hw *hw,
+			      struct ieee80211_vif *vif,
+			      struct ieee80211_ampdu_params *params)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct ieee80211_sta *sta = params->sta;
+	enum ieee80211_ampdu_mlme_action action = params->action;
+	u16 tid = params->tid;
+	u16 ssn = params->ssn;
+	u16 buf_size = params->buf_size;
+	u16 timeout = params->timeout;
+	int ret;
+
+	IWL_DEBUG_HT(mld, "A-MPDU action on addr %pM tid: %d action: %d\n",
+		     sta->addr, tid, action);
+
+	switch (action) {
+	case IEEE80211_AMPDU_RX_START:
+		/* TODO: BT coex amsdu disallowed (task=coex) */
+		ret = iwl_mld_sta_ampdu_rx_start(mld, sta, tid, ssn, buf_size,
+						 timeout);
+		break;
+	case IEEE80211_AMPDU_RX_STOP:
+		ret = iwl_mld_sta_ampdu_rx_stop(mld, sta, tid);
+		break;
+	default:
+		/* The mac80211 TX_AMPDU_SETUP_IN_HW flag is set for all
+		 * devices, since all support TX A-MPDU offload in hardware.
+		 * Therefore, no TX action should be requested here.
+		 */
+		WARN_ON_ONCE(1);
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1265,6 +1303,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.sta_state = iwl_mld_mac80211_sta_state,
 	.flush = iwl_mld_mac80211_flush,
 	.flush_sta = iwl_mld_mac80211_flush_sta,
+	.ampdu_action = iwl_mld_mac80211_ampdu_action,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,

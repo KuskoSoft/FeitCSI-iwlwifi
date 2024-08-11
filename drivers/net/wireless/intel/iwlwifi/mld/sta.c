@@ -10,6 +10,7 @@
 #include "iface.h"
 #include "fw/api/sta.h"
 #include "fw/api/mac.h"
+#include "fw/api/rx.h"
 
 static int
 iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
@@ -477,4 +478,207 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	}
 
 	return result;
+}
+
+static int
+iwl_mld_sta_stop_ba_in_fw(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			  int tid)
+{
+	struct iwl_rx_baid_cfg_cmd cmd = {
+		.action = cpu_to_le32(IWL_RX_BAID_ACTION_REMOVE),
+		.remove.sta_id_mask =
+			cpu_to_le32(iwl_mld_fw_sta_id_mask(mld, sta)),
+		.remove.tid = cpu_to_le32(tid),
+
+	};
+	int ret;
+
+	ret = iwl_mld_send_cmd_pdu(mld,
+				   WIDE_ID(DATA_PATH_GROUP,
+					   RX_BAID_ALLOCATION_CONFIG_CMD),
+				   &cmd);
+	if (ret)
+		return ret;
+
+	IWL_DEBUG_HT(mld, "RX BA Session stopped in fw\n");
+
+	return ret;
+}
+
+static int
+iwl_mld_sta_start_ba_in_fw(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			   int tid, u16 ssn, u16 buf_size)
+{
+	struct iwl_rx_baid_cfg_cmd cmd = {
+		.action = cpu_to_le32(IWL_RX_BAID_ACTION_ADD),
+		.alloc.sta_id_mask =
+			cpu_to_le32(iwl_mld_fw_sta_id_mask(mld, sta)),
+		.alloc.tid = tid,
+		.alloc.ssn = cpu_to_le16(ssn),
+		.alloc.win_size = cpu_to_le16(buf_size),
+	};
+	struct iwl_host_cmd hcmd = {
+		.id = WIDE_ID(DATA_PATH_GROUP, RX_BAID_ALLOCATION_CONFIG_CMD),
+		.flags = CMD_WANT_SKB,
+		.len[0] = sizeof(cmd),
+		.data[0] = &cmd,
+	};
+	struct iwl_rx_baid_cfg_resp *resp;
+	struct iwl_rx_packet *pkt;
+	u32 resp_len;
+	int ret, baid;
+
+	BUILD_BUG_ON(sizeof(*resp) != sizeof(baid));
+
+	ret = iwl_mld_send_cmd(mld, &hcmd);
+	if (ret)
+		return ret;
+
+	pkt = hcmd.resp_pkt;
+
+	resp_len = iwl_rx_packet_payload_len(pkt);
+	if (IWL_FW_CHECK(mld, resp_len != sizeof(*resp),
+			 "BAID_ALLOC_CMD: unexpected response length %d\n",
+			 resp_len)) {
+		ret = -EIO;
+		goto out;
+	}
+
+	IWL_DEBUG_HT(mld, "RX BA Session started in fw\n");
+
+	resp = (void *)pkt->data;
+	baid = le32_to_cpu(resp->baid);
+
+	if (IWL_FW_CHECK(mld, baid < 0 || baid >= ARRAY_SIZE(mld->fw_id_to_ba),
+			 "BAID_ALLOC_CMD: invalid BAID response %d\n", baid)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = baid;
+out:
+	iwl_free_resp(&hcmd);
+	return ret;
+}
+
+int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			       int tid, u16 ssn, u16 buf_size, u16 timeout)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_baid_data *baid_data = NULL;
+	u32 reorder_buf_size = buf_size * sizeof(baid_data->entries[0]);
+	int ret, baid;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (mld->num_rx_ba_sessions >= IWL_MAX_BAID) {
+		IWL_DEBUG_HT(mld,
+			     "Max num of RX BA sessions reached; blocking new session\n");
+		return -ENOSPC;
+	}
+
+	/* sparse doesn't like the __align() so don't check */
+#ifndef __CHECKER__
+	/* The division below will be OK if either the cache line size
+	 * can be divided by the entry size (ALIGN will round up) or if
+	 * the entry size can be divided by the cache line size, in which
+	 * case the ALIGN() will do nothing.
+	 */
+	BUILD_BUG_ON(SMP_CACHE_BYTES % sizeof(baid_data->entries[0]) &&
+		     sizeof(baid_data->entries[0]) % SMP_CACHE_BYTES);
+#endif
+
+	/* Upward align the reorder buffer size to fill an entire cache
+	 * line for each queue, to avoid sharing cache lines between
+	 * different queues.
+	 */
+	reorder_buf_size = ALIGN(reorder_buf_size, SMP_CACHE_BYTES);
+
+	/* Allocate here so if allocation fails we can bail out early
+	 * before starting the BA session in the firmware
+	 */
+	baid_data = kzalloc(sizeof(*baid_data) +
+			    mld->trans->num_rx_queues * reorder_buf_size,
+			    GFP_KERNEL);
+	if (!baid_data)
+		return -ENOMEM;
+
+	/* This division is why we need the above BUILD_BUG_ON(),
+	 * if that doesn't hold then this will not be right.
+	 */
+	baid_data->entries_per_queue =
+		reorder_buf_size / sizeof(baid_data->entries[0]);
+
+	baid = iwl_mld_sta_start_ba_in_fw(mld, sta, tid, ssn, buf_size);
+	if (baid < 0) {
+		ret = baid;
+		goto out_free;
+	}
+
+	mld->num_rx_ba_sessions++;
+	mld_sta->tid_to_baid[tid] = baid;
+
+	/* TODO: session timer setup (task=DP) */
+	/* TODO: init reorder buffer (task=DP) */
+
+	baid_data->baid = baid;
+	baid_data->mld = mld;
+	baid_data->tid = tid;
+	baid_data->buf_size = buf_size;
+	baid_data->sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+
+	IWL_DEBUG_HT(mld, "STA mask=0x%x (tid=%d) is assigned to BAID %d\n",
+		     baid_data->sta_mask, tid, baid);
+
+	/* protect the BA data with RCU to cover a case where our
+	 * internal RX sync mechanism will timeout (not that it's
+	 * supposed to happen) and we will free the session data while
+	 * RX is being processed in parallel
+	 */
+	WARN_ON(rcu_access_pointer(mld->fw_id_to_ba[baid]));
+	rcu_assign_pointer(mld->fw_id_to_ba[baid], baid_data);
+
+	return 0;
+
+out_free:
+	kfree(baid_data);
+	return ret;
+}
+
+int iwl_mld_sta_ampdu_rx_stop(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			      int tid)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	int baid = mld_sta->tid_to_baid[tid];
+	struct iwl_mld_baid_data *baid_data;
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* during firmware restart, do not send the command as the firmware no
+	 * longer recognizes the session. instead, only clear the driver BA
+	 * session data.
+	 */
+	if (!mld->fw_status.in_hw_restart) {
+		ret = iwl_mld_sta_stop_ba_in_fw(mld, sta, tid);
+		if (ret)
+			return ret;
+	}
+
+	if (!WARN_ON(mld->num_rx_ba_sessions == 0))
+		mld->num_rx_ba_sessions--;
+
+	baid_data = rcu_access_pointer(mld->fw_id_to_ba[baid]);
+	if (WARN_ON(!baid_data))
+		return -EINVAL;
+
+	/* TODO: free reorder buffer (task=DP) */
+	/* TODO: shutdown session timer (task=DP) */
+
+	RCU_INIT_POINTER(mld->fw_id_to_ba[baid], NULL);
+	kfree_rcu(baid_data, rcu_head);
+
+	IWL_DEBUG_HT(mld, "BAID %d is free\n", baid);
+
+	return 0;
 }

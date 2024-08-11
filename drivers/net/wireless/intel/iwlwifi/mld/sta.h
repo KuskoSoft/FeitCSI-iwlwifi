@@ -32,6 +32,7 @@ struct iwl_mld_rxq_dup_data {
  * @sta_state: station state according to enum %ieee80211_sta_state
  * @sta_type: type of this station. See &enum iwl_fw_sta_type
  * @dup_data: per queue duplicate packet detection data
+ * @tid_to_baid: a simple map of TID to Block-Ack fw id
  */
 struct iwl_mld_sta {
 	/* Add here fields that need clean up on restart */
@@ -42,6 +43,7 @@ struct iwl_mld_sta {
 	struct ieee80211_vif *vif;
 	/* And here fields that survive a fw restart */
 	struct iwl_mld_rxq_dup_data *dup_data;
+	u8 tid_to_baid[IWL_MAX_TID_COUNT];
 };
 
 static inline struct iwl_mld_sta *
@@ -70,4 +72,9 @@ int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
 void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta);
 void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld,
 				struct ieee80211_sta *sta);
+int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			       int tid, u16 ssn, u16 buf_size, u16 timeout);
+int iwl_mld_sta_ampdu_rx_stop(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			      int tid);
+
 #endif /* __iwl_mld_sta_h__ */
