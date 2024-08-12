@@ -253,6 +253,10 @@ void iwl_mld_rx(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 
 	if (likely(cmd_id == WIDE_ID(LEGACY_GROUP, REPLY_RX_MPDU_CMD)))
 		iwl_mld_rx_mpdu(mld, napi, rxb, 0);
+	else if (cmd_id == WIDE_ID(LEGACY_GROUP, FRAME_RELEASE))
+		iwl_mld_handle_frame_release_notif(mld, napi, pkt, 0);
+	else if (cmd_id == WIDE_ID(LEGACY_GROUP, BAR_FRAME_RELEASE))
+		iwl_mld_handle_bar_frame_release_notif(mld, napi, pkt, 0);
 	else
 		iwl_mld_rx_notif(mld, rxb, pkt);
 }

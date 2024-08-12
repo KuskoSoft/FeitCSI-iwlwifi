@@ -677,3 +677,105 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 unlock:
 	rcu_read_unlock();
 }
+
+static void iwl_mld_release_frames_from_notif(struct iwl_mld *mld,
+					      struct napi_struct *napi,
+					      u8 baid, u16 nssn, int queue)
+{
+	struct iwl_mld_reorder_buffer *reorder_buf;
+	struct iwl_mld_baid_data *ba_data;
+	struct ieee80211_link_sta *link_sta;
+	u32 sta_id;
+
+	IWL_DEBUG_HT(mld, "Frame release notification for BAID %u, NSSN %d\n",
+		     baid, nssn);
+
+	if (WARN_ON_ONCE(baid == IWL_RX_REORDER_DATA_INVALID_BAID ||
+			 baid >= ARRAY_SIZE(mld->fw_id_to_ba)))
+		return;
+
+	rcu_read_lock();
+
+	ba_data = rcu_dereference(mld->fw_id_to_ba[baid]);
+	if (IWL_FW_CHECK(mld, !ba_data, "BAID %d not found in map\n", baid))
+		goto out_unlock;
+
+	/* pick any STA ID to find the pointer */
+	sta_id = ffs(ba_data->sta_mask) - 1;
+	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
+	if (WARN_ON_ONCE(!link_sta || !link_sta->sta))
+		goto out_unlock;
+
+	reorder_buf = &ba_data->reorder_buf[queue];
+
+	iwl_mld_reorder_release_frames(mld, link_sta->sta, napi, ba_data,
+				       reorder_buf, nssn);
+out_unlock:
+	rcu_read_unlock();
+}
+
+void iwl_mld_handle_frame_release_notif(struct iwl_mld *mld,
+					struct napi_struct *napi,
+					struct iwl_rx_packet *pkt, int queue)
+{
+	struct iwl_frame_release *release = (void *)pkt->data;
+	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
+
+	if (IWL_FW_CHECK(mld, pkt_len < sizeof(*release),
+			 "Unexpected frame release notif size %d (expected %ld)\n",
+			 pkt_len, sizeof(*release)))
+		return;
+
+	iwl_mld_release_frames_from_notif(mld, napi, release->baid,
+					  le16_to_cpu(release->nssn),
+					  queue);
+}
+
+void iwl_mld_handle_bar_frame_release_notif(struct iwl_mld *mld,
+					    struct napi_struct *napi,
+					    struct iwl_rx_packet *pkt,
+					    int queue)
+{
+	struct iwl_bar_frame_release *release = (void *)pkt->data;
+	struct iwl_mld_baid_data *baid_data;
+	unsigned int baid = le32_get_bits(release->ba_info,
+					  IWL_BAR_FRAME_RELEASE_BAID_MASK);
+	unsigned int nssn = le32_get_bits(release->ba_info,
+					  IWL_BAR_FRAME_RELEASE_NSSN_MASK);
+	unsigned int sta_id = le32_get_bits(release->sta_tid,
+					    IWL_BAR_FRAME_RELEASE_STA_MASK);
+	unsigned int tid = le32_get_bits(release->sta_tid,
+					 IWL_BAR_FRAME_RELEASE_TID_MASK);
+	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
+
+	if (IWL_FW_CHECK(mld, pkt_len < sizeof(*release),
+			 "Unexpected frame release notif size %d (expected %ld)\n",
+			 pkt_len, sizeof(*release)))
+		return;
+
+	if (IWL_FW_CHECK(mld, baid >= ARRAY_SIZE(mld->fw_id_to_ba),
+			 "BAR release: invalid BAID (%x)\n", baid))
+		return;
+
+	rcu_read_lock();
+	baid_data = rcu_dereference(mld->fw_id_to_ba[baid]);
+	if (!IWL_FW_CHECK(mld, !baid_data,
+			  "Got valid BAID %d but not allocated, invalid BAR release!\n",
+			  baid))
+		goto out_unlock;
+
+	if (IWL_FW_CHECK(mld, tid != baid_data->tid ||
+			 sta_id > mld->fw->ucode_capa.num_stations ||
+			 !(baid_data->sta_mask & BIT(sta_id)),
+			 "BAID 0x%x is mapped to sta_mask:0x%x tid:%d, but BAR release received for sta:%d tid:%d\n",
+			 baid, baid_data->sta_mask, baid_data->tid, sta_id,
+			 tid))
+		goto out_unlock;
+
+	IWL_DEBUG_DROP(mld, "Received a BAR, expect packet loss: nssn %d\n",
+		       nssn);
+
+	iwl_mld_release_frames_from_notif(mld, napi, baid, nssn, queue);
+out_unlock:
+	rcu_read_unlock();
+}
