@@ -568,6 +568,24 @@ out:
 	return ret;
 }
 
+static void iwl_mld_init_reorder_buffer(struct iwl_mld *mld,
+					struct iwl_mld_baid_data *data,
+					u16 ssn)
+{
+	for (int i = 0; i < mld->trans->num_rx_queues; i++) {
+		struct iwl_mld_reorder_buffer *reorder_buf =
+			&data->reorder_buf[i];
+		struct iwl_mld_reorder_buf_entry *entries =
+			&data->entries[i * data->entries_per_queue];
+
+		reorder_buf->head_sn = ssn;
+		reorder_buf->queue = i;
+
+		for (int j = 0; j < data->buf_size; j++)
+			__skb_queue_head_init(&entries[j].frames);
+	}
+}
+
 int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 			       int tid, u16 ssn, u16 buf_size, u16 timeout)
 {
@@ -626,13 +644,14 @@ int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	mld_sta->tid_to_baid[tid] = baid;
 
 	/* TODO: session timer setup (task=DP) */
-	/* TODO: init reorder buffer (task=DP) */
 
 	baid_data->baid = baid;
 	baid_data->mld = mld;
 	baid_data->tid = tid;
 	baid_data->buf_size = buf_size;
 	baid_data->sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+
+	iwl_mld_init_reorder_buffer(mld, baid_data, ssn);
 
 	IWL_DEBUG_HT(mld, "STA mask=0x%x (tid=%d) is assigned to BAID %d\n",
 		     baid_data->sta_mask, tid, baid);
@@ -650,6 +669,30 @@ int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 out_free:
 	kfree(baid_data);
 	return ret;
+}
+
+static void iwl_mld_free_reorder_buffer(struct iwl_mld *mld,
+					struct iwl_mld_baid_data *data)
+{
+	/* TODO: synchronize all rx queues so we can safely delete (task=DP) */
+	for (int i = 0; i < mld->trans->num_rx_queues; i++) {
+		struct iwl_mld_reorder_buffer *reorder_buf =
+			&data->reorder_buf[i];
+		struct iwl_mld_reorder_buf_entry *entries =
+			&data->entries[i * data->entries_per_queue];
+
+		if (likely(!reorder_buf->num_stored))
+			continue;
+
+		/* This shouldn't happen in regular DELBA since the RX queues
+		 * sync internal DELBA notification should trigger a release
+		 * of all frames in the reorder buffer.
+		 */
+		WARN_ON(1);
+
+		for (int j = 0; j < data->buf_size; j++)
+			__skb_queue_purge(&entries[j].frames);
+	}
 }
 
 int iwl_mld_sta_ampdu_rx_stop(struct iwl_mld *mld, struct ieee80211_sta *sta,
@@ -679,8 +722,9 @@ int iwl_mld_sta_ampdu_rx_stop(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	if (WARN_ON(!baid_data))
 		return -EINVAL;
 
-	/* TODO: free reorder buffer (task=DP) */
 	/* TODO: shutdown session timer (task=DP) */
+
+	iwl_mld_free_reorder_buffer(mld, baid_data);
 
 	RCU_INIT_POINTER(mld->fw_id_to_ba[baid], NULL);
 	kfree_rcu(baid_data, rcu_head);
