@@ -582,6 +582,9 @@ iwl_vendor_cmd_fill_links_info(struct ieee80211_vif *vif, struct sk_buff *skb)
 			continue;
 
 		chandef = &link_conf->chanreq.oper;
+		if (!cfg80211_chandef_valid(chandef) || !link_conf->bss)
+			continue;
+
 		channel = ieee80211_frequency_to_channel(chandef->center_freq1);
 		phy_band = iwl_mvm_phy_band_from_nl80211(chandef->chan->band);
 		if (nla_put_u8(skb, IWL_MVM_VENDOR_ATTR_CHANNEL, channel) ||
