@@ -38,10 +38,10 @@ static void iwl_mld_fill_phy_data(struct iwl_rx_mpdu_desc *desc,
 /* iwl_mld_pass_packet_to_mac80211 - passes the packet for mac80211 */
 static void iwl_mld_pass_packet_to_mac80211(struct iwl_mld *mld,
 					    struct napi_struct *napi,
-					    struct sk_buff *skb,
+					    struct sk_buff *skb, int queue,
 					    struct ieee80211_sta *sta)
 {
-	/* TODO: check PN */
+	/* TODO: check PN (task=DP) */
 	ieee80211_rx_napi(mld->hw, sta, skb, napi);
 }
 
@@ -437,6 +437,166 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 	return sta;
 }
 
+static void
+iwl_mld_reorder_release_frames(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			       struct napi_struct *napi,
+			       struct iwl_mld_baid_data *baid_data,
+			       struct iwl_mld_reorder_buffer *reorder_buf,
+			       u16 nssn)
+{
+	struct iwl_mld_reorder_buf_entry *entries =
+		&baid_data->entries[reorder_buf->queue *
+				    baid_data->entries_per_queue];
+	u16 ssn = reorder_buf->head_sn;
+
+	while (ieee80211_sn_less(ssn, nssn)) {
+		int index = ssn % baid_data->buf_size;
+		struct sk_buff_head *skb_list = &entries[index].frames;
+		struct sk_buff *skb;
+
+		ssn = ieee80211_sn_inc(ssn);
+
+		/* Empty the list. Will have more than one frame for A-MSDU.
+		 * Empty list is valid as well since nssn indicates frames were
+		 * received.
+		 */
+		while ((skb = __skb_dequeue(skb_list))) {
+			iwl_mld_pass_packet_to_mac80211(mld, napi, skb,
+							reorder_buf->queue,
+							sta);
+			reorder_buf->num_stored--;
+		}
+	}
+	reorder_buf->head_sn = nssn;
+}
+
+/* Returns true if the MPDU was buffered\dropped, false if it should be passed
+ * to upper layer.
+ */
+static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
+			    int queue, struct ieee80211_sta *sta,
+			    struct sk_buff *skb, struct iwl_rx_mpdu_desc *desc)
+{
+	struct ieee80211_hdr *hdr = (void *)skb_mac_header(skb);
+	struct iwl_mld_baid_data *baid_data;
+	struct iwl_mld_reorder_buffer *buffer;
+	struct iwl_mld_reorder_buf_entry *entries;
+	u32 reorder = le32_to_cpu(desc->reorder_data);
+	bool amsdu, last_subframe, is_old_sn, is_dup;
+	u8 tid = ieee80211_get_tid(hdr);
+	u8 baid;
+	u16 nssn, sn;
+	u32 sta_mask;
+	int index;
+
+	baid = u32_get_bits(reorder, IWL_RX_MPDU_REORDER_BAID_MASK);
+
+	/* This also covers the case of receiving a Block Ack Request
+	 * outside a BA session; we'll pass it to mac80211 and that
+	 * then sends a delBA action frame.
+	 * This also covers pure monitor mode, in which case we won't
+	 * have any BA sessions.
+	 */
+	if (baid == IWL_RX_REORDER_DATA_INVALID_BAID)
+		return false;
+
+	/* no sta yet */
+	if (WARN_ONCE(!sta,
+		      "Got valid BAID without a valid station assigned\n"))
+		return false;
+
+	/* not a data packet */
+	if (!ieee80211_is_data_qos(hdr->frame_control) ||
+	    is_multicast_ether_addr(hdr->addr1))
+		return false;
+
+	if (unlikely(!ieee80211_is_data_present(hdr->frame_control)))
+		return false;
+
+	baid_data = rcu_dereference(mld->fw_id_to_ba[baid]);
+	if (IWL_FW_CHECK(mld, !baid_data,
+			 "Got valid BAID but no baid allocated (BAID=%d reorder=0x%x)\n",
+			 baid, reorder))
+		return false;
+
+	sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+
+	/* verify the BAID is correctly mapped to the sta and tid */
+	if (IWL_FW_CHECK(mld,
+			 tid != baid_data->tid ||
+			 !(sta_mask & baid_data->sta_mask),
+			 "BAID 0x%x is mapped to sta_mask:0x%x tid:%d, but was received for sta_mask:0x%x tid:%d\n",
+			 baid, baid_data->sta_mask, baid_data->tid,
+			 sta_mask, tid))
+		return false;
+
+	buffer = &baid_data->reorder_buf[queue];
+	entries = &baid_data->entries[queue * baid_data->entries_per_queue];
+
+	is_old_sn = !!(reorder & IWL_RX_MPDU_REORDER_BA_OLD_SN);
+
+	if (!buffer->valid && is_old_sn)
+		return false;
+
+	buffer->valid = true;
+
+	is_dup = !!(desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_DUPLICATE));
+
+	/* drop any duplicated or outdated packets */
+	if (is_dup || is_old_sn) {
+		kfree_skb(skb);
+		return true;
+	}
+
+	sn = u32_get_bits(reorder, IWL_RX_MPDU_REORDER_SN_MASK);
+	nssn = u32_get_bits(reorder, IWL_RX_MPDU_REORDER_NSSN_MASK);
+	amsdu = desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU;
+	last_subframe = desc->amsdu_info & IWL_RX_MPDU_AMSDU_LAST_SUBFRAME;
+
+	/* release immediately if allowed by nssn and no stored frames */
+	if (!buffer->num_stored && ieee80211_sn_less(sn, nssn)) {
+		if (!amsdu || last_subframe)
+			buffer->head_sn = nssn;
+		return false;
+	}
+
+	/* release immediately if there are no stored frames, and the sn is
+	 * equal to the head.
+	 * This can happen due to reorder timer, where NSSN is behind head_sn.
+	 * When we released everything, and we got the next frame in the
+	 * sequence, according to the NSSN we can't release immediately,
+	 * while technically there is no hole and we can move forward.
+	 */
+	if (!buffer->num_stored && sn == buffer->head_sn) {
+		if (!amsdu || last_subframe)
+			buffer->head_sn = ieee80211_sn_inc(buffer->head_sn);
+
+		return false;
+	}
+
+	/* put in reorder buffer */
+	index = sn % baid_data->buf_size;
+	__skb_queue_tail(&entries[index].frames, skb);
+	buffer->num_stored++;
+
+	/* We cannot trust NSSN for AMSDU sub-frames that are not the last. The
+	 * reason is that NSSN advances on the first sub-frame, and may cause
+	 * the reorder buffer to advance before all the sub-frames arrive.
+	 *
+	 * Example: reorder buffer contains SN 0 & 2, and we receive AMSDU with
+	 * SN 1. NSSN for first sub frame will be 3 with the result of driver
+	 * releasing SN 0,1, 2. When sub-frame 1 arrives - reorder buffer is
+	 * already ahead and it will be dropped.
+	 * If the last sub-frame is not on this queue - we will get frame
+	 * release notification with up to date NSSN.
+	 */
+	if (!amsdu || last_subframe)
+		iwl_mld_reorder_release_frames(mld, sta, napi, baid_data,
+					       buffer, nssn);
+
+	return true;
+}
+
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		     struct iwl_rx_cmd_buffer *rxb, int queue)
 {
@@ -506,13 +666,13 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	}
 
 	/* TODO: verify the following before passing frames to mac80211:
-	 * 1. reorder buffer
-	 * 2. time sync frame
-	 * 3. FPGA valid packet channel
-	 * 4. mei_scan_filter
+	 * 1. time sync frame
+	 * 2. FPGA valid packet channel
+	 * 3. mei_scan_filter
 	 */
 
-	iwl_mld_pass_packet_to_mac80211(mld, napi, skb, sta);
+	if (!iwl_mld_reorder(mld, napi, queue, sta, skb, mpdu_desc))
+		iwl_mld_pass_packet_to_mac80211(mld, napi, skb, queue, sta);
 
 unlock:
 	rcu_read_unlock();

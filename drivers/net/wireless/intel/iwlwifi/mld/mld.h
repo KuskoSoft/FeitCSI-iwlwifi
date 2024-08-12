@@ -32,14 +32,12 @@
  * @head_sn: reorder window head sequence number
  * @num_stored: number of MPDUs stored in the buffer
  * @queue: queue of this reorder buffer
- * @last_amsdu_sn: track last A-MSDU sequence number for duplication detection
  * @valid: true if reordering is valid for this queue
  */
 struct iwl_mld_reorder_buffer {
 	u16 head_sn;
 	u16 num_stored;
 	int queue;
-	u16 last_amsdu_sn;
 	bool valid;
 } ____cacheline_aligned_in_smp;
 
