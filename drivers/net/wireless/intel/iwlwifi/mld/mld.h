@@ -22,58 +22,9 @@
 #include "fw/dbg.h"
 
 #include "notif.h"
+#include "scan.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
-
-/* enum iwl_mld_pass_all_sched_results_states - Defines the states for
- * handling/passing scheduled scan results to mac80211
- * @SCHED_SCAN_PASS_ALL_STATE_DISABLED: Don't pass all scan results, only when
- *	a match found.
- * @SCHED_SCAN_PASS_ALL_STATE_ENABLED: Pass all scan results is enabled
- *	(no filtering).
- * @SCHED_SCAN_PASS_ALL_STATE_FOUND: A scan result is found, pass it on the
- *	next scan iteration complete notification.
- */
-enum iwl_mld_pass_all_sched_results_states {
-	SCHED_SCAN_PASS_ALL_STATE_DISABLED,
-	SCHED_SCAN_PASS_ALL_STATE_ENABLED,
-	SCHED_SCAN_PASS_ALL_STATE_FOUND,
-};
-
-/**
- * struct iwl_mld_scan - Scan data
- * @status: scan status, a combination of %enum iwl_mld_scan_status,
- *	reflects the %scan.uid_status array.
- * @uid_status: array to track the scan status per uid.
- * @start_tsf: start time of last scan in TSF of the link that requested
- *	the scan.
- * @last_ebs_failed: true if the last EBS (Energy Based Scan) failed.
- * @pass_all_sched_res: see %enum iwl_mld_pass_all_sched_results_states.
- * @fw_link_id: the current (regular) scan fw link id, used by scan
- *	complete notif.
- * @cmd_size: size of %cmd.
- * @cmd: pointer to scan cmd buffer (allocated once in op mode start).
- * @last_6ghz_passive_jiffies: stores the last 6GHz passive scan time
- *	in jiffies.
- * @last_start_time_jiffies: stores the last start time in jiffies
- *	(interface up/reset/resume).
- */
-struct iwl_mld_scan {
-	/* Add here fields that need clean up on restart */
-	struct_group(zeroed_on_hw_restart,
-		unsigned int status;
-		u32 uid_status[IWL_MAX_UMAC_SCANS];
-		u64 start_tsf;
-		bool last_ebs_failed;
-		enum iwl_mld_pass_all_sched_results_states pass_all_sched_res;
-		u8 fw_link_id;
-	);
-	/* And here fields that survive a fw restart */
-	size_t cmd_size;
-	void *cmd;
-	unsigned long last_6ghz_passive_jiffies;
-	unsigned long last_start_time_jiffies;
-};
 
 /**
  * struct iwl_mld - MLD op mode
