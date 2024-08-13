@@ -88,16 +88,16 @@ struct iwl_rfi_config_cmd_v3 {
  * @ddr_table: a table of channels that are used by DDR
  * @oem: specifies if this is the default table or set by OEM
  * @reserved: (reserved/padding)
- * @desense_table: desense values per chain. see &iwl_rfi_desense_lut_entry
  * @snr_threshold: SNR threshold to be used for RSSI based RFIM.
+ * @desense_table: desense values per chain. see &iwl_rfi_desense_lut_entry
  */
 struct iwl_rfi_config_cmd {
 	__le32 rfi_memory_support;
 	struct iwl_rfi_ddr_lut_entry ddr_table[IWL_RFI_DDR_LUT_SIZE];
 	u8 oem;
 	u8 reserved[3];
-	struct iwl_rfi_desense_lut_entry desense_table[IWL_RFI_DDR_LUT_SIZE];
 	__le32 snr_threshold;
+	struct iwl_rfi_desense_lut_entry desense_table[IWL_RFI_DDR_LUT_SIZE];
 } __packed; /* RFI_CONFIG_CMD_API_S_VER_4 */
 
 /**
