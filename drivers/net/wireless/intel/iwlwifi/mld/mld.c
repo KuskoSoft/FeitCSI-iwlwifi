@@ -354,14 +354,6 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 }
 
 static void
-iwl_mld_rx_rss(struct iwl_op_mode *op_mode, struct napi_struct *napi,
-	       struct iwl_rx_cmd_buffer *rxb, unsigned int queue)
-{
-	/* TODO: add RX path :-) */
-	WARN_ONCE(1, "RX is not supported yet\n");
-}
-
-static void
 iwl_mld_queue_full(struct iwl_op_mode *op_mode, int hw_queue)
 {
 	/* TODO */
