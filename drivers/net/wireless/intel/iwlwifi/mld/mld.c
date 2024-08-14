@@ -47,10 +47,10 @@ iwl_is_mld_op_mode_supported(struct iwl_trans *trans)
 	return trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ;
 }
 
-static void
-iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
-		  const struct iwl_cfg *cfg, const struct iwl_fw *fw,
-		  struct ieee80211_hw *hw)
+VISIBLE_IF_IWLWIFI_KUNIT
+void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
+		       const struct iwl_cfg *cfg, const struct iwl_fw *fw,
+		       struct ieee80211_hw *hw)
 {
 	mld->dev = trans->dev;
 	mld->trans = trans;
@@ -72,6 +72,7 @@ iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	INIT_LIST_HEAD(&mld->txqs_to_add);
 	wiphy_work_init(&mld->add_txqs_wk, iwl_mld_add_txqs_wk);
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_construct_mld);
 
 static void __acquires(&mld->wiphy->mtx)
 iwl_mld_fwrt_dump_start(void *ctx)
