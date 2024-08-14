@@ -15,7 +15,7 @@ static int
 iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
 				struct ieee80211_link_sta *link_sta)
 {
-	for (int fw_id = 0; fw_id < ARRAY_SIZE(mld->fw_id_to_link_sta);
+	for (int fw_id = 0; fw_id < mld->fw->ucode_capa.num_stations;
 	     fw_id++) {
 		struct ieee80211_link_sta *l_sta;
 
