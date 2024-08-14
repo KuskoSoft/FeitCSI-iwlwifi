@@ -50,7 +50,7 @@ iwl_is_mld_op_mode_supported(struct iwl_trans *trans)
 static void
 iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 		  const struct iwl_cfg *cfg, const struct iwl_fw *fw,
-		  struct ieee80211_hw *hw, struct dentry *debugfs_dir)
+		  struct ieee80211_hw *hw)
 {
 	mld->dev = trans->dev;
 	mld->trans = trans;
@@ -58,8 +58,6 @@ iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	mld->fw = fw;
 	mld->hw = hw;
 	mld->wiphy = hw->wiphy;
-
-	iwl_mld_add_debugfs_files(mld, debugfs_dir);
 
 	iwl_notification_wait_init(&mld->notif_wait);
 
@@ -266,7 +264,9 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	mld = IWL_OP_MODE_GET_MLD(op_mode);
 
-	iwl_construct_mld(mld, trans, cfg, fw, hw, dbgfs_dir);
+	iwl_construct_mld(mld, trans, cfg, fw, hw);
+
+	iwl_mld_add_debugfs_files(mld, dbgfs_dir);
 
 	iwl_mld_construct_fw_runtime(mld, trans, fw, dbgfs_dir);
 
