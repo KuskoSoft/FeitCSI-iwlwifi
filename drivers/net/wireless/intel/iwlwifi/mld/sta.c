@@ -582,6 +582,54 @@ static void iwl_mld_init_reorder_buffer(struct iwl_mld *mld,
 	}
 }
 
+static void iwl_mld_rx_agg_session_expired(struct timer_list *t)
+{
+	struct iwl_mld_baid_data *data =
+		from_timer(data, t, session_timer);
+	struct iwl_mld_baid_data __rcu **rcu_ptr = data->rcu_ptr;
+	struct iwl_mld_baid_data *ba_data;
+	struct ieee80211_link_sta *link_sta;
+	struct iwl_mld_sta *mld_sta;
+	unsigned long timeout;
+	unsigned int sta_id;
+
+	rcu_read_lock();
+
+	ba_data = rcu_dereference(*rcu_ptr);
+	if (WARN_ON(!ba_data))
+		goto unlock;
+
+	if (WARN_ON(!ba_data->timeout))
+		goto unlock;
+
+	timeout = ba_data->last_rx_timestamp +
+		  TU_TO_JIFFIES(ba_data->timeout * 2);
+	if (time_is_after_jiffies(timeout)) {
+		mod_timer(&ba_data->session_timer, timeout);
+		goto unlock;
+	}
+
+	/* timer expired, pick any STA ID to find the pointer */
+	sta_id = ffs(ba_data->sta_mask) - 1;
+	link_sta = rcu_dereference(ba_data->mld->fw_id_to_link_sta[sta_id]);
+
+	/* sta should be valid unless the following happens:
+	 * The firmware asserts which triggers a reconfig flow, but
+	 * the reconfig fails before we set the pointer to sta into
+	 * the fw_id_to_link_sta pointer table. mac80211 can't stop
+	 * A-MPDU and hence the timer continues to run. Then, the
+	 * timer expires and sta is NULL.
+	 */
+	if (!link_sta || WARN_ON(!link_sta->sta))
+		goto unlock;
+
+	mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+	ieee80211_rx_ba_timer_expired(mld_sta->vif, link_sta->sta->addr,
+				      ba_data->tid);
+unlock:
+	rcu_read_unlock();
+}
+
 int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 			       int tid, u16 ssn, u16 buf_size, u16 timeout)
 {
@@ -639,15 +687,22 @@ int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	mld->num_rx_ba_sessions++;
 	mld_sta->tid_to_baid[tid] = baid;
 
-	/* TODO: session timer setup (task=DP) */
-
 	baid_data->baid = baid;
 	baid_data->mld = mld;
 	baid_data->tid = tid;
 	baid_data->buf_size = buf_size;
 	baid_data->sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+	baid_data->timeout = timeout;
+	baid_data->last_rx_timestamp = jiffies;
+	baid_data->rcu_ptr = &mld->fw_id_to_ba[baid];
 
 	iwl_mld_init_reorder_buffer(mld, baid_data, ssn);
+
+	timer_setup(&baid_data->session_timer, iwl_mld_rx_agg_session_expired,
+		    0);
+	if (timeout)
+		mod_timer(&baid_data->session_timer,
+			  TU_TO_EXP_TIME(timeout * 2));
 
 	IWL_DEBUG_HT(mld, "STA mask=0x%x (tid=%d) is assigned to BAID %d\n",
 		     baid_data->sta_mask, tid, baid);
@@ -720,11 +775,12 @@ int iwl_mld_sta_ampdu_rx_stop(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	if (!WARN_ON(mld->num_rx_ba_sessions == 0))
 		mld->num_rx_ba_sessions--;
 
-	baid_data = rcu_access_pointer(mld->fw_id_to_ba[baid]);
+	baid_data = wiphy_dereference(mld->wiphy, mld->fw_id_to_ba[baid]);
 	if (WARN_ON(!baid_data))
 		return -EINVAL;
 
-	/* TODO: shutdown session timer (task=DP) */
+	if (timer_pending(&baid_data->session_timer))
+		timer_shutdown_sync(&baid_data->session_timer);
 
 	iwl_mld_free_reorder_buffer(mld, baid_data);
 

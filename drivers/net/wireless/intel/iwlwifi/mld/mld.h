@@ -66,6 +66,16 @@ __aligned(roundup_pow_of_two(sizeof(struct sk_buff_head)))
  * @buf_size: the reorder buffer size as set by the last ADDBA request
  * @entries_per_queue: number of buffers per queue, this actually gets
  *	aligned up to avoid cache line sharing between queues
+ * @timeout: the timeout value specified in the ADDBA request.
+ * @last_rx_timestamp: timestamp of the last received packet (in jiffies). This
+ *	value is updated only when the configured @timeout has passed since
+ *	the last update to minimize cache bouncing between RX queues.
+ * @session_timer: timer is set to expire after 2 * @timeout (since we want
+ *	to minimize the cache bouncing by updating @last_rx_timestamp only once
+ *	after @timeout has passed). If no packets are received within this
+ *	period, it informs mac80211 to initiate delBA flow, terminating the
+ *	BA session.
+ * @rcu_ptr: BA data RCU protected access
  * @mld: mld pointer, needed for timer context
  * @reorder_buf: reorder buffer, allocated per queue
  * @entries: data
@@ -77,6 +87,10 @@ struct iwl_mld_baid_data {
 	u8 baid;
 	u16 buf_size;
 	u16 entries_per_queue;
+	u16 timeout;
+	struct timer_list session_timer;
+	unsigned long last_rx_timestamp;
+	struct iwl_mld_baid_data __rcu **rcu_ptr;
 	struct iwl_mld *mld;
 	struct iwl_mld_reorder_buffer reorder_buf[IWL_MAX_RX_HW_QUEUES];
 	struct iwl_mld_reorder_buf_entry entries[] ____cacheline_aligned_in_smp;

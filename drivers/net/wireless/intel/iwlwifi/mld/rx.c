@@ -376,6 +376,30 @@ iwl_mld_is_dup(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	return false;
 }
 
+static void iwl_mld_update_last_rx_timestamp(struct iwl_mld *mld, u8 baid)
+{
+	unsigned long now = jiffies;
+	unsigned long timeout;
+	struct iwl_mld_baid_data *ba_data;
+
+	ba_data = rcu_dereference(mld->fw_id_to_ba[baid]);
+	if (IWL_FW_CHECK(mld, !ba_data, "BAID %d not found in map\n", baid))
+		return;
+
+	if (!ba_data->timeout)
+		return;
+
+	/* To minimize cache bouncing between RX queues, avoid frequent updates
+	 * to last_rx_timestamp. update it only when the timeout period has
+	 * passed. The worst-case scenario is the session expiring after
+	 * approximately 2 * timeout, which is negligible (the update is
+	 * atomic).
+	 */
+	timeout = TU_TO_JIFFIES(ba_data->timeout);
+	if (time_is_before_jiffies(ba_data->last_rx_timestamp + timeout))
+		ba_data->last_rx_timestamp = now;
+}
+
 /* Processes received packets for a station.
  * Sets *drop to true if the packet should be dropped.
  * Returns the station if found, or NULL otherwise.
@@ -389,6 +413,7 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 	struct ieee80211_sta *sta = NULL;
 	struct ieee80211_link_sta *link_sta = NULL;
 	struct ieee80211_rx_status *rx_status;
+	u8 baid;
 
 	if (mpdu_desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_SRC_STA_FOUND)) {
 		u8 sta_id = le32_get_bits(mpdu_desc->status,
@@ -435,6 +460,11 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 		*drop = true;
 		return NULL;
 	}
+
+	baid = le32_get_bits(mpdu_desc->reorder_data,
+			     IWL_RX_MPDU_REORDER_BAID_MASK);
+	if (baid != IWL_RX_REORDER_DATA_INVALID_BAID)
+		iwl_mld_update_last_rx_timestamp(mld, baid);
 
 	return sta;
 }
