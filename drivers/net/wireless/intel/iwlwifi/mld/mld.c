@@ -90,6 +90,9 @@ void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	INIT_LIST_HEAD(&mld->txqs_to_add);
 	wiphy_work_init(&mld->add_txqs_wk, iwl_mld_add_txqs_wk);
 
+	/* Setup RX queues sync wait queue */
+	init_waitqueue_head(&mld->rxq_sync.waitq);
+
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_mld_debug_setup_random_nmi(mld);
 #endif
@@ -199,6 +202,7 @@ static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
  * Access is done through binary search
  */
 static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
+	HCMD_NAME(TRIGGER_RX_QUEUES_NOTIF_CMD),
 	HCMD_NAME(RLC_CONFIG_CMD),
 	HCMD_NAME(RFH_QUEUE_CONFIG_CMD),
 	HCMD_NAME(TLC_MNG_CONFIG_CMD),

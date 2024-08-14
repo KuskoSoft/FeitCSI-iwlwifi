@@ -8,6 +8,7 @@
 #include "mld.h"
 #include "sta.h"
 #include "rx.h"
+#include "hcmd.h"
 #include "fw/dbg.h"
 #include "fw/api/rx.h"
 #include "fw/api/rs.h"
@@ -779,4 +780,53 @@ void iwl_mld_handle_bar_frame_release_notif(struct iwl_mld *mld,
 	iwl_mld_release_frames_from_notif(mld, napi, baid, nssn, queue);
 out_unlock:
 	rcu_read_unlock();
+}
+
+#define SYNC_RX_QUEUE_TIMEOUT (HZ * CPTCFG_IWL_TIMEOUT_FACTOR)
+void iwl_mld_sync_rx_queues(struct iwl_mld *mld,
+			    enum iwl_mld_internal_rxq_notif_type type,
+			    const void *notif_payload, u32 notif_payload_size)
+{
+	u8 num_rx_queues = mld->trans->num_rx_queues;
+	struct {
+		struct iwl_rxq_sync_cmd sync_cmd;
+		struct iwl_mld_internal_rxq_notif notif;
+	} __packed cmd = {
+		.sync_cmd.rxq_mask = cpu_to_le32(BIT(num_rx_queues) - 1),
+		.sync_cmd.count =
+			cpu_to_le32(sizeof(struct iwl_mld_internal_rxq_notif) +
+				    notif_payload_size),
+		.notif.type = type,
+		.notif.cookie = mld->rxq_sync.cookie,
+	};
+	struct iwl_host_cmd hcmd = {
+		.id = WIDE_ID(DATA_PATH_GROUP, TRIGGER_RX_QUEUES_NOTIF_CMD),
+		.data[0] = &cmd,
+		.len[0] = sizeof(cmd),
+		.data[1] = notif_payload,
+		.len[1] = notif_payload_size,
+	};
+	int ret;
+
+	/* size must be a multiple of DWORD */
+	if (WARN_ON(cmd.sync_cmd.count & cpu_to_le32(3)))
+		return;
+
+	mld->rxq_sync.state = (1 << num_rx_queues) - 1;
+
+	ret = iwl_mld_send_cmd(mld, &hcmd);
+	if (ret) {
+		IWL_ERR(mld, "Failed to trigger RX queues sync (%d)\n", ret);
+		goto out;
+	}
+
+	ret = wait_event_timeout(mld->rxq_sync.waitq,
+				 READ_ONCE(mld->rxq_sync.state) == 0,
+				 SYNC_RX_QUEUE_TIMEOUT);
+	WARN_ONCE(!ret, "RXQ sync failed: state=0x%lx, cookie=%d\n",
+		  mld->rxq_sync.state, mld->rxq_sync.cookie);
+
+out:
+	mld->rxq_sync.state = 0;
+	mld->rxq_sync.cookie++;
 }

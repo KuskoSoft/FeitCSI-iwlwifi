@@ -7,6 +7,58 @@
 
 #include "mld.h"
 
+/**
+ * enum iwl_mld_internal_rxq_notif_type - RX queue sync notif types
+ *
+ * @IWL_MLD_RXQ_EMPTY: empty sync notification
+ * @IWL_MLD_RXQ_NOTIF_DEL_BA: notify RSS queues of delBA
+ */
+enum iwl_mld_internal_rxq_notif_type {
+	IWL_MLD_RXQ_EMPTY,
+	IWL_MLD_RXQ_NOTIF_DEL_BA,
+};
+
+/**
+ * struct iwl_mld_internal_rxq_notif - @iwl_rxq_sync_cmd internal data.
+ * This data is echoed by the firmware to all RSS queues and should be DWORD
+ * aligned. FW is agnostic to the data, so there are no endianness requirements
+ *
+ * @type: one of &iwl_mld_internal_rxq_notif_type
+ * @cookie: unique internal cookie to identify old notifications
+ * @reserved: reserved for alignment
+ * @payload: data to send to RX queues based on the type (may be empty)
+ */
+struct iwl_mld_internal_rxq_notif {
+	u8 type;
+	u8 reserved[3];
+	u32 cookie;
+	u8 payload[];
+} __packed;
+
+/**
+ * struct iwl_mld_delba_data - RX queue sync data for %IWL_MLD_RXQ_NOTIF_DEL_BA
+ *
+ * @baid: Block Ack id, used to identify the BA session to be removed
+ */
+struct iwl_mld_delba_data {
+	u32 baid;
+} __packed;
+
+/**
+ * struct iwl_mld_rx_queues_sync - RX queues sync data
+ *
+ * @waitq: wait queue for RX queues sync completion
+ * @cookie: unique id to correlate sync requests with responses
+ * @state: bitmask representing the sync state of RX queues
+ *	all RX queues bits are set before sending the command, and the
+ *	corresponding queue bit cleared upon handling the notification
+ */
+struct iwl_mld_rx_queues_sync {
+	wait_queue_head_t waitq;
+	u32 cookie;
+	unsigned long state;
+};
+
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		     struct iwl_rx_cmd_buffer *rxb, int queue);
 void iwl_mld_handle_frame_release_notif(struct iwl_mld *mld,
@@ -16,5 +68,9 @@ void iwl_mld_handle_bar_frame_release_notif(struct iwl_mld *mld,
 					    struct napi_struct *napi,
 					    struct iwl_rx_packet *pkt,
 					    int queue);
+
+void iwl_mld_sync_rx_queues(struct iwl_mld *mld,
+			    enum iwl_mld_internal_rxq_notif_type type,
+			    const void *notif_payload, u32 notif_payload_size);
 
 #endif /* __iwl_mld_agg_h__ */

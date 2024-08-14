@@ -24,6 +24,7 @@
 
 #include "notif.h"
 #include "scan.h"
+#include "rx.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
 
@@ -122,6 +123,7 @@ struct iwl_mld_baid_data {
  * @num_rx_ba_sessions: tracks the number of active Rx Block Ack (BA) sessions.
  *	the driver ensures that new BA sessions are blocked once the maximum
  *	supported by the firmware is reached, preventing firmware asserts.
+ * @rxq_sync: manages RX queue sync state
  * @txqs_to_add: a list of &ieee80211_txq's to allocate in &add_txqs_wk
  * @add_txqs_wk: a worker to allocate txqs.
  * @add_txqs_lock: to lock the &txqs_to_add list.
@@ -167,6 +169,8 @@ struct iwl_mld {
 
 	struct iwl_mld_baid_data __rcu *fw_id_to_ba[IWL_MAX_BAID];
 	u8 num_rx_ba_sessions;
+
+	struct iwl_mld_rx_queues_sync rxq_sync;
 
 	struct list_head txqs_to_add;
 	struct wiphy_work add_txqs_wk;
