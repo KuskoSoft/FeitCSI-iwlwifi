@@ -830,3 +830,85 @@ out:
 	mld->rxq_sync.state = 0;
 	mld->rxq_sync.cookie++;
 }
+
+static void iwl_mld_del_ba(struct iwl_mld *mld, int queue,
+			   struct iwl_mld_delba_data *data)
+{
+	struct iwl_mld_baid_data *ba_data;
+	struct iwl_mld_reorder_buffer *reorder_buf;
+	struct ieee80211_link_sta *link_sta;
+	u8 baid = data->baid;
+	u32 sta_id;
+
+	if (WARN_ONCE(baid >= IWL_MAX_BAID, "invalid BAID: %x\n", baid))
+		return;
+
+	rcu_read_lock();
+
+	ba_data = rcu_dereference(mld->fw_id_to_ba[baid]);
+	if (WARN_ON_ONCE(!ba_data))
+		goto out_unlock;
+
+	/* pick any STA ID to find the pointer */
+	sta_id = ffs(ba_data->sta_mask) - 1;
+	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
+	if (WARN_ON_ONCE(!link_sta || !link_sta->sta))
+		goto out_unlock;
+
+	reorder_buf = &ba_data->reorder_buf[queue];
+
+	/* release all frames that are in the reorder buffer to the stack */
+	iwl_mld_reorder_release_frames(mld, link_sta->sta, NULL,
+				       ba_data, reorder_buf,
+				       ieee80211_sn_add(reorder_buf->head_sn,
+							ba_data->buf_size));
+out_unlock:
+	rcu_read_unlock();
+}
+
+void iwl_mld_handle_rx_queues_sync_notif(struct iwl_mld *mld,
+					 struct napi_struct *napi,
+					 struct iwl_rx_packet *pkt, int queue)
+{
+	struct iwl_rxq_sync_notification *notif;
+	struct iwl_mld_internal_rxq_notif *internal_notif;
+	u32 len = iwl_rx_packet_payload_len(pkt);
+	size_t combined_notif_len = sizeof(*notif) + sizeof(*internal_notif);
+
+	notif = (void *)pkt->data;
+	internal_notif = (void *)notif->payload;
+
+	if (IWL_FW_CHECK(mld, len < combined_notif_len,
+			 "invalid notification size %d (%ld)\n",
+			 len, combined_notif_len))
+		return;
+
+	len -= combined_notif_len;
+
+	if (IWL_FW_CHECK(mld, mld->rxq_sync.cookie != internal_notif->cookie,
+			 "received expired RX queue sync message (cookie=%d expected=%d q[%d])\n",
+			 internal_notif->cookie, mld->rxq_sync.cookie, queue))
+		return;
+
+	switch (internal_notif->type) {
+	case IWL_MLD_RXQ_EMPTY:
+		IWL_FW_CHECK(mld, len,
+			     "invalid empty notification size %d\n", len);
+		break;
+	case IWL_MLD_RXQ_NOTIF_DEL_BA:
+		if (IWL_FW_CHECK(mld, len != sizeof(struct iwl_mld_delba_data),
+				 "invalid delba notification size %d (%ld)\n",
+				 len, sizeof(struct iwl_mld_delba_data)))
+			break;
+		iwl_mld_del_ba(mld, queue, (void *)internal_notif->payload);
+		break;
+	default:
+		WARN_ON_ONCE(1);
+	}
+
+	IWL_FW_CHECK(mld, !test_and_clear_bit(queue, &mld->rxq_sync.state),
+		     "RXQ sync: queue %d responded a second time!\n", queue);
+
+	if (READ_ONCE(mld->rxq_sync.state) == 0)
+		wake_up(&mld->rxq_sync.waitq);
+}

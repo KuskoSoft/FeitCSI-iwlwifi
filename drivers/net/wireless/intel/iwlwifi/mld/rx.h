@@ -73,4 +73,8 @@ void iwl_mld_sync_rx_queues(struct iwl_mld *mld,
 			    enum iwl_mld_internal_rxq_notif_type type,
 			    const void *notif_payload, u32 notif_payload_size);
 
+void iwl_mld_handle_rx_queues_sync_notif(struct iwl_mld *mld,
+					 struct napi_struct *napi,
+					 struct iwl_rx_packet *pkt, int queue);
+
 #endif /* __iwl_mld_agg_h__ */

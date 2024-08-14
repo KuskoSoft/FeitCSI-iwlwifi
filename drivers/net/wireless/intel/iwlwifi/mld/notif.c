@@ -258,6 +258,9 @@ void iwl_mld_rx(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 		iwl_mld_handle_frame_release_notif(mld, napi, pkt, 0);
 	else if (cmd_id == WIDE_ID(LEGACY_GROUP, BAR_FRAME_RELEASE))
 		iwl_mld_handle_bar_frame_release_notif(mld, napi, pkt, 0);
+	else if (unlikely(cmd_id == WIDE_ID(DATA_PATH_GROUP,
+					    RX_QUEUES_NOTIFICATION)))
+		iwl_mld_handle_rx_queues_sync_notif(mld, napi, pkt, 0);
 	else
 		iwl_mld_rx_notif(mld, rxb, pkt);
 }
@@ -272,10 +275,11 @@ void iwl_mld_rx_rss(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 	if (unlikely(queue >= mld->trans->num_rx_queues))
 		return;
 
-	/* TODO: RX_QUEUES_NOTIFICATION (task=DP) */
-
 	if (likely(cmd_id == WIDE_ID(LEGACY_GROUP, REPLY_RX_MPDU_CMD)))
 		iwl_mld_rx_mpdu(mld, napi, rxb, queue);
+	else if (unlikely(cmd_id == WIDE_ID(DATA_PATH_GROUP,
+					    RX_QUEUES_NOTIFICATION)))
+		iwl_mld_handle_rx_queues_sync_notif(mld, napi, pkt, queue);
 	else if (unlikely(cmd_id == WIDE_ID(LEGACY_GROUP, FRAME_RELEASE)))
 		iwl_mld_handle_frame_release_notif(mld, napi, pkt, queue);
 }

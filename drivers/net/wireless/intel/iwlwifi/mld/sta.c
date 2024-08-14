@@ -670,7 +670,13 @@ out_free:
 static void iwl_mld_free_reorder_buffer(struct iwl_mld *mld,
 					struct iwl_mld_baid_data *data)
 {
-	/* TODO: synchronize all rx queues so we can safely delete (task=DP) */
+	struct iwl_mld_delba_data delba_data = {
+		.baid = data->baid,
+	};
+
+	iwl_mld_sync_rx_queues(mld, IWL_MLD_RXQ_NOTIF_DEL_BA,
+			       &delba_data, sizeof(delba_data));
+
 	for (int i = 0; i < mld->trans->num_rx_queues; i++) {
 		struct iwl_mld_reorder_buffer *reorder_buf =
 			&data->reorder_buf[i];

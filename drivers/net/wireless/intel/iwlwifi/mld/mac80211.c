@@ -1274,6 +1274,13 @@ iwl_mld_mac80211_ampdu_action(struct ieee80211_hw *hw,
 	return ret;
 }
 
+static void iwl_mld_mac80211_sync_rx_queues(struct ieee80211_hw *hw)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	iwl_mld_sync_rx_queues(mld, IWL_MLD_RXQ_EMPTY, NULL, 0);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1304,6 +1311,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.flush = iwl_mld_mac80211_flush,
 	.flush_sta = iwl_mld_mac80211_flush_sta,
 	.ampdu_action = iwl_mld_mac80211_ampdu_action,
+	.sync_rx_queues = iwl_mld_mac80211_sync_rx_queues,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
