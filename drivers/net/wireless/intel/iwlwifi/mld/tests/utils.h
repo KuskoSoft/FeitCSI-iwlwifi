@@ -10,4 +10,7 @@ struct iwl_mld;
 
 int kunit_test_init(struct kunit *test);
 
+enum nl80211_iftype;
+
+struct ieee80211_vif *kunit_add_vif(bool mlo, enum nl80211_iftype type);
 #endif /* __iwl_mld_kunit_utils_h__ */

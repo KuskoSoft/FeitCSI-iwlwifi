@@ -14,6 +14,8 @@
 #include "fw/api/scan.h"
 #include "iwl-trans.h"
 #include "mld.h"
+#include "iface.h"
+#include "link.h"
 
 #define KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, size)			\
 do {									\
@@ -67,4 +69,63 @@ int kunit_test_init(struct kunit *test)
 	/* Avoid passing mld struct around */
 	test->priv = mld;
 	return 0;
+}
+
+IWL_MLD_ALLOC_FN(link, bss_conf)
+
+static void kunit_init_link(struct ieee80211_vif *vif,
+			    struct ieee80211_bss_conf *link,
+			    struct iwl_mld_link *mld_link, int link_id)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	/* setup mac80211 link */
+	rcu_assign_pointer(vif->link_conf[link_id], link);
+	link->link_id = link_id;
+	link->vif = vif;
+	link->beacon_int = 100;
+	link->dtim_period = 3;
+	link->qos = true;
+
+	/* and mld_link */
+	ret = iwl_mld_allocate_link_fw_id(mld, &mld_link->fw_id, link);
+	KUNIT_ASSERT_EQ(test, ret, 0);
+	rcu_assign_pointer(mld_vif->link[link_id], mld_link);
+}
+
+IWL_MLD_ALLOC_FN(vif, vif)
+
+/* Helper function to add and initialize a VIF for KUnit tests */
+struct ieee80211_vif *kunit_add_vif(bool mlo, enum nl80211_iftype type)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
+	struct ieee80211_vif *vif;
+	struct iwl_mld_vif *mld_vif;
+	int ret;
+
+	/* TODO: support more types */
+	KUNIT_ASSERT_EQ(test, type, NL80211_IFTYPE_STATION);
+
+	KUNIT_ALLOC_AND_ASSERT_SIZE(test, vif,
+				    sizeof(*vif) + sizeof(*mld_vif));
+
+	vif->type = type;
+	mld_vif = iwl_mld_vif_from_mac80211(vif);
+	mld_vif->mld = mld;
+
+	ret = iwl_mld_allocate_vif_fw_id(mld, &mld_vif->fw_id, vif);
+	KUNIT_ASSERT_EQ(test, ret, 0);
+
+	/* TODO: revisit (task=EHT) */
+	if (mlo)
+		return vif;
+
+	/* Initialize the default link */
+	kunit_init_link(vif, &vif->bss_conf, &mld_vif->deflink, 0);
+
+	return vif;
 }
