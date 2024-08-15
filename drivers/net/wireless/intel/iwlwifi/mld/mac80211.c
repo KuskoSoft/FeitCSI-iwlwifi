@@ -773,12 +773,13 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 	 * able to TX on the link, i.e. when active. (task=link-switch)
 	 */
 
-	/* TODO: send ap_tx_power_constraint_cmd for STA (task=6GHZ)*/
-
 	/* Now activate the link */
 	ret = iwl_mld_activate_link(mld, link);
 	if (ret)
 		goto err;
+
+	if (vif->type == NL80211_IFTYPE_STATION)
+		iwl_mld_send_ap_tx_power_constraint_cmd(mld, vif, link);
 
 	return 0;
 err:
@@ -889,10 +890,12 @@ void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 	if (link_changes)
 		iwl_mld_change_link_in_fw(mld, link_conf, link_changes);
 
+	if (changes & BSS_CHANGED_TPE)
+		iwl_mld_send_ap_tx_power_constraint_cmd(mld, vif, link_conf);
+
 	// todo: BSS_CHANGED_BEACON_INFO (task=beacon_filter, power)
 	// todo: BSS_CHANGED_BANDWIDTH (task=EMLSR)
 	// todo: BSS_CHANGED_CQM
-	// todo: BSS_CHANGED_TPE (task=power)
 	// todo: BSS_CHANGED_TXPOWER (task=power)
 }
 
