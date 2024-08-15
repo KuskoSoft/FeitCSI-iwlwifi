@@ -279,7 +279,7 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 		ether_addr_copy(cmd.ibss_bssid_addr, link->bssid);
 
 	/* Channel context is needed to get the rates */
-	if (!WARN_ON((changes & LINK_CONTEXT_MODIFY_RATES_INFO) && !chan_ctx))
+	if (chan_ctx)
 		iwl_mld_fill_rates(mld, link, chan_ctx, &cmd.cck_rates,
 				   &cmd.ofdm_rates);
 
