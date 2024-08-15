@@ -129,3 +129,20 @@ struct ieee80211_vif *kunit_add_vif(bool mlo, enum nl80211_iftype type)
 
 	return vif;
 }
+
+/* Use only for MLO vif */
+struct ieee80211_bss_conf *kunit_add_link(struct ieee80211_vif *vif,
+					  int link_id)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct ieee80211_bss_conf *link;
+	struct iwl_mld_link *mld_link;
+
+	KUNIT_ALLOC_AND_ASSERT(test, link);
+	KUNIT_ALLOC_AND_ASSERT(test, mld_link);
+
+	kunit_init_link(vif, link, mld_link, link_id);
+	vif->valid_links |= BIT(link_id);
+
+	return link;
+}

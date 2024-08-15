@@ -20,6 +20,7 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	struct iwl_mld *mld = test->priv;
 	struct ieee80211_vif *vif;
 	struct iwl_mld_vif *mld_vif;
+	struct ieee80211_bss_conf *link;
 
 	/* Perform tests on the mld instance */
 	KUNIT_EXPECT_PTR_EQ(test, mld->dev, mld->trans->dev);
@@ -30,10 +31,22 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	KUNIT_EXPECT_PTR_EQ(test, mld_vif->mld, mld);
 	KUNIT_EXPECT_PTR_EQ(test, rcu_access_pointer(mld_vif->link[0]),
 			    &mld_vif->deflink);
+	KUNIT_EXPECT_FALSE(test, ieee80211_vif_is_mld(vif));
 
 	vif = kunit_add_vif(true, NL80211_IFTYPE_STATION);
+	mld_vif = iwl_mld_vif_from_mac80211(vif);
 
 	KUNIT_EXPECT_NULL(test, rcu_access_pointer(vif->link_conf[0]));
+	/* the vif is not considered as mld before a link is added */
+	KUNIT_EXPECT_FALSE(test, ieee80211_vif_is_mld(vif));
+
+	link = kunit_add_link(vif, 1);
+
+	KUNIT_EXPECT_PTR_EQ(test, link->vif, vif);
+	rcu_read_lock();
+	KUNIT_EXPECT_NOT_NULL(test, iwl_mld_link_from_mac80211(link));
+	rcu_read_unlock();
+	KUNIT_EXPECT_TRUE(test, ieee80211_vif_is_mld(vif));
 }
 
 static struct kunit_case iwl_mld_kunit_test_cases[] = {
