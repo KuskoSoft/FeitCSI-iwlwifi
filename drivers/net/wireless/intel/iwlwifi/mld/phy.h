@@ -36,6 +36,7 @@ iwl_mld_cleanup_phy(struct iwl_mld *mld, struct iwl_mld_phy *phy)
 	CLEANUP_STRUCT(phy);
 }
 
+int iwl_mld_allocate_fw_phy_id(struct iwl_mld *mld);
 int iwl_mld_phy_fw_action(struct iwl_mld *mld,
 			  struct ieee80211_chanctx_conf *ctx, u32 action);
 int iwl_mld_send_rlc_cmd(struct iwl_mld *mld, u8 phy_id);

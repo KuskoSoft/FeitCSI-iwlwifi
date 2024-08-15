@@ -10,12 +10,13 @@
 #include "utils.h"
 
 #include <linux/device.h>
-#include <net/mac80211.h>
+
 #include "fw/api/scan.h"
 #include "iwl-trans.h"
 #include "mld.h"
 #include "iface.h"
 #include "link.h"
+#include "phy.h"
 
 #define KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, size)			\
 do {									\
@@ -145,4 +146,32 @@ struct ieee80211_bss_conf *kunit_add_link(struct ieee80211_vif *vif,
 	vif->valid_links |= BIT(link_id);
 
 	return link;
+}
+
+struct ieee80211_chanctx_conf *
+kunit_add_chanctx_from_def(struct cfg80211_chan_def *def)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
+	struct ieee80211_chanctx_conf *ctx;
+	struct iwl_mld_phy *phy;
+	int fw_id;
+
+	KUNIT_ALLOC_AND_ASSERT_SIZE(test, ctx, sizeof(*ctx) + sizeof(*phy));
+
+	/* Setup the chanctx conf */
+	ctx->def = *def;
+	ctx->min_def = *def;
+	ctx->ap = *def;
+
+	/* and the iwl_mld_phy */
+	phy = iwl_mld_phy_from_mac80211(ctx);
+
+	fw_id = iwl_mld_allocate_fw_phy_id(mld);
+	KUNIT_ASSERT_GE(test, fw_id, 0);
+
+	phy->fw_id = fw_id;
+	phy->chandef = *iwl_mld_get_chandef_from_chanctx(ctx);
+
+	return ctx;
 }

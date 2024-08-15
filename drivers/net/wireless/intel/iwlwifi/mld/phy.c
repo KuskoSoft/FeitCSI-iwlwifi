@@ -10,6 +10,20 @@
 /* TODO: remove on RLC offload */
 #include "fw/api/datapath.h"
 
+int iwl_mld_allocate_fw_phy_id(struct iwl_mld *mld)
+{
+	int id;
+	unsigned long used = mld->used_phy_ids;
+
+	for_each_clear_bit(id, &used, NUM_PHY_CTX) {
+		mld->used_phy_ids |= BIT(id);
+		return id;
+	}
+
+	return -ENOSPC;
+}
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_allocate_fw_phy_id);
+
 struct cfg80211_chan_def *
 iwl_mld_get_chandef_from_chanctx(struct ieee80211_chanctx_conf *ctx)
 {
@@ -19,6 +33,7 @@ iwl_mld_get_chandef_from_chanctx(struct ieee80211_chanctx_conf *ctx)
 
 	return use_def ? &ctx->def : &ctx->min_def;
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_get_chandef_from_chanctx);
 
 static u8
 iwl_mld_nl80211_width_to_fw(enum nl80211_chan_width width)

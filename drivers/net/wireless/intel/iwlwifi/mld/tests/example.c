@@ -12,6 +12,7 @@
 #include "mld.h"
 #include "iface.h"
 #include "link.h"
+#include "phy.h"
 
 MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
 
@@ -21,6 +22,8 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	struct ieee80211_vif *vif;
 	struct iwl_mld_vif *mld_vif;
 	struct ieee80211_bss_conf *link;
+	struct ieee80211_chanctx_conf *ctx;
+	struct iwl_mld_phy *phy;
 
 	/* Perform tests on the mld instance */
 	KUNIT_EXPECT_PTR_EQ(test, mld->dev, mld->trans->dev);
@@ -47,6 +50,14 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	KUNIT_EXPECT_NOT_NULL(test, iwl_mld_link_from_mac80211(link));
 	rcu_read_unlock();
 	KUNIT_EXPECT_TRUE(test, ieee80211_vif_is_mld(vif));
+
+	ctx = kunit_add_chanctx(NL80211_BAND_2GHZ);
+
+	phy = iwl_mld_phy_from_mac80211(ctx);
+	KUNIT_ASSERT_EQ(test, ctx->def.chan->band, NL80211_BAND_2GHZ);
+	KUNIT_EXPECT_MEMEQ(test, &phy->chandef, &ctx->min_def,
+			   sizeof(phy->chandef));
+	KUNIT_ASSERT_EQ(test, phy->fw_id, 0);
 }
 
 static struct kunit_case iwl_mld_kunit_test_cases[] = {

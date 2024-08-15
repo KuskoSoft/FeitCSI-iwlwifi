@@ -651,19 +651,6 @@ void iwl_mld_mac80211_wake_tx_queue(struct ieee80211_hw *hw,
 	spin_unlock_bh(&mld->add_txqs_lock);
 }
 
-static int iwl_mld_allocate_fw_phy_id(struct iwl_mld *mld)
-{
-	int id;
-	unsigned long used = mld->used_phy_ids;
-
-	for_each_clear_bit(id, &used, NUM_PHY_CTX) {
-		mld->used_phy_ids |= BIT(id);
-		return id;
-	}
-
-	return -ENOSPC;
-}
-
 static
 int iwl_mld_add_chanctx(struct ieee80211_hw *hw,
 			struct ieee80211_chanctx_conf *ctx)
