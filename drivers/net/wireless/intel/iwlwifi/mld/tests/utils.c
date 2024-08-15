@@ -24,9 +24,8 @@ do {									\
 #define KUNIT_ALLOC_AND_ASSERT(test, ptr)				\
 	KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, sizeof(*(ptr)))
 
-struct iwl_mld *kunit_setup_mld(void)
+int kunit_test_init(struct kunit *test)
 {
-	struct kunit *test = kunit_get_current_test();
 	struct iwl_mld *mld;
 	struct iwl_trans *trans;
 	const struct iwl_cfg *cfg;
@@ -59,5 +58,13 @@ struct iwl_mld *kunit_setup_mld(void)
 				    sizeof(struct iwl_scan_req_umac_v17));
 	mld->scan.cmd_size = sizeof(struct iwl_scan_req_umac_v17);
 
-	return mld;
+	/* This is not the state at the end of the regular opmode_start,
+	 * but it is more common to need it. Explicitly undo this if needed.
+	 */
+	mld->trans->state = IWL_TRANS_FW_ALIVE;
+	mld->fw_status.running = true;
+
+	/* Avoid passing mld struct around */
+	test->priv = mld;
+	return 0;
 }

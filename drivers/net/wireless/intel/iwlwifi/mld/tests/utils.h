@@ -8,6 +8,6 @@
 
 struct iwl_mld;
 
-struct iwl_mld *kunit_setup_mld(void);
+int kunit_test_init(struct kunit *test);
 
 #endif /* __iwl_mld_kunit_utils_h__ */

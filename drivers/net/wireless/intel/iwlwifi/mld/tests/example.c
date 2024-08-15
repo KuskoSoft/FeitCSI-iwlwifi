@@ -13,8 +13,7 @@ MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
 
 static void iwl_mld_kunit_test_example(struct kunit *test)
 {
-	/* Set up the iwl_mld instance */
-	struct iwl_mld *mld = kunit_setup_mld();
+	struct iwl_mld *mld = test->priv;
 
 	/* Perform tests on the mld instance */
 	KUNIT_EXPECT_PTR_EQ(test, mld->dev, mld->trans->dev);
@@ -28,6 +27,7 @@ static struct kunit_case iwl_mld_kunit_test_cases[] = {
 static struct kunit_suite iwl_mld_kunit_test_suite = {
 	.name = "iwl_mld_kunit_test_suite",
 	.test_cases = iwl_mld_kunit_test_cases,
+	.init = kunit_test_init,
 };
 
 kunit_test_suite(iwl_mld_kunit_test_suite);
