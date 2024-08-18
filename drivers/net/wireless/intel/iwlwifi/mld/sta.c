@@ -337,15 +337,22 @@ iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 		    struct ieee80211_vif *vif, enum iwl_fw_sta_type type)
 {
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct ieee80211_link_sta *link_sta;
+	int link_id;
+
 	iwl_mld_init_sta(mld, sta, vif, type);
 
-	/* When the sta is added, i.e. its state is moving from NOTEXIST to
-	 * NONE, it can't have more then one active link_sta,
-	 * and that one active link_sta is deflink.
-	 * In restart when in EMLSR, mac80211 will first configure us to one
-	 * link, and then explicitly activate the second link and the link_sta.
+	/* We could have add only the deflink link_sta, but it will not work
+	 * in the restart case if the single link that is active during
+	 * reconfig is not the deflink one.
 	 */
-	return iwl_mld_add_link_sta(mld, &sta->deflink);
+	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
+		int ret = iwl_mld_add_link_sta(mld, link_sta);
+			if (ret)
+				return ret;
+	}
+	return 0;
 }
 
 void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta)
