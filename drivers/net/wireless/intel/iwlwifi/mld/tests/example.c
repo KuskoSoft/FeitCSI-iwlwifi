@@ -13,6 +13,7 @@
 #include "iface.h"
 #include "link.h"
 #include "phy.h"
+#include "sta.h"
 
 MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
 
@@ -24,6 +25,8 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	struct ieee80211_bss_conf *link;
 	struct ieee80211_chanctx_conf *ctx;
 	struct iwl_mld_phy *phy;
+	struct ieee80211_sta *sta;
+	struct iwl_mld_sta *mld_sta;
 
 	/* Perform tests on the mld instance */
 	KUNIT_EXPECT_PTR_EQ(test, mld->dev, mld->trans->dev);
@@ -61,6 +64,25 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 
 	iwlmld_kunit_assign_chanctx_to_link(vif, link, ctx);
 	KUNIT_EXPECT_TRUE(test, ieee80211_vif_link_active(vif, link->link_id));
+
+	sta = iwlmld_kunit_setup_sta(vif, IEEE80211_STA_NONE, -1);
+
+	KUNIT_EXPECT_PTR_EQ(test, sta->deflink.sta, sta);
+
+	KUNIT_EXPECT_EQ(test, sta->valid_links, 0);
+	KUNIT_EXPECT_PTR_EQ(test, rcu_access_pointer(sta->link[0]),
+			    &sta->deflink);
+
+	mld_sta = iwl_mld_sta_from_mac80211(sta);
+
+	KUNIT_EXPECT_PTR_EQ(test, mld_sta->vif, vif);
+	KUNIT_EXPECT_EQ(test, mld_sta->sta_state, IEEE80211_STA_NONE);
+
+	sta = iwlmld_kunit_setup_sta(vif, IEEE80211_STA_NONE, 1);
+
+	KUNIT_EXPECT_EQ(test, sta->valid_links, BIT(1));
+	KUNIT_EXPECT_PTR_EQ(test, rcu_access_pointer(sta->link[1]),
+			    &sta->deflink);
 }
 
 static struct kunit_case iwl_mld_kunit_test_cases[] = {

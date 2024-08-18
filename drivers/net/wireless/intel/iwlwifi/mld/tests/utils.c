@@ -17,6 +17,7 @@
 #include "iface.h"
 #include "link.h"
 #include "phy.h"
+#include "sta.h"
 
 #define KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, size)			\
 do {									\
@@ -203,4 +204,96 @@ void iwlmld_kunit_assign_chanctx_to_link(struct ieee80211_vif *vif,
 		vif->active_links |= BIT(link->link_id);
 
 	wiphy_unlock(mld->wiphy);
+}
+
+IWL_MLD_ALLOC_FN(link_sta, link_sta)
+
+static void iwlmld_kunit_add_link_sta(struct ieee80211_sta *sta,
+				      struct ieee80211_link_sta *link_sta,
+				      u8 link_id)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
+	u8 fw_id;
+	int ret;
+
+	/* Allocate a sta id and map it to the link_sta object */
+	ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
+	KUNIT_ASSERT_EQ(test, ret, 0);
+
+	link_sta->link_id = link_id;
+	rcu_assign_pointer(sta->link[link_id], link_sta);
+
+	link_sta->sta = sta;
+}
+
+/* Allocate and initialize a STA with the first link_sta */
+static struct ieee80211_sta *
+iwlmld_kunit_add_sta(struct ieee80211_vif *vif, int link_id)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct ieee80211_sta *sta;
+	struct iwl_mld_sta *mld_sta;
+
+	/* Allocate memory for ieee80211_sta with embedded iwl_mld_sta */
+	KUNIT_ALLOC_AND_ASSERT_SIZE(test, sta, sizeof(*sta) + sizeof(*mld_sta));
+
+	/* TODO: allocate and initialize the TXQs ? */
+
+	mld_sta = iwl_mld_sta_from_mac80211(sta);
+	mld_sta->vif = vif;
+
+	/* TODO: adjust for internal stations */
+	mld_sta->sta_type = STATION_TYPE_PEER;
+
+	if (link_id >= 0) {
+		iwlmld_kunit_add_link_sta(sta, &sta->deflink, link_id);
+		sta->valid_links = BIT(link_id);
+	} else {
+		iwlmld_kunit_add_link_sta(sta, &sta->deflink, 0);
+	}
+	return sta;
+}
+
+/* Move s STA to a state */
+static void iwlmld_kunit_move_sta_state(struct ieee80211_vif *vif,
+					struct ieee80211_sta *sta,
+					enum ieee80211_sta_state state)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld_sta *mld_sta;
+	struct iwl_mld_vif *mld_vif;
+
+	/* The sta will be removed automatically at the end of the test */
+	KUNIT_ASSERT_NE(test, state, IEEE80211_STA_NOTEXIST);
+
+	mld_sta = iwl_mld_sta_from_mac80211(sta);
+	mld_sta->sta_state = state;
+
+	mld_vif = iwl_mld_vif_from_mac80211(mld_sta->vif);
+	mld_vif->authorized = state == IEEE80211_STA_AUTHORIZED;
+
+	if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
+		mld_vif->ap_sta = sta;
+}
+
+struct ieee80211_sta *iwlmld_kunit_setup_sta(struct ieee80211_vif *vif,
+					     enum ieee80211_sta_state state,
+					     int link_id)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct ieee80211_sta *sta;
+
+	/* The sta will be removed automatically at the end of the test */
+	KUNIT_ASSERT_NE(test, state, IEEE80211_STA_NOTEXIST);
+
+	/* First - allocate and init the STA */
+	sta = iwlmld_kunit_add_sta(vif, link_id);
+
+	/* Now move it all the way to the wanted state */
+	for (enum ieee80211_sta_state _state = IEEE80211_STA_NONE;
+	     _state <= state; _state++)
+		iwlmld_kunit_move_sta_state(vif, sta, state);
+
+	return sta;
 }

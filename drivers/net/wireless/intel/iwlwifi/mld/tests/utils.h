@@ -76,4 +76,9 @@ void iwlmld_kunit_assign_chanctx_to_link(struct ieee80211_vif *vif,
 					 struct ieee80211_bss_conf *link,
 					 struct ieee80211_chanctx_conf *ctx);
 
+/* Allocate a sta, initialize it and move it to the wanted state */
+struct ieee80211_sta *iwlmld_kunit_setup_sta(struct ieee80211_vif *vif,
+					     enum ieee80211_sta_state state,
+					     int link_id);
+
 #endif /* __iwl_mld_kunit_utils_h__ */
