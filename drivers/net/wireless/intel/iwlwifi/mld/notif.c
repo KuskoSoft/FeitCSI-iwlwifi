@@ -153,6 +153,7 @@ iwl_mld_notif_is_valid(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
 {
 	unsigned int size = iwl_rx_packet_payload_len(pkt);
 	size_t notif_ver;
+	u8 grp;
 
 	/* If n_sizes == 0, it indicates that a validation function may be used
 	 * or that no validation is required.
@@ -163,8 +164,14 @@ iwl_mld_notif_is_valid(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
 		return true;
 	}
 
+	/* Erroneously, FW publishes the TLV of this using LONG_GROUP instead
+	 * of LEGACY_GROUP. WA this until FW is fixed.
+	 */
+	grp = iwl_cmd_opcode(handler->cmd_id) == TX_CMD ? LONG_GROUP :
+		iwl_cmd_groupid(handler->cmd_id);
+
 	notif_ver = iwl_fw_lookup_notif_ver(mld->fw,
-					    iwl_cmd_groupid(handler->cmd_id),
+					    grp,
 					    iwl_cmd_opcode(handler->cmd_id),
 					    IWL_FW_CMD_VER_UNKNOWN);
 
