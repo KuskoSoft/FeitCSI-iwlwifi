@@ -177,3 +177,30 @@ iwlmld_kunit_add_chanctx_from_def(struct cfg80211_chan_def *def)
 
 	return ctx;
 }
+
+void iwlmld_kunit_assign_chanctx_to_link(struct ieee80211_vif *vif,
+					 struct ieee80211_bss_conf *link,
+					 struct ieee80211_chanctx_conf *ctx)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
+	struct iwl_mld_link *mld_link;
+
+	KUNIT_EXPECT_NULL(test, rcu_access_pointer(link->chanctx_conf));
+	rcu_assign_pointer(link->chanctx_conf, ctx);
+
+	wiphy_lock(mld->wiphy);
+
+	mld_link = iwl_mld_link_from_mac80211(link);
+
+	KUNIT_EXPECT_NULL(test, rcu_access_pointer(mld_link->chan_ctx));
+	KUNIT_EXPECT_FALSE(test, mld_link->active);
+
+	rcu_assign_pointer(mld_link->chan_ctx, ctx);
+	mld_link->active = true;
+
+	if (ieee80211_vif_is_mld(vif))
+		vif->active_links |= BIT(link->link_id);
+
+	wiphy_unlock(mld->wiphy);
+}

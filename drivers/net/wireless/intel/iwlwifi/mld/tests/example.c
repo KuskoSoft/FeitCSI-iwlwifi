@@ -58,6 +58,9 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	KUNIT_EXPECT_MEMEQ(test, &phy->chandef, &ctx->min_def,
 			   sizeof(phy->chandef));
 	KUNIT_ASSERT_EQ(test, phy->fw_id, 0);
+
+	iwlmld_kunit_assign_chanctx_to_link(vif, link, ctx);
+	KUNIT_EXPECT_TRUE(test, ieee80211_vif_link_active(vif, link->link_id));
 }
 
 static struct kunit_case iwl_mld_kunit_test_cases[] = {

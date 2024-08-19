@@ -72,4 +72,8 @@ iwlmld_kunit_add_chanctx(enum nl80211_band band)
 	return iwlmld_kunit_add_chanctx_from_def(chandef);
 }
 
+void iwlmld_kunit_assign_chanctx_to_link(struct ieee80211_vif *vif,
+					 struct ieee80211_bss_conf *link,
+					 struct ieee80211_chanctx_conf *ctx);
+
 #endif /* __iwl_mld_kunit_utils_h__ */
