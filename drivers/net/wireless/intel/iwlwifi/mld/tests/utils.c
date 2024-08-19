@@ -190,7 +190,7 @@ void iwlmld_kunit_assign_chanctx_to_link(struct ieee80211_vif *vif,
 	KUNIT_EXPECT_NULL(test, rcu_access_pointer(link->chanctx_conf));
 	rcu_assign_pointer(link->chanctx_conf, ctx);
 
-	wiphy_lock(mld->wiphy);
+	lockdep_assert_wiphy(mld->wiphy);
 
 	mld_link = iwl_mld_link_from_mac80211(link);
 
@@ -202,8 +202,6 @@ void iwlmld_kunit_assign_chanctx_to_link(struct ieee80211_vif *vif,
 
 	if (ieee80211_vif_is_mld(vif))
 		vif->active_links |= BIT(link->link_id);
-
-	wiphy_unlock(mld->wiphy);
 }
 
 IWL_MLD_ALLOC_FN(link_sta, link_sta)
@@ -225,6 +223,24 @@ static void iwlmld_kunit_add_link_sta(struct ieee80211_sta *sta,
 	rcu_assign_pointer(sta->link[link_id], link_sta);
 
 	link_sta->sta = sta;
+}
+
+static struct ieee80211_link_sta *
+iwlmld_kunit_alloc_link_sta(struct ieee80211_sta *sta, int link_id)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct ieee80211_link_sta *link_sta;
+
+	/* Only valid for MLO */
+	KUNIT_ASSERT_TRUE(test, sta->valid_links);
+
+	KUNIT_ALLOC_AND_ASSERT(test, link_sta);
+
+	iwlmld_kunit_add_link_sta(sta, link_sta, link_id);
+
+	sta->valid_links |= BIT(link_id);
+
+	return link_sta;
 }
 
 /* Allocate and initialize a STA with the first link_sta */
@@ -310,6 +326,7 @@ static struct ieee80211_vif *
 iwlmld_kunit_setup_assoc(bool mlo, u8 link_id, enum nl80211_band band)
 {
 	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
 	struct ieee80211_vif *vif;
 	struct ieee80211_bss_conf *link;
 	struct ieee80211_chanctx_conf *chan_ctx;
@@ -325,7 +342,9 @@ iwlmld_kunit_setup_assoc(bool mlo, u8 link_id, enum nl80211_band band)
 
 	chan_ctx = iwlmld_kunit_add_chanctx(band);
 
+	wiphy_lock(mld->wiphy);
 	iwlmld_kunit_assign_chanctx_to_link(vif, link, chan_ctx);
+	wiphy_unlock(mld->wiphy);
 
 	/* The AP sta will now be pointer to by mld_vif->ap_sta */
 	iwlmld_kunit_setup_sta(vif, IEEE80211_STA_AUTHORIZED, link_id);
@@ -376,4 +395,45 @@ _iwl_mld_kunit_create_pkt(const void *notif, size_t notif_sz)
 	pkt->len_n_flags = cpu_to_le32(sizeof(pkt->hdr) + notif_sz);
 
 	return pkt;
+}
+
+struct ieee80211_vif *iwlmld_kunit_assoc_emlsr(u16 valid_links,
+					       enum nl80211_band band1,
+					       enum nl80211_band band2)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
+	struct ieee80211_vif *vif;
+	struct ieee80211_bss_conf *link;
+	struct ieee80211_chanctx_conf *chan_ctx;
+	struct ieee80211_sta *sta;
+	struct iwl_mld_vif *mld_vif;
+	u8 assoc_link_id, other_link_id;
+
+	KUNIT_ASSERT_TRUE(test, hweight16(valid_links) == 2);
+
+	assoc_link_id = ffs(valid_links) - 1;
+	other_link_id = ffs(valid_links & ~BIT(assoc_link_id)) - 1;
+
+	vif = iwlmld_kunit_setup_mlo_assoc(valid_links, assoc_link_id, band1);
+	mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	/* Activate second link */
+	wiphy_lock(mld->wiphy);
+
+	link = wiphy_dereference(mld->wiphy, vif->link_conf[other_link_id]);
+	KUNIT_EXPECT_NOT_NULL(test, link);
+
+	chan_ctx = iwlmld_kunit_add_chanctx(band2);
+	iwlmld_kunit_assign_chanctx_to_link(vif, link, chan_ctx);
+
+	wiphy_unlock(mld->wiphy);
+
+	/* And other link sta */
+	sta = mld_vif->ap_sta;
+	KUNIT_EXPECT_NOT_NULL(test, sta);
+
+	iwlmld_kunit_alloc_link_sta(sta, other_link_id);
+
+	return vif;
 }
