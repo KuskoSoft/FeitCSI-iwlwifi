@@ -549,6 +549,7 @@ void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
 		IWL_ERR(mld, "Not implemented, exist EMLSR\n");
 	}
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_handle_missed_beacon_notif);
 
 int iwl_mld_link_set_associated(struct iwl_mld *mld, struct ieee80211_vif *vif,
 				struct ieee80211_bss_conf *link)
