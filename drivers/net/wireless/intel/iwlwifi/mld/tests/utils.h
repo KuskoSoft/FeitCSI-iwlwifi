@@ -86,4 +86,10 @@ struct ieee80211_vif *iwlmld_kunit_setup_mlo_assoc(u16 valid_links,
 						   enum nl80211_band band);
 struct ieee80211_vif *iwlmld_kunit_setup_non_mlo_assoc(enum nl80211_band band);
 
+struct iwl_rx_packet *
+_iwl_mld_kunit_create_pkt(const void *notif, size_t notif_sz);
+
+#define iwl_mld_kunit_create_pkt(_notif)	\
+	_iwl_mld_kunit_create_pkt(&(_notif), sizeof(_notif))
+
 #endif /* __iwl_mld_kunit_utils_h__ */

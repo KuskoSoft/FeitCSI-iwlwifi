@@ -363,3 +363,17 @@ struct ieee80211_vif *iwlmld_kunit_setup_non_mlo_assoc(enum nl80211_band band)
 {
 	return iwlmld_kunit_setup_assoc(false, 0, band);
 }
+
+struct iwl_rx_packet *
+_iwl_mld_kunit_create_pkt(const void *notif, size_t notif_sz)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_rx_packet *pkt;
+
+	KUNIT_ALLOC_AND_ASSERT_SIZE(test, pkt, sizeof(pkt) + notif_sz);
+
+	memcpy(pkt->data, notif, notif_sz);
+	pkt->len_n_flags = cpu_to_le32(sizeof(pkt->hdr) + notif_sz);
+
+	return pkt;
+}
