@@ -81,4 +81,9 @@ struct ieee80211_sta *iwlmld_kunit_setup_sta(struct ieee80211_vif *vif,
 					     enum ieee80211_sta_state state,
 					     int link_id);
 
+struct ieee80211_vif *iwlmld_kunit_setup_mlo_assoc(u16 valid_links,
+						   u8 assoc_link_id,
+						   enum nl80211_band band);
+struct ieee80211_vif *iwlmld_kunit_setup_non_mlo_assoc(enum nl80211_band band);
+
 #endif /* __iwl_mld_kunit_utils_h__ */

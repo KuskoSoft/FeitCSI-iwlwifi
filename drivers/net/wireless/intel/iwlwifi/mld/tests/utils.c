@@ -297,3 +297,69 @@ struct ieee80211_sta *iwlmld_kunit_setup_sta(struct ieee80211_vif *vif,
 
 	return sta;
 }
+
+static void iwlmld_kunit_set_vif_associated(struct ieee80211_vif *vif)
+{
+	/* TODO: setup chanreq */
+	/* TODO setup capabilities */
+
+	vif->cfg.assoc = 1;
+}
+
+static struct ieee80211_vif *
+iwlmld_kunit_setup_assoc(bool mlo, u8 link_id, enum nl80211_band band)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct ieee80211_vif *vif;
+	struct ieee80211_bss_conf *link;
+	struct ieee80211_chanctx_conf *chan_ctx;
+
+	KUNIT_ASSERT_TRUE(test, mlo || link_id == 0);
+
+	vif = iwlmld_kunit_add_vif(mlo, NL80211_IFTYPE_STATION);
+
+	if (mlo)
+		link = iwlmld_kunit_add_link(vif, link_id);
+	else
+		link = &vif->bss_conf;
+
+	chan_ctx = iwlmld_kunit_add_chanctx(band);
+
+	iwlmld_kunit_assign_chanctx_to_link(vif, link, chan_ctx);
+
+	/* The AP sta will now be pointer to by mld_vif->ap_sta */
+	iwlmld_kunit_setup_sta(vif, IEEE80211_STA_AUTHORIZED, link_id);
+
+	iwlmld_kunit_set_vif_associated(vif);
+
+	return vif;
+}
+
+struct ieee80211_vif *iwlmld_kunit_setup_mlo_assoc(u16 valid_links,
+						   u8 assoc_link_id,
+						   enum nl80211_band band)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct ieee80211_vif *vif;
+
+	KUNIT_ASSERT_TRUE(test,
+			  hweight16(valid_links) == 1 ||
+			  hweight16(valid_links) == 2);
+	KUNIT_ASSERT_TRUE(test, valid_links & BIT(assoc_link_id));
+
+	vif = iwlmld_kunit_setup_assoc(true, assoc_link_id, band);
+
+	/* Add the other link, if applicable */
+	if (hweight16(valid_links) > 1) {
+		u8 other_link_id = ffs(valid_links & ~BIT(assoc_link_id)) - 1;
+
+		iwlmld_kunit_add_link(vif, other_link_id);
+	}
+
+	return vif;
+}
+
+struct ieee80211_vif *iwlmld_kunit_setup_non_mlo_assoc(enum nl80211_band band)
+{
+	return iwlmld_kunit_setup_assoc(false, 0, band);
+}

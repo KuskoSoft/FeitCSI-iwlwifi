@@ -85,8 +85,31 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 			    &sta->deflink);
 }
 
+static void iwl_mld_kunit_assoc_example(struct kunit *test)
+{
+	struct ieee80211_vif *vif;
+	u16 valid_links = 0x3;
+	u8 assoc_link_id = 1;
+
+	vif = iwlmld_kunit_setup_non_mlo_assoc(NL80211_BAND_2GHZ);
+
+	KUNIT_ASSERT_NOT_NULL(test, vif);
+	KUNIT_ASSERT_FALSE(test, ieee80211_vif_is_mld(vif));
+	KUNIT_ASSERT_TRUE(test, vif->cfg.assoc);
+	KUNIT_ASSERT_NOT_NULL(test, iwl_mld_vif_from_mac80211(vif)->ap_sta);
+
+	vif = iwlmld_kunit_setup_mlo_assoc(valid_links, assoc_link_id,
+					   NL80211_BAND_5GHZ);
+
+	KUNIT_ASSERT_NOT_NULL(test, vif);
+	KUNIT_ASSERT_TRUE(test, ieee80211_vif_is_mld(vif));
+	KUNIT_ASSERT_EQ(test, vif->valid_links, valid_links);
+	KUNIT_ASSERT_EQ(test, vif->active_links, BIT(assoc_link_id));
+}
+
 static struct kunit_case iwl_mld_kunit_test_cases[] = {
 	KUNIT_CASE(iwl_mld_kunit_test_example),
+	KUNIT_CASE(iwl_mld_kunit_assoc_example),
 	{},
 };
 
