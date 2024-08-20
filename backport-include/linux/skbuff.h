@@ -101,4 +101,19 @@ static inline struct sk_buff *LINUX_BACKPORT(skb_recv_datagram)(struct sock *sk,
 #define skb_recv_datagram LINUX_BACKPORT(skb_recv_datagram)
 #endif /* < 5.17 */
 
+#if LINUX_VERSION_IS_LESS(5,4,0)
+#define skb_queue_empty_lockless LINUX_BACKPORT(skb_queue_empty_lockless)
+/**
+ *	skb_queue_empty_lockless - check if a queue is empty
+ *	@list: queue head
+ *
+ *	Returns true if the queue is empty, false otherwise.
+ *	This variant can be used in lockless contexts.
+ */
+static inline bool skb_queue_empty_lockless(const struct sk_buff_head *list)
+{
+	return READ_ONCE(list->next) == (const struct sk_buff *) list;
+}
+#endif /* < 5.4 */
+
 #endif /* __BACKPORT_SKBUFF_H */

@@ -73,8 +73,6 @@ enum environment_cap {
  *	is processed before processing any new requests.
  * @is_indoor: indicates if the device is operating in an indoor environment
  *      or not
- * @country_ie_checksum: checksum of the last processed and accepted
- *	country IE
  * @country_ie_env: lets us know if the AP is telling us we are outdoor,
  *	indoor, or if it doesn't matter
  * @list: used to insert into the reg_requests_list linked list
