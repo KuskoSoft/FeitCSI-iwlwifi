@@ -1355,6 +1355,27 @@ static void iwl_mvm_lari_cfg(struct iwl_mvm *mvm)
 	}
 }
 
+static void iwl_mvm_tx_power_limit_cfg(struct iwl_mvm *mvm)
+{
+	u32 cmd_id = WIDE_ID(REGULATORY_AND_NVM_GROUP,
+			     TX_POWER_LIMIT_OVERRIDE_CMD);
+	int val;
+	int ret;
+
+	if (iwl_fw_lookup_cmd_ver(mvm->fw, cmd_id, 0) != 1)
+		return;
+
+	ret = iwl_bios_get_dsm(&mvm->fwrt, DSM_FUNC_REGULATORY_CONFIG, &val);
+	if (ret < 0 || !(val & DSM_MASK_ADJUST_TX_POWER))
+		return;
+
+	ret = iwl_mvm_send_cmd_pdu(mvm, cmd_id, 0, 0, NULL);
+	if (ret < 0)
+		IWL_DEBUG_RADIO(mvm,
+				"Failed to send TX_POWER_LIMIT_OVERRIDE_CMD (%d)\n",
+				ret);
+}
+
 void iwl_mvm_get_bios_tables(struct iwl_mvm *mvm)
 {
 	int ret;
@@ -1617,6 +1638,7 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	}
 
 	iwl_mvm_lari_cfg(mvm);
+	iwl_mvm_tx_power_limit_cfg(mvm);
 
 	/* Init RSS configuration */
 	ret = iwl_configure_rxq(&mvm->fwrt);

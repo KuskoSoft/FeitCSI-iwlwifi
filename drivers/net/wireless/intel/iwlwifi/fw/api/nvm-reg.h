@@ -52,6 +52,11 @@ enum iwl_regulatory_and_nvm_subcmd_ids {
 	MCC_ALLOWED_AP_TYPE_CMD = 0x5,
 
 	/**
+	 * @TX_POWER_LIMIT_OVERRIDE_CMD: no command data
+	 */
+	TX_POWER_LIMIT_OVERRIDE_CMD = 0x6,
+
+	/**
 	 * @PNVM_INIT_COMPLETE_NTFY: &struct iwl_pnvm_init_complete_ntfy
 	 */
 	PNVM_INIT_COMPLETE_NTFY = 0xFE,
