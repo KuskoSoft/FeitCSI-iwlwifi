@@ -7,6 +7,7 @@
 
 int iwl_mld_init_mcc(struct iwl_mld *mld);
 void iwl_mld_handle_update_mcc(struct iwl_mld *mld, struct iwl_rx_packet *pkt);
+void iwl_mld_update_changed_regdomain(struct iwl_mld *mld);
 struct ieee80211_regdomain *
 iwl_mld_get_regdomain(struct iwl_mld *mld,
 		      const char *alpha2,

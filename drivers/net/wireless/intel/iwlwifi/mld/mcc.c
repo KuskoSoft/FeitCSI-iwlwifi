@@ -208,6 +208,21 @@ iwl_mld_get_current_regdomain(struct iwl_mld *mld,
 				     MCC_SOURCE_GET_CURRENT, changed);
 }
 
+void iwl_mld_update_changed_regdomain(struct iwl_mld *mld)
+{
+	struct ieee80211_regdomain *regd;
+	bool changed;
+
+	regd = iwl_mld_get_current_regdomain(mld, &changed);
+
+	if (IS_ERR_OR_NULL(regd))
+		return;
+
+	if (changed)
+		regulatory_set_wiphy_regd(mld->wiphy, regd);
+	kfree(regd);
+}
+
 static int iwl_mld_apply_last_mcc(struct iwl_mld *mld,
 				  const char *alpha2)
 {
