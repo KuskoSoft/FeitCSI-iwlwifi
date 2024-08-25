@@ -385,8 +385,11 @@ iwl_mld_set_hw_rfkill_state(struct iwl_op_mode *op_mode, bool state)
 static void
 iwl_mld_free_skb(struct iwl_op_mode *op_mode, struct sk_buff *skb)
 {
-	/* TODO */
-	WARN_ONCE(1, "Not supported yet\n");
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+
+	iwl_trans_free_tx_cmd(mld->trans, info->driver_data[1]);
+	ieee80211_free_txskb(mld->hw, skb);
 }
 
 static void iwl_mld_restart_nic(struct iwl_mld *mld)
