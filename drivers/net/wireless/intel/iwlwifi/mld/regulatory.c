@@ -343,37 +343,40 @@ void iwl_mld_init_uats(struct iwl_mld *mld)
 			ret);
 }
 
-static bool iwl_mld_add_to_tas_block_list(__le32 *list, __le32 *le_size,
-					  unsigned int mcc)
+static bool iwl_mld_add_to_tas_block_list(u16 *list, u8 *size, u16 mcc)
 {
-	u32 size = le32_to_cpu(*le_size);
-
-	for (int i = 0; i < size; i++) {
-		if (list[i] == cpu_to_le32(mcc))
+	for (int i = 0; i < *size; i++) {
+		if (list[i] == mcc)
 			return true;
 	}
 
 	/* Verify that there is room for another country
-	 * If size == IWL_WTAS_BLACK_LIST_MAX, then the table is full.
+	 * If *size == IWL_WTAS_BLACK_LIST_MAX, then the table is full.
 	 */
-	if (size >= IWL_WTAS_BLACK_LIST_MAX)
+	if (*size >= IWL_WTAS_BLACK_LIST_MAX)
 		return false;
 
-	list[size] = cpu_to_le32(mcc);
-	*le_size = cpu_to_le32(size + 1);
-
+	list[*size++] = mcc;
 	return true;
 }
 
 void iwl_mld_init_tas(struct iwl_mld *mld)
 {
 	int ret;
+	int cmd_size;
 	struct iwl_tas_data data = {};
-	struct iwl_tas_config_cmd cmd = {};
+	struct iwl_tas_config_cmd cmd_v5 = {};
+	struct iwl_tas_config_cmd_v2_v4 cmd_v2_v4 = {};
+	u32 cmd_id = WIDE_ID(REGULATORY_AND_NVM_GROUP, TAS_CONFIG);
+	void *cmd_data = &cmd_v2_v4;
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mld->fw, cmd_id,
+					   IWL_FW_CMD_VER_UNKNOWN);
 
 	BUILD_BUG_ON(ARRAY_SIZE(data.block_list_array) !=
 		     IWL_WTAS_BLACK_LIST_MAX);
-	BUILD_BUG_ON(ARRAY_SIZE(cmd.common.block_list_array) !=
+	BUILD_BUG_ON(ARRAY_SIZE(cmd_v2_v4.common.block_list_array) !=
+		     IWL_WTAS_BLACK_LIST_MAX);
+	BUILD_BUG_ON(ARRAY_SIZE(cmd_v5.block_list_array) !=
 		     IWL_WTAS_BLACK_LIST_MAX);
 
 	ret = iwl_bios_get_tas_table(&mld->fwrt, &data);
@@ -384,7 +387,7 @@ void iwl_mld_init_tas(struct iwl_mld *mld)
 		return;
 	}
 
-	if (ret == 0)
+	if (ret == 0 && cmd_ver < 5)
 		return;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
@@ -415,16 +418,40 @@ void iwl_mld_init_tas(struct iwl_mld *mld)
 				dmi_get_system_info(DMI_SYS_VENDOR) ?: "<unknown>");
 	}
 
-	memcpy(&cmd.common, &data, sizeof(struct iwl_tas_config_cmd_common));
-	cmd.v4.override_tas_iec = data.override_tas_iec;
-	cmd.v4.enable_tas_iec = data.enable_tas_iec;
-	cmd.v4.usa_tas_uhb_allowed = data.usa_tas_uhb_allowed;
-	if (data.canada_tas_uhb_allowed)
-		cmd.v4.uhb_allowed_flags = TAS_UHB_ALLOWED_CANADA;
+	if (cmd_ver == 5) {
+		cmd_size = sizeof(cmd_v5);
+		cmd_data = &cmd_v5;
+		cmd_v5.block_list_size = cpu_to_le16(data.block_list_size);
+		for (u8 i = 0; i < data.block_list_size; i++)
+			cmd_v5.block_list_array[i] =
+				cpu_to_le16(data.block_list_array[i]);
+		cmd_v5.tas_config_info.table_source = data.table_source;
+		cmd_v5.tas_config_info.table_revision = data.table_revision;
+		cmd_v5.tas_config_info.value = cpu_to_le32(data.tas_selection);
+	/* TODO: remove support from ver 4 when FW merges ver 5 */
+	} else if (cmd_ver == 4) {
+		struct iwl_tas_selection_data selection_data = {};
 
-	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(REGULATORY_AND_NVM_GROUP,
-						TAS_CONFIG),
-				   &cmd);
+		cmd_size = sizeof(cmd_v2_v4.common) + sizeof(cmd_v2_v4.v4);
+		cmd_v2_v4.common.block_list_size =
+			cpu_to_le32(data.block_list_size);
+		for (u8 i = 0; i < data.block_list_size; i++)
+			cmd_v2_v4.common.block_list_array[i] =
+				cpu_to_le32(data.block_list_array[i]);
+
+		selection_data = iwl_parse_tas_selection(data.tas_selection,
+							 data.table_revision);
+		cmd_v2_v4.v4.override_tas_iec = selection_data.override_tas_iec;
+		cmd_v2_v4.v4.enable_tas_iec = selection_data.enable_tas_iec;
+		cmd_v2_v4.v4.usa_tas_uhb_allowed =
+			selection_data.usa_tas_uhb_allowed;
+		if (selection_data.canada_tas_uhb_allowed)
+			cmd_v2_v4.v4.uhb_allowed_flags = TAS_UHB_ALLOWED_CANADA;
+	} else {
+		return;
+	}
+
+	ret = iwl_mld_send_cmd_pdu(mld, cmd_id, cmd_data, cmd_size);
 	if (ret)
 		IWL_DEBUG_RADIO(mld, "failed to send TAS_CONFIG (%d)\n", ret);
 }
