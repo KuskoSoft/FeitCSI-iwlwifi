@@ -52,7 +52,7 @@ enum iwl_regulatory_and_nvm_subcmd_ids {
 	MCC_ALLOWED_AP_TYPE_CMD = 0x5,
 
 	/**
-	 * @TX_POWER_LIMIT_OVERRIDE_CMD: no command data
+	 * @TX_POWER_LIMIT_OVERRIDE_CMD: &struct iwl_tx_power_override_cmd
 	 */
 	TX_POWER_LIMIT_OVERRIDE_CMD = 0x6,
 
@@ -764,5 +764,13 @@ struct iwl_mcc_allowed_ap_type_cmd {
 	u8 offset_map[UATS_TABLE_ROW_SIZE][UATS_TABLE_COL_SIZE];
 	__le16 reserved;
 } __packed; /* MCC_ALLOWED_AP_TYPE_CMD_API_S_VER_1 */
+
+/**
+ * struct iwl_tx_power_override_cmd - control tx power override.
+ * @reserved: reserved
+ */
+struct iwl_tx_power_override_cmd {
+	__le32 reserved;
+} __packed; /* REGULATORY_CHROME_20_MHZ_POWER_LIMIT_OVERRIDE_CMD_API_S_VER_1 */
 
 #endif /* __iwl_fw_api_nvm_reg_h__ */

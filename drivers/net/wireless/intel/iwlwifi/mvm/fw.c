@@ -1359,6 +1359,7 @@ static void iwl_mvm_tx_power_limit_cfg(struct iwl_mvm *mvm)
 {
 	u32 cmd_id = WIDE_ID(REGULATORY_AND_NVM_GROUP,
 			     TX_POWER_LIMIT_OVERRIDE_CMD);
+	struct iwl_tx_power_override_cmd cmd = {};
 	int val;
 	int ret;
 
@@ -1369,7 +1370,7 @@ static void iwl_mvm_tx_power_limit_cfg(struct iwl_mvm *mvm)
 	if (ret < 0 || !(val & DSM_MASK_ADJUST_TX_POWER))
 		return;
 
-	ret = iwl_mvm_send_cmd_pdu(mvm, cmd_id, 0, 0, NULL);
+	ret = iwl_mvm_send_cmd_pdu(mvm, cmd_id, 0, sizeof(cmd), &cmd);
 	if (ret < 0)
 		IWL_DEBUG_RADIO(mvm,
 				"Failed to send TX_POWER_LIMIT_OVERRIDE_CMD (%d)\n",
