@@ -1402,20 +1402,7 @@ int iwl_mvm_mac_start(struct ieee80211_hw *hw)
 	int ret;
 
 	mutex_lock(&mvm->mutex);
-
-	/* we are starting the mac not in error flow, and restart is enabled */
-	if (!test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status) &&
-	    iwlwifi_mod_params.fw_restart) {
-		/*
-		 * This will prevent mac80211 recovery flows to trigger during
-		 * init failures
-		 */
-		set_bit(IWL_MVM_STATUS_STARTING, &mvm->status);
-	}
-
 	ret = __iwl_mvm_mac_start(mvm);
-	clear_bit(IWL_MVM_STATUS_STARTING, &mvm->status);
-
 	mutex_unlock(&mvm->mutex);
 
 	iwl_mvm_mei_set_sw_rfkill_state(mvm);
