@@ -307,3 +307,27 @@ void iwl_mld_set_vif_associated(struct iwl_mld *mld,
 	 * todo: coex: coex_vif_change and reset ave_beacon_signal
 	 */
 }
+
+static void iwl_mld_get_fw_id_bss_bitmap_iter(void *_data, u8 *mac,
+					      struct ieee80211_vif *vif)
+{
+	u8 *fw_id_bitmap = _data;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION)
+		return;
+
+	*fw_id_bitmap |= BIT(mld_vif->fw_id);
+}
+
+u8 iwl_mld_get_fw_bss_vifs_ids(struct iwl_mld *mld)
+{
+	u8 fw_id_bitmap;
+
+	ieee80211_iterate_interfaces(mld->hw,
+				     IEEE80211_IFACE_SKIP_SDATA_NOT_IN_DRIVER,
+				     iwl_mld_get_fw_id_bss_bitmap_iter,
+				     &fw_id_bitmap);
+
+	return fw_id_bitmap;
+}

@@ -69,4 +69,6 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif);
 int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif);
 void iwl_mld_set_vif_associated(struct iwl_mld *mld,
 				struct ieee80211_vif *vif);
+u8 iwl_mld_get_fw_bss_vifs_ids(struct iwl_mld *mld);
+
 #endif /* __iwl_mld_iface_h__ */
