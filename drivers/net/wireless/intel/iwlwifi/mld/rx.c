@@ -310,7 +310,8 @@ static int iwl_mld_build_rx_skb(struct iwl_mld *mld, struct sk_buff *skb,
 /* returns true if a packet is a duplicate or invalid tid and
  * should be dropped. Updates AMSDU PN tracking info
  */
-static bool
+VISIBLE_IF_IWLWIFI_KUNIT
+bool
 iwl_mld_is_dup(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	       struct ieee80211_hdr *hdr,
 	       const struct iwl_rx_mpdu_desc *mpdu_desc,
@@ -375,6 +376,7 @@ iwl_mld_is_dup(struct iwl_mld *mld, struct ieee80211_sta *sta,
 
 	return false;
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_is_dup);
 
 static void iwl_mld_update_last_rx_timestamp(struct iwl_mld *mld, u8 baid)
 {

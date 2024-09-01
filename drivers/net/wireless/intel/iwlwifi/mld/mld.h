@@ -20,6 +20,7 @@
 #include "fw/api/mac.h"
 #include "fw/api/phy-ctxt.h"
 #include "fw/api/datapath.h"
+#include "fw/api/rx.h"
 #include "fw/dbg.h"
 
 #include "notif.h"
@@ -307,6 +308,12 @@ extern const struct ieee80211_ops iwl_mld_hw_ops;
 #if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)
 extern const struct iwl_hcmd_arr iwl_mld_groups[];
 extern const unsigned int global_iwl_mld_goups_size;
+
+bool
+iwl_mld_is_dup(struct iwl_mld *mld, struct ieee80211_sta *sta,
+	       struct ieee80211_hdr *hdr,
+	       const struct iwl_rx_mpdu_desc *mpdu_desc,
+	       struct ieee80211_rx_status *rx_status, int queue);
 
 void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 		       const struct iwl_cfg *cfg, const struct iwl_fw *fw,
