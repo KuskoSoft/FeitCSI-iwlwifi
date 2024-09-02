@@ -257,6 +257,10 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	int ret;
 	u8 fw_id;
 
+	/* We will fail to add it to the FW anyway */
+	if (iwl_mld_error_before_recovery(mld))
+		return -ENODEV;
+
 	/* We need to preserve the fw sta ids during a restart, since the fw
 	 * will recover SN/PN for them
 	 */
