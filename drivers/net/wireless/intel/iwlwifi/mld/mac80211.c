@@ -830,22 +830,6 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	}
 }
 
-#ifdef CONFIG_PM_SLEEP
-static
-int iwl_mld_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
-{
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
-}
-
-static
-int iwl_mld_resume(struct ieee80211_hw *hw)
-{
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
-}
-#endif /* CONFIG_PM_SLEEP */
-
 static
 int iwl_mld_mac80211_set_rts_threshold(struct ieee80211_hw *hw, u32 value)
 {
@@ -1384,6 +1368,48 @@ static void iwl_mld_set_wakeup(struct ieee80211_hw *hw, bool enabled)
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 
 	device_set_wakeup_enable(mld->trans->dev, enabled);
+}
+
+/* Returns 0 on success. 1 if failed to suspend with wowlan:
+ * If the circumstances didn't satisfy the conditions for suspension
+ * with wowlan, mac80211 would use the no_wowlan flow.
+ * If an error had occurred we update the trans status and state here
+ * and the result will be stopping the FW.
+ */
+static int
+iwl_mld_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
+
+	iwl_fw_runtime_suspend(&mld->fwrt);
+
+	ret = iwl_mld_wowlan_suspend(mld, wowlan);
+	if (ret) {
+		if (ret < 0) {
+			mld->trans->state = IWL_TRANS_NO_FW;
+			set_bit(STATUS_FW_ERROR, &mld->trans->status);
+		}
+		return 1;
+	}
+
+	if (iwl_mld_no_wowlan_suspend(mld))
+		return 1;
+
+	return 0;
+}
+
+static int iwl_mld_resume(struct ieee80211_hw *hw)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
+
+	ret = iwl_mld_wowlan_resume(mld);
+
+	if (!ret)
+		iwl_fw_runtime_resume(&mld->fwrt);
+
+	return ret;
 }
 
 const struct ieee80211_ops iwl_mld_hw_ops = {
