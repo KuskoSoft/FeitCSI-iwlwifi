@@ -626,6 +626,11 @@ enum iwl_vendor_auth_akm_mode {
 	IWL_VENDOR_AUTH_MAX,
 };
 
+enum iwl_vendor_link_type {
+	IWL_VENDOR_PRIMARY_LINK,
+	IWL_VENDOR_SECONDARY_LINK,
+};
+
 /**
  * enum iwl_mvm_vendor_attr - attributes used in vendor commands
  * @__IWL_MVM_VENDOR_ATTR_INVALID: attribute 0 is invalid
@@ -808,6 +813,8 @@ enum iwl_vendor_auth_akm_mode {
  * @IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE: chain b desense values
  * @IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD: SNR threshold for RSSI based
  *	DDR RFIM.
+ * @IWL_MVM_VENDOR_ATTR_LINK_TYPE: link type (u8) specified as per
+ *	&enum iwl_vendor_link_type
  *
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
@@ -931,6 +938,7 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE		= 0x7e,
 	IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE		= 0x7f,
 	IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD		= 0x80,
+	IWL_MVM_VENDOR_ATTR_LINK_TYPE				= 0x81,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,

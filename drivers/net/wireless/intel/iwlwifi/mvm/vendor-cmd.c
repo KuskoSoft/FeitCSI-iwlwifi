@@ -563,13 +563,30 @@ free:
 }
 
 static int
-iwl_vendor_cmd_fill_links_info(struct ieee80211_vif *vif, struct sk_buff *skb)
+iwl_mvm_fill_vendor_link_type(struct ieee80211_vif *vif, struct sk_buff *skb,
+			      unsigned int link_id)
+{
+	lockdep_assert_held(&ieee80211_vif_to_wdev(vif)->wiphy->mtx);
+
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION) {
+		if (link_id == iwl_mvm_get_primary_link(vif))
+			return nla_put_u8(skb, IWL_MVM_VENDOR_ATTR_LINK_TYPE,
+					  IWL_VENDOR_PRIMARY_LINK);
+		return nla_put_u8(skb, IWL_MVM_VENDOR_ATTR_LINK_TYPE,
+				  IWL_VENDOR_SECONDARY_LINK);
+	}
+	return 0;
+}
+
+static int
+iwl_vendor_cmd_fill_links_info(struct wiphy *wiphy, struct ieee80211_vif *vif,
+			       struct sk_buff *skb)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	unsigned int link_id;
 	int ret = 0;
 
-	rcu_read_lock();
+	lockdep_assert_held(&wiphy->mtx);
 
 	for_each_mvm_vif_valid_link(mvmvif, link_id) {
 		const struct cfg80211_chan_def *chandef;
@@ -577,7 +594,7 @@ iwl_vendor_cmd_fill_links_info(struct ieee80211_vif *vif, struct sk_buff *skb)
 		u8 channel;
 		u8 phy_band;
 
-		link_conf = rcu_dereference(vif->link_conf[link_id]);
+		link_conf = wiphy_dereference(wiphy, vif->link_conf[link_id]);
 		if (WARN_ON_ONCE(!link_conf))
 			continue;
 
@@ -599,22 +616,22 @@ iwl_vendor_cmd_fill_links_info(struct ieee80211_vif *vif, struct sk_buff *skb)
 				chandef->center_freq1) ||
 		    (chandef->center_freq2 &&
 		     nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_CENTER_FREQ2,
-				 chandef->center_freq2))) {
+				 chandef->center_freq2)) ||
+		    iwl_mvm_fill_vendor_link_type(vif, skb, link_id)) {
 			ret = -ENOBUFS;
 			break;
 		}
 	}
 
-	rcu_read_unlock();
 	return ret;
 }
 
 /*
  * Calculate the response size based on the maximum number of active links.
- * Each link requires 47 bytes, plus 4 bytes for the attribute header and an
+ * Each link requires 52 bytes, plus 4 bytes for the attribute header and an
  * additional 20 bytes for potential future use.
  */
-#define links_info_response_size(max_active_liks) ((max_active_liks) * 47 +\
+#define links_info_response_size(max_active_links) ((max_active_links) * 52 +\
 						   4 + 20)
 
 static int iwl_vendor_get_links_info(struct wiphy *wiphy,
@@ -644,7 +661,7 @@ static int iwl_vendor_get_links_info(struct wiphy *wiphy,
 		goto err;
 	}
 
-	ret = iwl_vendor_cmd_fill_links_info(vif, skb);
+	ret = iwl_vendor_cmd_fill_links_info(wiphy, vif, skb);
 	if (ret)
 		goto err;
 
