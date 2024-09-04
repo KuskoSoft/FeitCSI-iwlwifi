@@ -269,6 +269,8 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 		ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
 		if (ret)
 			return ret;
+	} else {
+		fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 	}
 
 	ret = iwl_mld_add_modify_sta_cmd(mld, link_sta);
