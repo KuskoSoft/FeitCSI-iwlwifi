@@ -320,8 +320,9 @@ int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
 
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
 		int ret = iwl_mld_add_modify_sta_cmd(mld, link_sta);
-			if (ret)
-				return ret;
+
+		if (ret)
+			return ret;
 	}
 	return 0;
 }
