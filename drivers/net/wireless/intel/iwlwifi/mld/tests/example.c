@@ -28,7 +28,7 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	/* Perform tests on the mld instance */
 	KUNIT_EXPECT_PTR_EQ(test, mld->dev, mld->trans->dev);
 
-	vif = kunit_add_vif(false, NL80211_IFTYPE_STATION);
+	vif = iwlmld_kunit_add_vif(false, NL80211_IFTYPE_STATION);
 
 	mld_vif = iwl_mld_vif_from_mac80211(vif);
 	KUNIT_EXPECT_PTR_EQ(test, mld_vif->mld, mld);
@@ -36,14 +36,14 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 			    &mld_vif->deflink);
 	KUNIT_EXPECT_FALSE(test, ieee80211_vif_is_mld(vif));
 
-	vif = kunit_add_vif(true, NL80211_IFTYPE_STATION);
+	vif = iwlmld_kunit_add_vif(true, NL80211_IFTYPE_STATION);
 	mld_vif = iwl_mld_vif_from_mac80211(vif);
 
 	KUNIT_EXPECT_NULL(test, rcu_access_pointer(vif->link_conf[0]));
 	/* the vif is not considered as mld before a link is added */
 	KUNIT_EXPECT_FALSE(test, ieee80211_vif_is_mld(vif));
 
-	link = kunit_add_link(vif, 1);
+	link = iwlmld_kunit_add_link(vif, 1);
 
 	KUNIT_EXPECT_PTR_EQ(test, link->vif, vif);
 	rcu_read_lock();
@@ -51,7 +51,7 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	rcu_read_unlock();
 	KUNIT_EXPECT_TRUE(test, ieee80211_vif_is_mld(vif));
 
-	ctx = kunit_add_chanctx(NL80211_BAND_2GHZ);
+	ctx = iwlmld_kunit_add_chanctx(NL80211_BAND_2GHZ);
 
 	phy = iwl_mld_phy_from_mac80211(ctx);
 	KUNIT_ASSERT_EQ(test, ctx->def.chan->band, NL80211_BAND_2GHZ);
@@ -68,7 +68,7 @@ static struct kunit_case iwl_mld_kunit_test_cases[] = {
 static struct kunit_suite iwl_mld_kunit_test_suite = {
 	.name = "iwl_mld_kunit_test_suite",
 	.test_cases = iwl_mld_kunit_test_cases,
-	.init = kunit_test_init,
+	.init = iwlmld_kunit_test_init,
 };
 
 kunit_test_suite(iwl_mld_kunit_test_suite);

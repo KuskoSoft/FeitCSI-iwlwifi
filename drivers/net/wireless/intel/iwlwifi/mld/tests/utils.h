@@ -11,14 +11,14 @@
 
 struct iwl_mld;
 
-int kunit_test_init(struct kunit *test);
+int iwlmld_kunit_test_init(struct kunit *test);
 
 enum nl80211_iftype;
 
-struct ieee80211_vif *kunit_add_vif(bool mlo, enum nl80211_iftype type);
+struct ieee80211_vif *iwlmld_kunit_add_vif(bool mlo, enum nl80211_iftype type);
 
-struct ieee80211_bss_conf *kunit_add_link(struct ieee80211_vif *vif,
-					  int link_id);
+struct ieee80211_bss_conf *
+iwlmld_kunit_add_link(struct ieee80211_vif *vif, int link_id);
 
 #define CHANNEL(_name, _band, _freq)				\
 static struct ieee80211_channel _name = {			\
@@ -47,10 +47,10 @@ CHANDEF(chandef_6ghz, chan_6ghz, 6115, NL80211_CHAN_WIDTH_160);
 //struct cfg80211_chan_def;
 
 struct ieee80211_chanctx_conf *
-kunit_add_chanctx_from_def(struct cfg80211_chan_def *def);
+iwlmld_kunit_add_chanctx_from_def(struct cfg80211_chan_def *def);
 
 static inline struct ieee80211_chanctx_conf *
-kunit_add_chanctx(enum nl80211_band band)
+iwlmld_kunit_add_chanctx(enum nl80211_band band)
 {
 	struct kunit *test = kunit_get_current_test();
 	struct cfg80211_chan_def *chandef;
@@ -69,7 +69,7 @@ kunit_add_chanctx(enum nl80211_band band)
 		KUNIT_FAIL(test, "Wrong band %d\n", band);
 	}
 
-	return kunit_add_chanctx_from_def(chandef);
+	return iwlmld_kunit_add_chanctx_from_def(chandef);
 }
 
 #endif /* __iwl_mld_kunit_utils_h__ */

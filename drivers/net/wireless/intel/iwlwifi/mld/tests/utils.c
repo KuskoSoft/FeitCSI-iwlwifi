@@ -27,7 +27,7 @@ do {									\
 #define KUNIT_ALLOC_AND_ASSERT(test, ptr)				\
 	KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, sizeof(*(ptr)))
 
-int kunit_test_init(struct kunit *test)
+int iwlmld_kunit_test_init(struct kunit *test)
 {
 	struct iwl_mld *mld;
 	struct iwl_trans *trans;
@@ -76,9 +76,9 @@ int kunit_test_init(struct kunit *test)
 
 IWL_MLD_ALLOC_FN(link, bss_conf)
 
-static void kunit_init_link(struct ieee80211_vif *vif,
-			    struct ieee80211_bss_conf *link,
-			    struct iwl_mld_link *mld_link, int link_id)
+static void iwlmld_kunit_init_link(struct ieee80211_vif *vif,
+				   struct ieee80211_bss_conf *link,
+				   struct iwl_mld_link *mld_link, int link_id)
 {
 	struct kunit *test = kunit_get_current_test();
 	struct iwl_mld *mld = test->priv;
@@ -102,7 +102,7 @@ static void kunit_init_link(struct ieee80211_vif *vif,
 IWL_MLD_ALLOC_FN(vif, vif)
 
 /* Helper function to add and initialize a VIF for KUnit tests */
-struct ieee80211_vif *kunit_add_vif(bool mlo, enum nl80211_iftype type)
+struct ieee80211_vif *iwlmld_kunit_add_vif(bool mlo, enum nl80211_iftype type)
 {
 	struct kunit *test = kunit_get_current_test();
 	struct iwl_mld *mld = test->priv;
@@ -128,14 +128,14 @@ struct ieee80211_vif *kunit_add_vif(bool mlo, enum nl80211_iftype type)
 		return vif;
 
 	/* Initialize the default link */
-	kunit_init_link(vif, &vif->bss_conf, &mld_vif->deflink, 0);
+	iwlmld_kunit_init_link(vif, &vif->bss_conf, &mld_vif->deflink, 0);
 
 	return vif;
 }
 
 /* Use only for MLO vif */
-struct ieee80211_bss_conf *kunit_add_link(struct ieee80211_vif *vif,
-					  int link_id)
+struct ieee80211_bss_conf *
+iwlmld_kunit_add_link(struct ieee80211_vif *vif, int link_id)
 {
 	struct kunit *test = kunit_get_current_test();
 	struct ieee80211_bss_conf *link;
@@ -144,14 +144,14 @@ struct ieee80211_bss_conf *kunit_add_link(struct ieee80211_vif *vif,
 	KUNIT_ALLOC_AND_ASSERT(test, link);
 	KUNIT_ALLOC_AND_ASSERT(test, mld_link);
 
-	kunit_init_link(vif, link, mld_link, link_id);
+	iwlmld_kunit_init_link(vif, link, mld_link, link_id);
 	vif->valid_links |= BIT(link_id);
 
 	return link;
 }
 
 struct ieee80211_chanctx_conf *
-kunit_add_chanctx_from_def(struct cfg80211_chan_def *def)
+iwlmld_kunit_add_chanctx_from_def(struct cfg80211_chan_def *def)
 {
 	struct kunit *test = kunit_get_current_test();
 	struct iwl_mld *mld = test->priv;
