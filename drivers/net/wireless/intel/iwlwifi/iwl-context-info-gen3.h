@@ -56,6 +56,7 @@ enum iwl_prph_scratch_mtr_format {
  * @IWL_PRPH_SCRATCH_RB_SIZE_EXT_8K: 8kB RB size
  * @IWL_PRPH_SCRATCH_RB_SIZE_EXT_12K: 12kB RB size
  * @IWL_PRPH_SCRATCH_RB_SIZE_EXT_16K: 16kB RB size
+ * @IWL_PRPH_SCRATCH_SILENT_MODE: put the STEP in silent mode
  * @IWL_PRPH_SCRATCH_SCU_FORCE_ACTIVE: Indicate fw to set SCU_FORCE_ACTIVE
  *	upon reset.
  */
@@ -73,6 +74,7 @@ enum iwl_prph_scratch_flags {
 	IWL_PRPH_SCRATCH_RB_SIZE_EXT_8K		= 8 << 20,
 	IWL_PRPH_SCRATCH_RB_SIZE_EXT_12K	= 9 << 20,
 	IWL_PRPH_SCRATCH_RB_SIZE_EXT_16K	= 10 << 20,
+	IWL_PRPH_SCRATCH_SILENT_MODE		= BIT(28),
 	IWL_PRPH_SCRATCH_SCU_FORCE_ACTIVE	= BIT(29),
 };
 

@@ -130,6 +130,11 @@ int iwl_pcie_ctxt_info_gen3_init(struct iwl_trans *trans,
 		break;
 	}
 
+#if IS_ENABLED(CPTCFG_IWLXVT)
+	if (trans->silent_mode)
+		control_flags |= IWL_PRPH_SCRATCH_SILENT_MODE;
+#endif
+
 	/* Allocate prph scratch */
 	prph_scratch = dma_alloc_coherent(trans->dev, sizeof(*prph_scratch),
 					  &trans_pcie->prph_scratch_dma_addr,

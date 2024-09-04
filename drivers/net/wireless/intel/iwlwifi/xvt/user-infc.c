@@ -595,6 +595,10 @@ static int iwl_xvt_start_op_mode(struct iwl_xvt *xvt)
 	/* when fw image is unified, only regular ucode is loaded. */
 	if (iwl_xvt_is_unified_fw(xvt))
 		ucode_type = IWL_UCODE_REGULAR;
+
+	if (xvt->sw_stack_cfg.load_mask == IWL_XVT_LOAD_MASK_INIT)
+		xvt->trans->silent_mode = true;
+
 	err = iwl_xvt_run_fw(xvt, ucode_type);
 	if (err)
 		return err;
@@ -648,6 +652,8 @@ static int _iwl_xvt_modulated_tx_infinite_stop(struct tx_meta_data *xvt_tx)
 void iwl_xvt_stop_op_mode(struct iwl_xvt *xvt)
 {
 	int i, r;
+
+	xvt->trans->silent_mode = false;
 
 	if (xvt->state == IWL_XVT_STATE_UNINITIALIZED)
 		return;

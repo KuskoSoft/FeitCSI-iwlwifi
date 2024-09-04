@@ -970,6 +970,12 @@ struct iwl_trans {
 	u8 pcie_link_speed;
 
 	struct iwl_dma_ptr invalid_tx_cmd;
+#if IS_ENABLED(CPTCFG_IWLXVT)
+	/**
+	 * @silent_mode: used for STEP debug in xvt mode
+	 */
+	bool silent_mode;
+#endif
 
 	/* pointer to trans specific struct */
 	/*Ensure that this pointer will always be aligned to sizeof pointer */
