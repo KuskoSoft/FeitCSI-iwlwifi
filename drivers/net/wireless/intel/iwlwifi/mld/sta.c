@@ -12,9 +12,8 @@
 #include "fw/api/mac.h"
 #include "fw/api/rx.h"
 
-static int
-iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
-				struct ieee80211_link_sta *link_sta)
+int iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
+				    struct ieee80211_link_sta *link_sta)
 {
 	/* This is not meant to be called with a NULL pointer */
 	if (WARN_ON(!link_sta))
