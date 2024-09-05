@@ -494,3 +494,41 @@ void iwl_mld_send_tlc_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	if (ret)
 		IWL_ERR(mld, "Failed to send TLC cmd (%d)\n", ret);
 }
+
+void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
+			      struct ieee80211_link_sta *link_sta)
+{
+	const struct ieee80211_sta_ht_cap *ht_cap = &link_sta->ht_cap;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/* For WFA testbed station, we need be able to create aggregation
+	 * sessions without requesting A-MSDU inside. Setting A-MSDU size of 0
+	 * will then make the firmware requests such sessions. This is OK
+	 * because we never allow A-MSDU outside A-MPDU in the first place.
+	 */
+	if (mld->trans->dbg_cfg.amsdu_in_ampdu_disabled ||
+	    mld->trans->dbg_cfg.HW_CSUM_DISABLE) {
+		link_sta->agg.max_rc_amsdu_len = 0;
+		goto recalc;
+	}
+#endif
+
+	link_sta->agg.max_rc_amsdu_len = link_sta->agg.max_amsdu_len;
+
+	/* For EHT, HE and VHT - we can use the value as it was calculated by
+	 * mac80211.
+	 */
+	if (link_sta->eht_cap.has_eht || link_sta->he_cap.has_he ||
+	    link_sta->vht_cap.vht_supported)
+		goto recalc;
+
+	/* But for HT, mac80211 doesn't enforce to 4095, so force it here */
+	if (ht_cap->ht_supported && ht_cap->cap & IEEE80211_HT_CAP_MAX_AMSDU)
+		/* Agg is offloaded, so we need to assume that agg are enabled
+		 * and max mpdu in ampdu is 4095 (spec 802.11-2016 9.3.2.1)
+		 */
+		link_sta->agg.max_rc_amsdu_len = IEEE80211_MAX_MPDU_LEN_HT_BA;
+
+recalc:
+	ieee80211_sta_recalc_aggregates(link_sta->sta);
+}
