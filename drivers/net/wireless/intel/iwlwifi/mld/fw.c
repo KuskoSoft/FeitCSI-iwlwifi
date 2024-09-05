@@ -15,6 +15,7 @@
 #include "power.h"
 #include "mcc.h"
 #include "led.h"
+#include "coex.h"
 
 static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
 {
@@ -361,6 +362,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+	ret = iwl_mld_send_bt_init_conf(mld);
+	if (ret)
+		return ret;
+
 	ret = iwl_set_soc_latency(&mld->fwrt);
 	if (ret)
 		return ret;
@@ -394,7 +399,6 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	 * - thermal
 	 * - system_features_control
 	 * - regulatory cmds (need also to read bios tables on init)
-	 * - BT init
 	 * - recovery cmd
 	 */
 
