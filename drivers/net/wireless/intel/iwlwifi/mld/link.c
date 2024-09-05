@@ -146,7 +146,7 @@ static void iwl_mld_fill_rates(struct iwl_mld *mld,
 	*ofdm_rates = cpu_to_le32((u32)ofdm);
 }
 
-static void iwl_mld_fill_pretection_flags(struct iwl_mld *mld,
+static void iwl_mld_fill_protection_flags(struct iwl_mld *mld,
 					  struct ieee80211_bss_conf *link,
 					  __le32 *protection_flags)
 {
@@ -173,10 +173,6 @@ static void iwl_mld_fill_pretection_flags(struct iwl_mld *mld,
 		/* Protect when channel wider than 20MHz */
 		if (link->chanreq.oper.width > NL80211_CHAN_WIDTH_20)
 			*protection_flags |= cpu_to_le32(ht_flag);
-		break;
-	default:
-		IWL_ERR(mld, "Illegal protection mode %d\n",
-			protection_mode);
 		break;
 	}
 }
@@ -286,7 +282,7 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 	cmd.cck_short_preamble = cpu_to_le32(link->use_short_preamble);
 	cmd.short_slot = cpu_to_le32(link->use_short_slot);
 
-	iwl_mld_fill_pretection_flags(mld, link, &cmd.protection_flags);
+	iwl_mld_fill_protection_flags(mld, link, &cmd.protection_flags);
 
 	iwl_mld_fill_qos_params(link, cmd.ac, &cmd.qos_flags);
 
