@@ -7,6 +7,7 @@
 
 #include "mld.h"
 #include "sta.h"
+#include "rx.h"
 #include "fw/dbg.h"
 #include "fw/api/rx.h"
 #include "fw/api/rs.h"

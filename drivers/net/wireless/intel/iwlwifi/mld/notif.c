@@ -18,6 +18,7 @@
 #include "mcc.h"
 #include "link.h"
 #include "tx.h"
+#include "rx.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler

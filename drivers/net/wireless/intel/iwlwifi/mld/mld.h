@@ -227,17 +227,6 @@ int iwl_mld_load_fw(struct iwl_mld *mld);
 void iwl_mld_stop_fw(struct iwl_mld *mld);
 int iwl_mld_start_fw(struct iwl_mld *mld);
 
-/* Rx */
-void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
-		     struct iwl_rx_cmd_buffer *rxb, int queue);
-void iwl_mld_handle_frame_release_notif(struct iwl_mld *mld,
-					struct napi_struct *napi,
-					struct iwl_rx_packet *pkt, int queue);
-void iwl_mld_handle_bar_frame_release_notif(struct iwl_mld *mld,
-					    struct napi_struct *napi,
-					    struct iwl_rx_packet *pkt,
-					    int queue);
-
 static inline u8 iwl_mld_get_valid_tx_ant(const struct iwl_mld *mld)
 {
 	u8 tx_ant = mld->fw->valid_tx_ant;
