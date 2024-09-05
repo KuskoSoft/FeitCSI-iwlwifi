@@ -297,7 +297,7 @@ static int iwl_mld_rm_sta_from_fw(struct iwl_mld *mld, u8 fw_sta_id)
 }
 
 static void
-iwl_mvm_remove_link_sta(struct iwl_mld *mld,
+iwl_mld_remove_link_sta(struct iwl_mld *mld,
 			struct ieee80211_link_sta *link_sta)
 {
 	int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
@@ -459,7 +459,7 @@ void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 
 	/* Remove all link_sta's*/
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id)
-		iwl_mvm_remove_link_sta(mld, link_sta);
+		iwl_mld_remove_link_sta(mld, link_sta);
 
 	iwl_mld_destroy_sta(sta);
 }
