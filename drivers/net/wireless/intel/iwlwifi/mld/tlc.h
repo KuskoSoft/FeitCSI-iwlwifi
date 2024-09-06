@@ -7,11 +7,12 @@
 
 #include "mld.h"
 
-void iwl_mld_send_tlc_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
-			  struct ieee80211_link_sta *link_sta,
-			  enum nl80211_band band);
+void iwl_mld_config_tlc_link(struct iwl_mld *mld,
+			     struct ieee80211_vif *vif,
+			     struct ieee80211_bss_conf *link_conf,
+			     struct ieee80211_link_sta *link_sta);
 
-void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
-			      struct ieee80211_link_sta *link_sta);
+void iwl_mld_config_tlc(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			struct ieee80211_sta *sta);
 
 #endif /* __iwl_mld_tlc_h__ */

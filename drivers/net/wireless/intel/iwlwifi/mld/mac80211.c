@@ -13,6 +13,7 @@
 #include "sta.h"
 #include "scan.h"
 #include "d3.h"
+#include "tlc.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #ifdef CONFIG_PM_SLEEP
@@ -1131,13 +1132,30 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
 			mld_vif->ap_sta = sta;
 
+		/* Initialize TLC here already - this really tells
+		 * the firmware only what the supported legacy rates are
+		 * (may be) since it's initialized already from what the
+		 * AP advertised in the beacon/probe response. This will
+		 * allow the firmware to send auth/assoc frames with one
+		 * of the supported rates already, rather than having to
+		 * use a mandatory rate.
+		 * If we're the AP, we'll just assume mandatory rates at
+		 * this point, but we know nothing about the STA anyway.
+		 */
+		iwl_mld_config_tlc(mld, vif, sta);
+
 		return ret;
 	} else if (old_state == IEEE80211_STA_NONE &&
 		   new_state == IEEE80211_STA_AUTH) {
 		return 0;
 	} else if (old_state == IEEE80211_STA_AUTH &&
 		   new_state == IEEE80211_STA_ASSOC) {
-		return iwl_mld_update_all_link_stations(mld, sta);
+		ret = iwl_mld_update_all_link_stations(mld, sta);
+
+		/* Now the link_sta's capabilities are set, update the FW */
+		iwl_mld_config_tlc(mld, vif, sta);
+
+		return ret;
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTHORIZED) {
 		mld_vif->authorized = true;
@@ -1152,6 +1170,9 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		 */
 		if (!sta->mfp)
 			ret = iwl_mld_update_all_link_stations(mld, sta);
+
+		/* We can use wide bandwidth now, not only 20 MHz */
+		iwl_mld_config_tlc(mld, vif, sta);
 
 		return ret;
 	} else {
@@ -1171,6 +1192,10 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 	if (old_state == IEEE80211_STA_AUTHORIZED &&
 	    new_state == IEEE80211_STA_ASSOC) {
 		mld_vif->authorized = false;
+		/* once we move into assoc state, need to update the FW to
+		 * stop using wide bandwidth
+		 */
+		iwl_mld_config_tlc(mld, vif, sta);
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTH) {
 		/* nothing */
@@ -1298,6 +1323,26 @@ static void iwl_mld_mac80211_sync_rx_queues(struct ieee80211_hw *hw)
 	iwl_mld_sync_rx_queues(mld, IWL_MLD_RXQ_EMPTY, NULL, 0);
 }
 
+static void iwl_mld_sta_rc_update(struct ieee80211_hw *hw,
+				  struct ieee80211_vif *vif,
+				  struct ieee80211_link_sta *link_sta,
+				  u32 changed)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	if (changed & (IEEE80211_RC_BW_CHANGED |
+		       IEEE80211_RC_SUPP_RATES_CHANGED |
+		       IEEE80211_RC_NSS_CHANGED)) {
+		struct ieee80211_bss_conf *link =
+			link_conf_dereference_check(vif, link_sta->link_id);
+
+		if (WARN_ON(!link))
+			return;
+
+		iwl_mld_config_tlc_link(mld, vif, link, link_sta);
+	}
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1329,6 +1374,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.flush_sta = iwl_mld_mac80211_flush_sta,
 	.ampdu_action = iwl_mld_mac80211_ampdu_action,
 	.sync_rx_queues = iwl_mld_mac80211_sync_rx_queues,
+	.link_sta_rc_update = iwl_mld_sta_rc_update,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,

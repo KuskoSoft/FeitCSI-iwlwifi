@@ -3,6 +3,8 @@
  * Copyright (C) 2024 Intel Corporation
  */
 
+#include <net/mac80211.h>
+
 #include "tlc.h"
 #include "hcmd.h"
 #include "sta.h"
@@ -454,9 +456,10 @@ iwl_mld_fill_supp_rates(struct iwl_mld *mld, struct ieee80211_vif *vif,
 #endif
 }
 
-void iwl_mld_send_tlc_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
-			  struct ieee80211_link_sta *link_sta,
-			  enum nl80211_band band)
+static void iwl_mld_send_tlc_cmd(struct iwl_mld *mld,
+				 struct ieee80211_vif *vif,
+				 struct ieee80211_link_sta *link_sta,
+				 enum nl80211_band band)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
 	struct ieee80211_supported_band *sband = mld->hw->wiphy->bands[band];
@@ -495,8 +498,8 @@ void iwl_mld_send_tlc_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		IWL_ERR(mld, "Failed to send TLC cmd (%d)\n", ret);
 }
 
-void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
-			      struct ieee80211_link_sta *link_sta)
+static void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
+				     struct ieee80211_link_sta *link_sta)
 {
 	const struct ieee80211_sta_ht_cap *ht_cap = &link_sta->ht_cap;
 
@@ -531,4 +534,42 @@ void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
 
 recalc:
 	ieee80211_sta_recalc_aggregates(link_sta->sta);
+}
+
+void iwl_mld_config_tlc_link(struct iwl_mld *mld,
+			     struct ieee80211_vif *vif,
+			     struct ieee80211_bss_conf *link_conf,
+			     struct ieee80211_link_sta *link_sta)
+{
+	enum nl80211_band band;
+
+	if (WARN_ON_ONCE(!link_conf->chanreq.oper.chan))
+		return;
+
+	band = link_conf->chanreq.oper.chan->band;
+
+	iwl_mld_recalc_amsdu_len(mld, link_sta);
+
+	iwl_mld_send_tlc_cmd(mld, vif, link_sta, band);
+
+	/* TODO: apply debug overrides */
+}
+
+void iwl_mld_config_tlc(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			struct ieee80211_sta *sta)
+{
+	struct ieee80211_bss_conf *link;
+	int link_id;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	for_each_vif_active_link(vif, link, link_id) {
+		struct ieee80211_link_sta *link_sta =
+			link_sta_dereference_check(sta, link_id);
+
+		if (!link || !link_sta)
+			continue;
+
+		iwl_mld_config_tlc_link(mld, vif, link, link_sta);
+	}
 }
