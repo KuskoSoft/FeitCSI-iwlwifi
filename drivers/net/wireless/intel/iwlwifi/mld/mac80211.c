@@ -18,6 +18,7 @@
 #include "tlc.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
+#include "fw/api/filter.h"
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
 #endif /* CONFIG_PM_SLEEP */
@@ -631,6 +632,94 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 	iwl_mld_rm_vif(mld, vif);
 }
 
+struct iwl_mld_mc_iter_data {
+	struct iwl_mld *mld;
+	int port_id;
+};
+
+static void iwl_mld_mc_iface_iterator(void *data, u8 *mac,
+				      struct ieee80211_vif *vif)
+{
+	struct iwl_mld_mc_iter_data *mc_data = data;
+	struct iwl_mld *mld = mc_data->mld;
+	struct iwl_mcast_filter_cmd *cmd = mld->mcast_filter_cmd;
+	struct iwl_host_cmd hcmd = {
+		.id = MCAST_FILTER_CMD,
+		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
+	};
+	int ret, len;
+
+	/* If we don't have free ports, mcast frames will be dropped */
+	if (WARN_ON_ONCE(mc_data->port_id >= MAX_PORT_ID_NUM))
+		return;
+
+	if (vif->type != NL80211_IFTYPE_STATION || !vif->cfg.assoc)
+		return;
+
+	cmd->port_id = mc_data->port_id++;
+	ether_addr_copy(cmd->bssid, vif->bss_conf.bssid);
+	len = roundup(sizeof(*cmd) + cmd->count * ETH_ALEN, 4);
+
+	hcmd.len[0] = len;
+	hcmd.data[0] = cmd;
+
+	ret = iwl_mld_send_cmd(mld, &hcmd);
+	if (ret)
+		IWL_ERR(mld, "mcast filter cmd error. ret=%d\n", ret);
+}
+
+static void iwl_mld_recalc_multicast_filter(struct iwl_mld *mld)
+{
+	struct iwl_mld_mc_iter_data iter_data = {
+		.mld = mld,
+	};
+
+	if (WARN_ON_ONCE(!mld->mcast_filter_cmd))
+		return;
+
+	ieee80211_iterate_active_interfaces(mld->hw,
+					    IEEE80211_IFACE_ITER_NORMAL,
+					    iwl_mld_mc_iface_iterator,
+					    &iter_data);
+}
+
+static u64
+iwl_mld_mac80211_prepare_multicast(struct ieee80211_hw *hw,
+				   struct netdev_hw_addr_list *mc_list)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mcast_filter_cmd *cmd;
+	struct netdev_hw_addr *addr;
+	int addr_count = netdev_hw_addr_list_count(mc_list);
+	bool pass_all = addr_count > MAX_MCAST_FILTERING_ADDRESSES;
+	int len;
+
+	if (pass_all)
+		addr_count = 0;
+
+	/* len must be a multiple of 4 */
+	len = roundup(sizeof(*cmd) + addr_count * ETH_ALEN, 4);
+	cmd = kzalloc(len, GFP_ATOMIC);
+	if (!cmd)
+		return 0;
+
+	if (pass_all) {
+		cmd->pass_all = 1;
+		goto out;
+	}
+
+	netdev_hw_addr_list_for_each(addr, mc_list) {
+		IWL_DEBUG_MAC80211(mld, "mcast addr (%d): %pM\n",
+				   cmd->count, addr->addr);
+		ether_addr_copy(&cmd->addr_list[cmd->count * ETH_ALEN],
+				addr->addr);
+		cmd->count++;
+	}
+
+out:
+	return (u64)(unsigned long)cmd;
+}
+
 static
 void iwl_mld_mac80211_configure_filter(struct ieee80211_hw *hw,
 				       unsigned int changed_flags,
@@ -638,12 +727,25 @@ void iwl_mld_mac80211_configure_filter(struct ieee80211_hw *hw,
 				       u64 multicast)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mcast_filter_cmd *cmd = (void *)(unsigned long)multicast;
 
-	/* TODO: for now just log the function is not implemented
-	 * and set total_flags = 0 to avoid mac80211 warning
-	 */
-	IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+	/* Replace previous configuration */
+	kfree(mld->mcast_filter_cmd);
+	mld->mcast_filter_cmd = cmd;
 
+	if (!cmd)
+		goto out;
+
+	if (changed_flags & FIF_ALLMULTI)
+		cmd->pass_all = !!(*total_flags & FIF_ALLMULTI);
+
+	if (cmd->pass_all)
+		cmd->count = 0;
+
+	/* TODO: vendor command active_rx_filter (task=vendor_cmds) */
+
+	iwl_mld_recalc_multicast_filter(mld);
+out:
 	*total_flags = 0;
 }
 
@@ -1443,6 +1545,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.add_interface = iwl_mld_mac80211_add_interface,
 	.remove_interface = iwl_mld_mac80211_remove_interface,
 	.conf_tx = iwl_mld_mac80211_conf_tx,
+	.prepare_multicast = iwl_mld_mac80211_prepare_multicast,
 	.configure_filter = iwl_mld_mac80211_configure_filter,
 	.reconfig_complete = iwl_mld_mac80211_reconfig_complete,
 	.wake_tx_queue = iwl_mld_mac80211_wake_tx_queue,

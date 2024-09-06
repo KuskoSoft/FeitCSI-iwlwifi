@@ -159,6 +159,7 @@ static const struct iwl_hcmd_names iwl_mld_long_names[] = {
 	HCMD_NAME(POWER_TABLE_CMD),
 	HCMD_NAME(TX_ANT_CONFIGURATION_CMD),
 	HCMD_NAME(RSS_CONFIG_CMD),
+	HCMD_NAME(MCAST_FILTER_CMD),
 	HCMD_NAME(REPLY_BEACON_FILTERING_CMD),
 	HCMD_NAME(PROT_OFFLOAD_CONFIG_CMD),
 	HCMD_NAME(WOWLAN_PATTERNS),
@@ -361,6 +362,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	kfree(mld->nvm_data);
 	kfree(mld->scan.cmd);
 	kfree(mld->error_recovery_buf);
+	kfree(mld->mcast_filter_cmd);
 
 	ieee80211_free_hw(mld->hw);
 }
