@@ -830,7 +830,7 @@ static bool iwl_mvm_reorder(struct iwl_mvm *mvm,
 	if (!buffer->num_stored && ieee80211_sn_less(sn, nssn)) {
 		if (!amsdu || last_subframe)
 			buffer->head_sn = nssn;
-		/* No need to update AMSDU last SN - we are moving the head */
+
 		spin_unlock_bh(&buffer->lock);
 		return false;
 	}
@@ -847,7 +847,6 @@ static bool iwl_mvm_reorder(struct iwl_mvm *mvm,
 		if (!amsdu || last_subframe)
 			buffer->head_sn = ieee80211_sn_inc(buffer->head_sn);
 
-		/* No need to update AMSDU last SN - we are moving the head */
 		spin_unlock_bh(&buffer->lock);
 		return false;
 	}
@@ -856,9 +855,6 @@ static bool iwl_mvm_reorder(struct iwl_mvm *mvm,
 	index = sn % baid_data->buf_size;
 	__skb_queue_tail(&entries[index].frames, skb);
 	buffer->num_stored++;
-
-	if (amsdu)
-		buffer->last_amsdu = sn;
 
 	/*
 	 * We cannot trust NSSN for AMSDU sub-frames that are not the last.
