@@ -1645,9 +1645,12 @@ static inline bool iwl_mvm_bt_is_rrc_supported(struct iwl_mvm *mvm)
 
 static inline bool iwl_mvm_is_csum_supported(struct iwl_mvm *mvm)
 {
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mvm->trans->dbg_cfg.MVM_HW_CSUM_DISABLE)
+		return false;
+#endif
 	return fw_has_capa(&mvm->fw->ucode_capa,
-			   IWL_UCODE_TLV_CAPA_CSUM_SUPPORT) &&
-		!IWL_MVM_HW_CSUM_DISABLE;
+			   IWL_UCODE_TLV_CAPA_CSUM_SUPPORT);
 }
 
 static inline bool iwl_mvm_is_mplut_supported(struct iwl_mvm *mvm)
