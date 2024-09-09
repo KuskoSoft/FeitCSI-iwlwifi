@@ -10,6 +10,7 @@
 #include "sta.h"
 
 #include "fw/api/rs.h"
+#include "fw/api/context.h"
 
 static u8 iwl_mld_fw_bw_from_sta_bw(const struct ieee80211_link_sta *link_sta)
 {
@@ -572,4 +573,148 @@ void iwl_mld_config_tlc(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 		iwl_mld_config_tlc_link(mld, vif, link, link_sta);
 	}
+}
+
+static u16
+iwl_mld_get_amsdu_size_of_tid(struct iwl_mld *mld,
+			      struct ieee80211_link_sta *link_sta,
+			      unsigned int tid)
+{
+	struct ieee80211_sta *sta = link_sta->sta;
+	struct ieee80211_vif *vif = iwl_mld_sta_from_mac80211(sta)->vif;
+	const u8 tid_to_mac80211_ac[] = {
+		IEEE80211_AC_BE,
+		IEEE80211_AC_BK,
+		IEEE80211_AC_BK,
+		IEEE80211_AC_BE,
+		IEEE80211_AC_VI,
+		IEEE80211_AC_VI,
+		IEEE80211_AC_VO,
+		IEEE80211_AC_VO,
+	};
+	unsigned int result = link_sta->agg.max_rc_amsdu_len;
+	u8 ac, txf, lmac;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* Don't send an AMSDU that will be longer than the TXF.
+	 * Add a security margin of 256 for the TX command + headers.
+	 * We also want to have the start of the next packet inside the
+	 * fifo to be able to send bursts.
+	 */
+
+	if (WARN_ON(tid >= ARRAY_SIZE(tid_to_mac80211_ac)))
+		return 0;
+
+	ac = tid_to_mac80211_ac[tid];
+
+	/* For HE redirect to trigger based fifos */
+	if (link_sta->he_cap.has_he)
+		ac += 4;
+
+	txf = iwl_mld_mac80211_ac_to_fw_tx_fifo(ac);
+
+	/* Only one link: take the lmac according to the band */
+	if (hweight16(sta->valid_links) <= 1) {
+		enum nl80211_band band;
+		struct ieee80211_bss_conf *link =
+			wiphy_dereference(mld->wiphy,
+					  vif->link_conf[link_sta->link_id]);
+
+		if (WARN_ON(!link || !link->chanreq.oper.chan))
+			band = NL80211_BAND_2GHZ;
+		else
+			band = link->chanreq.oper.chan->band;
+		lmac = iwl_mld_get_lmac_id(mld, band);
+
+	/* More than one link but with 2 lmacs: take the minimum */
+	} else if (fw_has_capa(&mld->fw->ucode_capa,
+			       IWL_UCODE_TLV_CAPA_CDB_SUPPORT)) {
+		lmac = IWL_LMAC_5G_INDEX;
+		result = min_t(unsigned int, result,
+			       mld->fwrt.smem_cfg.lmac[lmac].txfifo_size[txf] - 256);
+		lmac = IWL_LMAC_24G_INDEX;
+	/* More than one link but only one lmac */
+	} else {
+		lmac = IWL_LMAC_24G_INDEX;
+	}
+
+	return min_t(unsigned int, result,
+		     mld->fwrt.smem_cfg.lmac[lmac].txfifo_size[txf] - 256);
+}
+
+void iwl_mld_handle_tlc_notif(struct iwl_mld *mld,
+			      struct iwl_rx_packet *pkt)
+{
+	struct iwl_tlc_update_notif *notif = (void *)pkt->data;
+	struct ieee80211_link_sta *link_sta;
+	u32 flags = le32_to_cpu(notif->flags);
+	u32 enabled;
+	u16 size;
+
+	if (IWL_FW_CHECK(mld, notif->sta_id >= mld->fw->ucode_capa.num_stations,
+			 "Invalid sta id (%d) in TLC notification\n",
+			 notif->sta_id))
+		return;
+
+	link_sta = wiphy_dereference(mld->wiphy,
+				     mld->fw_id_to_link_sta[notif->sta_id]);
+
+	if (!link_sta) {
+		/* This can happen if the command was sent but the notif only
+		 * got to run (was waiting for the wiphy mutex) after the
+		 * link_sta was removed
+		 */
+		IWL_DEBUG_RATE(mld, "link_sta of sta id (%d) doesn't exist\n",
+			       notif->sta_id);
+		return;
+	}
+
+	if (flags & IWL_TLC_NOTIF_FLAG_RATE) {
+		struct iwl_mld_link_sta *mld_link_sta =
+			iwl_mld_link_sta_from_mac80211(link_sta);
+		char pretty_rate[100];
+
+		if (WARN_ON(!mld_link_sta))
+			return;
+
+		mld_link_sta->last_rate_n_flags = le32_to_cpu(notif->rate);
+
+		rs_pretty_print_rate(pretty_rate, sizeof(pretty_rate),
+				     mld_link_sta->last_rate_n_flags);
+		IWL_DEBUG_RATE(mld, "TLC notif: new rate = %s\n", pretty_rate);
+	}
+
+	/* We are done processing the notif */
+	if (!(flags & IWL_TLC_NOTIF_FLAG_AMSDU))
+		return;
+
+	enabled = le32_to_cpu(notif->amsdu_enabled);
+	size = le32_to_cpu(notif->amsdu_size);
+
+	if (size < 2000) {
+		size = 0;
+		enabled = 0;
+	}
+
+	if (IWL_FW_CHECK(mld, size > link_sta->agg.max_rc_amsdu_len,
+			 "Invalid amsdu len in TLC notif: %d. Current amsdu len: %d\n",
+			 size, link_sta->agg.max_rc_amsdu_len))
+		return;
+
+	link_sta->agg.max_rc_amsdu_len = size;
+
+	for (int i = 0; i < IWL_MAX_TID_COUNT; i++) {
+		if (enabled & BIT(i))
+			link_sta->agg.max_tid_amsdu_len[i] =
+				iwl_mld_get_amsdu_size_of_tid(mld, link_sta, i);
+		else
+			link_sta->agg.max_tid_amsdu_len[i] = 0;
+	}
+
+	ieee80211_sta_recalc_aggregates(link_sta->sta);
+
+	IWL_DEBUG_RATE(mld,
+		       "AMSDU update. AMSDU size: %d, AMSDU selected size: %d, AMSDU TID bitmap 0x%X\n",
+		       le32_to_cpu(notif->amsdu_size), size, enabled);
 }

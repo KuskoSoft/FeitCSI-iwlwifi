@@ -28,12 +28,14 @@ struct iwl_mld_rxq_dup_data {
  * This represents the link-level sta - the driver level equivalent to the
  * ieee80211_link_sta
  *
+ * @last_rate_n_flags: rate_n_flags from the last &iwl_tlc_update_notif
  * @rcu_head: RCU head for freeing this object
  * @fw_id: the FW id of this link sta.
  */
 struct iwl_mld_link_sta {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
+		u32 last_rate_n_flags;
 	);
 	/* And here fields that survive a fw restart */
 	struct rcu_head rcu_head;

@@ -15,4 +15,7 @@ void iwl_mld_config_tlc_link(struct iwl_mld *mld,
 void iwl_mld_config_tlc(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			struct ieee80211_sta *sta);
 
+void iwl_mld_handle_tlc_notif(struct iwl_mld *mld,
+			      struct iwl_rx_packet *pkt);
+
 #endif /* __iwl_mld_tlc_h__ */

@@ -21,6 +21,8 @@
 #include "fw/api/phy-ctxt.h"
 #include "fw/api/datapath.h"
 #include "fw/api/rx.h"
+#include "fw/api/context.h"
+
 #include "fw/dbg.h"
 
 #include "notif.h"
@@ -373,6 +375,16 @@ static inline u8 iwl_mld_mac80211_ac_to_fw_tx_fifo(enum ieee80211_ac_numbers ac)
 		IWL_BZ_TRIG_TX_FIFO_BK,
 	};
 	return mac80211_ac_to_fw_tx_fifo[ac];
+}
+
+static inline u32
+iwl_mld_get_lmac_id(struct iwl_mld *mld, enum nl80211_band band)
+{
+	if (!fw_has_capa(&mld->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_CDB_SUPPORT) ||
+	    band == NL80211_BAND_2GHZ)
+		return IWL_LMAC_24G_INDEX;
+	return IWL_LMAC_5G_INDEX;
 }
 
 /* Check if we had an error, but reconfig flow didn't start yet */
