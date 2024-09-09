@@ -75,6 +75,13 @@ static bool iwl_mld_cancel_##name##_notif(struct iwl_mld *mld,			\
 				  u8: (notif)->id_member);			\
 }
 
+static bool iwl_mld_always_cancel(struct iwl_mld *mld,
+				  struct iwl_rx_packet *pkt,
+				  u32 obj_id)
+{
+	return true;
+}
+
 /* Currently only defined for the RX_HANDLER_SIZES options. Use this for
  * notifications that belong to a specific object, and that should be
  * canceled when the object is removed
@@ -375,6 +382,8 @@ CMD_VERSIONS(time_msmt_notif,
 	     CMD_VER_ENTRY(1, iwl_time_msmt_notify))
 CMD_VERSIONS(time_sync_confirm_notif,
 	     CMD_VER_ENTRY(1, iwl_time_msmt_cfm_notify))
+CMD_VERSIONS(omi_status_notif,
+	     CMD_VER_ENTRY(1, iwl_omi_send_status_notif))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -390,6 +399,7 @@ DEFINE_SIMPLE_CANCELLATION(probe_resp_data, iwl_probe_resp_data_notif,
 			   mac_id)
 DEFINE_SIMPLE_CANCELLATION(uapsd_misbehaving_ap, iwl_uapsd_misbehaving_ap_notif,
 			   mac_id)
+#define iwl_mld_cancel_omi_status_notif iwl_mld_always_cancel
 
 /**
  * DOC: Handlers for fw notifications
@@ -484,6 +494,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP,
 			     WNM_80211V_TIMING_MEASUREMENT_CONFIRM_NOTIFICATION,
 			     time_sync_confirm_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_OF_LINK(DATA_PATH_GROUP, OMI_SEND_STATUS_NOTIF,
+			   omi_status_notif)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 
