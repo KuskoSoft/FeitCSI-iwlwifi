@@ -314,9 +314,9 @@ static int iwl_vendor_rfi_ddr_get_table(struct wiphy *wiphy,
 	}
 
 	if (notif_ver < 3)
-		resp_size = RFI_DDR_GET_TABLE_RESP_SIZE_WITH_DESENSE;
-	else
 		resp_size = RFI_DDR_GET_TABLE_RESP_SIZE;
+	else
+		resp_size = RFI_DDR_GET_TABLE_RESP_SIZE_WITH_DESENSE;
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, resp_size);
 	if (!skb) {
