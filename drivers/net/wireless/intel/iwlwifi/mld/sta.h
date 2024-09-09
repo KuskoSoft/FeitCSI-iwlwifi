@@ -31,6 +31,7 @@ struct iwl_mld_rxq_dup_data {
  * @vif: pointer the vif object.
  * @sta_state: station state according to enum %ieee80211_sta_state
  * @sta_type: type of this station. See &enum iwl_fw_sta_type
+ * @mld: a pointer to the iwl_mld object
  * @dup_data: per queue duplicate packet detection data
  * @tid_to_baid: a simple map of TID to Block-Ack fw id
  */
@@ -40,8 +41,9 @@ struct iwl_mld_sta {
 		enum ieee80211_sta_state sta_state;
 		enum iwl_fw_sta_type sta_type;
 	);
-	struct ieee80211_vif *vif;
 	/* And here fields that survive a fw restart */
+	struct iwl_mld *mld;
+	struct ieee80211_vif *vif;
 	struct iwl_mld_rxq_dup_data *dup_data;
 	u8 tid_to_baid[IWL_MAX_TID_COUNT];
 };

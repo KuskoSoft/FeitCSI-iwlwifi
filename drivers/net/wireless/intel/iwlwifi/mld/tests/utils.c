@@ -249,6 +249,7 @@ iwlmld_kunit_add_sta(struct ieee80211_vif *vif, int link_id)
 
 	mld_sta = iwl_mld_sta_from_mac80211(sta);
 	mld_sta->vif = vif;
+	mld_sta->mld = test->priv;
 
 	/* TODO: adjust for internal stations */
 	mld_sta->sta_type = STATION_TYPE_PEER;
