@@ -48,6 +48,8 @@ int kunit_test_init(struct kunit *test)
 	KUNIT_ALLOC_AND_ASSERT(test, mld);
 	iwl_construct_mld(mld, trans, cfg, fw, hw);
 
+	fw->ucode_capa.num_stations = IWL_STATION_COUNT_MAX;
+
 	mld->fwrt.trans = trans;
 	mld->fwrt.fw = fw;
 	mld->fwrt.dev = trans->dev;
