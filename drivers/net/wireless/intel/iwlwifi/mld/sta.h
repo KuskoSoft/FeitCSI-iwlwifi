@@ -23,6 +23,34 @@ struct iwl_mld_rxq_dup_data {
 } ____cacheline_aligned_in_smp;
 
 /**
+ * struct iwl_mld_link_sta - link-level station
+ *
+ * This represents the link-level sta - the driver level equivalent to the
+ * ieee80211_link_sta
+ *
+ * @rcu_head: RCU head for freeing this object
+ * @fw_id: the FW id of this link sta.
+ */
+struct iwl_mld_link_sta {
+	/* Add here fields that need clean up on restart */
+	struct_group(zeroed_on_hw_restart,
+	);
+	/* And here fields that survive a fw restart */
+	struct rcu_head rcu_head;
+	u32 fw_id;
+};
+
+#define iwl_mld_link_sta_dereference_check(mld_sta, link_id)		\
+	rcu_dereference_check((mld_sta)->link[link_id],			\
+			      lockdep_is_held(&mld_sta->mld->wiphy->mtx))
+
+#define for_each_mld_link_sta(mld_sta, link_sta)			\
+	for (int link_id = 0; link_id < ARRAY_SIZE((mld_sta)->link);	\
+	     link_id++)							\
+		if ((link_sta =						\
+			iwl_mld_link_sta_dereference_check(mld_sta, link_id)))
+
+/**
  * struct iwl_mld_sta - representation of a station in the driver.
  *
  * This represent the MLD-level sta, and will not be added to the FW.
@@ -34,6 +62,17 @@ struct iwl_mld_rxq_dup_data {
  * @mld: a pointer to the iwl_mld object
  * @dup_data: per queue duplicate packet detection data
  * @tid_to_baid: a simple map of TID to Block-Ack fw id
+ * @deflink: This holds the default link STA information, for non MLO STA all
+ *	link specific STA information is accessed through @deflink or through
+ *	link[0] which points to address of @deflink. For MLO Link STA
+ *	the first added link STA will point to deflink.
+ * @link: reference to Link Sta entries. For Non MLO STA, except 1st link,
+ *	i.e link[0] all links would be assigned to NULL by default and
+ *	would access link information via @deflink or link[0]. For MLO
+ *	STA, first link STA being added will point its link pointer to
+ *	@deflink address and remaining would be allocated and the address
+ *	would be assigned to link[link_id] where link_id is the id assigned
+ *	by the AP.
  */
 struct iwl_mld_sta {
 	/* Add here fields that need clean up on restart */
@@ -46,6 +85,9 @@ struct iwl_mld_sta {
 	struct ieee80211_vif *vif;
 	struct iwl_mld_rxq_dup_data *dup_data;
 	u8 tid_to_baid[IWL_MAX_TID_COUNT];
+
+	struct iwl_mld_link_sta deflink;
+	struct iwl_mld_link_sta __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
 };
 
 static inline struct iwl_mld_sta *
@@ -58,11 +100,23 @@ static inline void
 iwl_mld_cleanup_sta(void *data, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_link_sta *mld_link_sta;
 
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		CLEANUP_STRUCT(iwl_mld_txq_from_mac80211(sta->txq[i]));
 
+	for_each_mld_link_sta(mld_sta, mld_link_sta)
+		CLEANUP_STRUCT(mld_link_sta);
+
 	CLEANUP_STRUCT(mld_sta);
+}
+
+static inline struct iwl_mld_link_sta *
+iwl_mld_link_sta_from_mac80211(struct ieee80211_link_sta *link_sta)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+
+	return iwl_mld_link_sta_dereference_check(mld_sta, link_sta->link_id);
 }
 
 int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,

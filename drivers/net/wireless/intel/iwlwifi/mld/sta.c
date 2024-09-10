@@ -253,8 +253,12 @@ IWL_MLD_ALLOC_FN(link_sta, link_sta)
 static int
 iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 {
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+	struct iwl_mld_link_sta *mld_link_sta;
 	int ret;
 	u8 fw_id;
+
+	lockdep_assert_wiphy(mld->wiphy);
 
 	/* We will fail to add it to the FW anyway */
 	if (iwl_mld_error_before_recovery(mld))
@@ -263,15 +267,28 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	/* We need to preserve the fw sta ids during a restart, since the fw
 	 * will recover SN/PN for them
 	 */
-	if (!mld->fw_status.in_hw_restart) {
-		/* Allocate a fw id and map it to the link_sta */
-		ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
-		if (ret)
-			return ret;
-	} else {
+	if (mld->fw_status.in_hw_restart) {
 		fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+		goto add_to_fw;
 	}
 
+	/* Allocate a fw id and map it to the link_sta */
+	ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
+	if (ret)
+		return ret;
+
+	if (link_sta == &link_sta->sta->deflink) {
+		mld_link_sta = &mld_sta->deflink;
+	} else {
+		mld_link_sta = kzalloc(sizeof(*mld_link_sta), GFP_KERNEL);
+		if (!mld_link_sta)
+			return -ENOMEM;
+	}
+
+	mld_link_sta->fw_id = fw_id;
+	rcu_assign_pointer(mld_sta->link[link_sta->link_id], mld_link_sta);
+
+add_to_fw:
 	ret = iwl_mld_add_modify_sta_cmd(mld, link_sta);
 	if (ret)
 		RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
@@ -299,17 +316,22 @@ static void
 iwl_mld_remove_link_sta(struct iwl_mld *mld,
 			struct ieee80211_link_sta *link_sta)
 {
-	int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+	struct iwl_mld_link_sta *mld_link_sta =
+		iwl_mld_link_sta_from_mac80211(link_sta);
 
-	if (WARN_ON(fw_id < 0))
+	if (WARN_ON(!mld_link_sta))
 		return;
 
-	iwl_mld_rm_sta_from_fw(mld, fw_id);
+	iwl_mld_rm_sta_from_fw(mld, mld_link_sta->fw_id);
 
-	/* This will not be set to NULL upon reconfig, so set it also when
+	/* This will not be done upon reconfig, so do it also when
 	 * failed to remove from fw
 	 */
-	RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
+	RCU_INIT_POINTER(mld->fw_id_to_link_sta[mld_link_sta->fw_id], NULL);
+	RCU_INIT_POINTER(mld_sta->link[link_sta->link_id], NULL);
+	if (mld_link_sta != &mld_sta->deflink)
+		kfree_rcu(mld_link_sta, rcu_head);
 }
 
 int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
