@@ -472,18 +472,12 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	struct ieee80211_link_sta *link_sta;
 	unsigned int link_id;
 	u32 result = 0;
-	u8 fw_id;
 
-	/* it's easy when the STA is not an MLD */
-	if (!sta->valid_links) {
-		fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, &sta->deflink);
-		return BIT(fw_id);
-	}
-
-	/* but if it is an MLD, get the mask of all the FW STAs it has ... */
 	for_each_sta_active_link(vif, sta, link_sta, link_id) {
-		fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
-		result |= BIT(fw_id);
+		int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+
+		if (!WARN_ON(fw_id < 0))
+			result |= BIT(fw_id);
 	}
 
 	return result;
