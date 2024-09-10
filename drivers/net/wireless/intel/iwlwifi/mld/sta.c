@@ -341,6 +341,9 @@ iwl_mld_alloc_dup_data(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta)
 {
 	struct iwl_mld_rxq_dup_data *dup_data;
 
+	if (mld->fw_status.in_hw_restart)
+		return 0;
+
 	dup_data = kcalloc(mld->trans->num_rx_queues, sizeof(*dup_data),
 			   GFP_KERNEL);
 	if (!dup_data)
