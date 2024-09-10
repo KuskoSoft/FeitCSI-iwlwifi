@@ -15,20 +15,17 @@
 int iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
 				    struct ieee80211_link_sta *link_sta)
 {
+	struct iwl_mld_link_sta *mld_link_sta;
+
 	/* This is not meant to be called with a NULL pointer */
 	if (WARN_ON(!link_sta))
 		return -ENOENT;
 
-	for (int fw_id = 0; fw_id < mld->fw->ucode_capa.num_stations;
-	     fw_id++) {
-		struct ieee80211_link_sta *l_sta;
+	mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+	if (WARN_ON(!mld_link_sta))
+		return -ENOENT;
 
-		l_sta = rcu_access_pointer(mld->fw_id_to_link_sta[fw_id]);
-
-		if (l_sta == link_sta)
-			return fw_id;
-	}
-	return -ENOENT;
+	return mld_link_sta->fw_id;
 }
 
 static void
