@@ -80,6 +80,8 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 
 	KUNIT_EXPECT_PTR_EQ(test, mld_sta->vif, vif);
 	KUNIT_EXPECT_EQ(test, mld_sta->sta_state, IEEE80211_STA_NONE);
+	KUNIT_EXPECT_PTR_EQ(test, rcu_access_pointer(mld_sta->link[0]),
+			    &mld_sta->deflink);
 
 	sta = iwlmld_kunit_setup_sta(vif, IEEE80211_STA_NONE, 1);
 
@@ -115,6 +117,7 @@ static void iwl_mld_kunit_emlsr_example(struct kunit *test)
 	struct ieee80211_vif *vif;
 	struct ieee80211_sta *sta;
 	struct iwl_mld_vif *mld_vif;
+	struct iwl_mld_sta *mld_sta;
 	u16 valid_links = 0x3;
 
 	vif = iwlmld_kunit_assoc_emlsr(valid_links, NL80211_BAND_5GHZ,
@@ -132,6 +135,11 @@ static void iwl_mld_kunit_emlsr_example(struct kunit *test)
 	KUNIT_EXPECT_PTR_EQ(test, rcu_access_pointer(sta->link[0]),
 			    &sta->deflink);
 	KUNIT_EXPECT_NOT_NULL(test, rcu_access_pointer(sta->link[1]));
+
+	mld_sta = iwl_mld_sta_from_mac80211(sta);
+	KUNIT_EXPECT_PTR_EQ(test, rcu_access_pointer(mld_sta->link[0]),
+			    &mld_sta->deflink);
+	KUNIT_EXPECT_NOT_NULL(test, rcu_access_pointer(mld_sta->link[1]));
 }
 
 static struct kunit_case iwl_mld_kunit_test_cases[] = {

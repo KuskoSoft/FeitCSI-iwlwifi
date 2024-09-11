@@ -199,21 +199,27 @@ IWL_MLD_ALLOC_FN(link_sta, link_sta)
 
 static void iwlmld_kunit_add_link_sta(struct ieee80211_sta *sta,
 				      struct ieee80211_link_sta *link_sta,
+				      struct iwl_mld_link_sta *mld_link_sta,
 				      u8 link_id)
 {
 	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct iwl_mld *mld = test->priv;
 	u8 fw_id;
 	int ret;
 
-	/* Allocate a sta id and map it to the link_sta object */
-	ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
-	KUNIT_ASSERT_EQ(test, ret, 0);
-
+	/* initialize mac80211's link_sta */
 	link_sta->link_id = link_id;
 	rcu_assign_pointer(sta->link[link_id], link_sta);
 
 	link_sta->sta = sta;
+
+	/* and the iwl_mld_link_sta */
+	ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
+	KUNIT_ASSERT_EQ(test, ret, 0);
+	mld_link_sta->fw_id = fw_id;
+
+	rcu_assign_pointer(mld_sta->link[link_id], mld_link_sta);
 }
 
 static struct ieee80211_link_sta *
@@ -221,13 +227,15 @@ iwlmld_kunit_alloc_link_sta(struct ieee80211_sta *sta, int link_id)
 {
 	struct kunit *test = kunit_get_current_test();
 	struct ieee80211_link_sta *link_sta;
+	struct iwl_mld_link_sta *mld_link_sta;
 
 	/* Only valid for MLO */
 	KUNIT_ASSERT_TRUE(test, sta->valid_links);
 
 	KUNIT_ALLOC_AND_ASSERT(test, link_sta);
+	KUNIT_ALLOC_AND_ASSERT(test, mld_link_sta);
 
-	iwlmld_kunit_add_link_sta(sta, link_sta, link_id);
+	iwlmld_kunit_add_link_sta(sta, link_sta, mld_link_sta, link_id);
 
 	sta->valid_links |= BIT(link_id);
 
@@ -255,10 +263,12 @@ iwlmld_kunit_add_sta(struct ieee80211_vif *vif, int link_id)
 	mld_sta->sta_type = STATION_TYPE_PEER;
 
 	if (link_id >= 0) {
-		iwlmld_kunit_add_link_sta(sta, &sta->deflink, link_id);
+		iwlmld_kunit_add_link_sta(sta, &sta->deflink,
+					  &mld_sta->deflink, link_id);
 		sta->valid_links = BIT(link_id);
 	} else {
-		iwlmld_kunit_add_link_sta(sta, &sta->deflink, 0);
+		iwlmld_kunit_add_link_sta(sta, &sta->deflink,
+					  &mld_sta->deflink, 0);
 	}
 	return sta;
 }
