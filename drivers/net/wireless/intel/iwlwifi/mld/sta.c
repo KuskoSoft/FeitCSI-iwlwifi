@@ -637,6 +637,7 @@ int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	struct iwl_mld_baid_data *baid_data = NULL;
 	u32 reorder_buf_size = buf_size * sizeof(baid_data->entries[0]);
 	int ret, baid;
+	u32 sta_mask;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -645,6 +646,10 @@ int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 			     "Max num of RX BA sessions reached; blocking new session\n");
 		return -ENOSPC;
 	}
+
+	sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+	if (WARN_ON(!sta_mask))
+		return -EINVAL;
 
 	/* sparse doesn't like the __align() so don't check */
 #ifndef __CHECKER__
@@ -691,7 +696,7 @@ int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	baid_data->mld = mld;
 	baid_data->tid = tid;
 	baid_data->buf_size = buf_size;
-	baid_data->sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+	baid_data->sta_mask = sta_mask;
 	baid_data->timeout = timeout;
 	baid_data->last_rx_timestamp = jiffies;
 	baid_data->rcu_ptr = &mld->fw_id_to_ba[baid];
