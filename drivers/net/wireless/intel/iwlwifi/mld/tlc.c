@@ -473,7 +473,7 @@ void iwl_mld_send_tlc_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 						   own_he_cap, own_eht_cap),
 		.chains = iwl_mld_get_fw_chains(mld),
 		.sgi_ch_width_supp = iwl_mld_get_fw_sgi(link_sta),
-		.max_mpdu_len =  cpu_to_le16(link_sta->agg.max_amsdu_len),
+		.max_mpdu_len = cpu_to_le16(link_sta->agg.max_rc_amsdu_len),
 	};
 	int fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 	int ret;
