@@ -502,12 +502,27 @@ iwl_mld_reorder_release_frames(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	reorder_buf->head_sn = nssn;
 }
 
+/**
+ * enum iwl_mld_reorder_result - Possible return values for iwl_mld_reorder()
+ * indicating how the caller should handle the skb based on the result.
+ *
+ * @IWL_MLD_PASS_SKB: skb should be passed to upper layer.
+ * @IWL_MLD_BUFFERED_SKB: skb has been buffered, don't pass it to upper layer.
+ * @IWL_MLD_DROP_SKB: skb should be dropped and freed by the caller.
+ */
+enum iwl_mld_reorder_result {
+	IWL_MLD_PASS_SKB,
+	IWL_MLD_BUFFERED_SKB,
+	IWL_MLD_DROP_SKB
+};
+
 /* Returns true if the MPDU was buffered\dropped, false if it should be passed
  * to upper layer.
  */
-static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
-			    int queue, struct ieee80211_sta *sta,
-			    struct sk_buff *skb, struct iwl_rx_mpdu_desc *desc)
+static enum iwl_mld_reorder_result
+iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
+		int queue, struct ieee80211_sta *sta,
+		struct sk_buff *skb, struct iwl_rx_mpdu_desc *desc)
 {
 	struct ieee80211_hdr *hdr = (void *)skb_mac_header(skb);
 	struct iwl_mld_baid_data *baid_data;
@@ -530,26 +545,26 @@ static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 	 * have any BA sessions.
 	 */
 	if (baid == IWL_RX_REORDER_DATA_INVALID_BAID)
-		return false;
+		return IWL_MLD_PASS_SKB;
 
 	/* no sta yet */
 	if (WARN_ONCE(!sta,
 		      "Got valid BAID without a valid station assigned\n"))
-		return false;
+		return IWL_MLD_PASS_SKB;
 
 	/* not a data packet */
 	if (!ieee80211_is_data_qos(hdr->frame_control) ||
 	    is_multicast_ether_addr(hdr->addr1))
-		return false;
+		return IWL_MLD_PASS_SKB;
 
 	if (unlikely(!ieee80211_is_data_present(hdr->frame_control)))
-		return false;
+		return IWL_MLD_PASS_SKB;
 
 	baid_data = rcu_dereference(mld->fw_id_to_ba[baid]);
 	if (IWL_FW_CHECK(mld, !baid_data,
 			 "Got valid BAID but no baid allocated (BAID=%d reorder=0x%x)\n",
 			 baid, reorder))
-		return false;
+		return IWL_MLD_PASS_SKB;
 
 	sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
 
@@ -560,7 +575,7 @@ static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 			 "BAID 0x%x is mapped to sta_mask:0x%x tid:%d, but was received for sta_mask:0x%x tid:%d\n",
 			 baid, baid_data->sta_mask, baid_data->tid,
 			 sta_mask, tid))
-		return false;
+		return IWL_MLD_PASS_SKB;
 
 	buffer = &baid_data->reorder_buf[queue];
 	entries = &baid_data->entries[queue * baid_data->entries_per_queue];
@@ -568,17 +583,15 @@ static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 	is_old_sn = !!(reorder & IWL_RX_MPDU_REORDER_BA_OLD_SN);
 
 	if (!buffer->valid && is_old_sn)
-		return false;
+		return IWL_MLD_PASS_SKB;
 
 	buffer->valid = true;
 
 	is_dup = !!(desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_DUPLICATE));
 
 	/* drop any duplicated or outdated packets */
-	if (is_dup || is_old_sn) {
-		kfree_skb(skb);
-		return true;
-	}
+	if (is_dup || is_old_sn)
+		return IWL_MLD_DROP_SKB;
 
 	sn = u32_get_bits(reorder, IWL_RX_MPDU_REORDER_SN_MASK);
 	nssn = u32_get_bits(reorder, IWL_RX_MPDU_REORDER_NSSN_MASK);
@@ -589,7 +602,7 @@ static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 	if (!buffer->num_stored && ieee80211_sn_less(sn, nssn)) {
 		if (!amsdu || last_subframe)
 			buffer->head_sn = nssn;
-		return false;
+		return IWL_MLD_PASS_SKB;
 	}
 
 	/* release immediately if there are no stored frames, and the sn is
@@ -602,8 +615,7 @@ static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 	if (!buffer->num_stored && sn == buffer->head_sn) {
 		if (!amsdu || last_subframe)
 			buffer->head_sn = ieee80211_sn_inc(buffer->head_sn);
-
-		return false;
+		return IWL_MLD_PASS_SKB;
 	}
 
 	/* put in reorder buffer */
@@ -626,7 +638,7 @@ static bool iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 		iwl_mld_reorder_release_frames(mld, sta, napi, baid_data,
 					       buffer, nssn);
 
-	return true;
+	return IWL_MLD_BUFFERED_SKB;
 }
 
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
@@ -642,6 +654,7 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	bool drop = false;
 	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
 	u32 mpdu_len;
+	enum iwl_mld_reorder_result reorder_res;
 
 	if (unlikely(mld->fw_status.in_hw_restart))
 		return;
@@ -686,15 +699,24 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	rcu_read_lock();
 
 	sta = iwl_mld_rx_with_sta(mld, hdr, skb, mpdu_desc, pkt, queue, &drop);
-	if (drop) {
-		kfree_skb(skb);
-		goto unlock;
-	}
+	if (drop)
+		goto drop;
 
 	/* TODO: pass crypto len */
-	if (iwl_mld_create_skb(mld, skb, hdr, mpdu_len, 0, rxb)) {
-		kfree_skb(skb);
-		goto unlock;
+	if (iwl_mld_create_skb(mld, skb, hdr, mpdu_len, 0, rxb))
+		goto drop;
+
+	reorder_res = iwl_mld_reorder(mld, napi, queue, sta, skb, mpdu_desc);
+	switch (reorder_res) {
+	case IWL_MLD_PASS_SKB:
+		break;
+	case IWL_MLD_DROP_SKB:
+		goto drop;
+	case IWL_MLD_BUFFERED_SKB:
+		goto out;
+	default:
+		WARN_ON(1);
+		goto drop;
 	}
 
 	/* TODO: verify the following before passing frames to mac80211:
@@ -703,10 +725,13 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	 * 3. mei_scan_filter
 	 */
 
-	if (!iwl_mld_reorder(mld, napi, queue, sta, skb, mpdu_desc))
-		iwl_mld_pass_packet_to_mac80211(mld, napi, skb, queue, sta);
+	iwl_mld_pass_packet_to_mac80211(mld, napi, skb, queue, sta);
 
-unlock:
+	goto out;
+
+drop:
+	kfree_skb(skb);
+out:
 	rcu_read_unlock();
 }
 
