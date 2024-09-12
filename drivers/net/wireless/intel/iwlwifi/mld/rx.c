@@ -219,9 +219,9 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 }
 
 /* iwl_mld_create_skb adds the rxb to a new skb */
-static int iwl_mld_create_skb(struct iwl_mld *mld, struct sk_buff *skb,
-			      struct ieee80211_hdr *hdr, u16 len, u8 crypt_len,
-			      struct iwl_rx_cmd_buffer *rxb)
+static int iwl_mld_build_rx_skb(struct iwl_mld *mld, struct sk_buff *skb,
+				struct ieee80211_hdr *hdr, u16 len,
+				u8 crypt_len, struct iwl_rx_cmd_buffer *rxb)
 {
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	struct iwl_rx_mpdu_desc *desc = (void *)pkt->data;
@@ -703,7 +703,7 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		goto drop;
 
 	/* TODO: pass crypto len */
-	if (iwl_mld_create_skb(mld, skb, hdr, mpdu_len, 0, rxb))
+	if (iwl_mld_build_rx_skb(mld, skb, hdr, mpdu_len, 0, rxb))
 		goto drop;
 
 	reorder_res = iwl_mld_reorder(mld, napi, queue, sta, skb, mpdu_desc);
