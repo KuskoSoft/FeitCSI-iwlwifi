@@ -11,6 +11,7 @@
 
 #include "fw/api/rs.h"
 #include "fw/api/context.h"
+#include "fw/api/dhc.h"
 
 static u8 iwl_mld_fw_bw_from_sta_bw(const struct ieee80211_link_sta *link_sta)
 {
@@ -553,7 +554,6 @@ void iwl_mld_config_tlc_link(struct iwl_mld *mld,
 
 	iwl_mld_send_tlc_cmd(mld, vif, link_sta, band);
 
-	/* TODO: apply debug overrides */
 }
 
 void iwl_mld_config_tlc(struct iwl_mld *mld, struct ieee80211_vif *vif,
