@@ -25,6 +25,12 @@ static inline int iwl_mld_send_cmd(struct iwl_mld *mld, struct iwl_host_cmd *cmd
 	iwl_mld_check_random_nmi(mld);
 #endif
 
+	/* No commands, including the d3 related commands, should be sent
+	 * after entering d3
+	 */
+	if (WARN_ON(mld->fw_status.in_d3))
+		return -EIO;
+
 	if (!(cmd->flags & CMD_ASYNC))
 		lockdep_assert_wiphy(mld->wiphy);
 
