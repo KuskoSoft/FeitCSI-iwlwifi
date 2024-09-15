@@ -18,4 +18,6 @@ void iwl_mld_config_tlc(struct iwl_mld *mld, struct ieee80211_vif *vif,
 void iwl_mld_handle_tlc_notif(struct iwl_mld *mld,
 			      struct iwl_rx_packet *pkt);
 
+int iwl_mld_send_tlc_dhc(struct iwl_mld *mld, u8 sta_id, u32 type, u32 data);
+
 #endif /* __iwl_mld_tlc_h__ */

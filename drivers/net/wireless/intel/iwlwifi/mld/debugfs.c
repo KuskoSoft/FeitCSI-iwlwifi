@@ -8,6 +8,10 @@
 #include "iwl-io.h"
 #include "hcmd.h"
 #include "iface.h"
+#include "sta.h"
+#include "tlc.h"
+
+#include "fw/api/rs.h"
 
 #define MLD_DEBUGFS_READ_FILE_OPS(name, bufsz)				\
 	_MLD_DEBUGFS_READ_FILE_OPS(name, bufsz, struct iwl_mld)
@@ -122,4 +126,96 @@ void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
 		mld_link_dir = debugfs_create_dir("iwlmld", dir);
 
 	/* Add here per-links files to mld_link_dir */
+}
+
+static ssize_t iwl_dbgfs_fixed_rate_write(struct ieee80211_link_sta *link_sta,
+					  char *buf, size_t count)
+{
+	struct iwl_mld *mld = iwl_mld_sta_from_mac80211(link_sta->sta)->mld;
+	struct iwl_mld_link_sta *mld_link_sta;
+	u32 rate;
+	u32 partial = false;
+	char pretty_rate[100];
+	int ret;
+	u8 fw_sta_id;
+
+	rcu_read_lock();
+
+	mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+	if (WARN_ON(!mld_link_sta)) {
+		rcu_read_unlock();
+		return -EINVAL;
+	}
+
+	fw_sta_id = mld_link_sta->fw_id;
+
+	rcu_read_unlock();
+
+	if (sscanf(buf, "%i %i", &rate, &partial) == 0)
+		return -EINVAL;
+
+	ret = iwl_mld_send_tlc_dhc(mld, fw_sta_id,
+				   partial ? IWL_TLC_DEBUG_PARTIAL_FIXED_RATE :
+					     IWL_TLC_DEBUG_FIXED_RATE,
+				   rate);
+
+	rs_pretty_print_rate(pretty_rate, sizeof(pretty_rate), rate);
+
+	IWL_DEBUG_RATE(mld, "sta_id %d rate %s partial: %d, ret:%d\n",
+		       fw_sta_id, pretty_rate, partial, ret);
+
+	return ret ? : count;
+}
+
+static ssize_t iwl_dbgfs_tlc_dhc_write(struct ieee80211_link_sta *link_sta,
+				       char *buf, size_t count)
+{
+	struct iwl_mld *mld = iwl_mld_sta_from_mac80211(link_sta->sta)->mld;
+	struct iwl_mld_link_sta *mld_link_sta;
+	u32 type, value;
+	int ret;
+	u8 fw_sta_id;
+
+	rcu_read_lock();
+
+	mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+	if (WARN_ON(!mld_link_sta)) {
+		rcu_read_unlock();
+		return -EINVAL;
+	}
+
+	fw_sta_id = mld_link_sta->fw_id;
+
+	rcu_read_unlock();
+
+	if (sscanf(buf, "%i %i", &type, &value) != 2) {
+		IWL_DEBUG_RATE(mld, "usage <type> <value>\n");
+		return -EINVAL;
+	}
+
+	ret = iwl_mld_send_tlc_dhc(mld, fw_sta_id, type, value);
+
+	return ret ? : count;
+}
+
+#define LINK_STA_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\
+	_MLD_DEBUGFS_WRITE_FILE_OPS(name, bufsz, struct ieee80211_link_sta)
+
+#define LINK_STA_DEBUGFS_ADD_FILE_ALIAS(alias, name, parent, mode) do {	\
+	debugfs_create_file(alias, mode, parent, link_sta,		\
+			    &iwl_dbgfs_##name##_ops);			\
+	} while (0)
+#define LINK_STA_DEBUGFS_ADD_FILE(name, parent, mode)			\
+	LINK_STA_DEBUGFS_ADD_FILE_ALIAS(#name, name, parent, mode)
+
+LINK_STA_DEBUGFS_WRITE_FILE_OPS(fixed_rate, 64);
+LINK_STA_DEBUGFS_WRITE_FILE_OPS(tlc_dhc, 64);
+
+void iwl_mld_add_link_sta_debugfs(struct ieee80211_hw *hw,
+				  struct ieee80211_vif *vif,
+				  struct ieee80211_link_sta *link_sta,
+				  struct dentry *dir)
+{
+	LINK_STA_DEBUGFS_ADD_FILE(fixed_rate, dir, 0200);
+	LINK_STA_DEBUGFS_ADD_FILE(tlc_dhc, dir, 0200);
 }

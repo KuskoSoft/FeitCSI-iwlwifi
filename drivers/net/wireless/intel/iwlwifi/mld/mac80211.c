@@ -1382,5 +1382,6 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	.vif_add_debugfs = iwl_mld_add_vif_debugfs,
 	.link_add_debugfs = iwl_mld_add_link_debugfs,
+	.link_sta_add_debugfs = iwl_mld_add_link_sta_debugfs,
 #endif
 };
