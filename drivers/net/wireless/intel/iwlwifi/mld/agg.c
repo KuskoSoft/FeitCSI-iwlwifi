@@ -301,6 +301,7 @@ iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 
 	return IWL_MLD_BUFFERED_SKB;
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_reorder);
 
 static void iwl_mld_rx_agg_session_expired(struct timer_list *t)
 {
