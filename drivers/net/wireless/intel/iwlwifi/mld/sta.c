@@ -4,6 +4,7 @@
  */
 
 #include <linux/ieee80211.h>
+#include <kunit/static_stub.h>
 
 #include "sta.h"
 #include "hcmd.h"
@@ -493,6 +494,8 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	unsigned int link_id;
 	u32 result = 0;
 
+	KUNIT_STATIC_STUB_REDIRECT(iwl_mld_fw_sta_id_mask, mld, sta);
+
 	for_each_sta_active_link(vif, sta, link_sta, link_id) {
 		int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 
@@ -502,3 +505,4 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 
 	return result;
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_fw_sta_id_mask);
