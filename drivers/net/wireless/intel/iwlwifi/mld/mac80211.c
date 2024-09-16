@@ -11,6 +11,7 @@
 #include "iface.h"
 #include "power.h"
 #include "sta.h"
+#include "agg.h"
 #include "scan.h"
 #include "d3.h"
 #include "tlc.h"
@@ -1298,11 +1299,11 @@ iwl_mld_mac80211_ampdu_action(struct ieee80211_hw *hw,
 	switch (action) {
 	case IEEE80211_AMPDU_RX_START:
 		/* TODO: BT coex amsdu disallowed (task=coex) */
-		ret = iwl_mld_sta_ampdu_rx_start(mld, sta, tid, ssn, buf_size,
-						 timeout);
+		ret = iwl_mld_ampdu_rx_start(mld, sta, tid, ssn, buf_size,
+					     timeout);
 		break;
 	case IEEE80211_AMPDU_RX_STOP:
-		ret = iwl_mld_sta_ampdu_rx_stop(mld, sta, tid);
+		ret = iwl_mld_ampdu_rx_stop(mld, sta, tid);
 		break;
 	default:
 		/* The mac80211 TX_AMPDU_SETUP_IN_HW flag is set for all

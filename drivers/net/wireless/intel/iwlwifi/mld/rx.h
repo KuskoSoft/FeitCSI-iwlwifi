@@ -36,15 +36,6 @@ struct iwl_mld_internal_rxq_notif {
 } __packed;
 
 /**
- * struct iwl_mld_delba_data - RX queue sync data for %IWL_MLD_RXQ_NOTIF_DEL_BA
- *
- * @baid: Block Ack id, used to identify the BA session to be removed
- */
-struct iwl_mld_delba_data {
-	u32 baid;
-} __packed;
-
-/**
  * struct iwl_mld_rx_queues_sync - RX queues sync data
  *
  * @waitq: wait queue for RX queues sync completion
@@ -61,13 +52,6 @@ struct iwl_mld_rx_queues_sync {
 
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		     struct iwl_rx_cmd_buffer *rxb, int queue);
-void iwl_mld_handle_frame_release_notif(struct iwl_mld *mld,
-					struct napi_struct *napi,
-					struct iwl_rx_packet *pkt, int queue);
-void iwl_mld_handle_bar_frame_release_notif(struct iwl_mld *mld,
-					    struct napi_struct *napi,
-					    struct iwl_rx_packet *pkt,
-					    int queue);
 
 void iwl_mld_sync_rx_queues(struct iwl_mld *mld,
 			    enum iwl_mld_internal_rxq_notif_type type,
@@ -76,5 +60,10 @@ void iwl_mld_sync_rx_queues(struct iwl_mld *mld,
 void iwl_mld_handle_rx_queues_sync_notif(struct iwl_mld *mld,
 					 struct napi_struct *napi,
 					 struct iwl_rx_packet *pkt, int queue);
+
+void iwl_mld_pass_packet_to_mac80211(struct iwl_mld *mld,
+				     struct napi_struct *napi,
+				     struct sk_buff *skb, int queue,
+				     struct ieee80211_sta *sta);
 
 #endif /* __iwl_mld_agg_h__ */

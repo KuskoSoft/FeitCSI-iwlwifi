@@ -132,9 +132,5 @@ int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
 void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta);
 void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld,
 				struct ieee80211_sta *sta);
-int iwl_mld_sta_ampdu_rx_start(struct iwl_mld *mld, struct ieee80211_sta *sta,
-			       int tid, u16 ssn, u16 buf_size, u16 timeout);
-int iwl_mld_sta_ampdu_rx_stop(struct iwl_mld *mld, struct ieee80211_sta *sta,
-			      int tid);
 
 #endif /* __iwl_mld_sta_h__ */

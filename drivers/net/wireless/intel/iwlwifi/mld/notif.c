@@ -21,6 +21,7 @@
 #include "tx.h"
 #include "rx.h"
 #include "tlc.h"
+#include "agg.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
