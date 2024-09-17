@@ -1449,6 +1449,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
 	.set_wakeup = iwl_mld_set_wakeup,
+	.set_rekey_data = iwl_mld_set_rekey_data,
 #endif /* CONFIG_PM_SLEEP */
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	.vif_add_debugfs = iwl_mld_add_vif_debugfs,

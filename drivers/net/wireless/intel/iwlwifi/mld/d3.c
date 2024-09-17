@@ -107,6 +107,26 @@ struct iwl_mld_resume_data {
 
 #define IWL_WOWLAN_OFFLOAD_TID 0
 
+void iwl_mld_set_rekey_data(struct ieee80211_hw *hw,
+			    struct ieee80211_vif *vif,
+			    struct cfg80211_gtk_rekey_data *data)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_wowlan_data *wowlan_data = &mld_vif->wowlan_data;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	wowlan_data->rekey_data.kek_len = data->kek_len;
+	wowlan_data->rekey_data.kck_len = data->kck_len;
+	memcpy(wowlan_data->rekey_data.kek, data->kek, data->kek_len);
+	memcpy(wowlan_data->rekey_data.kck, data->kck, data->kck_len);
+	wowlan_data->rekey_data.akm = data->akm & 0xFF;
+	wowlan_data->rekey_data.replay_ctr =
+		cpu_to_le64(be64_to_cpup((const __be64 *)data->replay_ctr));
+	wowlan_data->rekey_data.valid = true;
+}
+
 static bool iwl_mld_check_err_tables(struct iwl_mld *mld,
 				     struct ieee80211_vif *vif)
 {

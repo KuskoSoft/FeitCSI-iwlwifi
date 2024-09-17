@@ -35,7 +35,7 @@ struct iwl_mld_vif {
 	struct iwl_mld *mld;
 	struct iwl_mld_link deflink;
 	struct iwl_mld_link __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
-#if IS_ENABLED(CONFIG_IPV6)
+#if CONFIG_PM_SLEEP
 	struct iwl_mld_wowlan_data wowlan_data;
 #endif
 };
