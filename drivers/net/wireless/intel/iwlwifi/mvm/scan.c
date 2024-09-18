@@ -3419,7 +3419,7 @@ void iwl_mvm_report_scan_aborted(struct iwl_mvm *mvm)
 			 * restart_hw, so do not report if FW is about to be
 			 * restarted.
 			 */
-			if (!mvm->fw_restart)
+			if (!iwlwifi_mod_params.fw_restart)
 				ieee80211_sched_scan_stopped(mvm->hw);
 			mvm->sched_scan_pass_all = SCHED_SCAN_PASS_ALL_DISABLED;
 			mvm->scan_uid_status[uid] = 0;
@@ -3470,7 +3470,7 @@ void iwl_mvm_report_scan_aborted(struct iwl_mvm *mvm)
 		 * restarted.
 		 */
 		if ((mvm->scan_status & IWL_MVM_SCAN_SCHED) &&
-		    !mvm->fw_restart) {
+		    !iwlwifi_mod_params.fw_restart) {
 			ieee80211_sched_scan_stopped(mvm->hw);
 			mvm->sched_scan_pass_all = SCHED_SCAN_PASS_ALL_DISABLED;
 		}
