@@ -456,7 +456,7 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
-	ret = iwl_mld_power_update_device(mld);
+	ret = iwl_mld_update_device_power(mld, false);
 	if (ret)
 		return ret;
 

@@ -344,8 +344,12 @@ static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
 		ieee80211_hw_set(hw, SUPPORTS_ONLY_HE_MULTI_BSSID);
 	}
 
+	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
+		wiphy->flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
+	else
+		wiphy->flags &= ~WIPHY_FLAG_PS_ON_BY_DEFAULT;
+
 	/* TODO:
-	 * 1. iwlmld_mod_params CAM MODE (WIPHY_FLAG_PS_ON_BY_DEFAULT)
 	 * 2. tm (time measurement) ext capab
 	 * 3. eml_capabilities debug override
 	 *
@@ -593,7 +597,8 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	if (vif->p2p || iwl_fw_lookup_cmd_ver(mld->fw, PHY_CONTEXT_CMD, 0) < 5)
 		vif->driver_flags |= IEEE80211_VIF_IGNORE_OFDMA_WIDER_BW;
 
-	/* TODO: power considerations */
+	if (vif->type == NL80211_IFTYPE_STATION)
+		iwl_mld_update_mac_power(mld, vif, false);
 
 	return 0;
 
@@ -620,8 +625,6 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
 		vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER |
 				       IEEE80211_VIF_SUPPORTS_CQM_RSSI);
-
-	/* TODO: power considerations */
 
 	iwl_mld_remove_link(mld, &vif->bss_conf);
 
@@ -920,7 +923,10 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 			 */
 	}
 
-	//todo: BSS_CHANGED_PS - power_update_mac
+	if (changes & BSS_CHANGED_PS &&
+	    !WARN_ON(vif->type != NL80211_IFTYPE_STATION))
+		iwl_mld_update_mac_power(mld, vif, false);
+
 	//todo: BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM - mlo_int_scan_wk
 }
 

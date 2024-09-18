@@ -725,7 +725,13 @@ int iwl_mld_no_wowlan_suspend(struct iwl_mld *mld)
 	    test_bit(STATUS_FW_ERROR, &mld->trans->status))
 		return -ENODEV;
 
-	WARN_ON(iwl_mld_power_update_device(mld));
+	ret = iwl_mld_update_device_power(mld, true);
+	if (ret) {
+		IWL_ERR(mld,
+			"d3 suspend: couldn't send power_device %d\n", ret);
+		goto out;
+	}
+
 	ret = iwl_mld_send_cmd_pdu(mld, D3_CONFIG_CMD,
 				   &d3_cfg_cmd_data);
 	if (ret) {
@@ -780,9 +786,7 @@ int iwl_mld_no_wowlan_resume(struct iwl_mld *mld)
 		set_bit(STATUS_FW_ERROR, &mld->trans->status);
 	}
 
-	/* TODO: iwl_mld_power_update_mac() (task=power) */
-
-	return ret;
+	return iwl_mld_update_device_power(mld, false);
 }
 
 static void
@@ -1012,7 +1016,11 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 	if (ret)
 		return ret;
 
-	return iwl_mld_send_proto_offload(mld, bss_vif, ap_sta_id);
+	ret = iwl_mld_send_proto_offload(mld, bss_vif, ap_sta_id);
+	if (ret)
+		return ret;
+
+	return iwl_mld_update_mac_power(mld, bss_vif, true);
 }
 
 int iwl_mld_wowlan_suspend(struct iwl_mld *mld, struct cfg80211_wowlan *wowlan)
@@ -1109,7 +1117,8 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 	}
 
 	iwl_mld_update_changed_regdomain(mld);
-	/* TODO: add power_update_mac() (task=power) */
+	iwl_mld_update_mac_power(mld, bss_vif, false);
+	iwl_mld_update_device_power(mld, false);
 
 	if (mld->netdetect)
 		ret = iwl_mld_scan_stop(mld, IWL_MLD_SCAN_NETDETECT, false);

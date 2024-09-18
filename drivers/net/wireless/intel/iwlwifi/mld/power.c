@@ -9,16 +9,20 @@
 #include "power.h"
 #include "iface.h"
 #include "link.h"
+#include "constants.h"
 
-int iwl_mld_power_update_device(struct iwl_mld *mld)
+int iwl_mld_update_device_power(struct iwl_mld *mld, bool d3)
 {
 	struct iwl_device_power_cmd cmd = {};
 
-	/* TODO: CAM MODE, DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK */
+	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
+		cmd.flags |= cpu_to_le16(DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK);
 
-	/* TODO: DEVICE_POWER_FLAGS_32K_CLK_VALID_MSK */
+	/* TODO: task=BIOS DEVICE_POWER_FLAGS_32K_CLK_VALID_MSK */
 
-	/* TODO: DEVICE_POWER_FLAGS_NO_SLEEP_TILL_D3_MSK */
+	if (d3)
+		cmd.flags |=
+			cpu_to_le16(DEVICE_POWER_FLAGS_NO_SLEEP_TILL_D3_MSK);
 
 	IWL_DEBUG_POWER(mld,
 			"Sending device power command with flags = 0x%X\n",
@@ -37,6 +41,138 @@ int iwl_mld_disable_beacon_filter(struct iwl_mld *mld,
 
 	return iwl_mld_send_cmd_pdu(mld, REPLY_BEACON_FILTERING_CMD,
 				    &cmd);
+}
+
+static bool iwl_mld_power_is_radar(struct iwl_mld *mld,
+				   const struct ieee80211_bss_conf *link_conf)
+{
+	const struct ieee80211_chanctx_conf *chanctx_conf;
+
+	chanctx_conf = wiphy_dereference(mld->wiphy, link_conf->chanctx_conf);
+
+	if (WARN_ON(!chanctx_conf))
+		return false;
+
+	return chanctx_conf->def.chan->flags & IEEE80211_CHAN_RADAR;
+}
+
+static void
+iwl_mld_power_config_skip_dtim(struct iwl_mld *mld,
+			       const struct ieee80211_bss_conf *link_conf,
+			       struct iwl_mac_power_cmd *cmd)
+{
+	unsigned int dtimper_tu;
+	unsigned int dtimper;
+	unsigned int skip;
+
+	dtimper = link_conf->dtim_period ?: 1;
+	dtimper_tu = dtimper * link_conf->beacon_int;
+
+	if (dtimper >= 10 || iwl_mld_power_is_radar(mld, link_conf))
+		return;
+
+	if (WARN_ON(!dtimper_tu))
+		return;
+
+	/* configure skip over dtim up to 900 TU DTIM interval */
+	skip = max_t(int, 1, 900 / dtimper_tu);
+
+	cmd->skip_dtim_periods = skip;
+	cmd->flags |= cpu_to_le16(POWER_FLAGS_SKIP_OVER_DTIM_MSK);
+}
+
+#define POWER_KEEP_ALIVE_PERIOD_SEC    25
+static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
+				    struct ieee80211_vif *vif,
+				    struct iwl_mac_power_cmd *cmd,
+				    bool d3)
+{
+	int dtimper, bi;
+	int keep_alive;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct ieee80211_bss_conf *link_conf = &vif->bss_conf;
+	/* TODO: task=low_latency + p2p */
+	bool low_latency = false;
+
+	cmd->id_and_color = cpu_to_le32(mld_vif->fw_id);
+
+	if (ieee80211_vif_is_mld(vif)) {
+		int link_id;
+
+		if (WARN_ON(!vif->active_links))
+			return;
+
+		/* The firmware consumes one single configuration for the vif
+		 * and can't differentiate between links, just pick the lowest
+		 * link_id's configuration and use that.
+		 */
+		link_id = __ffs(vif->active_links);
+		link_conf = link_conf_dereference_check(vif, link_id);
+		if (WARN_ON(!link_conf))
+			return;
+	}
+	dtimper = link_conf->dtim_period;
+	bi = link_conf->beacon_int;
+
+	/* Regardless of power management state the driver must set
+	 * keep alive period. FW will use it for sending keep alive NDPs
+	 * immediately after association. Check that keep alive period
+	 * is at least 3 * DTIM
+	 */
+	keep_alive = DIV_ROUND_UP(ieee80211_tu_to_usec(3 * dtimper * bi),
+				  USEC_PER_SEC);
+	keep_alive = max(keep_alive, POWER_KEEP_ALIVE_PERIOD_SEC);
+	cmd->keep_alive_seconds = cpu_to_le16(keep_alive);
+
+	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
+		cmd->flags |= cpu_to_le16(POWER_FLAGS_POWER_SAVE_ENA_MSK);
+
+	if (!vif->cfg.ps)
+		return;
+
+	cmd->flags |= cpu_to_le16(POWER_FLAGS_POWER_MANAGEMENT_ENA_MSK);
+
+	/* firmware supports LPRX for beacons at rate 1 Mbps or 6 Mbps only */
+	if (link_conf->beacon_rate &&
+	    (link_conf->beacon_rate->bitrate == 10 ||
+	     link_conf->beacon_rate->bitrate == 60)) {
+		cmd->flags |= cpu_to_le16(POWER_FLAGS_LPRX_ENA_MSK);
+		cmd->lprx_rssi_threshold = POWER_LPRX_RSSI_THRESHOLD;
+	}
+
+	if (d3) {
+		iwl_mld_power_config_skip_dtim(mld, link_conf, cmd);
+		cmd->rx_data_timeout =
+			cpu_to_le32(IWL_MLD_WOWLAN_PS_RX_DATA_TIMEOUT);
+		cmd->tx_data_timeout =
+			cpu_to_le32(IWL_MLD_WOWLAN_PS_TX_DATA_TIMEOUT);
+	} else if (low_latency) {
+		cmd->tx_data_timeout =
+			cpu_to_le32(IWL_MLD_SHORT_PS_TX_DATA_TIMEOUT);
+		cmd->rx_data_timeout =
+			cpu_to_le32(IWL_MLD_SHORT_PS_RX_DATA_TIMEOUT);
+	} else {
+		cmd->rx_data_timeout =
+			cpu_to_le32(IWL_MLD_DEFAULT_PS_RX_DATA_TIMEOUT);
+		cmd->tx_data_timeout =
+			cpu_to_le32(IWL_MLD_DEFAULT_PS_TX_DATA_TIMEOUT);
+	}
+
+	/* TODO: task=uapsd */
+
+	/* TODO: task=power_debugfs */
+}
+
+int iwl_mld_update_mac_power(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     bool d3)
+{
+	struct iwl_mac_power_cmd cmd = {};
+
+	/* TODO: task=tdls don't enable power management */
+
+	iwl_mld_power_build_cmd(mld, vif, &cmd, d3);
+
+	return iwl_mld_send_cmd_pdu(mld, MAC_PM_POWER_TABLE, &cmd);
 }
 
 static void
