@@ -441,7 +441,8 @@ static void iwl_mld_restart_nic(struct iwl_mld *mld)
 }
 
 static void
-iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
+iwl_mld_nic_error(struct iwl_op_mode *op_mode,
+		  enum iwl_fw_error_type type)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 	bool trans_dead = test_bit(STATUS_TRANS_DEAD, &mld->trans->status);
@@ -452,7 +453,7 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
 	mld->fw_status.do_not_dump_once = false;
 
 	/* WRT */
-	iwl_fw_error_collect(&mld->fwrt, sync);
+	iwl_fw_error_collect(&mld->fwrt, type == IWL_ERR_TYPE_RESET_HS_TIMEOUT);
 
 	/* It is necessary to abort any os scan here because mac80211 requires
 	 * having the scan cleared before restarting.
@@ -463,8 +464,8 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
 	iwl_mld_report_scan_aborted(mld);
 
 	/* Do restart only in the following conditions are met:
-	 * 1. sync=false
-	 *    (true means that the device is going to be shut down now)
+	 * 1. type != IWL_ERR_TYPE_RESET_HS_TIMEOUT
+	 *    (which means that the device isn't going to be shut down now)
 	 * 2. trans is not dead
 	 * 3. we consider the FW as running
 	 *    (if 2 or 3 is not true -  there is nothing we can do anyway)
@@ -472,7 +473,8 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode, bool sync)
 	 * 5. The trigger that brough us here is defined as one that requires
 	 *    a restart (in the debug TLVs)
 	 */
-	if (sync || trans_dead || !mld->fw_status.running ||
+	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT || trans_dead ||
+	    !mld->fw_status.running ||
 	    !iwlwifi_mod_params.fw_restart ||
 	    !mld->fwrt.trans->dbg.restart_required)
 		return;
