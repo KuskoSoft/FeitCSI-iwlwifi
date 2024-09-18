@@ -841,7 +841,7 @@ static bool iwl_mvm_mld_vif_have_valid_ap_sta(struct iwl_mvm_vif *mvmvif)
 	int i;
 
 	for_each_mvm_vif_valid_link(mvmvif, i) {
-		if (mvmvif->link[i]->ap_sta_id != IWL_MVM_INVALID_STA)
+		if (mvmvif->link[i]->ap_sta_id != IWL_INVALID_STA)
 			return true;
 	}
 
