@@ -45,10 +45,10 @@ iwl_mld_vif_from_mac80211(struct ieee80211_vif *vif)
 	rcu_dereference_check((mld_vif)->link[link_id],			\
 			      lockdep_is_held(&mld_vif->mld->wiphy->mtx))
 
-#define for_each_mld_vif_valid_link(mld_vif, link)			\
+#define for_each_mld_vif_valid_link(mld_vif, mld_link)			\
 	for (int link_id = 0; link_id < ARRAY_SIZE((mld_vif)->link);	\
 	     link_id++)							\
-		if ((link = iwl_mld_link_dereference_check(mld_vif, link_id)))
+		if ((mld_link = iwl_mld_link_dereference_check(mld_vif, link_id)))
 
 /* Retrieve pointer to mld link from mac80211 structures */
 static inline struct iwl_mld_link *
