@@ -149,8 +149,6 @@ int iwl_mld_no_wowlan_suspend(struct iwl_mld *mld)
 		goto out;
 	}
 
-	/* TODO: task power iwl_mld_power_update_mac() */
-
 	ret = iwl_trans_d3_suspend(mld->trans, false, false);
 	if (ret) {
 		IWL_ERR(mld, "d3 suspend: trans_d3_suspend failed %d\n", ret);
