@@ -20,6 +20,15 @@ struct ieee80211_vif *iwlmld_kunit_add_vif(bool mlo, enum nl80211_iftype type);
 struct ieee80211_bss_conf *
 iwlmld_kunit_add_link(struct ieee80211_vif *vif, int link_id);
 
+#define KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, size)			\
+do {									\
+	(ptr) = kunit_kzalloc((test), (size), GFP_KERNEL);		\
+	KUNIT_ASSERT_NOT_NULL((test), (ptr));				\
+} while (0)
+
+#define KUNIT_ALLOC_AND_ASSERT(test, ptr)				\
+	KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, sizeof(*(ptr)))
+
 #define CHANNEL(_name, _band, _freq)				\
 static struct ieee80211_channel _name = {			\
 	.band = (_band),					\

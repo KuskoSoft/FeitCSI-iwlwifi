@@ -19,15 +19,6 @@
 #include "phy.h"
 #include "sta.h"
 
-#define KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, size)			\
-do {									\
-	(ptr) = kunit_kzalloc((test), (size), GFP_KERNEL);		\
-	KUNIT_ASSERT_NOT_NULL((test), (ptr));				\
-} while (0)
-
-#define KUNIT_ALLOC_AND_ASSERT(test, ptr)				\
-	KUNIT_ALLOC_AND_ASSERT_SIZE(test, ptr, sizeof(*(ptr)))
-
 int iwlmld_kunit_test_init(struct kunit *test)
 {
 	struct iwl_mld *mld;
