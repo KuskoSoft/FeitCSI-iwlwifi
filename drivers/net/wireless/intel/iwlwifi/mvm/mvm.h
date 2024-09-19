@@ -254,20 +254,22 @@ enum iwl_mvm_low_latency_cause {
 	LOW_LATENCY_DEBUGFS_FORCE = BIT(5),
 };
 
-/**
-* struct iwl_mvm_link_bf_data - beacon filtering related data
-* @ave_beacon_signal: average beacon signal
-* @last_cqm_event: rssi of the last cqm event
-* @bt_coex_min_thold: minimum threshold for BT coex
-* @bt_coex_max_thold: maximum threshold for BT coex
-* @last_bt_coex_event: rssi of the last BT coex event
-*/
+/*
+ * struct iwl_mvm_link_bf_data - beacon filtering related data
+ * @ave_beacon_signal: average beacon signal
+ * @last_cqm_event: rssi of the last cqm event
+ * @bt_coex_min_thold: minimum threshold for BT coex
+ * @bt_coex_max_thold: maximum threshold for BT coex
+ * @last_bt_coex_event: rssi of the last BT coex event
+ * @last_vendor_event: rssi of the last vendor event
+ */
 struct iwl_mvm_link_bf_data {
 	int ave_beacon_signal;
 	int last_cqm_event;
 	int bt_coex_min_thold;
 	int bt_coex_max_thold;
 	int last_bt_coex_event;
+	int last_vendor_event;
 };
 
 /**

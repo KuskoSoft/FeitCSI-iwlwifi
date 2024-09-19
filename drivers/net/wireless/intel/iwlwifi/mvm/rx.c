@@ -595,6 +595,18 @@ static void iwl_mvm_update_link_sig(struct ieee80211_vif *vif, int sig,
 		}
 	}
 
+	/* Vendor Notification */
+	last_event = link_info->bf_data.last_vendor_event;
+	if ((sig < IWL_MVM_VENDOR_RSSI_THRESHOLD_MIN &&
+	     (last_event > IWL_MVM_VENDOR_RSSI_THRESHOLD_MAX ||
+	      last_event == 0)) ||
+	    (sig > IWL_MVM_VENDOR_RSSI_THRESHOLD_MAX &&
+	     (last_event < IWL_MVM_VENDOR_RSSI_THRESHOLD_MIN ||
+	      last_event == 0))) {
+		link_info->bf_data.last_vendor_event = sig;
+		iwl_vendor_send_link_info_changed_event(mvm, vif);
+	}
+
 	if (!(vif->driver_flags & IEEE80211_VIF_SUPPORTS_CQM_RSSI))
 		return;
 
