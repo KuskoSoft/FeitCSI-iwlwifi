@@ -671,8 +671,22 @@ static void iwl_xvt_nic_error(struct iwl_op_mode *op_mode,
 				 err);
 		kfree(p_table_umac);
 	}
+}
 
-	iwl_fw_error_collect(&xvt->fwrt, type == IWL_ERR_TYPE_RESET_HS_TIMEOUT);
+static void iwl_xvt_dump_error(struct iwl_op_mode *op_mode,
+			       enum iwl_fw_error_type type)
+{
+	struct iwl_xvt *xvt = IWL_OP_MODE_GET_XVT(op_mode);
+
+	/* for reset handshake we come from stop, with mutex held */
+	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
+		lockdep_assert_held(&xvt->mutex);
+		iwl_fw_error_collect(&xvt->fwrt, true);
+	} else {
+		mutex_lock(&xvt->mutex);
+		iwl_fw_error_collect(&xvt->fwrt, true);
+		mutex_unlock(&xvt->mutex);
+	}
 }
 
 static bool iwl_xvt_set_hw_rfkill_state(struct iwl_op_mode *op_mode, bool state)
@@ -751,6 +765,7 @@ static const struct iwl_op_mode_ops iwl_xvt_ops = {
 	.rx = iwl_xvt_rx_dispatch,
 	.nic_config = iwl_xvt_nic_config,
 	.nic_error = iwl_xvt_nic_error,
+	.dump_error = iwl_xvt_dump_error,
 	.hw_rf_kill = iwl_xvt_set_hw_rfkill_state,
 	.free_skb = iwl_xvt_free_skb,
 	.queue_full = iwl_xvt_stop_sw_queue,
