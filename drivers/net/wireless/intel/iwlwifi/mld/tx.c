@@ -579,3 +579,23 @@ free_rsp:
 	iwl_free_resp(&cmd);
 	return ret;
 }
+
+int iwl_mld_ensure_queue(struct iwl_mld *mld, struct ieee80211_txq *txq)
+{
+	struct iwl_mld_txq *mld_txq = iwl_mld_txq_from_mac80211(txq);
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (likely(mld_txq->status.allocated))
+		return 0;
+
+	ret = iwl_mld_add_txq(mld, txq);
+
+	spin_lock_bh(&mld->add_txqs_lock);
+	if (!list_empty(&mld_txq->list))
+		list_del_init(&mld_txq->list);
+	spin_unlock_bh(&mld->add_txqs_lock);
+
+	return ret;
+}
