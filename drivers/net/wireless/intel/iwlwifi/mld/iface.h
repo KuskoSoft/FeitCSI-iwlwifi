@@ -8,6 +8,7 @@
 #include "mld.h"
 #include "link.h"
 #include "session-protect.h"
+#include "d3.h"
 
 /**
  * struct iwl_mld_vif - virtual interface (MAC context) configuration parameters
@@ -20,6 +21,7 @@
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
  * @session_protect: session protection parameters
+ * @wowlan_data: data used by the wowlan suspend flow
  */
 struct iwl_mld_vif {
 	/* Add here fields that need clean up on restart */
@@ -33,6 +35,9 @@ struct iwl_mld_vif {
 	struct iwl_mld *mld;
 	struct iwl_mld_link deflink;
 	struct iwl_mld_link __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
+#if IS_ENABLED(CONFIG_IPV6)
+	struct iwl_mld_wowlan_data wowlan_data;
+#endif
 };
 
 static inline struct iwl_mld_vif *
