@@ -481,15 +481,8 @@ static void iwl_mld_read_error_recovery_buffer(struct iwl_mld *mld)
 
 static void iwl_mld_restart_nic(struct iwl_mld *mld)
 {
-	if (mld->fw_status.in_hw_restart) {
-		/* TODO nested restarts */
-		IWL_ERR(mld, "Nested restart. Not implemented\n");
-		return;
-	}
-
 	iwl_mld_read_error_recovery_buffer(mld);
 
-	mld->fw_status.in_hw_restart = true;
 	mld->fwrt.trans->dbg.restart_required = false;
 
 	ieee80211_restart_hw(mld->hw);
@@ -509,9 +502,6 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode,
 
 	mld->fw_status.do_not_dump_once = false;
 
-	/* WRT */
-	iwl_fw_error_collect(&mld->fwrt, type == IWL_ERR_TYPE_RESET_HS_TIMEOUT);
-
 	/* It is necessary to abort any os scan here because mac80211 requires
 	 * having the scan cleared before restarting.
 	 * We'll reset the scan_status to NONE in restart cleanup in
@@ -520,23 +510,47 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode,
 	 */
 	iwl_mld_report_scan_aborted(mld);
 
-	/* Do restart only in the following conditions are met:
-	 * 1. type != IWL_ERR_TYPE_RESET_HS_TIMEOUT
-	 *    (which means that the device isn't going to be shut down now)
-	 * 2. trans is not dead
-	 * 3. we consider the FW as running
-	 *    (if 2 or 3 is not true -  there is nothing we can do anyway)
-	 * 4. fw restart is allowed by module parameter
-	 * 5. The trigger that brough us here is defined as one that requires
-	 *    a restart (in the debug TLVs)
+	/*
+	 * This should be first thing before trying to collect any
+	 * data to avoid endless loops if any HW error happens while
+	 * collecting debug data.
+	 * It might not actually be true that we'll restart, but the
+	 * setting doesn't matter if we're going to be unbound either.
 	 */
-	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT || trans_dead ||
-	    !mld->fw_status.running ||
-	    !iwlwifi_mod_params.fw_restart ||
-	    !mld->fwrt.trans->dbg.restart_required)
-		return;
+	mld->fw_status.in_hw_restart = true;
+}
+
+static void iwl_mld_dump_error(struct iwl_op_mode *op_mode,
+			       enum iwl_fw_error_type type)
+{
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	/* for reset handshake we come from stop, with mutex held */
+	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
+		lockdep_assert_wiphy(mld->wiphy);
+		iwl_fw_error_collect(&mld->fwrt, true);
+	} else {
+		wiphy_lock(mld->wiphy);
+		iwl_fw_error_collect(&mld->fwrt, true);
+		wiphy_unlock(mld->wiphy);
+	}
+}
+
+static bool iwl_mld_sw_reset(struct iwl_op_mode *op_mode,
+			     enum iwl_fw_error_type type)
+{
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+
+	/* Do restart only in the following conditions are met:
+	 * - we consider the FW as running
+	 * - The trigger that brought us here is defined as one that requires
+	 *   a restart (in the debug TLVs)
+	 */
+	if (!mld->fw_status.running || !mld->fwrt.trans->dbg.restart_required)
+		return false;
 
 	iwl_mld_restart_nic(mld);
+	return true;
 }
 
 static void
@@ -575,6 +589,8 @@ static const struct iwl_op_mode_ops iwl_mld_ops = {
 	.hw_rf_kill = iwl_mld_set_hw_rfkill_state,
 	.free_skb = iwl_mld_free_skb,
 	.nic_error = iwl_mld_nic_error,
+	.dump_error = iwl_mld_dump_error,
+	.sw_reset = iwl_mld_sw_reset,
 	.time_point = iwl_mld_time_point,
 	.device_powered_off = pm_sleep_ptr(iwl_mld_device_powered_off),
 };
