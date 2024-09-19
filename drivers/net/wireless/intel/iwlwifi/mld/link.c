@@ -453,11 +453,8 @@ int iwl_mld_remove_link(struct iwl_mld *mld,
 	struct iwl_mld_link *link = iwl_mld_link_from_mac80211(bss_conf);
 	int ret;
 
-	if (link->active) {
-		ret = iwl_mld_deactivate_link(mld, bss_conf);
-		if (ret)
-			return ret;
-	}
+	if (WARN_ON(link->active))
+		return -EINVAL;
 
 	ret = iwl_mld_rm_link_from_fw(mld, bss_conf);
 	if (ret)
