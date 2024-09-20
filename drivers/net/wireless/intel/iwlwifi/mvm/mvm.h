@@ -2752,8 +2752,13 @@ void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
 
 static inline bool iwl_mvm_rfi_desense_supported(struct iwl_mvm *mvm)
 {
-	return iwl_fw_lookup_cmd_ver(mvm->fw, WIDE_ID(SYSTEM_GROUP,
-				     RFI_CONFIG_CMD), 0) > 3;
+	u32 mac_type = CSR_HW_REV_TYPE(mvm->trans->hw_rev);
+
+	return (mac_type == IWL_CFG_MAC_TYPE_SC ||
+		mac_type == IWL_CFG_MAC_TYPE_SC2 ||
+		mac_type == IWL_CFG_MAC_TYPE_SC2F) &&
+	       iwl_fw_lookup_cmd_ver(mvm->fw, WIDE_ID(SYSTEM_GROUP,
+						      RFI_CONFIG_CMD), 0) > 3;
 }
 
 static inline bool iwl_mvm_fw_rfi_state_supported(struct iwl_mvm *mvm)
