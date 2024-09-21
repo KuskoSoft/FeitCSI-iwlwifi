@@ -42,5 +42,10 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld);
 void iwl_mld_set_rekey_data(struct ieee80211_hw *hw,
 			    struct ieee80211_vif *vif,
 			    struct cfg80211_gtk_rekey_data *data);
+#if IS_ENABLED(CONFIG_IPV6)
+void iwl_mld_ipv6_addr_change(struct ieee80211_hw *hw,
+			      struct ieee80211_vif *vif,
+			      struct inet6_dev *idev);
+#endif
 
 #endif /* __iwl_mld_d3_h__ */

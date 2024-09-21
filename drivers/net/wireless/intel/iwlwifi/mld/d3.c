@@ -127,6 +127,34 @@ void iwl_mld_set_rekey_data(struct ieee80211_hw *hw,
 	wowlan_data->rekey_data.valid = true;
 }
 
+#if IS_ENABLED(CONFIG_IPV6)
+void iwl_mld_ipv6_addr_change(struct ieee80211_hw *hw,
+			      struct ieee80211_vif *vif,
+			      struct inet6_dev *idev)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_wowlan_data *wowlan_data = &mld_vif->wowlan_data;
+	struct inet6_ifaddr *ifa;
+	int idx = 0;
+
+	memset(wowlan_data->tentative_addrs, 0,
+	       sizeof(wowlan_data->tentative_addrs));
+
+	read_lock_bh(&idev->lock);
+	list_for_each_entry(ifa, &idev->addr_list, if_list) {
+		wowlan_data->target_ipv6_addrs[idx] = ifa->addr;
+		if (ifa->flags & IFA_F_TENTATIVE)
+			__set_bit(idx, wowlan_data->tentative_addrs);
+		idx++;
+		if (idx >= IWL_PROTO_OFFLOAD_NUM_IPV6_ADDRS_MAX)
+			break;
+	}
+	read_unlock_bh(&idev->lock);
+
+	wowlan_data->num_target_ipv6_addrs = idx;
+}
+#endif
+
 static bool iwl_mld_check_err_tables(struct iwl_mld *mld,
 				     struct ieee80211_vif *vif)
 {
