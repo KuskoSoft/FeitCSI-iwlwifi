@@ -4,6 +4,7 @@
  */
 
 #include <net/mac80211.h>
+#include <linux/ip.h>
 
 #include "mld.h"
 #include "mac80211.h"
@@ -1317,6 +1318,32 @@ iwl_mld_mac80211_ampdu_action(struct ieee80211_hw *hw,
 	return ret;
 }
 
+static bool iwl_mld_can_hw_csum(struct sk_buff *skb)
+{
+	u8 protocol = ip_hdr(skb)->protocol;
+
+	return protocol == IPPROTO_TCP || protocol == IPPROTO_UDP;
+}
+
+static bool iwl_mld_mac80211_can_aggregate(struct ieee80211_hw *hw,
+					   struct sk_buff *head,
+					   struct sk_buff *skb)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	if (!IS_ENABLED(CONFIG_INET))
+		return false;
+
+	/* For now don't aggregate IPv6 in AMSDU */
+	if (skb->protocol != htons(ETH_P_IP))
+		return false;
+
+	/* Allow aggregation only if both frames have the same HW csum offload
+	 * capability, ensuring consistent HW or SW csum handling in A-MSDU.
+	 */
+	return iwl_mld_can_hw_csum(skb) == iwl_mld_can_hw_csum(head);
+}
+
 static void iwl_mld_mac80211_sync_rx_queues(struct ieee80211_hw *hw)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
@@ -1374,6 +1401,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.flush = iwl_mld_mac80211_flush,
 	.flush_sta = iwl_mld_mac80211_flush_sta,
 	.ampdu_action = iwl_mld_mac80211_ampdu_action,
+	.can_aggregate_in_amsdu = iwl_mld_mac80211_can_aggregate,
 	.sync_rx_queues = iwl_mld_mac80211_sync_rx_queues,
 	.link_sta_rc_update = iwl_mld_sta_rc_update,
 #ifdef CONFIG_PM_SLEEP
