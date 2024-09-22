@@ -463,7 +463,17 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 		if (skb_freed > 1)
 			info->flags |= IEEE80211_TX_STAT_ACK;
 
-		/* TODO: iwl_mvm_tx_status_check_trigger (task=DP) */
+		if ((status & TX_STATUS_MSK) != TX_STATUS_SUCCESS) {
+			struct ieee80211_hdr *hdr = (void *)skb->data;
+			enum iwl_fw_ini_time_point tp =
+				IWL_FW_INI_TIME_POINT_TX_FAILED;
+
+			if (ieee80211_is_action(hdr->frame_control))
+				tp = IWL_FW_INI_TIME_POINT_TX_WFD_ACTION_FRAME_FAILED;
+
+			iwl_dbg_tlv_time_point(&mld->fwrt, tp, NULL);
+		}
+
 		/* TODO: iwl_mvm_hwrate_to_tx_rate (task=DP)*/
 
 		ieee80211_tx_status_skb(mld->hw, skb);
