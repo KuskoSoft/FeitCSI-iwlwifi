@@ -365,6 +365,10 @@ static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
 
 	hw->netdev_features = NETIF_F_HIGHDMA | NETIF_F_SG;
 	hw->netdev_features |= mld->cfg->features;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.HW_CSUM_DISABLE)
+		hw->netdev_features &= ~IWL_CSUM_NETIF_FLAGS_MASK;
+#endif
 
 	hw->max_tx_fragments = mld->trans->max_skb_frags;
 	hw->max_listen_interval = 10;
@@ -1337,6 +1341,10 @@ static bool iwl_mld_mac80211_can_aggregate(struct ieee80211_hw *hw,
 	/* For now don't aggregate IPv6 in AMSDU */
 	if (skb->protocol != htons(ETH_P_IP))
 		return false;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.HW_CSUM_DISABLE)
+		return false;
+#endif
 
 	/* Allow aggregation only if both frames have the same HW csum offload
 	 * capability, ensuring consistent HW or SW csum handling in A-MSDU.
