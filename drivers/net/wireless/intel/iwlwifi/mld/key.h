@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+/*
+ * Copyright (C) 2024 Intel Corporation
+ */
+#ifndef __iwl_mld_key_h__
+#define __iwl_mld_key_h__
+
+#include "mld.h"
+#include <net/mac80211.h>
+
+int iwl_mld_remove_key(struct iwl_mld *mld,
+		       struct ieee80211_vif *vif,
+		       struct ieee80211_sta *sta,
+		       struct ieee80211_key_conf *key);
+int iwl_mld_add_key(struct iwl_mld *mld,
+		    struct ieee80211_vif *vif,
+		    struct ieee80211_sta *sta,
+		    struct ieee80211_key_conf *key);
+
+#endif /* __iwl_mld_key_h__ */

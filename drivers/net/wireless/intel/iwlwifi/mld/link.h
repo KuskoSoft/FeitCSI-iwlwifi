@@ -20,6 +20,8 @@
  * @chan_ctx: pointer to the channel context assigned to the link. If a link
  *	has an assigned channel context it means that it is active.
  * @he_ru_2mhz_block: 26-tone RU OFDMA transmissions should be blocked.
+ * @igtk: fw can only have one IGTK at a time, whereas mac80211 can have two.
+ *	This tracks the one IGTK that currently exists in FW.
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
@@ -29,6 +31,7 @@ struct iwl_mld_link {
 		struct ieee80211_tx_queue_params queue_params[IEEE80211_NUM_ACS];
 		struct ieee80211_chanctx_conf __rcu *chan_ctx;
 		bool he_ru_2mhz_block;
+		struct ieee80211_key_conf *igtk;
 	);
 	/* And here fields that survive a fw restart */
 };

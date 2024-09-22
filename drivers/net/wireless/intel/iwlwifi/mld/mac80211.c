@@ -16,9 +16,11 @@
 #include "scan.h"
 #include "d3.h"
 #include "tlc.h"
+#include "key.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #include "fw/api/filter.h"
+#include "fw/api/sta.h"
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
 #endif /* CONFIG_PM_SLEEP */
@@ -1032,17 +1034,6 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 	//todo: BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM - mlo_int_scan_wk
 }
 
-static
-int iwl_mld_mac80211_set_key(struct ieee80211_hw *hw,
-			     enum set_key_cmd cmd,
-			     struct ieee80211_vif *vif,
-			     struct ieee80211_sta *sta,
-			     struct ieee80211_key_conf *key)
-{
-	WARN_ON("Not supported yet\n");
-	return -EOPNOTSUPP;
-}
-
 static int
 iwl_mld_mac80211_hw_scan(struct ieee80211_hw *hw,
 			 struct ieee80211_vif *vif,
@@ -1533,6 +1524,104 @@ static int iwl_mld_resume(struct ieee80211_hw *hw)
 
 	if (!ret)
 		iwl_fw_runtime_resume(&mld->fwrt);
+
+	return ret;
+}
+
+static int iwl_mld_set_key_add(struct iwl_mld *mld,
+			       struct ieee80211_vif *vif,
+			       struct ieee80211_sta *sta,
+			       struct ieee80211_key_conf *key)
+{
+	int ret;
+
+	switch (key->cipher) {
+	case WLAN_CIPHER_SUITE_WEP40:
+	case WLAN_CIPHER_SUITE_WEP104:
+		IWL_DEBUG_MAC80211(mld, "Use SW encryption for WEP\n");
+		return -EOPNOTSUPP;
+	case WLAN_CIPHER_SUITE_TKIP:
+		if (vif->type == NL80211_IFTYPE_STATION) {
+			key->flags |= IEEE80211_KEY_FLAG_PUT_MIC_SPACE;
+			break;
+		}
+		IWL_DEBUG_MAC80211(mld, "Use SW encryption for TKIP\n");
+		return -EOPNOTSUPP;
+	case WLAN_CIPHER_SUITE_CCMP:
+	case WLAN_CIPHER_SUITE_GCMP:
+	case WLAN_CIPHER_SUITE_GCMP_256:
+	case WLAN_CIPHER_SUITE_AES_CMAC:
+	case WLAN_CIPHER_SUITE_BIP_GMAC_128:
+	case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	/* TODO: setup beacon protection (task=secure_assoc) */
+
+	/* TODO: for AP/IBSS, store the GTK and IGTK, and send it when
+	 * start_ap_ibss is called (see ap_early_keys) (task=soft_ap)
+	 */
+
+	/* TODO: setup PN tracking (task=DP) */
+
+	/* TODO: for iwlmei, track the cipher of the pairwise key (task=iwlmei) */
+
+	IWL_DEBUG_MAC80211(mld, "set hwcrypto key (sta:%pM, id:%d)\n",
+			   sta ? sta->addr : NULL, key->keyidx);
+
+	ret = iwl_mld_add_key(mld, vif, sta, key);
+
+	if (ret)
+		IWL_WARN(mld, "set key failed\n");
+
+	return ret;
+}
+
+static void iwl_mld_set_key_remove(struct iwl_mld *mld,
+				   struct ieee80211_vif *vif,
+				   struct ieee80211_sta *sta,
+				   struct ieee80211_key_conf *key)
+{
+	/* TODO: clean up becaon protection data (task=DP) */
+
+	/* TODO: ignore AP early key (task=softAP) */
+
+	/* TODO: free PN data (task=DP) */
+
+	/* We already removed it */
+	if (key->hw_key_idx == STA_KEY_IDX_INVALID)
+		return;
+
+	IWL_DEBUG_MAC80211(mld, "disable hwcrypto key\n");
+
+	iwl_mld_remove_key(mld, vif, sta, key);
+}
+
+static int iwl_mld_mac80211_set_key(struct ieee80211_hw *hw,
+				    enum set_key_cmd cmd,
+				    struct ieee80211_vif *vif,
+				    struct ieee80211_sta *sta,
+				    struct ieee80211_key_conf *key)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
+
+	switch (cmd) {
+	case SET_KEY:
+		ret = iwl_mld_set_key_add(mld, vif, sta, key);
+		if (ret)
+			ret = -EOPNOTSUPP;
+		break;
+	case DISABLE_KEY:
+		iwl_mld_set_key_remove(mld, vif, sta, key);
+		ret = 0;
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
 
 	return ret;
 }
