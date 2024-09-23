@@ -349,6 +349,80 @@ void iwl_mld_stop_fw(struct iwl_mld *mld)
 	mld->fw_status.running = false;
 }
 
+static void iwl_mld_restart_disconnect_iter(void *data, u8 *mac,
+					    struct ieee80211_vif *vif)
+{
+	if (vif->type == NL80211_IFTYPE_STATION)
+		ieee80211_hw_restart_disconnect(vif);
+}
+
+void iwl_mld_send_recovery_cmd(struct iwl_mld *mld, u32 flags)
+{
+	u32 error_log_size = mld->fw->ucode_capa.error_log_size;
+	struct iwl_fw_error_recovery_cmd recovery_cmd = {
+		.flags = cpu_to_le32(flags),
+	};
+	struct iwl_host_cmd cmd = {
+		.id = WIDE_ID(SYSTEM_GROUP, FW_ERROR_RECOVERY_CMD),
+		.flags = CMD_WANT_SKB,
+		.data = {&recovery_cmd, },
+		.len = {sizeof(recovery_cmd), },
+	};
+	int ret;
+
+	/* no error log was defined in TLV */
+	if (!error_log_size)
+		return;
+
+	if (flags & ERROR_RECOVERY_UPDATE_DB) {
+		/* no buf was allocated upon NIC error */
+		if (!mld->error_recovery_buf)
+			return;
+
+		cmd.data[1] = mld->error_recovery_buf;
+		cmd.len[1] =  error_log_size;
+		cmd.dataflags[1] = IWL_HCMD_DFL_NOCOPY;
+		recovery_cmd.buf_size = cpu_to_le32(error_log_size);
+	}
+
+	ret = iwl_mld_send_cmd(mld, &cmd);
+
+	/* we no longer need the recovery buffer */
+	kfree(mld->error_recovery_buf);
+	mld->error_recovery_buf = NULL;
+
+	if (ret) {
+		IWL_ERR(mld, "Failed to send recovery cmd %d\n", ret);
+		return;
+	}
+
+	if (flags & ERROR_RECOVERY_UPDATE_DB) {
+		struct iwl_rx_packet *pkt = cmd.resp_pkt;
+		u32 pkt_len = iwl_rx_packet_payload_len(pkt);
+		u32 resp;
+
+		if (IWL_FW_CHECK(mld, pkt_len != sizeof(resp),
+				 "Unexpected recovery cmd response size %d (expected %ld)\n",
+				 pkt_len, sizeof(resp)))
+			goto out;
+
+		resp = le32_to_cpup((__le32 *)cmd.resp_pkt->data);
+		if (!resp)
+			goto out;
+
+		IWL_ERR(mld,
+			"Failed to send recovery cmd blob was invalid %d\n",
+			resp);
+
+		ieee80211_iterate_interfaces(mld->hw, 0,
+					     iwl_mld_restart_disconnect_iter,
+					     NULL);
+	}
+
+out:
+	iwl_free_resp(&cmd);
+}
+
 static int iwl_mld_config_fw(struct iwl_mld *mld)
 {
 	int ret;
@@ -389,6 +463,9 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	ret = iwl_mld_init_mcc(mld);
 	if (ret)
 		return ret;
+
+	if (mld->fw_status.in_hw_restart)
+		iwl_mld_send_recovery_cmd(mld, ERROR_RECOVERY_UPDATE_DB);
 
 	iwl_mld_led_config_fw(mld);
 

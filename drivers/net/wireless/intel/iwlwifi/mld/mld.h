@@ -78,6 +78,9 @@
  * @txqs_to_add: a list of &ieee80211_txq's to allocate in &add_txqs_wk
  * @add_txqs_wk: a worker to allocate txqs.
  * @add_txqs_lock: to lock the &txqs_to_add list.
+ * @error_recovery_buf: pointer to the recovery buffer that will be read
+ *	from firmware upon fw/hw error and sent back to the firmware in
+ *	reconfig flow (after NIC reset).
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -131,6 +134,7 @@ struct iwl_mld {
 	struct wiphy_work add_txqs_wk;
 	spinlock_t add_txqs_lock;
 
+	u8 *error_recovery_buf;
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/* the hcmd number on which nmi will be triggered */
 	u8 nmi_thresh;
@@ -186,6 +190,7 @@ int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld);
 int iwl_mld_load_fw(struct iwl_mld *mld);
 void iwl_mld_stop_fw(struct iwl_mld *mld);
 int iwl_mld_start_fw(struct iwl_mld *mld);
+void iwl_mld_send_recovery_cmd(struct iwl_mld *mld, u32 flags);
 
 static inline u8 iwl_mld_get_valid_tx_ant(const struct iwl_mld *mld)
 {

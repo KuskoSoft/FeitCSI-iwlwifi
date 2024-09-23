@@ -1027,7 +1027,7 @@ iwl_mld_mac80211_reconfig_complete(struct ieee80211_hw *hw,
 	switch (reconfig_type) {
 	case IEEE80211_RECONFIG_TYPE_RESTART:
 		mld->fw_status.in_hw_restart = false;
-		/* TODO: send recovery cmd */
+		iwl_mld_send_recovery_cmd(mld, ERROR_RECOVERY_END_OF_RECOVERY);
 		break;
 	case IEEE80211_RECONFIG_TYPE_SUSPEND:
 		break;

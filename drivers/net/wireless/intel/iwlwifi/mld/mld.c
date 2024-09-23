@@ -168,6 +168,7 @@ static const struct iwl_hcmd_names iwl_mld_system_names[] = {
 	HCMD_NAME(SHARED_MEM_CFG_CMD),
 	HCMD_NAME(SOC_CONFIGURATION_CMD),
 	HCMD_NAME(INIT_EXTENDED_CFG_CMD),
+	HCMD_NAME(FW_ERROR_RECOVERY_CMD),
 };
 
 /* Please keep this array *SORTED* by hex value.
@@ -354,6 +355,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 
 	kfree(mld->nvm_data);
 	kfree(mld->scan.cmd);
+	kfree(mld->error_recovery_buf);
 
 	ieee80211_free_hw(mld->hw);
 }
@@ -392,6 +394,33 @@ iwl_mld_free_skb(struct iwl_op_mode *op_mode, struct sk_buff *skb)
 	ieee80211_free_txskb(mld->hw, skb);
 }
 
+static void iwl_mld_read_error_recovery_buffer(struct iwl_mld *mld)
+{
+	u32 src_size = mld->fw->ucode_capa.error_log_size;
+	u32 src_addr = mld->fw->ucode_capa.error_log_addr;
+	u8 *recovery_buf;
+	int ret;
+
+	/* no recovery buffer size defined in a TLV */
+	if (!src_size)
+		return;
+
+	recovery_buf = kzalloc(src_size, GFP_ATOMIC);
+	if (!recovery_buf)
+		return;
+
+	ret = iwl_trans_read_mem_bytes(mld->trans, src_addr,
+				       recovery_buf, src_size);
+	if (ret) {
+		IWL_ERR(mld, "Failed to read error recovery buffer (%d)\n",
+			ret);
+		kfree(recovery_buf);
+		return;
+	}
+
+	mld->error_recovery_buf = recovery_buf;
+}
+
 static void iwl_mld_restart_nic(struct iwl_mld *mld)
 {
 	if (mld->fw_status.in_hw_restart) {
@@ -400,7 +429,7 @@ static void iwl_mld_restart_nic(struct iwl_mld *mld)
 		return;
 	}
 
-	/* TODO: get error recovery buffer (task=DP) */
+	iwl_mld_read_error_recovery_buffer(mld);
 
 	mld->fw_status.in_hw_restart = true;
 	mld->fwrt.trans->dbg.restart_required = false;
