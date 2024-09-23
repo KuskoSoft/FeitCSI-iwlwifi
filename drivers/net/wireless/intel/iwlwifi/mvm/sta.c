@@ -3571,8 +3571,8 @@ static int iwl_mvm_send_sta_key(struct iwl_mvm *mvm,
 		key_flags |= cpu_to_le16(STA_KEY_FLG_AMSDU_SPP);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-	if (mvm->trans->dbg_cfg.MVM_SPP_AMSDU_ACTIVATE >= 0) {
-		if (mvm->trans->dbg_cfg.MVM_SPP_AMSDU_ACTIVATE)
+	if (mvm->trans->dbg_cfg.SPP_AMSDU_ACTIVATE >= 0) {
+		if (mvm->trans->dbg_cfg.SPP_AMSDU_ACTIVATE)
 			key_flags |= cpu_to_le16(STA_KEY_FLG_AMSDU_SPP);
 		else
 			key_flags &= ~cpu_to_le16(STA_KEY_FLG_AMSDU_SPP);
