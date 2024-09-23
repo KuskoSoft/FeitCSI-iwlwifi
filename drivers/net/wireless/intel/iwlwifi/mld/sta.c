@@ -9,6 +9,7 @@
 #include "sta.h"
 #include "hcmd.h"
 #include "iface.h"
+#include "key.h"
 #include "fw/api/sta.h"
 #include "fw/api/mac.h"
 #include "fw/api/rx.h"
@@ -465,6 +466,7 @@ void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld, struct ieee80211_sta *sta)
 void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct ieee80211_vif *vif = mld_sta->vif;
 	struct ieee80211_link_sta *link_sta;
 	u8 link_id;
 
@@ -480,9 +482,17 @@ void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		iwl_mld_remove_txq(mld, sta->txq[i]);
 
-	/* Remove all link_sta's*/
-	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id)
+	for_each_sta_active_link(vif, sta, link_sta, link_id) {
+		/* Mac8011 will remove the groupwise keys after the sta is
+		 * removed, but FW expects all the keys to be removed before
+		 * the STA is, so remove them all here.
+		 */
+		if (vif->type == NL80211_IFTYPE_STATION)
+			iwl_mld_remove_ap_keys(mld, vif, link_id);
+
+		/* Remove the link_sta */
 		iwl_mld_remove_link_sta(mld, link_sta);
+	}
 
 	iwl_mld_destroy_sta(sta);
 }

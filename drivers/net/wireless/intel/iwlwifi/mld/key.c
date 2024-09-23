@@ -247,3 +247,37 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 
 	return 0;
 }
+
+static void iwl_mld_remove_ap_keys_iter(struct ieee80211_hw *hw,
+					struct ieee80211_vif *vif,
+					struct ieee80211_sta *sta,
+					struct ieee80211_key_conf *key,
+					void *data)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	unsigned int link_id = (uintptr_t)data;
+
+	if (key->hw_key_idx == STA_KEY_IDX_INVALID)
+		return;
+
+	if (sta)
+		return;
+
+	if (key->link_id >= 0 && key->link_id != link_id)
+		return;
+
+	iwl_mld_remove_key(mld, vif, NULL, key);
+	key->hw_key_idx = STA_KEY_IDX_INVALID;
+}
+
+void iwl_mld_remove_ap_keys(struct iwl_mld *mld,
+			    struct ieee80211_vif *vif,
+			    unsigned int link_id)
+{
+	if (WARN_ON_ONCE(vif->type != NL80211_IFTYPE_STATION))
+		return;
+
+	ieee80211_iter_keys(mld->hw, vif,
+			    iwl_mld_remove_ap_keys_iter,
+			    (void *)(uintptr_t)link_id);
+}

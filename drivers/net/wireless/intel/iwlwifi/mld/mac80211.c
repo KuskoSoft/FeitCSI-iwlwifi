@@ -1310,8 +1310,8 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 		/* nothing */
 	} else if (old_state == IEEE80211_STA_NONE &&
 		   new_state == IEEE80211_STA_NOTEXIST) {
-		mld_vif->ap_sta = NULL;
 		iwl_mld_remove_sta(mld, sta);
+		mld_vif->ap_sta = NULL;
 	} else {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
 		return -EINVAL;
