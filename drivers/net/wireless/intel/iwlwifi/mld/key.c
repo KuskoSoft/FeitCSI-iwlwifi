@@ -4,18 +4,157 @@
  */
 #include "key.h"
 #include "iface.h"
+#include "sta.h"
 #include "fw/api/sta.h"
+#include "fw/api/datapath.h"
 
-static int iwl_mld_add_key_to_fw(void)
+static u32 iwl_mld_get_key_flags(struct iwl_mld *mld,
+				 struct ieee80211_vif *vif,
+				 struct ieee80211_sta *sta,
+				 struct ieee80211_key_conf *key)
 {
-	/* TODO: implement key API */
-	return 0;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	bool pairwise = key->flags & IEEE80211_KEY_FLAG_PAIRWISE;
+	bool igtk = key->keyidx == 4 || key->keyidx == 5;
+	u32 flags = 0;
+
+	if (!pairwise)
+		flags |= IWL_SEC_KEY_FLAG_MCAST_KEY;
+
+	switch (key->cipher) {
+	case WLAN_CIPHER_SUITE_TKIP:
+		flags |= IWL_SEC_KEY_FLAG_CIPHER_TKIP;
+		break;
+	case WLAN_CIPHER_SUITE_AES_CMAC:
+	case WLAN_CIPHER_SUITE_CCMP:
+		flags |= IWL_SEC_KEY_FLAG_CIPHER_CCMP;
+		break;
+	case WLAN_CIPHER_SUITE_GCMP_256:
+	case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+		flags |= IWL_SEC_KEY_FLAG_KEY_SIZE;
+		fallthrough;
+	case WLAN_CIPHER_SUITE_GCMP:
+	case WLAN_CIPHER_SUITE_BIP_GMAC_128:
+		flags |= IWL_SEC_KEY_FLAG_CIPHER_GCMP;
+		break;
+	}
+
+	if (!sta && vif->type == NL80211_IFTYPE_STATION)
+		sta = mld_vif->ap_sta;
+
+	/* If we are installing an iGTK (in AP or STA mode), we need to tell
+	 * the firmware this key will en/decrypt MGMT frames.
+	 * Same goes if we are installing a pairwise key for an MFP station.
+	 * In case we're installing a groupwise key (which is not an iGTK),
+	 * then, we will not use this key for MGMT frames.
+	 */
+	if ((sta && sta->mfp && pairwise) || igtk)
+		flags |= IWL_SEC_KEY_FLAG_MFP;
+
+	if (key->flags & IEEE80211_KEY_FLAG_SPP_AMSDU)
+		flags |= IWL_SEC_KEY_FLAG_SPP_AMSDU;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.SPP_AMSDU_ACTIVATE >= 0) {
+		if (mld->trans->dbg_cfg.SPP_AMSDU_ACTIVATE)
+			flags |= IWL_SEC_KEY_FLAG_SPP_AMSDU;
+		else
+			flags &= ~IWL_SEC_KEY_FLAG_SPP_AMSDU;
+	}
+#endif
+
+	return flags;
 }
 
-static int iwl_mld_remove_key_from_fw(void)
+static u32 iwl_mld_get_key_sta_mask(struct iwl_mld *mld,
+				    struct ieee80211_vif *vif,
+				    struct ieee80211_sta *sta,
+				    struct ieee80211_key_conf *key)
 {
-	/* TODO: implement key API */
-	return 0;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct ieee80211_link_sta *link_sta;
+	u8 sta_id;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* TODO: select bcast/mcast sta id for AP mode and groupwise keys (task=softAP) */
+
+	/* for client mode use the AP STA also for group keys */
+	if (!sta && vif->type == NL80211_IFTYPE_STATION)
+		sta = mld_vif->ap_sta;
+
+	/* STA should be non-NULL now */
+	if (WARN_ON(!sta))
+		return 0;
+
+	/* Key is not per-link, get the full sta mask */
+	if (key->link_id < 0)
+		return iwl_mld_fw_sta_id_mask(mld, sta);
+
+	/* The link_sta shouldn't be NULL now, but this is checked in
+	 * iwl_mld_fw_sta_id_mask
+	 */
+	link_sta = link_sta_dereference_check(sta, key->link_id);
+
+	sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+	if (WARN_ON(sta_id < 0))
+		return 0;
+
+	return BIT(sta_id);
+}
+
+static int iwl_mld_add_key_to_fw(struct iwl_mld *mld, u32 sta_mask,
+				 u32 key_flags, struct ieee80211_key_conf *key)
+{
+	struct iwl_sec_key_cmd cmd = {
+		.action = cpu_to_le32(FW_CTXT_ACTION_ADD),
+		.u.add.sta_mask = cpu_to_le32(sta_mask),
+		.u.add.key_id = cpu_to_le32(key->keyidx),
+		.u.add.key_flags = cpu_to_le32(key_flags),
+		.u.add.tx_seq = cpu_to_le64(atomic64_read(&key->tx_pn)),
+	};
+	bool tkip = key->cipher == WLAN_CIPHER_SUITE_TKIP;
+	int max_key_len = sizeof(cmd.u.add.key);
+
+	if (WARN_ON(!sta_mask))
+		return -EINVAL;
+
+	if (WARN_ON(key->keylen > max_key_len))
+		return -EINVAL;
+
+	if (WARN_ON(!sta_mask))
+		return -EINVAL;
+
+	memcpy(cmd.u.add.key, key->key, key->keylen);
+
+	if (tkip) {
+		memcpy(cmd.u.add.tkip_mic_rx_key,
+		       key->key + NL80211_TKIP_DATA_OFFSET_RX_MIC_KEY,
+		       8);
+		memcpy(cmd.u.add.tkip_mic_tx_key,
+		       key->key + NL80211_TKIP_DATA_OFFSET_TX_MIC_KEY,
+		       8);
+	}
+
+	return iwl_mld_send_cmd_pdu(mld, WIDE_ID(DATA_PATH_GROUP, SEC_KEY_CMD),
+				    &cmd);
+}
+
+static int iwl_mld_remove_key_from_fw(struct iwl_mld *mld, u32 sta_mask,
+				      u32 key_flags, u32 keyidx)
+{
+	struct iwl_sec_key_cmd cmd = {
+		.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE),
+		.u.remove.sta_mask = cpu_to_le32(sta_mask),
+		.u.remove.key_id = cpu_to_le32(keyidx),
+		.u.remove.key_flags = cpu_to_le32(key_flags),
+	};
+
+	if (WARN_ON(!sta_mask))
+		return -EINVAL;
+
+	return iwl_mld_send_cmd_pdu(mld, WIDE_ID(DATA_PATH_GROUP, SEC_KEY_CMD),
+				    &cmd);
 }
 
 int iwl_mld_remove_key(struct iwl_mld *mld,
@@ -23,6 +162,8 @@ int iwl_mld_remove_key(struct iwl_mld *mld,
 		       struct ieee80211_sta *sta,
 		       struct ieee80211_key_conf *key)
 {
+	u32 sta_mask = iwl_mld_get_key_sta_mask(mld, vif, sta, key);
+	u32 key_flags = iwl_mld_get_key_flags(mld, vif, sta, key);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 
 	lockdep_assert_wiphy(mld->wiphy);
@@ -46,7 +187,8 @@ int iwl_mld_remove_key(struct iwl_mld *mld,
 		}
 	}
 
-	return iwl_mld_remove_key_from_fw();
+	return iwl_mld_remove_key_from_fw(mld, sta_mask, key_flags,
+					  key->keyidx);
 }
 
 int iwl_mld_add_key(struct iwl_mld *mld,
@@ -54,6 +196,8 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 		    struct ieee80211_sta *sta,
 		    struct ieee80211_key_conf *key)
 {
+	u32 sta_mask = iwl_mld_get_key_sta_mask(mld, vif, sta, key);
+	u32 key_flags = iwl_mld_get_key_flags(mld, vif, sta, key);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *mld_link = NULL;
 	bool igtk = key->keyidx == 4 || key->keyidx == 5;
@@ -89,7 +233,7 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 	/* Will be set to 0 if added successfully */
 	key->hw_key_idx = STA_KEY_IDX_INVALID;
 
-	ret = iwl_mld_add_key_to_fw();
+	ret = iwl_mld_add_key_to_fw(mld, sta_mask, key_flags, key);
 	if (ret)
 		return ret;
 
