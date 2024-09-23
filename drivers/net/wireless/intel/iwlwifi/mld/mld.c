@@ -15,6 +15,7 @@
 #include "led.h"
 #include "scan.h"
 #include "tx.h"
+#include "sta.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -363,18 +364,48 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	ieee80211_free_hw(mld->hw);
 }
 
+static void iwl_mld_queue_state_change(struct iwl_op_mode *op_mode,
+				       int hw_queue, bool queue_full)
+{
+	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
+	struct ieee80211_txq *txq;
+	struct iwl_mld_sta *mld_sta;
+	struct iwl_mld_txq *mld_txq;
+
+	rcu_read_lock();
+
+	txq = rcu_dereference(mld->fw_id_to_txq[hw_queue]);
+	if (!txq)
+		goto out;
+
+	mld_txq = iwl_mld_txq_from_mac80211(txq);
+	mld_sta = txq->sta ? iwl_mld_sta_from_mac80211(txq->sta) : NULL;
+
+	/* TODO: static queues (task=DP_TX) */
+
+	mld_txq->status.stop_full = queue_full;
+
+	if (!queue_full && mld_sta &&
+	    mld_sta->sta_state != IEEE80211_STA_NOTEXIST) {
+		local_bh_disable();
+		iwl_mld_tx_from_txq(mld, txq);
+		local_bh_enable();
+	}
+
+out:
+	rcu_read_unlock();
+}
+
 static void
 iwl_mld_queue_full(struct iwl_op_mode *op_mode, int hw_queue)
 {
-	/* TODO */
-	WARN_ONCE(1, "Not supported yet\n");
+	iwl_mld_queue_state_change(op_mode, hw_queue, true);
 }
 
 static void
 iwl_mld_queue_not_full(struct iwl_op_mode *op_mode, int hw_queue)
 {
-	/* TODO */
-	WARN_ONCE(1, "Not supported yet\n");
+	iwl_mld_queue_state_change(op_mode, hw_queue, false);
 }
 
 static bool

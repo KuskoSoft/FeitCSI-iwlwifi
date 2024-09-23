@@ -14,6 +14,7 @@
  * @list: list pointer, for &mld::txqs_to_add
  * @status: bitmap of the txq status
  * @status.allocated: Indicates that the queue was allocated.
+ * @status.stop_full: Indicates that the queue is full and should stop TXing.
  * @tx_request: makes sure that if there are multiple threads that want to tx
  *	from this txq, only one of them will do all the TXing.
  *	This is needed to avoid spinning the trans txq lock, which is expensive
@@ -25,6 +26,7 @@ struct iwl_mld_txq {
 		struct list_head list;
 		struct {
 			u8 allocated:1;
+			u8 stop_full:1;
 		} status;
 		atomic_t tx_request;
 	);
