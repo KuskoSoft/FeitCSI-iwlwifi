@@ -56,6 +56,71 @@ static bool iwl_mld_power_is_radar(struct iwl_mld *mld,
 	return chanctx_conf->def.chan->flags & IEEE80211_CHAN_RADAR;
 }
 
+static void iwl_mld_power_configure_uapsd(struct iwl_mld *mld,
+					  struct iwl_mld_link *link,
+					  struct iwl_mac_power_cmd *cmd)
+{
+	bool tid_found = false;
+
+	cmd->rx_data_timeout_uapsd =
+		cpu_to_le32(IWL_MLD_UAPSD_RX_DATA_TIMEOUT);
+	cmd->tx_data_timeout_uapsd =
+		cpu_to_le32(IWL_MLD_UAPSD_TX_DATA_TIMEOUT);
+
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	/* TODO: task=power_debugfs
+	 * set advanced pm flag with no uapsd ACs to enable ps-poll
+	if (mld_vif->dbgfs_pm.use_ps_poll) {
+		cmd->flags |= cpu_to_le16(POWER_FLAGS_ADVANCE_PM_ENA_MSK);
+		return;
+	}
+	*/
+#endif
+
+	for (enum ieee80211_ac_numbers ac = IEEE80211_AC_VO;
+	     ac <= IEEE80211_AC_BK;
+	     ac++) {
+		if (!link->queue_params[ac].uapsd)
+			continue;
+
+		cmd->flags |=
+			cpu_to_le16(POWER_FLAGS_ADVANCE_PM_ENA_MSK |
+				    POWER_FLAGS_UAPSD_MISBEHAVING_ENA_MSK);
+
+		cmd->uapsd_ac_flags |= BIT(ac);
+
+		/* QNDP TID - the highest TID with no admission control */
+		if (!tid_found && !link->queue_params[ac].acm) {
+			tid_found = true;
+			switch (ac) {
+			case IEEE80211_AC_VO:
+				cmd->qndp_tid = 6;
+				break;
+			case IEEE80211_AC_VI:
+				cmd->qndp_tid = 5;
+				break;
+			case IEEE80211_AC_BE:
+				cmd->qndp_tid = 0;
+				break;
+			case IEEE80211_AC_BK:
+				cmd->qndp_tid = 1;
+				break;
+			}
+		}
+	}
+
+	if (cmd->uapsd_ac_flags == (BIT(IEEE80211_AC_VO) |
+				    BIT(IEEE80211_AC_VI) |
+				    BIT(IEEE80211_AC_BE) |
+				    BIT(IEEE80211_AC_BK))) {
+		cmd->flags |= cpu_to_le16(POWER_FLAGS_SNOOZE_ENA_MSK);
+		cmd->snooze_interval = cpu_to_le16(IWL_MLD_PS_SNOOZE_INTERVAL);
+		cmd->snooze_window = cpu_to_le16(IWL_MLD_PS_SNOOZE_WINDOW);
+	}
+
+	cmd->uapsd_max_sp = mld->hw->uapsd_max_sp_len;
+}
+
 static void
 iwl_mld_power_config_skip_dtim(struct iwl_mld *mld,
 			       const struct ieee80211_bss_conf *link_conf,
@@ -91,6 +156,7 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 	int keep_alive;
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct ieee80211_bss_conf *link_conf = &vif->bss_conf;
+	struct iwl_mld_link *link = &mld_vif->deflink;
 	/* TODO: task=low_latency + p2p */
 	bool low_latency = false;
 
@@ -108,7 +174,9 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 		 */
 		link_id = __ffs(vif->active_links);
 		link_conf = link_conf_dereference_check(vif, link_id);
-		if (WARN_ON(!link_conf))
+		link = iwl_mld_link_dereference_check(mld_vif, link_id);
+
+		if (WARN_ON(!link_conf || !link))
 			return;
 	}
 	dtimper = link_conf->dtim_period;
@@ -158,7 +226,11 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 			cpu_to_le32(IWL_MLD_DEFAULT_PS_TX_DATA_TIMEOUT);
 	}
 
-	/* TODO: task=uapsd */
+	/* uAPSD is only enabled for specific certifications. For those cases,
+	 * mac80211 will allow uAPSD. Always call iwl_mld_power_configure_uapsd
+	 * which will look at what mac80211 is saying.
+	 */
+	iwl_mld_power_configure_uapsd(mld, link, cmd);
 
 	/* TODO: task=power_debugfs */
 }

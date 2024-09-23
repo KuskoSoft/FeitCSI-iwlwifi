@@ -1110,6 +1110,22 @@ iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
 	return 0;
 }
 
+static void iwl_mld_set_uapsd(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	vif->driver_flags &= ~IEEE80211_VIF_SUPPORTS_UAPSD;
+
+	if (vif->type != NL80211_IFTYPE_STATION)
+		return;
+
+	if (vif->p2p &&
+	    !(iwlwifi_mod_params.uapsd_disable & IWL_DISABLE_UAPSD_P2P_CLIENT))
+		vif->driver_flags |= IEEE80211_VIF_SUPPORTS_UAPSD;
+
+	if (!vif->p2p &&
+	    !(iwlwifi_mod_params.uapsd_disable & IWL_DISABLE_UAPSD_BSS))
+		vif->driver_flags |= IEEE80211_VIF_SUPPORTS_UAPSD;
+}
+
 static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 				     struct ieee80211_vif *vif,
 				     struct ieee80211_sta *sta,
@@ -1143,6 +1159,7 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		return ret;
 	} else if (old_state == IEEE80211_STA_NONE &&
 		   new_state == IEEE80211_STA_AUTH) {
+		iwl_mld_set_uapsd(mld, vif);
 		return 0;
 	} else if (old_state == IEEE80211_STA_AUTH &&
 		   new_state == IEEE80211_STA_ASSOC) {
