@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2014, 2018, 2023 Intel Corporation
+ * Copyright (C) 2014, 2018, 2023-2024 Intel Corporation
  * Copyright (C) 2014 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -324,6 +324,4 @@ void iwl_dnt_configure(struct iwl_trans *trans, const struct fw_img *image)
 		IWL_INFO(trans, "Invalid monitor type\n");
 		return;
 	}
-
-	dnt->dispatch.crash_out_mode |= dbg_cfg->dnt_out_mode;
 }

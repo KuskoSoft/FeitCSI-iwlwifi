@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2014, 2023 Intel Corporation
+ * Copyright (C) 2014, 2023-2024 Intel Corporation
  */
 #ifndef __iwl_dnt_dispatch_h__
 #define __iwl_dnt_dispatch_h__
@@ -25,6 +25,4 @@ void iwl_dnt_dispatch_free(struct iwl_dnt *dnt, struct iwl_trans *trans);
 
 struct dnt_collect_db *iwl_dnt_dispatch_allocate_collect_db(
 							struct iwl_dnt *dnt);
-
-void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans *trans);
 #endif

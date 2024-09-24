@@ -2285,9 +2285,6 @@ void iwl_mvm_nic_restart(struct iwl_mvm *mvm, bool fw_error)
 		}
 
 		iwl_fw_error_collect(&mvm->fwrt, false);
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-		iwl_dnt_dispatch_handle_nic_err(mvm->trans);
-#endif
 
 		if (fw_error && mvm->fw_restart > 0) {
 			mvm->fw_restart--;

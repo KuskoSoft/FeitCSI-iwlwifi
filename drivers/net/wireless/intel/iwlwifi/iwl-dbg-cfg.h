@@ -214,7 +214,6 @@ struct iwl_dbg_cfg {
 	/* XXX: should be dbg_mon_ for consistency? */
 	IWL_DBG_CFG_NODEF(u32, dbgm_enable_mode)
 	IWL_DBG_CFG_NODEF(u32, dbgm_mem_power)
-	IWL_DBG_CFG_NODEF(u32, dbg_flags)
 	IWL_DBG_CFG_NODEF(u32, dbg_mon_sample_ctl_addr)
 	IWL_DBG_CFG_NODEF(u32, dbg_mon_sample_ctl_val)
 	IWL_DBG_CFG_NODEF(u32, dbg_mon_buff_base_addr_reg_addr)

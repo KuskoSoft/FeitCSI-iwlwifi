@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2014, 2023 Intel Corporation
+ * Copyright (C) 2014, 2023-2024 Intel Corporation
  * Copyright (C) 2014 Intel Mobile Communications GmbH
  */
 #ifndef __iwl_dnt_cfg_h__
@@ -84,16 +84,6 @@ enum {
 	PULL
 };
 
-/* crash data */
-enum {
-	NONE = 0,
-	SRAM = BIT(0),
-	DBGM = BIT(1),
-	TX_FIFO = BIT(2),
-	RX_FIFO = BIT(3),
-	PERIPHERY = BIT(4)
-};
-
 struct dnt_collect_entry {
 	u8 *data;
 	u32 size;
@@ -157,8 +147,6 @@ struct iwl_dnt_dispatch {
 	u32 ucode_msgs_in_mode;
 	u32 ucode_msgs_out_mode;
 	u32 ucode_msgs_output;
-
-	u32 crash_out_mode;
 
 	struct dnt_collect_db *dbgm_db;
 	struct dnt_collect_db *um_db;
