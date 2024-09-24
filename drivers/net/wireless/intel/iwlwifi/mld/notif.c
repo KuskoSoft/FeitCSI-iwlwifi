@@ -122,6 +122,8 @@ CMD_VERSIONS(missed_beacon_notif,
 	     CMD_VER_ENTRY(5, iwl_missed_beacons_notif))
 CMD_VERSIONS(tx_resp_notif,
 	     CMD_VER_ENTRY(7, iwl_tx_resp))
+CMD_VERSIONS(compressed_ba_notif,
+	     CMD_VER_ENTRY(5, iwl_compressed_ba_notif))
 CMD_VERSIONS(tlc_notif,
 	     CMD_VER_ENTRY(3, iwl_tlc_update_notif))
 /*
@@ -133,6 +135,8 @@ CMD_VERSIONS(tlc_notif,
  */
 static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_SIZES(LEGACY_GROUP, TX_CMD, tx_resp_notif,
+			 RX_HANDLER_SYNC)
+	RX_HANDLER_SIZES(LEGACY_GROUP, BA_NOTIF, compressed_ba_notif,
 			 RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
 			 RX_HANDLER_ASYNC)

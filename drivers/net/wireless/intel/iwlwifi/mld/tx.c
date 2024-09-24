@@ -506,13 +506,14 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 	/* TODO: print more info here */
 }
 
-static void iwl_mld_tx_reclaim_txq(struct iwl_mld *mld, int txq, int index)
+static void iwl_mld_tx_reclaim_txq(struct iwl_mld *mld, int txq, int index,
+				   bool in_flush)
 {
 	struct sk_buff_head reclaimed_skbs;
 
 	__skb_queue_head_init(&reclaimed_skbs);
 
-	iwl_trans_reclaim(mld->trans, txq, index, &reclaimed_skbs, true);
+	iwl_trans_reclaim(mld->trans, txq, index, &reclaimed_skbs, in_flush);
 
 	while (!skb_queue_empty(&reclaimed_skbs)) {
 		struct sk_buff *skb = __skb_dequeue(&reclaimed_skbs);
@@ -522,7 +523,15 @@ static void iwl_mld_tx_reclaim_txq(struct iwl_mld *mld, int txq, int index)
 
 		memset(&info->status, 0, sizeof(info->status));
 
-		info->flags &= ~IEEE80211_TX_STAT_ACK;
+		/* Packet was transmitted successfully, failures come as single
+		 * frames because before failing a frame the firmware transmits
+		 * it without aggregation at least once.
+		 */
+		if (!in_flush)
+			info->flags |= IEEE80211_TX_STAT_ACK;
+		else
+			info->flags &= ~IEEE80211_TX_STAT_ACK;
+
 		ieee80211_tx_status_skb(mld->hw, skb);
 	}
 }
@@ -592,7 +601,7 @@ int iwl_mld_flush_link_sta_txqs(struct iwl_mld *mld, u32 fw_sta_id)
 				    le16_to_cpu(queue_info->read_before_flush),
 				    read_after);
 
-		iwl_mld_tx_reclaim_txq(mld, txq_id, read_after);
+		iwl_mld_tx_reclaim_txq(mld, txq_id, read_after, true);
 	}
 
 free_rsp:
@@ -618,4 +627,42 @@ int iwl_mld_ensure_queue(struct iwl_mld *mld, struct ieee80211_txq *txq)
 	spin_unlock_bh(&mld->add_txqs_lock);
 
 	return ret;
+}
+
+void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
+					struct iwl_rx_packet *pkt)
+{
+	struct iwl_compressed_ba_notif *ba_res = (void *)pkt->data;
+	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
+	u16 tfd_cnt = le16_to_cpu(ba_res->tfd_cnt);
+
+	if (!tfd_cnt)
+		return;
+
+	if (IWL_FW_CHECK(mld, struct_size(ba_res, tfd, tfd_cnt) > pkt_len,
+			 "Short BA notif (tfd_cnt=%d, size:0x%x)\n",
+			 tfd_cnt, pkt_len))
+		return;
+
+	IWL_DEBUG_TX_REPLY(mld,
+			   "BA notif received from sta_id=%d, flags=0x%x, sent:%d, acked:%d\n",
+			   ba_res->sta_id, le32_to_cpu(ba_res->flags),
+			   le16_to_cpu(ba_res->txed),
+			   le16_to_cpu(ba_res->done));
+
+	for (int i = 0; i < tfd_cnt; i++) {
+		struct iwl_compressed_ba_tfd *ba_tfd = &ba_res->tfd[i];
+		int txq_id = le16_to_cpu(ba_tfd->q_num);
+		int index = le16_to_cpu(ba_tfd->tfd_index);
+
+		if (IWL_FW_CHECK(mld,
+				 txq_id >= ARRAY_SIZE(mld->fw_id_to_txq),
+				 "Invalid txq id %d\n", txq_id))
+			continue;
+
+		iwl_mld_tx_reclaim_txq(mld, txq_id, index, false);
+	}
+
+	/* TODO: count_mpdu (task=EMLSR) */
+	/* TODO: iwl_mvm_tx_airtime (task=tcm) */
 }
