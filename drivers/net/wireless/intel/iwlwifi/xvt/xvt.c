@@ -681,10 +681,10 @@ static void iwl_xvt_dump_error(struct iwl_op_mode *op_mode,
 	/* for reset handshake we come from stop, with mutex held */
 	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
 		lockdep_assert_held(&xvt->mutex);
-		iwl_fw_error_collect(&xvt->fwrt, true);
+		iwl_fw_error_collect(&xvt->fwrt);
 	} else {
 		mutex_lock(&xvt->mutex);
-		iwl_fw_error_collect(&xvt->fwrt, true);
+		iwl_fw_error_collect(&xvt->fwrt);
 		mutex_unlock(&xvt->mutex);
 	}
 }
