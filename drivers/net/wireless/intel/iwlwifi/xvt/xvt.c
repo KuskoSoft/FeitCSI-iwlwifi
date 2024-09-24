@@ -488,7 +488,7 @@ static void iwl_xvt_rx_ba_notif(struct iwl_xvt *xvt,
 	u16 scd_ssn;
 
 	if (iwl_xvt_is_unified_fw(xvt)) {
-		struct iwl_mvm_compressed_ba_notif *ba_res = (void *)pkt->data;
+		struct iwl_compressed_ba_notif *ba_res = (void *)pkt->data;
 		u16 queue;
 		u16 tfd_idx;
 
