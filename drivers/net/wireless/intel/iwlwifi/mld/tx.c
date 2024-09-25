@@ -300,6 +300,24 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 	tx_cmd->flags = cpu_to_le16(flags);
 }
 
+static void
+iwl_mld_update_qos_seq(struct iwl_mld *mld, struct ieee80211_sta *sta,
+		       struct ieee80211_txq *txq, struct ieee80211_hdr *hdr)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	__le16 fc = hdr->frame_control;
+	u8 tid = txq->tid;
+	u16 seq_number = 0;
+
+	if (!ieee80211_is_data_qos(fc) || ieee80211_is_qos_nullfunc(fc) ||
+	    ieee80211_has_morefrags(fc))
+		return;
+
+	seq_number = mld_sta->seq_number[tid];
+	seq_number &= IEEE80211_SCTL_SEQ;
+	mld_sta->seq_number[tid] = seq_number + 0x10;
+}
+
 /* This function must be called with BHs disabled */
 static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 			   struct ieee80211_txq *txq)
@@ -346,6 +364,8 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 
 	if (iwl_trans_tx(mld->trans, skb, dev_tx_cmd, txq_id))
 		goto err;
+
+	iwl_mld_update_qos_seq(mld, sta, txq, hdr);
 
 	return 0;
 

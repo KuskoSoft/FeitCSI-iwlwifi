@@ -87,6 +87,10 @@ struct iwl_mld_sta {
 	struct ieee80211_vif *vif;
 	struct iwl_mld_rxq_dup_data *dup_data;
 	u8 tid_to_baid[IWL_MAX_TID_COUNT];
+	/* Used for wowlan, will be removed when FW supports
+	 * WOWLAN_CONFIG_API_S_VER_7
+	 */
+	u16 seq_number[IWL_MAX_TID_COUNT];
 
 	struct iwl_mld_link_sta deflink;
 	struct iwl_mld_link_sta __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
