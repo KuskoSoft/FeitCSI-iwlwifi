@@ -1379,6 +1379,13 @@ static void iwl_mld_sta_rc_update(struct ieee80211_hw *hw,
 	}
 }
 
+static void iwl_mld_set_wakeup(struct ieee80211_hw *hw, bool enabled)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	device_set_wakeup_enable(mld->trans->dev, enabled);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1415,6 +1422,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
+	.set_wakeup = iwl_mld_set_wakeup,
 #endif /* CONFIG_PM_SLEEP */
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	.vif_add_debugfs = iwl_mld_add_vif_debugfs,
