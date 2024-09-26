@@ -9,7 +9,7 @@
  * Copyright 2007, Michael Wu <flamingice@sourmilk.net>
  * Copyright 2007-2010, Intel Corporation
  * Copyright(c) 2015-2017 Intel Deutschland GmbH
- * Copyright (C) 2018-2024 Intel Corporation
+ * Copyright (C) 2018-2023 Intel Corporation
  */
 
 /**
@@ -190,13 +190,14 @@ static void ieee80211_add_addbaext(struct ieee80211_sub_if_data *sdata,
 
 static void ieee80211_send_addba_resp(struct sta_info *sta, u8 *da, u16 tid,
 				      u8 dialog_token, u16 status, u16 policy,
-				      u16 buf_size, u16 timeout, bool amsdu,
+				      u16 buf_size, u16 timeout,
 				      const struct ieee80211_addba_ext_ie *addbaext)
 {
 	struct ieee80211_sub_if_data *sdata = sta->sdata;
 	struct ieee80211_local *local = sdata->local;
 	struct sk_buff *skb;
 	struct ieee80211_mgmt *mgmt;
+	bool amsdu = ieee80211_hw_check(&local->hw, SUPPORTS_AMSDU_IN_AMPDU);
 	u16 capab;
 
 	skb = dev_alloc_skb(sizeof(*mgmt) +
@@ -253,8 +254,7 @@ void __ieee80211_start_rx_ba_session(struct sta_info *sta,
 		.sta = &sta->sta,
 		.action = IEEE80211_AMPDU_RX_START,
 		.tid = tid,
-		.amsdu = ieee80211_hw_check(&local->hw,
-					    SUPPORTS_AMSDU_IN_AMPDU),
+		.amsdu = false,
 		.timeout = timeout,
 		.ssn = start_seq_num,
 	};
@@ -432,7 +432,7 @@ end:
 	if (tx)
 		ieee80211_send_addba_resp(sta, sta->sta.addr, tid,
 					  dialog_token, status, 1, buf_size,
-					  timeout, params.amsdu, addbaext);
+					  timeout, addbaext);
 }
 
 void ieee80211_process_addba_request(struct ieee80211_local *local,
