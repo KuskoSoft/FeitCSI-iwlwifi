@@ -22,6 +22,7 @@
 #include "rx.h"
 #include "tlc.h"
 #include "agg.h"
+#include "mac80211.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
@@ -108,6 +109,54 @@ static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 		       le32_to_cpu(mfuart_notif->image_size));
 }
 
+static void iwl_mld_mu_mimo_iface_iterator(void *_data, u8 *mac,
+					   struct ieee80211_vif *vif)
+{
+	struct ieee80211_bss_conf *bss_conf = &vif->bss_conf;
+	unsigned int link_id = 0;
+
+	if (WARN(hweight16(vif->active_links) > 1,
+		 "no support for this notif while in EMLSR 0x%x\n",
+		 vif->active_links))
+		return;
+
+	if (ieee80211_vif_is_mld(vif)) {
+		link_id = __ffs(vif->active_links);
+		bss_conf = link_conf_dereference_check(vif, link_id);
+	}
+
+	if (!WARN_ON(!bss_conf) && bss_conf->mu_mimo_owner) {
+		const struct iwl_mu_group_mgmt_notif *notif = _data;
+
+		BUILD_BUG_ON(sizeof(notif->membership_status) !=
+			     WLAN_MEMBERSHIP_LEN);
+		BUILD_BUG_ON(sizeof(notif->user_position) !=
+			     WLAN_USER_POSITION_LEN);
+
+		/* MU-MIMO Group Id action frame is little endian. We treat
+		 * the data received from firmware as if it came from the
+		 * action frame, so no conversion is needed.
+		 */
+		ieee80211_update_mu_groups(vif, link_id,
+					   (u8 *)&notif->membership_status,
+					   (u8 *)&notif->user_position);
+	}
+}
+
+/* This handler is called in SYNC mode because it needs to be serialized with
+ * Rx as specified in ieee80211_update_mu_groups()'s documentation.
+ */
+static void iwl_mld_handle_mu_mimo_grp_notif(struct iwl_mld *mld,
+					     struct iwl_rx_packet *pkt)
+{
+	struct iwl_mu_group_mgmt_notif *notif = (void *)pkt->data;
+
+	ieee80211_iterate_active_interfaces_atomic(mld->hw,
+						   IEEE80211_IFACE_ITER_NORMAL,
+						   iwl_mld_mu_mimo_iface_iterator,
+						   notif);
+}
+
 CMD_VERSIONS(scan_complete_notif,
 	     CMD_VER_ENTRY(1, iwl_umac_scan_complete))
 CMD_VERSIONS(scan_iter_complete_notif,
@@ -126,6 +175,9 @@ CMD_VERSIONS(compressed_ba_notif,
 	     CMD_VER_ENTRY(5, iwl_compressed_ba_notif))
 CMD_VERSIONS(tlc_notif,
 	     CMD_VER_ENTRY(3, iwl_tlc_update_notif))
+CMD_VERSIONS(mu_mimo_grp_notif,
+	     CMD_VER_ENTRY(1, iwl_mu_group_mgmt_notif))
+
 /*
  * Handlers for fw notifications
  * Convention: RX_HANDLER(grp, cmd, name, context),
@@ -156,6 +208,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 missed_beacon_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF,
 			 tlc_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
+			 mu_mimo_grp_notif, RX_HANDLER_SYNC)
 };
 
 static bool
