@@ -846,17 +846,3 @@ void iwl_mvm_bt_coex_vif_change(struct iwl_mvm *mvm)
 {
 	iwl_mvm_bt_coex_notif_handle(mvm);
 }
-
-bool iwl_mvm_bt_coex_is_amsdu_disallowed(struct iwl_mvm *mvm,
-					 enum nl80211_band band)
-{
-	bool have_new_notif =
-		iwl_fw_lookup_notif_ver(mvm->fw, BT_COEX_GROUP,
-					PROFILE_NOTIF, 0) >= 1;
-	bool bt_active = have_new_notif ?
-		mvm->last_bt_wifi_loss.wifi_loss_low_rssi[PHY_BAND_24][0] !=
-		BT_OFF :
-		le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) != BT_OFF;
-
-	return band == NL80211_BAND_2GHZ && bt_active;
-}

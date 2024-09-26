@@ -1134,19 +1134,6 @@ int iwl_mvm_mac_ampdu_action(struct ieee80211_hw *hw,
 			ret = -EINVAL;
 			break;
 		}
-		if (!ieee80211_vif_is_mld(vif)) {
-			enum nl80211_band band =
-				 vif->bss_conf.chanreq.oper.chan->band;
-			if (iwl_mvm_bt_coex_is_amsdu_disallowed(mvm, band)) {
-				/*
-				 * disable A-MSDU if BT is active
-				 * and band is 2.4 GHz
-				 */
-				params->amsdu = false;
-				IWL_DEBUG_MAC80211(mvm,
-						   "AMSDU disabled due to BT Coex\n");
-			}
-		}
 		ret = iwl_mvm_sta_rx_agg(mvm, sta, tid, *ssn, true, buf_size,
 					 timeout);
 		break;
