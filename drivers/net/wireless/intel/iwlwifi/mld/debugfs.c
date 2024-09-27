@@ -93,10 +93,16 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	MLD_DEBUGFS_ADD_FILE(fw_nmi, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(fw_restart, debugfs_dir, 0200);
 
-	/*
-	 * TODO: Once registered to mac80211, add a symlink in mac80211
-	 * debugfs
+	/* Create a symlink with mac80211. It will be removed when mac80211
+	 * exits (before the opmode exits which removes the target.)
 	 */
+	if (!IS_ERR(debugfs_dir)) {
+		char buf[100];
+
+		snprintf(buf, 100, "../../%pd2", debugfs_dir->d_parent);
+		debugfs_create_symlink("iwlwifi", mld->wiphy->debugfsdir,
+				       buf);
+	}
 }
 
 void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,

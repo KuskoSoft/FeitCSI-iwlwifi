@@ -299,8 +299,6 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	iwl_construct_mld(mld, trans, cfg, fw, hw);
 
-	iwl_mld_add_debugfs_files(mld, dbgfs_dir);
-
 	iwl_mld_construct_fw_runtime(mld, trans, fw, dbgfs_dir);
 
 	/* Configure transport layer with the opmode specific params */
@@ -331,6 +329,8 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	if (iwl_mld_register_hw(mld))
 		goto free_scan_cmd;
+
+	iwl_mld_add_debugfs_files(mld, dbgfs_dir);
 
 	return op_mode;
 
