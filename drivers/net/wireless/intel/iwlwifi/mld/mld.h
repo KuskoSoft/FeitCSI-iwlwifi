@@ -188,8 +188,15 @@ extern struct iwl_mld_mod_params iwlmld_mod_params;
 #define IWL_MAC80211_GET_MLD(_hw)			\
 	IWL_OP_MODE_GET_MLD((struct iwl_op_mode *)((_hw)->priv))
 
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir);
+#else
+static inline void
+iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
+{}
+#endif
+
 int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld);
 int iwl_mld_load_fw(struct iwl_mld *mld);
 void iwl_mld_stop_fw(struct iwl_mld *mld);
