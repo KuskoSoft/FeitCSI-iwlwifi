@@ -124,6 +124,11 @@ int iwl_mld_send_rlc_cmd(struct iwl_mld *mld, u8 phy_id)
 		.phy_id = cpu_to_le32(phy_id),
 	};
 
+	if(iwl_fw_lookup_cmd_ver(mld->fw,
+				 WIDE_ID(DATA_PATH_GROUP, RLC_CONFIG_CMD),
+				 0) >= 3)
+		return 0;
+
 	cmd.rlc.rx_chain_info =
 		cpu_to_le32(iwl_mld_get_valid_rx_ant(mld) <<
 				PHY_RX_CHAIN_VALID_POS);
