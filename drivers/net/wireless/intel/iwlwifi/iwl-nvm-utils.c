@@ -96,7 +96,12 @@ void iwl_init_ht_hw_capab(struct iwl_trans *trans,
 
 	max_bit_rate = MAX_BIT_RATE_20_MHZ;
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (cfg->ht_params->ht40_bands & BIT(band) &&
+	    !trans->dbg_cfg.disable_ht40) {
+#else
 	if (cfg->ht_params->ht40_bands & BIT(band)) {
+#endif
 		ht_info->cap |= IEEE80211_HT_CAP_SUP_WIDTH_20_40;
 		ht_info->cap |= IEEE80211_HT_CAP_SGI_40;
 		max_bit_rate = MAX_BIT_RATE_40_MHZ;
