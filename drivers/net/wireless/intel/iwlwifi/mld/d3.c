@@ -13,6 +13,7 @@
 
 #include "fw/api/d3.h"
 #include "fw/api/offload.h"
+#include "fw/api/sta.h"
 #include "fw/dbg.h"
 
 #include <net/ipv6.h>
@@ -33,6 +34,16 @@ enum iwl_mld_d3_notif {
 	IWL_D3_NOTIF_PROT_OFFLOAD =	BIT(2),
 	IWL_D3_ND_MATCH_INFO      =     BIT(3),
 	IWL_D3_NOTIF_D3_END_NOTIF =	BIT(4)
+};
+
+struct iwl_mld_suspend_key_iter_data {
+	struct iwl_wowlan_rsc_tsc_params_cmd *rsc;
+	bool have_rsc;
+	int gtks;
+	int found_gtk_idx[4];
+	__le32 gtk_cipher;
+	__le32 igtk_cipher;
+	__le32 bigtk_cipher;
 };
 
 /**
@@ -817,6 +828,168 @@ int iwl_mld_no_wowlan_resume(struct iwl_mld *mld)
 }
 
 static void
+iwl_mld_aes_seq_to_le64_pn(struct ieee80211_key_conf *key,
+			   __le64 *key_rsc)
+{
+	for (int i = 0; i < IWL_MAX_TID_COUNT; i++) {
+		struct ieee80211_key_seq seq;
+		u8 *pn = key->cipher == WLAN_CIPHER_SUITE_CCMP ? seq.ccmp.pn :
+			seq.gcmp.pn;
+
+		ieee80211_get_key_rx_seq(key, i, &seq);
+		key_rsc[i] = cpu_to_le64((u64)pn[5] |
+					 ((u64)pn[4] << 8) |
+					 ((u64)pn[3] << 16) |
+					 ((u64)pn[2] << 24) |
+					 ((u64)pn[1] << 32) |
+					 ((u64)pn[0] << 40));
+	}
+}
+
+static void
+iwl_mld_suspend_set_ucast_pn(struct iwl_mld *mld, struct ieee80211_sta *sta,
+			     struct ieee80211_key_conf *key, __le64 *key_rsc)
+{
+	struct iwl_mld_sta *mld_sta =
+		iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_ptk_pn *mld_ptk_pn;
+
+	if (WARN_ON(key->keyidx >= ARRAY_SIZE(mld_sta->ptk_pn)))
+		return;
+
+	mld_ptk_pn = wiphy_dereference(mld->wiphy,
+				       mld_sta->ptk_pn[key->keyidx]);
+	if (WARN_ON(!mld_ptk_pn))
+		return;
+
+	for (int tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+		struct ieee80211_key_seq seq;
+		u8 *max_pn = seq.ccmp.pn;
+
+		/* get the PN from mac80211, used on the default queue */
+		ieee80211_get_key_rx_seq(key, tid, &seq);
+
+		/* and use the internal data for all queues */
+		for (int que = 1; que < mld->trans->num_rx_queues; que++) {
+			u8 *cur_pn = mld_ptk_pn->q[que].pn[tid];
+
+			if (memcmp(max_pn, cur_pn, IEEE80211_CCMP_PN_LEN) < 0)
+				max_pn = cur_pn;
+		}
+		key_rsc[tid] = cpu_to_le64((u64)max_pn[5] |
+					   ((u64)max_pn[4] << 8) |
+					   ((u64)max_pn[3] << 16) |
+					   ((u64)max_pn[2] << 24) |
+					   ((u64)max_pn[1] << 32) |
+					   ((u64)max_pn[0] << 40));
+	}
+}
+
+static void
+iwl_mld_suspend_key_data_iter(struct ieee80211_hw *hw,
+			      struct ieee80211_vif *vif,
+			      struct ieee80211_sta *sta,
+			      struct ieee80211_key_conf *key,
+			      void *_data)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_suspend_key_iter_data *data = _data;
+	__le64 *key_rsc;
+	__le32 cipher = 0;
+
+	switch (key->cipher) {
+	case WLAN_CIPHER_SUITE_CCMP:
+		cipher = cpu_to_le32(STA_KEY_FLG_CCM);
+		fallthrough;
+	case WLAN_CIPHER_SUITE_GCMP:
+	case WLAN_CIPHER_SUITE_GCMP_256:
+		if (!cipher)
+			cipher = cpu_to_le32(STA_KEY_FLG_GCMP);
+		if (sta) {
+			iwl_mld_suspend_set_ucast_pn(mld, sta, key,
+						     data->rsc->ucast_rsc);
+			data->have_rsc = true;
+			return;
+		}
+
+		/* We're iterating from old to new, there're 4 possible
+		 * gtk ids, and only the last two keys matter
+		 */
+		if (WARN_ON(data->gtks >=
+				ARRAY_SIZE(data->found_gtk_idx)))
+			return;
+
+		if (WARN_ON(key->keyidx >=
+				ARRAY_SIZE(data->rsc->mcast_key_id_map)))
+			return;
+		data->gtk_cipher = cipher;
+		data->found_gtk_idx[data->gtks] = key->keyidx;
+		key_rsc = data->rsc->mcast_rsc[data->gtks % 2];
+		data->rsc->mcast_key_id_map[key->keyidx] =
+			data->gtks % 2;
+
+		if (data->gtks >= 2) {
+			int prev = data->gtks % 2;
+			int prev_idx = data->found_gtk_idx[prev];
+
+			data->rsc->mcast_key_id_map[prev_idx] =
+				IWL_MCAST_KEY_MAP_INVALID;
+		}
+
+		iwl_mld_aes_seq_to_le64_pn(key, key_rsc);
+		data->gtks++;
+		data->have_rsc = true;
+		break;
+	case WLAN_CIPHER_SUITE_BIP_GMAC_128:
+	case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+		cipher = cpu_to_le32(STA_KEY_FLG_GCMP);
+		fallthrough;
+	case WLAN_CIPHER_SUITE_BIP_CMAC_256:
+	case WLAN_CIPHER_SUITE_AES_CMAC:
+		if (!cipher)
+			cipher = cpu_to_le32(STA_KEY_FLG_CCM);
+		if (key->keyidx == 4 || key->keyidx == 5)
+			data->igtk_cipher = cipher;
+
+		if (key->keyidx == 6 || key->keyidx == 7)
+			data->bigtk_cipher = cipher;
+
+		break;
+	}
+}
+
+static int
+iwl_mld_suspend_send_security_cmds(struct iwl_mld *mld,
+				   struct ieee80211_vif *vif,
+				   int ap_sta_id)
+{
+	struct iwl_mld_suspend_key_iter_data data = {};
+	int ret;
+
+	data.rsc = kzalloc(sizeof(*data.rsc), GFP_KERNEL);
+	if (!data.rsc)
+		return -ENOMEM;
+
+	memset(data.rsc->mcast_key_id_map, IWL_MCAST_KEY_MAP_INVALID,
+	       ARRAY_SIZE(data.rsc->mcast_key_id_map));
+
+	data.rsc->sta_id = cpu_to_le32(ap_sta_id);
+	ieee80211_iter_keys(mld->hw, vif,
+			    iwl_mld_suspend_key_data_iter,
+			    &data);
+
+	if (data.have_rsc)
+		ret = iwl_mld_send_cmd_pdu(mld, WOWLAN_TSC_RSC_PARAM,
+					   data.rsc);
+	else
+		ret = 0;
+
+	kfree(data.rsc);
+
+	return ret;
+}
+
+static void
 iwl_mld_set_wowlan_config_cmd(struct iwl_mld *mld,
 			      struct cfg80211_wowlan *wowlan,
 			      struct iwl_wowlan_config_cmd *wowlan_config_cmd,
@@ -1023,6 +1196,12 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 				      &wowlan_config_cmd, ap_sta);
 	ret = iwl_mld_send_cmd_pdu(mld, WOWLAN_CONFIGURATION,
 				   &wowlan_config_cmd);
+	if (ret)
+		return ret;
+
+	/* TODO: check if order matters*/
+	ret = iwl_mld_suspend_send_security_cmds(mld, bss_vif,
+						 ap_sta_id);
 	if (ret)
 		return ret;
 
