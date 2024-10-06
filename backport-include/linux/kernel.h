@@ -15,4 +15,11 @@
 
 #endif /* < 4.17.0 */
 
+#if LINUX_VERSION_IS_LESS(5,10,0)
+#undef min
+#undef max
+#undef clamp
+#include <linux/minmax.h>
+#endif
+
 #endif /* __BACKPORT_KERNEL_H */

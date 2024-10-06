@@ -165,11 +165,19 @@ int cfg80211_switch_netns(struct cfg80211_registered_device *rdev,
 	list_for_each_entry(wdev, &rdev->wiphy.wdev_list, list) {
 		if (!wdev->netdev)
 			continue;
+#if LINUX_VERSION_IS_GEQ(6,12,0)
+		wdev->netdev->netns_local = false;
+#else
 		wdev->netdev->features &= ~NETIF_F_NETNS_LOCAL;
+#endif
 		err = dev_change_net_namespace(wdev->netdev, net, "wlan%d");
 		if (err)
 			break;
+#if LINUX_VERSION_IS_GEQ(6,12,0)
+		wdev->netdev->netns_local = true;
+#else
 		wdev->netdev->features |= NETIF_F_NETNS_LOCAL;
+#endif
 	}
 
 	if (err) {
@@ -181,11 +189,19 @@ int cfg80211_switch_netns(struct cfg80211_registered_device *rdev,
 						     list) {
 			if (!wdev->netdev)
 				continue;
+#if LINUX_VERSION_IS_GEQ(6,12,0)
+			wdev->netdev->netns_local = false;
+#else
 			wdev->netdev->features &= ~NETIF_F_NETNS_LOCAL;
+#endif
 			err = dev_change_net_namespace(wdev->netdev, net,
 							"wlan%d");
 			WARN_ON(err);
+#if LINUX_VERSION_IS_GEQ(6,12,0)
+			wdev->netdev->netns_local = true;
+#else
 			wdev->netdev->features |= NETIF_F_NETNS_LOCAL;
+#endif
 		}
 
 		return err;
@@ -1484,7 +1500,11 @@ static int cfg80211_netdev_notifier_call(struct notifier_block *nb,
 		SET_NETDEV_DEVTYPE(dev, &wiphy_type);
 		wdev->netdev = dev;
 		/* can only change netns with wiphy */
-		dev->features |= NETIF_F_NETNS_LOCAL;
+#if LINUX_VERSION_IS_GEQ(6,12,0)
+		dev->netns_local = true;
+#else
+		wdev->netdev->features |= NETIF_F_NETNS_LOCAL;
+#endif
 
 		cfg80211_init_wdev(wdev);
 		break;

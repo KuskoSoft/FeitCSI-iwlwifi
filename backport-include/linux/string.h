@@ -28,4 +28,14 @@
 ssize_t strscpy_pad(char *dest, const char *src, size_t count);
 #endif
 
+#if LINUX_VERSION_IS_LESS(6,10,0)
+#include <linux/overflow.h>
+#define kmemdup_array LINUX_BACKPORT(kmemdup_array)
+static inline void *
+kmemdup_array(const void *src, size_t count, size_t element_size, gfp_t gfp)
+{
+	return kmemdup(src, size_mul(element_size, count), gfp);
+}
+#endif
+
 #endif /* __BACKPORT_LINUX_STRING_H */

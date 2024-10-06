@@ -102,4 +102,12 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 #define __cleanup(func) __attribute__((__cleanup__(func)))
 #endif
 
+#ifndef is_signed_type
+#define is_signed_type(type) (((type)(-1)) < (type)1)
+#endif
+
+#ifndef statically_true
+#define statically_true(x) (__builtin_constant_p(x) && (x))
+#endif
+
 #endif /* __BACKPORT_LINUX_COMPILER_H */
