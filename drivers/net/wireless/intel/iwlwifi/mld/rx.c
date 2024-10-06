@@ -39,6 +39,75 @@ static void iwl_mld_fill_phy_data(struct iwl_rx_mpdu_desc *desc,
 	phy_data->data1 = desc->v3.phy_data1;
 }
 
+static inline int iwl_mld_check_pn(struct iwl_mld *mld, struct sk_buff *skb,
+				   int queue, struct ieee80211_sta *sta)
+{
+	struct ieee80211_hdr *hdr = (void *)skb_mac_header(skb);
+	struct ieee80211_rx_status *stats = IEEE80211_SKB_RXCB(skb);
+	struct iwl_mld_sta *mld_sta;
+	struct iwl_mld_ptk_pn *ptk_pn;
+	int res;
+	u8 tid, keyidx;
+	u8 pn[IEEE80211_CCMP_PN_LEN];
+	u8 *extiv;
+
+	/* multicast and non-data only arrives on default queue; avoid checking
+	 * for default queue - we don't want to replicate all the logic that's
+	 * necessary for checking the PN on fragmented frames, leave that
+	 * to mac80211
+	 */
+	if (queue == 0 || !ieee80211_is_data(hdr->frame_control) ||
+	    is_multicast_ether_addr(hdr->addr1))
+		return 0;
+
+	if (!(stats->flag & RX_FLAG_DECRYPTED))
+		return 0;
+
+	/* if we are here - this for sure is either CCMP or GCMP */
+	if (!sta) {
+		IWL_DEBUG_DROP(mld,
+			       "expected hw-decrypted unicast frame for station\n");
+		return -1;
+	}
+
+	mld_sta = iwl_mld_sta_from_mac80211(sta);
+
+	extiv = (u8 *)hdr + ieee80211_hdrlen(hdr->frame_control);
+	keyidx = extiv[3] >> 6;
+
+	ptk_pn = rcu_dereference(mld_sta->ptk_pn[keyidx]);
+	if (!ptk_pn)
+		return -1;
+
+	if (ieee80211_is_data_qos(hdr->frame_control))
+		tid = ieee80211_get_tid(hdr);
+	else
+		tid = 0;
+
+	/* we don't use HCCA/802.11 QoS TSPECs, so drop such frames */
+	if (tid >= IWL_MAX_TID_COUNT)
+		return -1;
+
+	/* load pn */
+	pn[0] = extiv[7];
+	pn[1] = extiv[6];
+	pn[2] = extiv[5];
+	pn[3] = extiv[4];
+	pn[4] = extiv[1];
+	pn[5] = extiv[0];
+
+	res = memcmp(pn, ptk_pn->q[queue].pn[tid], IEEE80211_CCMP_PN_LEN);
+	if (res < 0)
+		return -1;
+	if (!res && !(stats->flag & RX_FLAG_ALLOW_SAME_PN))
+		return -1;
+
+	memcpy(ptk_pn->q[queue].pn[tid], pn, IEEE80211_CCMP_PN_LEN);
+	stats->flag |= RX_FLAG_PN_VALIDATED;
+
+	return 0;
+}
+
 /* iwl_mld_pass_packet_to_mac80211 - passes the packet for mac80211 */
 void iwl_mld_pass_packet_to_mac80211(struct iwl_mld *mld,
 				     struct napi_struct *napi,
@@ -48,7 +117,11 @@ void iwl_mld_pass_packet_to_mac80211(struct iwl_mld *mld,
 	KUNIT_STATIC_STUB_REDIRECT(iwl_mld_pass_packet_to_mac80211,
 				   mld, napi, skb, queue, sta);
 
-	/* TODO: check PN (task=DP) */
+	if (unlikely(iwl_mld_check_pn(mld, skb, queue, sta))) {
+		kfree_skb(skb);
+		return;
+	}
+
 	ieee80211_rx_napi(mld->hw, sta, skb, napi);
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_pass_packet_to_mac80211);

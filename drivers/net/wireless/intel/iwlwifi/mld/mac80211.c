@@ -1532,11 +1532,45 @@ static int iwl_mld_resume(struct ieee80211_hw *hw)
 	return ret;
 }
 
+static int iwl_mld_alloc_ptk_pn(struct iwl_mld *mld,
+				struct iwl_mld_sta *mld_sta,
+				struct ieee80211_key_conf *key,
+				struct iwl_mld_ptk_pn **ptk_pn)
+{
+	u8 num_rx_queues = mld->trans->num_rx_queues;
+	int keyidx = key->keyidx;
+	struct ieee80211_key_seq seq;
+
+	if (WARN_ON(keyidx >= ARRAY_SIZE(mld_sta->ptk_pn)))
+		return -EINVAL;
+
+	WARN_ON(rcu_access_pointer(mld_sta->ptk_pn[keyidx]));
+	*ptk_pn = kzalloc(struct_size(*ptk_pn, q, num_rx_queues),
+			  GFP_KERNEL);
+	if (!*ptk_pn)
+		return -ENOMEM;
+
+	for (u8 tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+		ieee80211_get_key_rx_seq(key, tid, &seq);
+		for (u8 q = 0; q < num_rx_queues; q++)
+			memcpy((*ptk_pn)->q[q].pn[tid], seq.ccmp.pn,
+			       IEEE80211_CCMP_PN_LEN);
+	}
+
+	rcu_assign_pointer(mld_sta->ptk_pn[keyidx], *ptk_pn);
+
+	return 0;
+}
+
 static int iwl_mld_set_key_add(struct iwl_mld *mld,
 			       struct ieee80211_vif *vif,
 			       struct ieee80211_sta *sta,
 			       struct ieee80211_key_conf *key)
 {
+	struct iwl_mld_sta *mld_sta =
+		sta ? iwl_mld_sta_from_mac80211(sta) : NULL;
+	struct iwl_mld_ptk_pn *ptk_pn = NULL;
+	int keyidx = key->keyidx;
 	int ret;
 
 	switch (key->cipher) {
@@ -1568,19 +1602,34 @@ static int iwl_mld_set_key_add(struct iwl_mld *mld,
 	 * start_ap_ibss is called (see ap_early_keys) (task=soft_ap)
 	 */
 
-	/* TODO: setup PN tracking (task=DP) */
+	if (!mld->fw_status.in_hw_restart && mld_sta &&
+	    key->flags & IEEE80211_KEY_FLAG_PAIRWISE &&
+	    (key->cipher == WLAN_CIPHER_SUITE_CCMP ||
+	     key->cipher == WLAN_CIPHER_SUITE_GCMP ||
+	     key->cipher == WLAN_CIPHER_SUITE_GCMP_256)) {
+		ret = iwl_mld_alloc_ptk_pn(mld, mld_sta, key, &ptk_pn);
+		if (ret)
+			return ret;
+	}
 
 	/* TODO: for iwlmei, track the cipher of the pairwise key (task=iwlmei) */
 
 	IWL_DEBUG_MAC80211(mld, "set hwcrypto key (sta:%pM, id:%d)\n",
-			   sta ? sta->addr : NULL, key->keyidx);
+			   sta ? sta->addr : NULL, keyidx);
 
 	ret = iwl_mld_add_key(mld, vif, sta, key);
+	if (ret) {
+		IWL_WARN(mld, "set key failed (%d)\n", ret);
+		key->hw_key_idx = STA_KEY_IDX_INVALID;
+		if (ptk_pn) {
+			RCU_INIT_POINTER(mld_sta->ptk_pn[keyidx], NULL);
+			kfree(ptk_pn);
+		}
 
-	if (ret)
-		IWL_WARN(mld, "set key failed\n");
+		return -EOPNOTSUPP;
+	}
 
-	return ret;
+	return 0;
 }
 
 static void iwl_mld_set_key_remove(struct iwl_mld *mld,
@@ -1588,11 +1637,25 @@ static void iwl_mld_set_key_remove(struct iwl_mld *mld,
 				   struct ieee80211_sta *sta,
 				   struct ieee80211_key_conf *key)
 {
+	struct iwl_mld_sta *mld_sta =
+		sta ? iwl_mld_sta_from_mac80211(sta) : NULL;
+
 	/* TODO: clean up becaon protection data (task=DP) */
 
 	/* TODO: ignore AP early key (task=softAP) */
 
-	/* TODO: free PN data (task=DP) */
+	if (mld_sta && key->flags & IEEE80211_KEY_FLAG_PAIRWISE &&
+	    (key->cipher == WLAN_CIPHER_SUITE_CCMP ||
+	     key->cipher == WLAN_CIPHER_SUITE_GCMP ||
+	     key->cipher == WLAN_CIPHER_SUITE_GCMP_256)) {
+		struct iwl_mld_ptk_pn *ptk_pn;
+
+		ptk_pn = wiphy_dereference(mld->wiphy,
+					   mld_sta->ptk_pn[key->keyidx]);
+		RCU_INIT_POINTER(mld_sta->ptk_pn[key->keyidx], NULL);
+		if (!WARN_ON(!ptk_pn))
+			kfree_rcu(ptk_pn, rcu_head);
+	}
 
 	/* We already removed it */
 	if (key->hw_key_idx == STA_KEY_IDX_INVALID)

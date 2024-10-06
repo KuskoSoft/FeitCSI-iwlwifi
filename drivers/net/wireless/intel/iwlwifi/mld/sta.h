@@ -52,6 +52,19 @@ struct iwl_mld_link_sta {
 		if ((link_sta =						\
 			iwl_mld_link_sta_dereference_check(mld_sta, link_id)))
 
+#define IWL_NUM_DEFAULT_KEYS 4
+
+/* struct iwl_mld_ptk_pn - Holds Packet Number (PN) per TID.
+ * @rcu_head: RCU head for freeing this data.
+ * @pn: Array storing PN for each TID.
+ */
+struct iwl_mld_ptk_pn {
+	struct rcu_head rcu_head;
+	struct {
+		u8 pn[IWL_MAX_TID_COUNT][IEEE80211_CCMP_PN_LEN];
+	} ____cacheline_aligned_in_smp q[];
+};
+
 /**
  * struct iwl_mld_sta - representation of a station in the driver.
  *
@@ -75,6 +88,8 @@ struct iwl_mld_link_sta {
  *	@deflink address and remaining would be allocated and the address
  *	would be assigned to link[link_id] where link_id is the id assigned
  *	by the AP.
+ * @ptk_pn: Array of pointers to PTK PN data, used to track the Packet Number
+ *	per key index and per queue (TID).
  */
 struct iwl_mld_sta {
 	/* Add here fields that need clean up on restart */
@@ -94,6 +109,7 @@ struct iwl_mld_sta {
 
 	struct iwl_mld_link_sta deflink;
 	struct iwl_mld_link_sta __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
+	struct iwl_mld_ptk_pn __rcu *ptk_pn[IWL_NUM_DEFAULT_KEYS];
 };
 
 static inline struct iwl_mld_sta *
