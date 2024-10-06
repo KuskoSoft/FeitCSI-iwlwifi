@@ -603,6 +603,8 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_STATION)
 		iwl_mld_update_mac_power(mld, vif, false);
 
+	/* TODO: set mld->monitor_on for monitor iface (task=sniffer) */
+
 	return 0;
 
 err_rm_link:
@@ -628,6 +630,8 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
 		vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER |
 				       IEEE80211_VIF_SUPPORTS_CQM_RSSI);
+
+	/* TODO: clear mld->monitor_on  for monitor iface (task=sniffer) */
 
 	iwl_mld_remove_link(mld, &vif->bss_conf);
 

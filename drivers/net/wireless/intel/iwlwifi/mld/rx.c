@@ -477,6 +477,73 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 	return sta;
 }
 
+static int iwl_mld_rx_crypto(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
+			     struct ieee80211_rx_status *rx_status,
+			     struct iwl_rx_mpdu_desc *desc, int queue,
+			     u32 pkt_flags, u8 *crypto_len)
+{
+	u32 status = le32_to_cpu(desc->status);
+
+	/* Drop UNKNOWN frames, unless in monitor mode (where we don't
+	 * have the keys).
+	 */
+	if ((status & IWL_RX_MPDU_STATUS_SEC_MASK) ==
+	    IWL_RX_MPDU_STATUS_SEC_UNKNOWN && !mld->monitor_on) {
+		IWL_DEBUG_DROP(mld, "Dropping packets, bad enc status\n");
+		return -1;
+	}
+
+	/* TODO: beacon protection (iwl_mvm_rx_mgmt_prot() task=DP_SEC) */
+
+	if (!ieee80211_has_protected(hdr->frame_control) ||
+	    (status & IWL_RX_MPDU_STATUS_SEC_MASK) ==
+	    IWL_RX_MPDU_STATUS_SEC_NONE)
+		return 0;
+
+	switch (status & IWL_RX_MPDU_STATUS_SEC_MASK) {
+	case IWL_RX_MPDU_STATUS_SEC_CCM:
+	case IWL_RX_MPDU_STATUS_SEC_GCM:
+		BUILD_BUG_ON(IEEE80211_CCMP_PN_LEN != IEEE80211_GCMP_PN_LEN);
+		if (!(status & IWL_RX_MPDU_STATUS_MIC_OK)) {
+			IWL_DEBUG_DROP(mld,
+				       "Dropping packet, bad MIC (CCM/GCM)\n");
+			return -1;
+		}
+
+		rx_status->flag |= RX_FLAG_DECRYPTED | RX_FLAG_MIC_STRIPPED;
+		*crypto_len = IEEE80211_CCMP_HDR_LEN;
+		return 0;
+	case IWL_RX_MPDU_STATUS_SEC_TKIP:
+		if (!(status & IWL_RX_MPDU_STATUS_ICV_OK))
+			return -1;
+
+		if (!(status & RX_MPDU_RES_STATUS_MIC_OK))
+			rx_status->flag |= RX_FLAG_MMIC_ERROR;
+
+		if (pkt_flags & FH_RSCSR_RADA_EN) {
+			rx_status->flag |= RX_FLAG_ICV_STRIPPED;
+			rx_status->flag |= RX_FLAG_MMIC_STRIPPED;
+		}
+
+		*crypto_len = IEEE80211_TKIP_IV_LEN;
+		rx_status->flag |= RX_FLAG_DECRYPTED;
+		return 0;
+	case RX_MPDU_RES_STATUS_SEC_CMAC_GMAC_ENC:
+		break;
+	default:
+		/* Sometimes we can get frames that were not decrypted
+		 * because the firmware didn't have the keys yet. This can
+		 * happen after connection where we can get multicast frames
+		 * before the GTK is installed. Silently drop those frames.
+		 */
+		if (!is_multicast_ether_addr(hdr->addr1) &&
+		    !mld->monitor_on && net_ratelimit())
+			IWL_WARN(mld, "Unhandled alg: 0x%x\n", status);
+	}
+
+	return 0;
+}
+
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		     struct iwl_rx_cmd_buffer *rxb, int queue)
 {
@@ -488,9 +555,11 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	struct sk_buff *skb;
 	size_t mpdu_desc_size = sizeof(*mpdu_desc);
 	bool drop = false;
+	u8 crypto_len = 0;
 	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
 	u32 mpdu_len;
 	enum iwl_mld_reorder_result reorder_res;
+	struct ieee80211_rx_status *rx_status;
 
 	if (unlikely(mld->fw_status.in_hw_restart))
 		return;
@@ -538,8 +607,13 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	if (drop)
 		goto drop;
 
-	/* TODO: pass crypto len */
-	if (iwl_mld_build_rx_skb(mld, skb, hdr, mpdu_len, 0, rxb))
+	rx_status = IEEE80211_SKB_RXCB(skb);
+
+	if (iwl_mld_rx_crypto(mld, hdr, rx_status, mpdu_desc, queue,
+			      le32_to_cpu(pkt->len_n_flags), &crypto_len))
+		goto drop;
+
+	if (iwl_mld_build_rx_skb(mld, skb, hdr, mpdu_len, crypto_len, rxb))
 		goto drop;
 
 	reorder_res = iwl_mld_reorder(mld, napi, queue, sta, skb, mpdu_desc);
