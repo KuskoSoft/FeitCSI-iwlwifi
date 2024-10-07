@@ -185,6 +185,7 @@ int iwl_mld_remove_key(struct iwl_mld *mld,
 			mld_link->igtk->hw_key_idx = STA_KEY_IDX_INVALID;
 			mld_link->igtk = NULL;
 		}
+		mld->num_igtks--;
 	}
 
 	return iwl_mld_remove_key_from_fw(mld, sta_mask, key_flags,
@@ -206,6 +207,9 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 	lockdep_assert_wiphy(mld->wiphy);
 
 	if (igtk) {
+		if (mld->num_igtks == IWL_MAX_NUM_IGTKS)
+			return -EOPNOTSUPP;
+
 		u8 link_id = 0;
 
 		/* set to -1 for non-MLO right now */
@@ -237,8 +241,10 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 	if (ret)
 		return ret;
 
-	if (mld_link)
+	if (mld_link) {
 		mld_link->igtk = key;
+		mld->num_igtks++;
+	}
 
 	/* We don't really need this, but need it to be not invalid,
 	 * so we will know if the key is in fw.
