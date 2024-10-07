@@ -1449,6 +1449,20 @@ iwl_mld_suspend_set_ucast_pn(struct iwl_mld *mld, struct ieee80211_sta *sta,
 }
 
 static void
+iwl_mld_suspend_convert_tkip_ipn(struct ieee80211_key_conf *key,
+				 __le64 *rsc)
+{
+	struct ieee80211_key_seq seq;
+
+	for (int i = 0; i < IWL_MAX_TID_COUNT; i++) {
+		ieee80211_get_key_rx_seq(key, i, &seq);
+		rsc[i] =
+			cpu_to_le64(((u64)seq.tkip.iv32 << 16) |
+				    seq.tkip.iv16);
+	}
+}
+
+static void
 iwl_mld_suspend_key_data_iter(struct ieee80211_hw *hw,
 			      struct ieee80211_vif *vif,
 			      struct ieee80211_sta *sta,
@@ -1468,13 +1482,21 @@ iwl_mld_suspend_key_data_iter(struct ieee80211_hw *hw,
 	case WLAN_CIPHER_SUITE_GCMP_256:
 		if (!cipher)
 			cipher = cpu_to_le32(STA_KEY_FLG_GCMP);
+		fallthrough;
+	case WLAN_CIPHER_SUITE_TKIP:
+		if (!cipher)
+			cipher = cpu_to_le32(STA_KEY_FLG_TKIP);
 		if (sta) {
-			iwl_mld_suspend_set_ucast_pn(mld, sta, key,
-						     data->rsc->ucast_rsc);
+			key_rsc = data->rsc->ucast_rsc;
+			if (key->cipher == WLAN_CIPHER_SUITE_TKIP)
+				iwl_mld_suspend_convert_tkip_ipn(key, key_rsc);
+			else
+				iwl_mld_suspend_set_ucast_pn(mld, sta, key,
+							     key_rsc);
+
 			data->have_rsc = true;
 			return;
 		}
-
 		/* We're iterating from old to new, there're 4 possible
 		 * gtk ids, and only the last two keys matter
 		 */
@@ -1499,7 +1521,11 @@ iwl_mld_suspend_key_data_iter(struct ieee80211_hw *hw,
 				IWL_MCAST_KEY_MAP_INVALID;
 		}
 
-		iwl_mld_aes_seq_to_le64_pn(key, key_rsc);
+		if (key->cipher == WLAN_CIPHER_SUITE_TKIP)
+			iwl_mld_suspend_convert_tkip_ipn(key, key_rsc);
+		else
+			iwl_mld_aes_seq_to_le64_pn(key, key_rsc);
+
 		data->gtks++;
 		data->have_rsc = true;
 		break;
