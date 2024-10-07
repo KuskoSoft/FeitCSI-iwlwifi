@@ -61,6 +61,7 @@ struct iwl_mld_mcast_key_data {
 	union {
 		struct {
 			struct ieee80211_key_seq aes_seq[IWL_MAX_TID_COUNT];
+			struct ieee80211_key_seq tkip_seq[IWL_MAX_TID_COUNT];
 		} gtk;
 		struct {
 			struct ieee80211_key_seq cmac_gmac_seq;
@@ -85,7 +86,8 @@ struct iwl_mld_mcast_key_data {
  * @gtk: data of the last two used gtk's by the FW upon resume
  * @igtk: data of the last used igtk by the FW upon resume
  * @bigtk: data of the last two used gtk's by the FW upon resume
- * @ptk_seq: last seq numbers per tid passed by the FW
+ * @ptk: last seq numbers per tid passed by the FW,
+ *	holds both in tkip and aes formats
  */
 struct iwl_mld_wowlan_status {
 	u32 wakeup_reasons;
@@ -100,7 +102,11 @@ struct iwl_mld_wowlan_status {
 	struct iwl_mld_mcast_key_data gtk[WOWLAN_GTK_KEYS_NUM];
 	struct iwl_mld_mcast_key_data igtk;
 	struct iwl_mld_mcast_key_data bigtk[WOWLAN_BIGTK_KEYS_NUM];
-	struct ieee80211_key_seq ptk_seq[IWL_MAX_TID_COUNT];
+	struct {
+		struct ieee80211_key_seq aes_seq[IWL_MAX_TID_COUNT];
+		struct ieee80211_key_seq tkip_seq[IWL_MAX_TID_COUNT];
+
+	} ptk;
 };
 
 #define NETDETECT_QUERY_BUF_LEN \
@@ -271,6 +277,15 @@ iwl_mld_netdetect_config(struct iwl_mld *mld,
 }
 
 static void
+iwl_mld_le64_to_tkip_seq(__le64 le_pn, struct ieee80211_key_seq *seq)
+{
+	u64 pn = le64_to_cpu(le_pn);
+
+	seq->tkip.iv16 = (u16)pn;
+	seq->tkip.iv32 = (u32)(pn >> 16);
+}
+
+static void
 iwl_mld_le64_to_aes_seq(__le64 le_pn, struct ieee80211_key_seq *seq)
 {
 	u64 pn = le64_to_cpu(le_pn);
@@ -289,11 +304,18 @@ iwl_mld_convert_gtk_resume_seq(struct iwl_mld_mcast_key_data *gtk_data,
 			       int rsc_idx)
 {
 	struct ieee80211_key_seq *aes_seq = gtk_data->gtk.aes_seq;
+	struct ieee80211_key_seq *tkip_seq = gtk_data->gtk.tkip_seq;
 
 	if (rsc_idx >= ARRAY_SIZE(sc->mcast_rsc))
 		return;
 
+	/* We store both the TKIP and AES representations coming from the
+	 * FW because we decode the data from there before we iterate
+	 * the keys and know which type is used.
+	 */
 	for (int tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+		iwl_mld_le64_to_tkip_seq(sc->mcast_rsc[rsc_idx][tid],
+					 &tkip_seq[tid]);
 		iwl_mld_le64_to_aes_seq(sc->mcast_rsc[rsc_idx][tid],
 					&aes_seq[tid]);
 	}
@@ -337,6 +359,14 @@ iwl_mld_convert_gtk_resume_data(struct iwl_mld *mld,
 			sc->mcast_key_id_map[wowlan_status->gtk[status_idx].id];
 		iwl_mld_convert_gtk_resume_seq(&wowlan_status->gtk[status_idx],
 					       sc, rsc_idx);
+
+		/* if it's as long as the TKIP encryption key, copy MIC key */
+		if (wowlan_status->gtk[status_idx].len ==
+		    NL80211_TKIP_DATA_OFFSET_TX_MIC_KEY)
+			memcpy(wowlan_status->gtk[status_idx].key +
+			       NL80211_TKIP_DATA_OFFSET_RX_MIC_KEY,
+			       gtk_data[notif_idx].tkip_mic_key,
+			       sizeof(gtk_data[notif_idx].tkip_mic_key));
 		status_idx++;
 	}
 }
@@ -346,12 +376,15 @@ iwl_mld_convert_ptk_resume_seq(struct iwl_mld *mld,
 			       struct iwl_mld_wowlan_status *wowlan_status,
 			       const struct iwl_wowlan_all_rsc_tsc_v5 *sc)
 {
-	struct ieee80211_key_seq *seq = wowlan_status->ptk_seq;
+	struct ieee80211_key_seq *aes_seq = wowlan_status->ptk.aes_seq;
+	struct ieee80211_key_seq *tkip_seq = wowlan_status->ptk.tkip_seq;
 
 	BUILD_BUG_ON(ARRAY_SIZE(sc->ucast_rsc) != IWL_MAX_TID_COUNT);
 
-	for (int tid = 0; tid < IWL_MAX_TID_COUNT; tid++)
-		iwl_mld_le64_to_aes_seq(sc->ucast_rsc[tid], &seq[tid]);
+	for (int tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+		iwl_mld_le64_to_aes_seq(sc->ucast_rsc[tid], &aes_seq[tid]);
+		iwl_mld_le64_to_tkip_seq(sc->ucast_rsc[tid], &tkip_seq[tid]);
+	}
 }
 
 static void
@@ -659,6 +692,10 @@ iwl_mld_set_key_rx_seq(struct ieee80211_key_conf *key,
 		iwl_mld_set_key_rx_seq_tids(key,
 					    key_data->gtk.aes_seq);
 		break;
+	case WLAN_CIPHER_SUITE_TKIP:
+		iwl_mld_set_key_rx_seq_tids(key,
+					    key_data->gtk.tkip_seq);
+		break;
 	case WLAN_CIPHER_SUITE_BIP_GMAC_128:
 	case WLAN_CIPHER_SUITE_BIP_GMAC_256:
 	case WLAN_CIPHER_SUITE_BIP_CMAC_256:
@@ -721,22 +758,28 @@ static void
 iwl_mld_update_ptk_rx_seq(struct iwl_mld *mld,
 			  struct iwl_mld_wowlan_status *wowlan_status,
 			  struct ieee80211_sta *sta,
-			  struct ieee80211_key_conf *key)
+			  struct ieee80211_key_conf *key,
+			  bool is_tkip)
 {
 	struct iwl_mld_sta *mld_sta =
 		iwl_mld_sta_from_mac80211(sta);
 	struct iwl_mld_ptk_pn *mld_ptk_pn =
 		wiphy_dereference(mld->wiphy,
 				  mld_sta->ptk_pn[key->keyidx]);
-	if (WARN_ON(!mld_ptk_pn))
+
+	iwl_mld_set_key_rx_seq_tids(key, is_tkip ?
+				    wowlan_status->ptk.tkip_seq :
+				    wowlan_status->ptk.aes_seq);
+	if (is_tkip)
 		return;
 
-	iwl_mld_set_key_rx_seq_tids(key, wowlan_status->ptk_seq);
+	if (WARN_ON(!mld_ptk_pn))
+		return;
 
 	for (int tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
 		for (int i = 1; i < mld->trans->num_rx_queues; i++)
 			memcpy(mld_ptk_pn->q[i].pn[tid],
-			       wowlan_status->ptk_seq[tid].ccmp.pn,
+			       wowlan_status->ptk.aes_seq[tid].ccmp.pn,
 			       IEEE80211_CCMP_PN_LEN);
 	}
 }
@@ -764,9 +807,12 @@ iwl_mld_resume_keys_iter(struct ieee80211_hw *hw,
 	case WLAN_CIPHER_SUITE_CCMP:
 	case WLAN_CIPHER_SUITE_GCMP:
 	case WLAN_CIPHER_SUITE_GCMP_256:
+	case WLAN_CIPHER_SUITE_TKIP:
 		if (sta) {
 			iwl_mld_update_ptk_rx_seq(data->mld, wowlan_status,
-						  sta, key);
+						  sta, key,
+						  key->cipher ==
+						  WLAN_CIPHER_SUITE_TKIP);
 			return;
 		}
 
@@ -832,6 +878,7 @@ iwl_mld_add_mcast_rekey(struct ieee80211_vif *vif,
 	BUILD_BUG_ON(WLAN_KEY_LEN_CCMP != WLAN_KEY_LEN_GCMP);
 	BUILD_BUG_ON(sizeof(conf.key) < WLAN_KEY_LEN_CCMP);
 	BUILD_BUG_ON(sizeof(conf.key) < WLAN_KEY_LEN_GCMP_256);
+	BUILD_BUG_ON(sizeof(conf.key) < WLAN_KEY_LEN_TKIP);
 	BUILD_BUG_ON(sizeof(conf.key) < WLAN_KEY_LEN_BIP_GMAC_128);
 	BUILD_BUG_ON(sizeof(conf.key) < WLAN_KEY_LEN_BIP_GMAC_256);
 	BUILD_BUG_ON(sizeof(conf.key) < WLAN_KEY_LEN_AES_CMAC);
@@ -847,6 +894,9 @@ iwl_mld_add_mcast_rekey(struct ieee80211_vif *vif,
 		break;
 	case WLAN_CIPHER_SUITE_GCMP_256:
 		conf.conf.keylen = WLAN_KEY_LEN_GCMP_256;
+		break;
+	case WLAN_CIPHER_SUITE_TKIP:
+		conf.conf.keylen = WLAN_KEY_LEN_TKIP;
 		break;
 	case WLAN_CIPHER_SUITE_BIP_GMAC_128:
 		conf.conf.keylen = WLAN_KEY_LEN_BIP_GMAC_128;
