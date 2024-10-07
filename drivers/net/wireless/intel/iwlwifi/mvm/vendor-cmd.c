@@ -629,6 +629,9 @@ static int iwl_vendor_get_links_info(struct wiphy *wiphy,
 	int resp_size;
 	int ret;
 
+	if (!vif)
+		return -ENODEV;
+
 	resp_size = links_info_response_size(iwl_mvm_max_active_links(mvm,
 								      vif));
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, resp_size);
