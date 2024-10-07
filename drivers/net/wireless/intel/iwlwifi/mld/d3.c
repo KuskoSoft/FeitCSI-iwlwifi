@@ -46,6 +46,22 @@ struct iwl_mld_suspend_key_iter_data {
 	__le32 bigtk_cipher;
 };
 
+struct iwl_mld_mcast_key_data {
+	u8 key[WOWLAN_KEY_MAX_SIZE];
+	u8 len;
+	u8 flags;
+	u8 id;
+	union {
+		struct {
+			struct ieee80211_key_seq aes_seq[IWL_MAX_TID_COUNT];
+		} gtk;
+		struct {
+			struct ieee80211_key_seq cmac_gmac_seq;
+		} igtk_bigtk;
+	};
+
+};
+
 /**
  * struct iwl_mld_wowlan_status - contains wowlan status data from
  * all wowlan notifications
@@ -59,6 +75,10 @@ struct iwl_mld_suspend_key_iter_data {
  * @wake_packet: wakeup packet received
  * @wake_packet_length: wake packet length
  * @wake_packet_bufsize: wake packet bufsize
+ * @gtk: data of the last two used gtk's by the FW upon resume
+ * @igtk: data of the last used igtk by the FW upon resume
+ * @bigtk: data of the last two used gtk's by the FW upon resume
+ * @ptk_seq: last seq numbers per tid passed by the FW
  */
 struct iwl_mld_wowlan_status {
 	u32 wakeup_reasons;
@@ -70,6 +90,10 @@ struct iwl_mld_wowlan_status {
 	u8 *wake_packet;
 	u32 wake_packet_length;
 	u32 wake_packet_bufsize;
+	struct iwl_mld_mcast_key_data gtk[WOWLAN_GTK_KEYS_NUM];
+	struct iwl_mld_mcast_key_data igtk;
+	struct iwl_mld_mcast_key_data bigtk[WOWLAN_BIGTK_KEYS_NUM];
+	struct ieee80211_key_seq ptk_seq[IWL_MAX_TID_COUNT];
 };
 
 #define NETDETECT_QUERY_BUF_LEN \
@@ -239,6 +263,163 @@ iwl_mld_netdetect_config(struct iwl_mld *mld,
 	return ret;
 }
 
+static void
+iwl_mld_le64_to_aes_seq(__le64 le_pn, struct ieee80211_key_seq *seq)
+{
+	u64 pn = le64_to_cpu(le_pn);
+
+	seq->ccmp.pn[0] = pn >> 40;
+	seq->ccmp.pn[1] = pn >> 32;
+	seq->ccmp.pn[2] = pn >> 24;
+	seq->ccmp.pn[3] = pn >> 16;
+	seq->ccmp.pn[4] = pn >> 8;
+	seq->ccmp.pn[5] = pn;
+}
+
+static void
+iwl_mld_convert_gtk_resume_seq(struct iwl_mld_mcast_key_data *gtk_data,
+			       const struct iwl_wowlan_all_rsc_tsc_v5 *sc,
+			       int rsc_idx)
+{
+	struct ieee80211_key_seq *aes_seq = gtk_data->gtk.aes_seq;
+
+	if (rsc_idx >= ARRAY_SIZE(sc->mcast_rsc))
+		return;
+
+	for (int tid = 0; tid < IWL_MAX_TID_COUNT; tid++) {
+		iwl_mld_le64_to_aes_seq(sc->mcast_rsc[rsc_idx][tid],
+					&aes_seq[tid]);
+	}
+}
+
+static void
+iwl_mld_convert_gtk_resume_data(struct iwl_mld *mld,
+				struct iwl_mld_wowlan_status *wowlan_status,
+				const struct iwl_wowlan_gtk_status_v3 *gtk_data,
+				const struct iwl_wowlan_all_rsc_tsc_v5 *sc)
+{
+	int status_idx = 0;
+
+	BUILD_BUG_ON(sizeof(wowlan_status->gtk[0].key) <
+		     sizeof(gtk_data[0].key));
+	BUILD_BUG_ON(ARRAY_SIZE(wowlan_status->gtk) < WOWLAN_GTK_KEYS_NUM);
+
+	for (int notif_idx = 0; notif_idx < ARRAY_SIZE(wowlan_status->gtk);
+	     notif_idx++) {
+		int rsc_idx;
+
+		if (!(gtk_data[notif_idx].key_len))
+			continue;
+
+		wowlan_status->gtk[status_idx].len =
+			gtk_data[notif_idx].key_len;
+		wowlan_status->gtk[status_idx].flags =
+			gtk_data[notif_idx].key_flags;
+		wowlan_status->gtk[status_idx].id =
+			wowlan_status->gtk[status_idx].flags &
+			IWL_WOWLAN_GTK_IDX_MASK;
+		memcpy(wowlan_status->gtk[status_idx].key,
+		       gtk_data[notif_idx].key,
+		       sizeof(gtk_data[notif_idx].key));
+
+		/* The rsc for both gtk keys are stored in gtk[0]->sc->mcast_rsc
+		 * The gtk ids can be any two numbers between 0 and 3,
+		 * the id_map maps between the key id and the index in sc->mcast
+		 */
+		rsc_idx =
+			sc->mcast_key_id_map[wowlan_status->gtk[status_idx].id];
+		iwl_mld_convert_gtk_resume_seq(&wowlan_status->gtk[status_idx],
+					       sc, rsc_idx);
+		status_idx++;
+	}
+}
+
+static void
+iwl_mld_convert_ptk_resume_seq(struct iwl_mld *mld,
+			       struct iwl_mld_wowlan_status *wowlan_status,
+			       const struct iwl_wowlan_all_rsc_tsc_v5 *sc)
+{
+	struct ieee80211_key_seq *seq = wowlan_status->ptk_seq;
+
+	BUILD_BUG_ON(ARRAY_SIZE(sc->ucast_rsc) != IWL_MAX_TID_COUNT);
+
+	for (int tid = 0; tid < IWL_MAX_TID_COUNT; tid++)
+		iwl_mld_le64_to_aes_seq(sc->ucast_rsc[tid], &seq[tid]);
+}
+
+static void
+iwl_mld_convert_mcast_ipn(struct iwl_mld_mcast_key_data *key_status,
+			  const struct iwl_wowlan_igtk_status *key)
+{
+	struct ieee80211_key_seq *seq =
+		&key_status->igtk_bigtk.cmac_gmac_seq;
+	u8 ipn_len = ARRAY_SIZE(key->ipn);
+
+	BUILD_BUG_ON(ipn_len != ARRAY_SIZE(seq->aes_gmac.pn));
+	BUILD_BUG_ON(ipn_len != ARRAY_SIZE(seq->aes_cmac.pn));
+	BUILD_BUG_ON(offsetof(struct ieee80211_key_seq, aes_gmac) !=
+		     offsetof(struct ieee80211_key_seq, aes_cmac));
+
+	/* mac80211 expects big endian for memcmp() to work, convert.
+	 * We don't have the key cipher yet so copy to both to cmac and gmac
+	 */
+	for (int i = 0; i < ipn_len; i++) {
+		seq->aes_gmac.pn[i] = key->ipn[ipn_len - i - 1];
+		seq->aes_cmac.pn[i] = key->ipn[ipn_len - i - 1];
+	}
+}
+
+static void
+iwl_mld_convert_igtk_resume_data(struct iwl_mld_wowlan_status *wowlan_status,
+				 const struct iwl_wowlan_igtk_status *igtk)
+{
+	BUILD_BUG_ON(sizeof(wowlan_status->igtk.key) < sizeof(igtk->key));
+
+	if (!igtk->key_len)
+		return;
+
+	wowlan_status->igtk.len = igtk->key_len;
+	wowlan_status->igtk.flags = igtk->key_flags;
+	wowlan_status->igtk.id =
+		u32_get_bits(igtk->key_flags,
+			     IWL_WOWLAN_IGTK_BIGTK_IDX_MASK) +
+		WOWLAN_IGTK_MIN_INDEX;
+
+	memcpy(wowlan_status->igtk.key, igtk->key, sizeof(igtk->key));
+	iwl_mld_convert_mcast_ipn(&wowlan_status->igtk, igtk);
+}
+
+static void
+iwl_mld_convert_bigtk_resume_data(struct iwl_mld_wowlan_status *wowlan_status,
+				  const struct iwl_wowlan_igtk_status *bigtk)
+{
+	int status_idx = 0;
+
+	BUILD_BUG_ON(ARRAY_SIZE(wowlan_status->bigtk) < WOWLAN_BIGTK_KEYS_NUM);
+
+	for (int notif_idx = 0; notif_idx < WOWLAN_BIGTK_KEYS_NUM;
+	     notif_idx++) {
+		if (!bigtk[notif_idx].key_len)
+			continue;
+
+		wowlan_status->bigtk[status_idx].len = bigtk[notif_idx].key_len;
+		wowlan_status->bigtk[status_idx].flags =
+			bigtk[notif_idx].key_flags;
+		wowlan_status->bigtk[status_idx].id =
+			u32_get_bits(bigtk[notif_idx].key_flags,
+				     IWL_WOWLAN_IGTK_BIGTK_IDX_MASK)
+			+ WOWLAN_BIGTK_MIN_INDEX;
+
+		BUILD_BUG_ON(sizeof(wowlan_status->bigtk[status_idx].key) <
+			     sizeof(bigtk[notif_idx].key));
+		memcpy(wowlan_status->bigtk[status_idx].key,
+		       bigtk[notif_idx].key, sizeof(bigtk[notif_idx].key));
+		iwl_mld_convert_mcast_ipn(&wowlan_status->bigtk[status_idx],
+					  &bigtk[notif_idx]);
+		status_idx++;
+	}
+}
+
 static bool
 iwl_mld_handle_wowlan_info_notif(struct iwl_mld *mld,
 				 struct iwl_mld_wowlan_status *wowlan_status,
@@ -254,6 +435,13 @@ iwl_mld_handle_wowlan_info_notif(struct iwl_mld *mld,
 			 expected_len, len)) {
 		return true;
 	}
+
+	iwl_mld_convert_gtk_resume_data(mld, wowlan_status, notif->gtk,
+					&notif->gtk[0].sc);
+	iwl_mld_convert_ptk_resume_seq(mld, wowlan_status, &notif->gtk[0].sc);
+	/* only one igtk is passed by FW */
+	iwl_mld_convert_igtk_resume_data(wowlan_status, &notif->igtk[0]);
+	iwl_mld_convert_bigtk_resume_data(wowlan_status, notif->bigtk);
 
 	wowlan_status->replay_ctr = le64_to_cpu(notif->replay_ctr);
 	wowlan_status->pattern_number = le16_to_cpu(notif->pattern_number);
@@ -1371,9 +1559,10 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 		set_bit(STATUS_FW_ERROR, &mld->trans->status);
 	}
 
-	if (resume_data.wowlan_status)
+	if (resume_data.wowlan_status) {
 		kfree(resume_data.wowlan_status->wake_packet);
-	kfree(resume_data.wowlan_status);
+		kfree(resume_data.wowlan_status);
+	}
 
 	mld->fw_status.in_hw_restart = true;
 	return 1;
