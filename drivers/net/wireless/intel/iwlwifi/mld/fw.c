@@ -16,6 +16,7 @@
 #include "mcc.h"
 #include "led.h"
 #include "coex.h"
+#include "regulatory.h"
 
 static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
 {
@@ -468,6 +469,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 		iwl_mld_send_recovery_cmd(mld, ERROR_RECOVERY_UPDATE_DB);
 
 	iwl_mld_led_config_fw(mld);
+
+	ret = iwl_mld_init_sar(mld);
+	if (ret)
+		return ret;
 
 	/* TODO:
 	 * - ptp

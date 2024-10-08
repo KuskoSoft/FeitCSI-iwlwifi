@@ -12,6 +12,7 @@
 #include "mld.h"
 #include "hcmd.h"
 #include "mcc.h"
+#include "regulatory.h"
 
 /* It is the caller's responsibility to free the pointer returned here */
 static struct iwl_mcc_update_resp_v8 *
@@ -327,8 +328,6 @@ void iwl_mld_handle_update_mcc(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
 	regd = iwl_mld_get_regdomain(mld, mcc, src, &changed);
 	if (IS_ERR_OR_NULL(regd))
 		return;
-
-	/* TODO: SAR iwl_mvm_get_sar_geo_profile */
 
 	if (changed)
 		regulatory_set_wiphy_regd(mld->hw->wiphy, regd);

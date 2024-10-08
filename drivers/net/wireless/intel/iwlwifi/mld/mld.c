@@ -222,6 +222,13 @@ static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
 	HCMD_NAME(SCD_QUEUE_CONFIG_CMD),
 };
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_phy_names[] = {
+	HCMD_NAME(PER_CHAIN_LIMIT_OFFSET_CMD),
+};
+
 VISIBLE_IF_IWLWIFI_KUNIT
 const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
@@ -231,6 +238,7 @@ const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[DATA_PATH_GROUP] = HCMD_ARR(iwl_mld_data_path_names),
 	[REGULATORY_AND_NVM_GROUP] = HCMD_ARR(iwl_mld_reg_and_nvm_names),
 	[DEBUG_GROUP] = HCMD_ARR(iwl_mld_debug_names),
+	[PHY_OPS_GROUP] = HCMD_ARR(iwl_mld_phy_names),
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_groups);
 

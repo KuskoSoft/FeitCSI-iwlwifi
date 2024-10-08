@@ -9,4 +9,8 @@
 
 void iwl_mld_get_bios_tables(struct iwl_mld *mld);
 
+int iwl_mld_init_sar(struct iwl_mld *mld);
+
+int iwl_mld_config_sar_profile(struct iwl_mld *mld, int prof_a, int prof_b);
+
 #endif /* __iwl_mld_regulatory_h__ */
