@@ -1005,7 +1005,9 @@ void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 	// todo: BSS_CHANGED_BEACON_INFO (task=beacon_filter)
 	// todo: BSS_CHANGED_BANDWIDTH (task=EMLSR)
 	// todo: BSS_CHANGED_CQM
-	// todo: BSS_CHANGED_TXPOWER (task=power)
+
+	if (changes & BSS_CHANGED_TXPOWER)
+		iwl_mld_set_tx_power(mld, link_conf, link_conf->txpower);
 }
 
 static

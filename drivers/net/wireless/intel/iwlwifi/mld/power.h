@@ -18,4 +18,8 @@ iwl_mld_send_ap_tx_power_constraint_cmd(struct iwl_mld *mld,
 					struct ieee80211_vif *vif,
 					struct ieee80211_bss_conf *link);
 
+int iwl_mld_set_tx_power(struct iwl_mld *mld,
+			 struct ieee80211_bss_conf *link_conf,
+			 s16 tx_power);
+
 #endif /* __iwl_mld_power_h__ */

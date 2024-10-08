@@ -310,3 +310,33 @@ iwl_mld_send_ap_tx_power_constraint_cmd(struct iwl_mld *mld,
 			"failed to send AP_TX_POWER_CONSTRAINTS_CMD (%d)\n",
 			ret);
 }
+
+int iwl_mld_set_tx_power(struct iwl_mld *mld,
+			 struct ieee80211_bss_conf *link_conf,
+			 s16 tx_power)
+{
+	u32 cmd_id = REDUCE_TX_POWER_CMD;
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link_conf);
+	u16 u_tx_power = tx_power == IWL_DEFAULT_MAX_TX_POWER ?
+		IWL_DEV_MAX_TX_POWER : 8 * tx_power;
+	struct iwl_dev_tx_power_cmd cmd = {
+		/* Those fields sit on the same place for v9 and v10 */
+		.common.set_mode = cpu_to_le32(IWL_TX_POWER_MODE_SET_LINK),
+		.common.pwr_restriction = cpu_to_le16(u_tx_power),
+	};
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mld->fw, cmd_id,
+					   IWL_FW_CMD_VER_UNKNOWN);
+	int len = sizeof(cmd.common);
+
+	if (WARN_ON(!mld_link))
+		return -ENODEV;
+
+	cmd.common.link_id = cpu_to_le32(mld_link->fw_id);
+
+	if (cmd_ver == 10)
+		len += sizeof(cmd.v10);
+	else if (cmd_ver == 9)
+		len += sizeof(cmd.v9);
+
+	return iwl_mld_send_cmd_pdu(mld, cmd_id, &cmd, len);
+}
