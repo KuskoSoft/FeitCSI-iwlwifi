@@ -959,8 +959,39 @@ iwl_mld_suspend_key_data_iter(struct ieee80211_hw *hw,
 }
 
 static int
+iwl_mld_send_kek_kck_cmd(struct iwl_mld *mld,
+			 struct iwl_mld_vif *mld_vif,
+			 struct iwl_mld_suspend_key_iter_data data,
+			 int ap_sta_id)
+{
+	struct iwl_wowlan_kek_kck_material_cmd_v4 kek_kck_cmd = {};
+	struct iwl_mld_rekey_data *rekey_data =
+		&mld_vif->wowlan_data.rekey_data;
+
+	memcpy(kek_kck_cmd.kck, rekey_data->kck,
+	       rekey_data->kck_len);
+	kek_kck_cmd.kck_len = cpu_to_le16(rekey_data->kck_len);
+	memcpy(kek_kck_cmd.kek, rekey_data->kek,
+	       rekey_data->kek_len);
+	kek_kck_cmd.kek_len = cpu_to_le16(rekey_data->kek_len);
+	kek_kck_cmd.replay_ctr = rekey_data->replay_ctr;
+	kek_kck_cmd.akm = cpu_to_le32(rekey_data->akm);
+	kek_kck_cmd.sta_id = cpu_to_le32(ap_sta_id);
+	kek_kck_cmd.gtk_cipher = data.gtk_cipher;
+	kek_kck_cmd.igtk_cipher = data.igtk_cipher;
+	kek_kck_cmd.bigtk_cipher = data.bigtk_cipher;
+
+	IWL_DEBUG_WOWLAN(mld, "setting akm %d\n",
+			 rekey_data->akm);
+
+	return iwl_mld_send_cmd_pdu(mld, WOWLAN_KEK_KCK_MATERIAL,
+				    &kek_kck_cmd);
+}
+
+static int
 iwl_mld_suspend_send_security_cmds(struct iwl_mld *mld,
 				   struct ieee80211_vif *vif,
+				   struct iwl_mld_vif *mld_vif,
 				   int ap_sta_id)
 {
 	struct iwl_mld_suspend_key_iter_data data = {};
@@ -983,6 +1014,9 @@ iwl_mld_suspend_send_security_cmds(struct iwl_mld *mld,
 					   data.rsc);
 	else
 		ret = 0;
+
+	if (!ret && mld_vif->wowlan_data.rekey_data.valid)
+		ret = iwl_mld_send_kek_kck_cmd(mld, mld_vif, data, ap_sta_id);
 
 	kfree(data.rsc);
 
@@ -1200,7 +1234,7 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 		return ret;
 
 	/* TODO: check if order matters*/
-	ret = iwl_mld_suspend_send_security_cmds(mld, bss_vif,
+	ret = iwl_mld_suspend_send_security_cmds(mld, bss_vif, mld_vif,
 						 ap_sta_id);
 	if (ret)
 		return ret;
