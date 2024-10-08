@@ -5,7 +5,15 @@
 #ifndef __iwl_mld_power_h__
 #define __iwl_mld_power_h__
 
+#include <net/mac80211.h>
+
+#include "mld.h"
+
 int iwl_mld_update_device_power(struct iwl_mld *mld, bool d3);
+
+int iwl_mld_enable_beacon_filter(struct iwl_mld *mld,
+				 const struct ieee80211_bss_conf *link_conf,
+				 bool d3);
 
 int iwl_mld_disable_beacon_filter(struct iwl_mld *mld,
 				  struct ieee80211_vif *vif);

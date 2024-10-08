@@ -29,6 +29,34 @@ int iwl_mld_update_device_power(struct iwl_mld *mld, bool d3)
 	return iwl_mld_send_cmd_pdu(mld, POWER_TABLE_CMD, &cmd);
 }
 
+int iwl_mld_enable_beacon_filter(struct iwl_mld *mld,
+				 const struct ieee80211_bss_conf *link_conf,
+				 bool d3)
+{
+	struct iwl_beacon_filter_cmd cmd = {
+		IWL_BF_CMD_CONFIG_DEFAULTS,
+		.bf_enable_beacon_filter = cpu_to_le32(1),
+		.ba_enable_beacon_abort = cpu_to_le32(1),
+	};
+
+	if (ieee80211_vif_type_p2p(link_conf->vif) != NL80211_IFTYPE_STATION)
+		return 0;
+
+	if (link_conf->cqm_rssi_thold) {
+		cmd.bf_energy_delta =
+			cpu_to_le32(link_conf->cqm_rssi_hyst);
+		/* fw uses an absolute value for this */
+		cmd.bf_roaming_state =
+			cpu_to_le32(-link_conf->cqm_rssi_thold);
+	}
+
+	if (d3)
+		cmd.ba_escape_timer = cpu_to_le32(IWL_BA_ESCAPE_TIMER_D3);
+
+	return iwl_mld_send_cmd_pdu(mld, REPLY_BEACON_FILTERING_CMD,
+				    &cmd);
+}
+
 int iwl_mld_disable_beacon_filter(struct iwl_mld *mld,
 				  struct ieee80211_vif *vif)
 {

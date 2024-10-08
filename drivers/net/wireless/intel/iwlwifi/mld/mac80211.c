@@ -595,12 +595,7 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	/* Add the default link (now pointed to by link[0]) */
 	ret = iwl_mld_add_link(mld, &vif->bss_conf);
 	if (ret)
-		goto err_rm_vif;
-
-	/* beacon filtering */
-	ret = iwl_mld_disable_beacon_filter(mld, vif);
-	if (ret)
-		goto err_rm_link;
+		goto err;
 
 	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
 		vif->driver_flags |= IEEE80211_VIF_BEACON_FILTER |
@@ -620,9 +615,7 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 
 	return 0;
 
-err_rm_link:
-	iwl_mld_remove_link(mld, &vif->bss_conf);
-err_rm_vif:
+err:
 	iwl_mld_rm_vif(mld, vif);
 	return ret;
 }
@@ -1047,9 +1040,14 @@ iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
 	if (changes & BSS_CHANGED_BEACON_INFO)
 		iwl_mld_update_mac_power(mld, vif, false);
 
-	// todo: BSS_CHANGED_BEACON_INFO (task=beacon_filter)
+	/* The firmware will wait quite a while after association before it
+	 * starts filtering the beacons. We can safely enable beacon filtering
+	 * upon CQM configuration, even if we didn't get a beacon yet.
+	 */
+	if (changes & (BSS_CHANGED_CQM | BSS_CHANGED_BEACON_INFO))
+		iwl_mld_enable_beacon_filter(mld, link_conf, false);
+
 	// todo: BSS_CHANGED_BANDWIDTH (task=EMLSR)
-	// todo: BSS_CHANGED_CQM
 }
 
 static int iwl_mld_update_mu_groups(struct iwl_mld *mld,

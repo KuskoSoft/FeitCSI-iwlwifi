@@ -1721,9 +1721,12 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 	u32 sta_id_mask;
 	int ap_sta_id, ret;
 
-	/* TODO: exit ESR (task=esr) */
+	/* TODO: exit ESR (task=EMLSR - stay with one link which will be link_conf) */
+	int link_id = bss_vif->active_links ? __ffs(bss_vif->active_links) : 0;
+	struct ieee80211_bss_conf *link_conf =
+		link_conf_dereference_protected(bss_vif, link_id);
 
-	if (WARN_ON(!ap_sta))
+	if (WARN_ON(!ap_sta || !link_conf))
 		return -EINVAL;
 
 	sta_id_mask = iwl_mld_fw_sta_id_mask(mld, ap_sta);
@@ -1759,6 +1762,7 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 	if (ret)
 		return ret;
 
+	iwl_mld_enable_beacon_filter(mld, link_conf, true);
 	return iwl_mld_update_mac_power(mld, bss_vif, true);
 }
 
@@ -1799,6 +1803,7 @@ int iwl_mld_wowlan_suspend(struct iwl_mld *mld, struct cfg80211_wowlan *wowlan)
 int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 {
 	struct ieee80211_vif *bss_vif;
+	struct ieee80211_bss_conf *link_conf;
 	struct iwl_mld_netdetect_res netdetect_res;
 	struct iwl_mld_resume_data resume_data = {
 		.notifs_expected =
@@ -1806,6 +1811,7 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 			IWL_D3_NOTIF_D3_END_NOTIF,
 		.netdetect_res = &netdetect_res,
 	};
+	int link_id;
 	int ret;
 	bool fw_err = false;
 	bool keep_connection;
@@ -1826,6 +1832,16 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 
 	bss_vif = iwl_mld_get_bss_vif(mld);
 	if (WARN_ON(!bss_vif))
+		goto err;
+
+	/* We can't have several links upon wowlan entry,
+	 * this is enforced in the suspend flow.
+	 */
+	WARN_ON(__ffs(bss_vif->active_links) > 1);
+	link_id = bss_vif->active_links ? __ffs(bss_vif->active_links) : 0;
+	link_conf = link_conf_dereference_protected(bss_vif, link_id);
+
+	if (WARN_ON(!link_conf))
 		goto err;
 
 	iwl_fw_dbg_read_d3_debug_data(&mld->fwrt);
@@ -1857,6 +1873,7 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 
 	iwl_mld_update_changed_regdomain(mld);
 	iwl_mld_update_mac_power(mld, bss_vif, false);
+	iwl_mld_enable_beacon_filter(mld, link_conf, false);
 	iwl_mld_update_device_power(mld, false);
 
 	if (mld->netdetect)
