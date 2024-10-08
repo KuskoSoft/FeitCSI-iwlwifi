@@ -999,7 +999,10 @@ void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 	if (changes & BSS_CHANGED_TPE)
 		iwl_mld_send_ap_tx_power_constraint_cmd(mld, vif, link_conf);
 
-	// todo: BSS_CHANGED_BEACON_INFO (task=beacon_filter, power)
+	if (changes & BSS_CHANGED_BEACON_INFO)
+		iwl_mld_update_mac_power(mld, vif, false);
+
+	// todo: BSS_CHANGED_BEACON_INFO (task=beacon_filter)
 	// todo: BSS_CHANGED_BANDWIDTH (task=EMLSR)
 	// todo: BSS_CHANGED_CQM
 	// todo: BSS_CHANGED_TXPOWER (task=power)
