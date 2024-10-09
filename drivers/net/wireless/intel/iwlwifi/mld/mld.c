@@ -17,6 +17,7 @@
 #include "scan.h"
 #include "tx.h"
 #include "sta.h"
+#include "regulatory.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -305,6 +306,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	iwl_mld_construct_fw_runtime(mld, trans, fw, dbgfs_dir);
 
+	iwl_mld_get_bios_tables(mld);
 	iwl_uefi_get_step_table(trans);
 
 	/* Configure transport layer with the opmode specific params */

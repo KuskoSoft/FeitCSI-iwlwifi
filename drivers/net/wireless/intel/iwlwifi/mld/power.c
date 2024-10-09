@@ -18,8 +18,6 @@ int iwl_mld_update_device_power(struct iwl_mld *mld, bool d3)
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
 		cmd.flags |= cpu_to_le16(DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK);
 
-	/* TODO: task=BIOS DEVICE_POWER_FLAGS_32K_CLK_VALID_MSK */
-
 	if (d3)
 		cmd.flags |=
 			cpu_to_le16(DEVICE_POWER_FLAGS_NO_SLEEP_TILL_D3_MSK);
