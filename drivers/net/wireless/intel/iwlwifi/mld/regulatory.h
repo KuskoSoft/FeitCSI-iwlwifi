@@ -9,6 +9,8 @@
 
 void iwl_mld_get_bios_tables(struct iwl_mld *mld);
 
+int iwl_mld_init_ppag(struct iwl_mld *mld);
+
 int iwl_mld_init_sgom(struct iwl_mld *mld);
 
 int iwl_mld_init_sar(struct iwl_mld *mld);

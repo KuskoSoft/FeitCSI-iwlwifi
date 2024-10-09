@@ -470,6 +470,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 
 	iwl_mld_led_config_fw(mld);
 
+	ret = iwl_mld_init_ppag(mld);
+	if (ret)
+		return ret;
+
 	ret = iwl_mld_init_sar(mld);
 	if (ret)
 		return ret;

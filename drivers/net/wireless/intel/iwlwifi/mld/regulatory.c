@@ -3,6 +3,8 @@
  * Copyright (C) 2024 Intel Corporation
  */
 
+#include <linux/dmi.h>
+
 #include "fw/regulatory.h"
 #include "fw/acpi.h"
 
@@ -193,4 +195,44 @@ int iwl_mld_init_sgom(struct iwl_mld *mld)
 			"failed to send SAR_OFFSET_MAPPING_CMD (%d)\n", ret);
 
 	return ret;
+}
+
+static int iwl_mld_ppag_send_cmd(struct iwl_mld *mld)
+{
+	union iwl_ppag_table_cmd cmd = {};
+	int ret, len;
+
+	ret = iwl_fill_ppag_table(&mld->fwrt, &cmd, &len);
+	/* Not supporting PPAG table is a valid scenario */
+	if (ret < 0)
+		return 0;
+
+	IWL_DEBUG_RADIO(mld, "Sending PER_PLATFORM_ANT_GAIN_CMD\n");
+	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(PHY_OPS_GROUP,
+						PER_PLATFORM_ANT_GAIN_CMD),
+				   &cmd, len);
+	if (ret < 0)
+		IWL_ERR(mld, "failed to send PER_PLATFORM_ANT_GAIN_CMD (%d)\n",
+			ret);
+
+	return ret;
+}
+
+int iwl_mld_init_ppag(struct iwl_mld *mld)
+{
+	/* no need to read the table, done in INIT stage */
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.ppag_allowed &&
+	    dmi_match(DMI_SYS_VENDOR, mld->trans->dbg_cfg.ppag_allowed)) {
+		IWL_DEBUG_RADIO(mld,
+				"System vendor matches dbg_cfg.ppag_allowed %s\n",
+				mld->trans->dbg_cfg.ppag_allowed);
+		return iwl_mld_ppag_send_cmd(mld);
+	}
+#endif
+
+	if (!(iwl_is_ppag_approved(&mld->fwrt)))
+		return 0;
+
+	return iwl_mld_ppag_send_cmd(mld);
 }
