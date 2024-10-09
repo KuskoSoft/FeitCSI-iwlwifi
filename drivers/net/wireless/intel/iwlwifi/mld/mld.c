@@ -187,6 +187,7 @@ static const struct iwl_hcmd_names iwl_mld_system_names[] = {
  */
 static const struct iwl_hcmd_names iwl_mld_reg_and_nvm_names[] = {
 	HCMD_NAME(NVM_GET_INFO),
+	HCMD_NAME(SAR_OFFSET_MAPPING_TABLE_CMD),
 };
 
 /* Please keep this array *SORTED* by hex value.
@@ -318,6 +319,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_mld_construct_fw_runtime(mld, trans, fw, dbgfs_dir);
 
 	iwl_mld_get_bios_tables(mld);
+	iwl_uefi_get_sgom_table(trans, &mld->fwrt);
 	iwl_uefi_get_step_table(trans);
 	iwl_bios_setup_step(trans, &mld->fwrt);
 

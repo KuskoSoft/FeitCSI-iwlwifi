@@ -169,3 +169,28 @@ int iwl_mld_init_sar(struct iwl_mld *mld)
 
 	return iwl_mld_geo_sar_init(mld);
 }
+
+int iwl_mld_init_sgom(struct iwl_mld *mld)
+{
+	int ret;
+	struct iwl_host_cmd cmd = {
+		.id = WIDE_ID(REGULATORY_AND_NVM_GROUP,
+			      SAR_OFFSET_MAPPING_TABLE_CMD),
+		.flags = 0,
+		.data[0] = &mld->fwrt.sgom_table,
+		.len[0] =  sizeof(mld->fwrt.sgom_table),
+		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
+	};
+
+	if (!mld->fwrt.sgom_enabled) {
+		IWL_DEBUG_RADIO(mld, "SGOM table is disabled\n");
+		return 0;
+	}
+
+	ret = iwl_mld_send_cmd(mld, &cmd);
+	if (ret)
+		IWL_ERR(mld,
+			"failed to send SAR_OFFSET_MAPPING_CMD (%d)\n", ret);
+
+	return ret;
+}

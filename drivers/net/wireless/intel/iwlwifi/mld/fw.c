@@ -474,6 +474,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+	ret = iwl_mld_init_sgom(mld);
+	if (ret)
+		return ret;
+
 	/* TODO:
 	 * - ptp
 	 * - testmode
