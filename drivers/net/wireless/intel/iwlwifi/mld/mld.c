@@ -9,6 +9,7 @@
 #include "fw/api/datapath.h"
 #include "fw/api/commands.h"
 #include "fw/dbg.h"
+#include "fw/uefi.h"
 
 #include "mld.h"
 #include "mac80211.h"
@@ -303,6 +304,8 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_construct_mld(mld, trans, cfg, fw, hw);
 
 	iwl_mld_construct_fw_runtime(mld, trans, fw, dbgfs_dir);
+
+	iwl_uefi_get_step_table(trans);
 
 	/* Configure transport layer with the opmode specific params */
 	iwl_mld_configure_trans(op_mode);
