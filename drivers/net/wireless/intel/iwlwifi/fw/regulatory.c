@@ -471,7 +471,7 @@ int iwl_parse_tas_selection(struct iwl_fw_runtime *fwrt,
 	return enabled;
 }
 
-static __le32 iwl_get_lari_config_bitmap(struct iwl_fw_runtime *fwrt)
+__le32 iwl_get_lari_config_bitmap(struct iwl_fw_runtime *fwrt)
 {
 	int ret;
 	u32 val;
@@ -518,6 +518,7 @@ static __le32 iwl_get_lari_config_bitmap(struct iwl_fw_runtime *fwrt)
 
 	return config_bitmap;
 }
+IWL_EXPORT_SYMBOL(iwl_get_lari_config_bitmap);
 
 static size_t iwl_get_lari_config_cmd_size(u8 cmd_ver)
 {
@@ -567,6 +568,10 @@ int iwl_fill_lari_config(struct iwl_fw_runtime *fwrt,
 	u8 cmd_ver = iwl_fw_lookup_cmd_ver(fwrt->fw,
 					   WIDE_ID(REGULATORY_AND_NVM_GROUP,
 						   LARI_CONFIG_CHANGE), 1);
+
+	if (WARN_ONCE(cmd_ver > 12,
+		      "Don't add newer versions to this function\n"))
+		return -EINVAL;
 
 	memset(cmd, 0, sizeof(*cmd));
 	*cmd_size = iwl_get_lari_config_cmd_size(cmd_ver);

@@ -445,6 +445,8 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+	iwl_mld_configure_lari(mld);
+
 	ret = iwl_configure_rxq(&mld->fwrt);
 	if (ret)
 		return ret;

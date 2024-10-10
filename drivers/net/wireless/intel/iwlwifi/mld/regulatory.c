@@ -236,3 +236,85 @@ int iwl_mld_init_ppag(struct iwl_mld *mld)
 
 	return iwl_mld_ppag_send_cmd(mld);
 }
+
+void iwl_mld_configure_lari(struct iwl_mld *mld)
+{
+	struct iwl_fw_runtime *fwrt = &mld->fwrt;
+	struct iwl_lari_config_change_cmd cmd = {
+		.config_bitmap = iwl_get_lari_config_bitmap(fwrt),
+	};
+	int ret;
+	u32 value;
+
+	ret = iwl_bios_get_dsm(fwrt, DSM_FUNC_11AX_ENABLEMENT, &value);
+	if (!ret)
+		cmd.oem_11ax_allow_bitmap = cpu_to_le32(value);
+
+	ret = iwl_bios_get_dsm(fwrt, DSM_FUNC_ENABLE_UNII4_CHAN, &value);
+	if (!ret)
+		cmd.oem_unii4_allow_bitmap =
+			cpu_to_le32(value &= DSM_UNII4_ALLOW_BITMAP);
+
+	ret = iwl_bios_get_dsm(fwrt, DSM_FUNC_ACTIVATE_CHANNEL, &value);
+	if (!ret)
+		cmd.chan_state_active_bitmap = cpu_to_le32(value);
+
+	ret = iwl_bios_get_dsm(fwrt, DSM_FUNC_ENABLE_6E, &value);
+	if (!ret)
+		cmd.oem_uhb_allow_bitmap = cpu_to_le32(value);
+
+	ret = iwl_bios_get_dsm(fwrt, DSM_FUNC_FORCE_DISABLE_CHANNELS, &value);
+	if (!ret)
+		cmd.force_disable_channels_bitmap = cpu_to_le32(value);
+
+	ret = iwl_bios_get_dsm(fwrt, DSM_FUNC_ENERGY_DETECTION_THRESHOLD,
+			       &value);
+	if (!ret)
+		cmd.edt_bitmap = cpu_to_le32(value);
+
+	ret = iwl_bios_get_wbem(fwrt, &value);
+	if (!ret)
+		cmd.oem_320mhz_allow_bitmap = cpu_to_le32(value);
+
+	ret = iwl_bios_get_dsm(fwrt, DSM_FUNC_ENABLE_11BE, &value);
+	if (!ret)
+		cmd.oem_11be_allow_bitmap = cpu_to_le32(value);
+
+	if (!cmd.config_bitmap &&
+	    !cmd.oem_uhb_allow_bitmap &&
+	    !cmd.oem_11ax_allow_bitmap &&
+	    !cmd.oem_unii4_allow_bitmap &&
+	    !cmd.chan_state_active_bitmap &&
+	    !cmd.force_disable_channels_bitmap &&
+	    !cmd.edt_bitmap &&
+	    !cmd.oem_320mhz_allow_bitmap &&
+	    !cmd.oem_11be_allow_bitmap)
+		return;
+
+	IWL_DEBUG_RADIO(mld,
+			"sending LARI_CONFIG_CHANGE, config_bitmap=0x%x, oem_11ax_allow_bitmap=0x%x\n",
+			le32_to_cpu(cmd.config_bitmap),
+			le32_to_cpu(cmd.oem_11ax_allow_bitmap));
+	IWL_DEBUG_RADIO(mld,
+			"sending LARI_CONFIG_CHANGE, oem_unii4_allow_bitmap=0x%x, chan_state_active_bitmap=0x%x\n",
+			le32_to_cpu(cmd.oem_unii4_allow_bitmap),
+			le32_to_cpu(cmd.chan_state_active_bitmap));
+	IWL_DEBUG_RADIO(mld,
+			"sending LARI_CONFIG_CHANGE, oem_uhb_allow_bitmap=0x%x, force_disable_channels_bitmap=0x%x\n",
+			le32_to_cpu(cmd.oem_uhb_allow_bitmap),
+			le32_to_cpu(cmd.force_disable_channels_bitmap));
+	IWL_DEBUG_RADIO(mld,
+			"sending LARI_CONFIG_CHANGE, edt_bitmap=0x%x, oem_320mhz_allow_bitmap=0x%x\n",
+			le32_to_cpu(cmd.edt_bitmap),
+			le32_to_cpu(cmd.oem_320mhz_allow_bitmap));
+	IWL_DEBUG_RADIO(mld,
+			"sending LARI_CONFIG_CHANGE, oem_11be_allow_bitmap=0x%x\n",
+			le32_to_cpu(cmd.oem_11be_allow_bitmap));
+
+	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(REGULATORY_AND_NVM_GROUP,
+						LARI_CONFIG_CHANGE), &cmd);
+	if (ret)
+		IWL_DEBUG_RADIO(mld,
+				"Failed to send LARI_CONFIG_CHANGE (%d)\n",
+				ret);
+}
