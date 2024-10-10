@@ -10,6 +10,7 @@
 void iwl_mld_get_bios_tables(struct iwl_mld *mld);
 void iwl_mld_configure_lari(struct iwl_mld *mld);
 void iwl_mld_init_uats(struct iwl_mld *mld);
+void iwl_mld_init_tas(struct iwl_mld *mld);
 
 int iwl_mld_init_ppag(struct iwl_mld *mld);
 

@@ -342,3 +342,89 @@ void iwl_mld_init_uats(struct iwl_mld *mld)
 		IWL_ERR(mld, "failed to send MCC_ALLOWED_AP_TYPE_CMD (%d)\n",
 			ret);
 }
+
+static bool iwl_mld_add_to_tas_block_list(__le32 *list, __le32 *le_size,
+					  unsigned int mcc)
+{
+	u32 size = le32_to_cpu(*le_size);
+
+	for (int i = 0; i < size; i++) {
+		if (list[i] == cpu_to_le32(mcc))
+			return true;
+	}
+
+	/* Verify that there is room for another country
+	 * If size == IWL_WTAS_BLACK_LIST_MAX, then the table is full.
+	 */
+	if (size >= IWL_WTAS_BLACK_LIST_MAX)
+		return false;
+
+	list[size] = cpu_to_le32(mcc);
+	*le_size = cpu_to_le32(size + 1);
+
+	return true;
+}
+
+void iwl_mld_init_tas(struct iwl_mld *mld)
+{
+	int ret;
+	struct iwl_tas_data data = {};
+	struct iwl_tas_config_cmd cmd = {};
+
+	BUILD_BUG_ON(ARRAY_SIZE(data.block_list_array) !=
+		     IWL_WTAS_BLACK_LIST_MAX);
+	BUILD_BUG_ON(ARRAY_SIZE(cmd.common.block_list_array) !=
+		     IWL_WTAS_BLACK_LIST_MAX);
+
+	ret = iwl_bios_get_tas_table(&mld->fwrt, &data);
+	if (ret < 0) {
+		IWL_DEBUG_RADIO(mld,
+				"TAS table invalid or unavailable. (%d)\n",
+				ret);
+		return;
+	}
+
+	if (ret == 0)
+		return;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.tas_allowed &&
+	    dmi_match(DMI_SYS_VENDOR, mld->trans->dbg_cfg.tas_allowed)) {
+		IWL_DEBUG_RADIO(mld,
+				"System vendor matches dbg_cfg.tas_allowed %s\n",
+				mld->trans->dbg_cfg.tas_allowed);
+	} else
+#endif
+	if (!iwl_is_tas_approved()) {
+		IWL_DEBUG_RADIO(mld,
+				"System vendor '%s' is not in the approved list, disabling TAS in US and Canada.\n",
+				dmi_get_system_info(DMI_SYS_VENDOR) ?: "<unknown>");
+		if ((!iwl_mld_add_to_tas_block_list(data.block_list_array,
+						    &data.block_list_size,
+						    IWL_MCC_US)) ||
+		    (!iwl_mld_add_to_tas_block_list(data.block_list_array,
+						    &data.block_list_size,
+						    IWL_MCC_CANADA))) {
+			IWL_DEBUG_RADIO(mld,
+					"Unable to add US/Canada to TAS block list, disabling TAS\n");
+			return;
+		}
+	} else {
+		IWL_DEBUG_RADIO(mld,
+				"System vendor '%s' is in the approved list.\n",
+				dmi_get_system_info(DMI_SYS_VENDOR) ?: "<unknown>");
+	}
+
+	memcpy(&cmd.common, &data, sizeof(struct iwl_tas_config_cmd_common));
+	cmd.v4.override_tas_iec = data.override_tas_iec;
+	cmd.v4.enable_tas_iec = data.enable_tas_iec;
+	cmd.v4.usa_tas_uhb_allowed = data.usa_tas_uhb_allowed;
+	if (data.canada_tas_uhb_allowed)
+		cmd.v4.uhb_allowed_flags = TAS_UHB_ALLOWED_CANADA;
+
+	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(REGULATORY_AND_NVM_GROUP,
+						TAS_CONFIG),
+				   &cmd);
+	if (ret)
+		IWL_DEBUG_RADIO(mld, "failed to send TAS_CONFIG (%d)\n", ret);
+}

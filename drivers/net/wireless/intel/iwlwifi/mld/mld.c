@@ -190,6 +190,7 @@ static const struct iwl_hcmd_names iwl_mld_system_names[] = {
 static const struct iwl_hcmd_names iwl_mld_reg_and_nvm_names[] = {
 	HCMD_NAME(LARI_CONFIG_CHANGE),
 	HCMD_NAME(NVM_GET_INFO),
+	HCMD_NAME(TAS_CONFIG),
 	HCMD_NAME(SAR_OFFSET_MAPPING_TABLE_CMD),
 	HCMD_NAME(MCC_ALLOWED_AP_TYPE_CMD),
 };

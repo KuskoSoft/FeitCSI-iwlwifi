@@ -495,6 +495,7 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+	iwl_mld_init_tas(mld);
 	iwl_mld_init_uats(mld);
 
 	/* TODO:
