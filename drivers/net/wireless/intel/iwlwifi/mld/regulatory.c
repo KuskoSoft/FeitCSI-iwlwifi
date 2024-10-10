@@ -7,6 +7,7 @@
 
 #include "fw/regulatory.h"
 #include "fw/acpi.h"
+#include "fw/uefi.h"
 
 #include "regulatory.h"
 #include "mld.h"
@@ -61,6 +62,10 @@ void iwl_mld_get_bios_tables(struct iwl_mld *mld)
 					ret);
 		/* we don't fail if the table is not available */
 	}
+
+	ret = iwl_uefi_get_uats_table(mld->trans, &mld->fwrt);
+	if (ret)
+		IWL_DEBUG_RADIO(mld, "failed to read UATS table (%d)\n", ret);
 }
 
 static int iwl_mld_geo_sar_init(struct iwl_mld *mld)
@@ -178,7 +183,6 @@ int iwl_mld_init_sgom(struct iwl_mld *mld)
 	struct iwl_host_cmd cmd = {
 		.id = WIDE_ID(REGULATORY_AND_NVM_GROUP,
 			      SAR_OFFSET_MAPPING_TABLE_CMD),
-		.flags = 0,
 		.data[0] = &mld->fwrt.sgom_table,
 		.len[0] =  sizeof(mld->fwrt.sgom_table),
 		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
@@ -317,4 +321,24 @@ void iwl_mld_configure_lari(struct iwl_mld *mld)
 		IWL_DEBUG_RADIO(mld,
 				"Failed to send LARI_CONFIG_CHANGE (%d)\n",
 				ret);
+}
+
+void iwl_mld_init_uats(struct iwl_mld *mld)
+{
+	int ret;
+	struct iwl_host_cmd cmd = {
+		.id = WIDE_ID(REGULATORY_AND_NVM_GROUP,
+			      MCC_ALLOWED_AP_TYPE_CMD),
+		.data[0] = &mld->fwrt.uats_table,
+		.len[0] =  sizeof(mld->fwrt.uats_table),
+		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
+	};
+
+	if (!mld->fwrt.uats_valid)
+		return;
+
+	ret = iwl_mld_send_cmd(mld, &cmd);
+	if (ret)
+		IWL_ERR(mld, "failed to send MCC_ALLOWED_AP_TYPE_CMD (%d)\n",
+			ret);
 }

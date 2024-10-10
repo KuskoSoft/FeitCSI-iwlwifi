@@ -484,13 +484,14 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+	iwl_mld_init_uats(mld);
+
 	/* TODO:
 	 * - ptp
 	 * - testmode
 	 * - vendor cmds
 	 * - thermal
 	 * - system_features_control
-	 * - regulatory cmds (need also to read bios tables on init)
 	 * - recovery cmd
 	 */
 
