@@ -11,6 +11,7 @@
 #include "fw/dbg.h"
 
 #include "fw/api/tx.h"
+#include "fw/api/rs.h"
 #include "fw/api/txq.h"
 #include "fw/api/datapath.h"
 
@@ -434,6 +435,60 @@ void iwl_mld_tx_from_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 	rcu_read_unlock();
 }
 
+static void iwl_mld_hwrate_to_tx_rate(u32 rate_n_flags,
+				      struct ieee80211_tx_info *info)
+{
+	enum nl80211_band band = info->band;
+	struct ieee80211_tx_rate *tx_rate = &info->status.rates[0];
+	u32 sgi = rate_n_flags & RATE_MCS_SGI_MSK;
+	u32 chan_width = rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK;
+	u32 format = rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
+
+	if (sgi)
+		tx_rate->flags |= IEEE80211_TX_RC_SHORT_GI;
+
+	switch (chan_width) {
+	case RATE_MCS_CHAN_WIDTH_20:
+		break;
+	case RATE_MCS_CHAN_WIDTH_40:
+		tx_rate->flags |= IEEE80211_TX_RC_40_MHZ_WIDTH;
+		break;
+	case RATE_MCS_CHAN_WIDTH_80:
+		tx_rate->flags |= IEEE80211_TX_RC_80_MHZ_WIDTH;
+		break;
+	case RATE_MCS_CHAN_WIDTH_160:
+		tx_rate->flags |= IEEE80211_TX_RC_160_MHZ_WIDTH;
+		break;
+	default:
+		break;
+	}
+
+	switch (format) {
+	case RATE_MCS_HT_MSK:
+		tx_rate->flags |= IEEE80211_TX_RC_MCS;
+		tx_rate->idx = RATE_HT_MCS_INDEX(rate_n_flags);
+		break;
+	case RATE_MCS_VHT_MSK:
+		ieee80211_rate_set_vht(tx_rate,
+				       rate_n_flags & RATE_MCS_CODE_MSK,
+				       FIELD_GET(RATE_MCS_NSS_MSK,
+						 rate_n_flags) + 1);
+		tx_rate->flags |= IEEE80211_TX_RC_VHT_MCS;
+		break;
+	case RATE_MCS_HE_MSK:
+		/* mac80211 cannot do this without ieee80211_tx_status_ext()
+		 * but it only matters for radiotap
+		 */
+		tx_rate->idx = 0;
+		break;
+	default:
+		tx_rate->idx =
+			iwl_mld_legacy_hw_idx_to_mac80211_idx(rate_n_flags,
+							      band);
+		break;
+	}
+}
+
 void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 				 struct iwl_rx_packet *pkt)
 {
@@ -495,7 +550,8 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 			iwl_dbg_tlv_time_point(&mld->fwrt, tp, NULL);
 		}
 
-		/* TODO: iwl_mvm_hwrate_to_tx_rate (task=DP)*/
+		iwl_mld_hwrate_to_tx_rate(le32_to_cpu(tx_resp->initial_rate),
+					  info);
 
 		ieee80211_tx_status_skb(mld->hw, skb);
 	}
