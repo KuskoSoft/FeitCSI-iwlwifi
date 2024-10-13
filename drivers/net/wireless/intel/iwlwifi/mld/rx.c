@@ -13,7 +13,6 @@
 #include "hcmd.h"
 #include "fw/dbg.h"
 #include "fw/api/rx.h"
-#include "fw/api/rs.h"
 
 /* stores relevant PHY data fields extracted from iwl_rx_mpdu_desc */
 struct iwl_mld_rx_phy_data {
@@ -147,21 +146,6 @@ static void iwl_mld_fill_signal(struct iwl_mld *mld,
 	    (rate_n_flags & RATE_MCS_ANT_AB_MSK) >> RATE_MCS_ANT_POS;
 	rx_status->chain_signal[0] = energy_a;
 	rx_status->chain_signal[1] = energy_b;
-}
-
-static int
-iwl_mld_legacy_hw_idx_to_mac80211_idx(u32 rate_n_flags,
-				      enum nl80211_band band)
-{
-	int format = rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
-	int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
-	bool is_lb = band == NL80211_BAND_2GHZ;
-
-	if (format == RATE_MCS_LEGACY_OFDM_MSK)
-		return is_lb ? rate + IWL_FIRST_OFDM_RATE : rate;
-
-	/* CCK is not allowed in 5 GHz */
-	return is_lb ? rate : -1;
 }
 
 static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,

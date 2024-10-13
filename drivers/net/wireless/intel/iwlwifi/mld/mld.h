@@ -21,6 +21,7 @@
 #include "fw/api/phy-ctxt.h"
 #include "fw/api/datapath.h"
 #include "fw/api/rx.h"
+#include "fw/api/rs.h"
 #include "fw/api/context.h"
 
 #include "fw/dbg.h"
@@ -257,6 +258,21 @@ static inline u8 iwl_mld_phy_band_to_nl80211(u8 phy_band)
 		WARN_ONCE(1, "Unsupported phy band (%u)\n", phy_band);
 		return NL80211_BAND_5GHZ;
 	}
+}
+
+static inline int
+iwl_mld_legacy_hw_idx_to_mac80211_idx(u32 rate_n_flags,
+				      enum nl80211_band band)
+{
+	int format = rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
+	int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
+	bool is_lb = band == NL80211_BAND_2GHZ;
+
+	if (format == RATE_MCS_LEGACY_OFDM_MSK)
+		return is_lb ? rate + IWL_FIRST_OFDM_RATE : rate;
+
+	/* CCK is not allowed in 5 GHz */
+	return is_lb ? rate : -1;
 }
 
 extern const struct ieee80211_ops iwl_mld_hw_ops;
