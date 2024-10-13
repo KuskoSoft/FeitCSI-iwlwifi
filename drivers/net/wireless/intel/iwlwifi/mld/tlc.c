@@ -514,12 +514,10 @@ static void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
 	if (mld->trans->dbg_cfg.amsdu_in_ampdu_disabled ||
 	    mld->trans->dbg_cfg.HW_CSUM_DISABLE) {
 		link_sta->agg.max_rc_amsdu_len = 0;
-		goto recalc;
+		ieee80211_sta_recalc_aggregates(link_sta->sta);
+		return;
 	}
 #endif
-
-	link_sta->agg.max_rc_amsdu_len = link_sta->agg.max_amsdu_len;
-
 	/* For EHT, HE and VHT - we can use the value as it was calculated by
 	 * mac80211.
 	 */
@@ -532,9 +530,10 @@ static void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
 		/* Agg is offloaded, so we need to assume that agg are enabled
 		 * and max mpdu in ampdu is 4095 (spec 802.11-2016 9.3.2.1)
 		 */
-		link_sta->agg.max_rc_amsdu_len = IEEE80211_MAX_MPDU_LEN_HT_BA;
+		link_sta->agg.max_amsdu_len = IEEE80211_MAX_MPDU_LEN_HT_BA;
 
 recalc:
+	link_sta->agg.max_rc_amsdu_len = link_sta->agg.max_amsdu_len;
 	ieee80211_sta_recalc_aggregates(link_sta->sta);
 }
 
@@ -722,9 +721,9 @@ void iwl_mld_handle_tlc_notif(struct iwl_mld *mld,
 		enabled = 0;
 	}
 
-	if (IWL_FW_CHECK(mld, size > link_sta->agg.max_rc_amsdu_len,
-			 "Invalid amsdu len in TLC notif: %d. Current amsdu len: %d\n",
-			 size, link_sta->agg.max_rc_amsdu_len))
+	if (IWL_FW_CHECK(mld, size > link_sta->agg.max_amsdu_len,
+			 "Invalid AMSDU len in TLC notif: %d (Max AMSDU len: %d)\n",
+			 size, link_sta->agg.max_amsdu_len))
 		return;
 
 	link_sta->agg.max_rc_amsdu_len = size;
