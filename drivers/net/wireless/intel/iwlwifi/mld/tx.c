@@ -490,20 +490,31 @@ static void iwl_mld_hwrate_to_tx_rate(u32 rate_n_flags,
 }
 
 void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
-				 struct iwl_rx_packet *pkt)
+				  struct iwl_rx_packet *pkt)
 {
 	struct iwl_tx_resp *tx_resp = (void *)pkt->data;
 	int txq_id = le16_to_cpu(tx_resp->tx_queue);
 	struct agg_tx_status *agg_status = &tx_resp->status;
 	u32 status = le16_to_cpu(agg_status->status);
-	u16 ssn = le32_to_cpup((__le32 *)agg_status + tx_resp->frame_count)
-				& 0xFFFF;
+	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
+	size_t notif_size = sizeof(*tx_resp) + sizeof(u32);
+	u16 ssn;
 	struct sk_buff_head skbs;
 	u8 skb_freed = 0;
 
-	WARN_ON(tx_resp->frame_count != 1);
+	if (IWL_FW_CHECK(mld, tx_resp->frame_count != 1,
+			 "Invalid tx_resp notif frame_count (%d)\n",
+			 tx_resp->frame_count))
+		return;
 
-	/* TODO: validate the size of the variable part of the notif */
+	/* validate the size of the variable part of the notif */
+	if (IWL_FW_CHECK(mld, notif_size != pkt_len,
+			 "Invalid tx_resp notif size (expected=%ld got=%d)\n",
+			 notif_size, pkt_len))
+		return;
+
+	ssn = le32_to_cpup((__le32 *)agg_status +
+			   tx_resp->frame_count) & 0xFFFF;
 
 	__skb_queue_head_init(&skbs);
 
