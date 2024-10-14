@@ -122,9 +122,6 @@ static int iwl_mld_add_key_to_fw(struct iwl_mld *mld, u32 sta_mask,
 	if (WARN_ON(key->keylen > max_key_len))
 		return -EINVAL;
 
-	if (WARN_ON(!sta_mask))
-		return -EINVAL;
-
 	memcpy(cmd.u.add.key, key->key, key->keylen);
 
 	if (tkip) {
