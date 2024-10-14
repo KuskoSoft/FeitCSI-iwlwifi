@@ -73,7 +73,7 @@ static u32 iwl_mld_get_key_sta_mask(struct iwl_mld *mld,
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct ieee80211_link_sta *link_sta;
-	u8 sta_id;
+	int sta_id;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
