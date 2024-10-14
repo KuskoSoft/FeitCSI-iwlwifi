@@ -100,20 +100,22 @@ void iwl_mld_handle_bar_frame_release_notif(struct iwl_mld *mld,
 {
 	struct iwl_bar_frame_release *release = (void *)pkt->data;
 	struct iwl_mld_baid_data *baid_data;
-	unsigned int baid = le32_get_bits(release->ba_info,
-					  IWL_BAR_FRAME_RELEASE_BAID_MASK);
-	unsigned int nssn = le32_get_bits(release->ba_info,
-					  IWL_BAR_FRAME_RELEASE_NSSN_MASK);
-	unsigned int sta_id = le32_get_bits(release->sta_tid,
-					    IWL_BAR_FRAME_RELEASE_STA_MASK);
-	unsigned int tid = le32_get_bits(release->sta_tid,
-					 IWL_BAR_FRAME_RELEASE_TID_MASK);
+	unsigned int baid, nssn, sta_id, tid;
 	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
 
 	if (IWL_FW_CHECK(mld, pkt_len < sizeof(*release),
 			 "Unexpected frame release notif size %d (expected %ld)\n",
 			 pkt_len, sizeof(*release)))
 		return;
+
+	baid = le32_get_bits(release->ba_info,
+			     IWL_BAR_FRAME_RELEASE_BAID_MASK);
+	nssn = le32_get_bits(release->ba_info,
+			     IWL_BAR_FRAME_RELEASE_NSSN_MASK);
+	sta_id = le32_get_bits(release->sta_tid,
+			       IWL_BAR_FRAME_RELEASE_STA_MASK);
+	tid = le32_get_bits(release->sta_tid,
+			    IWL_BAR_FRAME_RELEASE_TID_MASK);
 
 	if (IWL_FW_CHECK(mld, baid >= ARRAY_SIZE(mld->fw_id_to_ba),
 			 "BAR release: invalid BAID (%x)\n", baid))
