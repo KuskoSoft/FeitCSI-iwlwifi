@@ -1571,6 +1571,7 @@ static int iwl_mld_set_key_add(struct iwl_mld *mld,
 			       struct ieee80211_sta *sta,
 			       struct ieee80211_key_conf *key)
 {
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_sta *mld_sta =
 		sta ? iwl_mld_sta_from_mac80211(sta) : NULL;
 	struct iwl_mld_ptk_pn *ptk_pn = NULL;
@@ -1600,7 +1601,9 @@ static int iwl_mld_set_key_add(struct iwl_mld *mld,
 		return -EOPNOTSUPP;
 	}
 
-	/* TODO: setup beacon protection (task=secure_assoc) */
+	if (vif->type == NL80211_IFTYPE_STATION &&
+	    (keyidx == 6 || keyidx == 7))
+		rcu_assign_pointer(mld_vif->bigtks[keyidx - 6], key);
 
 	/* TODO: for AP/IBSS, store the GTK and IGTK, and send it when
 	 * start_ap_ibss is called (see ap_early_keys) (task=soft_ap)
@@ -1641,10 +1644,14 @@ static void iwl_mld_set_key_remove(struct iwl_mld *mld,
 				   struct ieee80211_sta *sta,
 				   struct ieee80211_key_conf *key)
 {
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_sta *mld_sta =
 		sta ? iwl_mld_sta_from_mac80211(sta) : NULL;
+	int keyidx = key->keyidx;
 
-	/* TODO: clean up becaon protection data (task=DP) */
+	if (vif->type == NL80211_IFTYPE_STATION &&
+	    (keyidx == 6 || keyidx == 7))
+		RCU_INIT_POINTER(mld_vif->bigtks[keyidx - 6], NULL);
 
 	/* TODO: ignore AP early key (task=softAP) */
 

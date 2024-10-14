@@ -17,6 +17,8 @@
  * @ap_sta: pointer to AP sta, for easier access to it.
  *	Relevant only for STA vifs.
  * @authorized: indicates the AP station was set to authorized
+ * @bigtks: BIGTKs of the AP, for beacon protection.
+ *	Only valid for STA. (FIXME: needs to be per link)
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
@@ -30,6 +32,7 @@ struct iwl_mld_vif {
 		struct iwl_mld_session_protect session_protect;
 		struct ieee80211_sta *ap_sta;
 		bool authorized;
+		struct ieee80211_key_conf __rcu *bigtks[2];
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld *mld;
