@@ -11,6 +11,7 @@
 #include "agg.h"
 #include "rx.h"
 #include "hcmd.h"
+#include "iface.h"
 #include "fw/dbg.h"
 #include "fw/api/rx.h"
 
@@ -534,7 +535,97 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 	return sta;
 }
 
-static int iwl_mld_rx_crypto(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
+#define KEY_IDX_LEN 2
+
+static int iwl_mld_rx_mgmt_prot(struct ieee80211_sta *sta,
+				struct ieee80211_hdr *hdr,
+				struct ieee80211_rx_status *rx_status,
+				u32 mpdu_status,
+				u32 mpdu_len)
+{
+	struct wireless_dev *wdev;
+	struct iwl_mld_sta *mld_sta;
+	struct iwl_mld_vif *mld_vif;
+	u8 keyidx;
+	struct ieee80211_key_conf *key;
+	const u8 *frame = (void *)hdr;
+
+	if ((mpdu_status & IWL_RX_MPDU_STATUS_SEC_MASK) ==
+	     IWL_RX_MPDU_STATUS_SEC_NONE)
+		return 0;
+
+	/* For non-beacon, we don't really care. But beacons may
+	 * be filtered out, and we thus need the firmware's replay
+	 * detection, otherwise beacons the firmware previously
+	 * filtered could be replayed, or something like that, and
+	 * it can filter a lot - though usually only if nothing has
+	 * changed.
+	 */
+	if (!ieee80211_is_beacon(hdr->frame_control))
+		return 0;
+
+	if (!sta)
+		return -1;
+
+	mld_sta = iwl_mld_sta_from_mac80211(sta);
+	mld_vif = iwl_mld_vif_from_mac80211(mld_sta->vif);
+
+	/* key mismatch - will also report !MIC_OK but we shouldn't count it */
+	if (!(mpdu_status & IWL_RX_MPDU_STATUS_KEY_VALID))
+		goto report;
+
+	/* good cases */
+	if (likely(mpdu_status & IWL_RX_MPDU_STATUS_MIC_OK &&
+		   !(mpdu_status & IWL_RX_MPDU_STATUS_REPLAY_ERROR))) {
+		rx_status->flag |= RX_FLAG_DECRYPTED;
+		return 0;
+	}
+
+	/* both keys will have the same cipher and MIC length, use
+	 * whichever one is available
+	 */
+	key = rcu_dereference(mld_vif->bigtks[0]);
+	if (!key) {
+		key = rcu_dereference(mld_vif->bigtks[1]);
+		if (!key)
+			goto report;
+	}
+
+	if (mpdu_len < key->icv_len + IEEE80211_GMAC_PN_LEN + KEY_IDX_LEN)
+		goto report;
+
+	/* get the real key ID */
+	keyidx = frame[mpdu_len - key->icv_len - IEEE80211_GMAC_PN_LEN - KEY_IDX_LEN];
+	/* and if that's the other key, look it up */
+	if (keyidx != key->keyidx) {
+		/* shouldn't happen since firmware checked, but be safe
+		 * in case the MIC length is wrong too, for example
+		 */
+		if (keyidx != 6 && keyidx != 7)
+			return -1;
+
+		key = rcu_dereference(mld_vif->bigtks[keyidx - 6]);
+		if (!key)
+			goto report;
+	}
+
+	/* Report status to mac80211 */
+	if (!(mpdu_status & IWL_RX_MPDU_STATUS_MIC_OK))
+		ieee80211_key_mic_failure(key);
+	else if (mpdu_status & IWL_RX_MPDU_STATUS_REPLAY_ERROR)
+		ieee80211_key_replay(key);
+report:
+	wdev = ieee80211_vif_to_wdev(mld_sta->vif);
+	if (wdev->netdev)
+		cfg80211_rx_unprot_mlme_mgmt(wdev->netdev, (void *)hdr,
+					     mpdu_len);
+
+	return -1;
+}
+
+static int iwl_mld_rx_crypto(struct iwl_mld *mld,
+			     struct ieee80211_sta *sta,
+			     struct ieee80211_hdr *hdr,
 			     struct ieee80211_rx_status *rx_status,
 			     struct iwl_rx_mpdu_desc *desc, int queue,
 			     u32 pkt_flags, u8 *crypto_len)
@@ -550,7 +641,10 @@ static int iwl_mld_rx_crypto(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 		return -1;
 	}
 
-	/* TODO: beacon protection (iwl_mvm_rx_mgmt_prot() task=DP_SEC) */
+	if (unlikely(ieee80211_is_mgmt(hdr->frame_control) &&
+		     !ieee80211_has_protected(hdr->frame_control)))
+		return iwl_mld_rx_mgmt_prot(sta, hdr, rx_status, status,
+					    le16_to_cpu(desc->mpdu_len));
 
 	if (!ieee80211_has_protected(hdr->frame_control) ||
 	    (status & IWL_RX_MPDU_STATUS_SEC_MASK) ==
@@ -666,7 +760,7 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 
 	rx_status = IEEE80211_SKB_RXCB(skb);
 
-	if (iwl_mld_rx_crypto(mld, hdr, rx_status, mpdu_desc, queue,
+	if (iwl_mld_rx_crypto(mld, sta, hdr, rx_status, mpdu_desc, queue,
 			      le32_to_cpu(pkt->len_n_flags), &crypto_len))
 		goto drop;
 
