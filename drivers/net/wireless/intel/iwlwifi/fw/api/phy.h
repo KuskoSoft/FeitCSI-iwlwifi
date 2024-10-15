@@ -48,6 +48,11 @@ enum iwl_phy_ops_subcmd_ids {
 	AP_TX_POWER_CONSTRAINTS_CMD = 0x0C,
 
 	/**
+	 * @DRIVER_LIMITS_CMD: &struct iwl_tx_power_driver_limits
+	 */
+	DRIVER_LIMITS_CMD = 0x0D,
+
+	/**
 	 * @CT_KILL_NOTIFICATION: &struct ct_kill_notif
 	 */
 	CT_KILL_NOTIFICATION = 0xFE,

@@ -836,4 +836,36 @@ struct iwl_txpower_constraints_cmd {
 	__s8 psd_pwr[IWL_MAX_TX_EIRP_PSD_PWR_MAX_SIZE];
 	u8 reserved[3];
 } __packed; /* PHY_AP_TX_POWER_CONSTRAINTS_CMD_API_S_VER_1 */
+
+/**
+ * enum iwl_tx_power_valid_bitmap
+ * validity of fields of &struct iwl_tx_power_driver_limits
+ * @IWL_TX_POWER_DRIVER_LIMIT_DEVICE_POWER: &dev_24, &dev_52_low and
+ *	&dev_52_high are valid.
+ * @IWL_TX_POWER_DRIVER_LIMIT_VLP_BACKOFF: &tpc_vlp_backoff_level is valid.
+ */
+enum iwl_tx_power_valid_bitmap {
+	IWL_TX_POWER_DRIVER_LIMIT_DEVICE_POWER = BIT(0),
+	IWL_TX_POWER_DRIVER_LIMIT_VLP_BACKOFF = BIT(1),
+};
+
+/**
+ * struct iwl_tx_power_driver_limits - tx power limitations
+ * DRIVER_LIMITS_CMD
+ * @dev_24: device TX power restriction in 1/8 dBms
+ * @dev_52_low: device TX power restriction upper band - low
+ * @dev_52_high: device TX power restriction upper band - high
+ * @tpc_vlp_backoff_level: user backoff of UNII5,7 VLP channels in USA.
+ *	Not in use.
+ * @valid_bitmap: tells which value should be applied. See
+ *	&enum iwl_tx_power_valid_bitmap
+ */
+struct iwl_tx_power_driver_limits {
+	__le16 dev_24;
+	__le16 dev_52_low;
+	__le16 dev_52_high;
+	u8 tpc_vlp_backoff_level;
+	u8 valid_bitmap;
+} __packed; /* DRIVER_LIMITS_API_S_VER_1 */
+
 #endif /* __iwl_fw_api_power_h__ */

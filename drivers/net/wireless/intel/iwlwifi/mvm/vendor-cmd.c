@@ -702,14 +702,20 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 		.per_band.dev_52_low = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
 		.per_band.dev_52_high = cpu_to_le16(IWL_DEV_MAX_TX_POWER),
 	};
+	struct iwl_tx_power_driver_limits driver_limits_cmd = {
+		.valid_bitmap = IWL_TX_POWER_DRIVER_LIMIT_DEVICE_POWER,
+	};
 	struct nlattr **tb;
 	int len;
 	int err;
 	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw, REDUCE_TX_POWER_CMD,
 					   IWL_FW_CMD_VER_UNKNOWN);
+	u8 cmd_ver_limits = iwl_fw_lookup_cmd_ver(mvm->fw,
+						  WIDE_ID(PHY_OPS_GROUP,
+							  DRIVER_LIMITS_CMD),
+						  IWL_FW_CMD_VER_UNKNOWN);
 
-	/* ver9 and above of the command does not support setting per band limits */
-	if (cmd_ver > 8)
+	if (cmd_ver > 8 && cmd_ver_limits != 1)
 		return -EOPNOTSUPP;
 
 	tb = iwl_mvm_parse_vendor_data(data, data_len);
@@ -724,6 +730,7 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 			goto free;
 		}
 		cmd.per_band.dev_24 = cpu_to_le16(txp);
+		driver_limits_cmd.dev_24 = cpu_to_le16(txp);
 	}
 
 	if (tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L]) {
@@ -734,6 +741,7 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 			goto free;
 		}
 		cmd.per_band.dev_52_low = cpu_to_le16(txp);
+		driver_limits_cmd.dev_52_low = cpu_to_le16(txp);
 	}
 
 	if (tb[IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H]) {
@@ -744,6 +752,7 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 			goto free;
 		}
 		cmd.per_band.dev_52_high = cpu_to_le16(txp);
+		driver_limits_cmd.dev_52_high = cpu_to_le16(txp);
 	}
 
 	if (cmd_ver == 8)
@@ -766,12 +775,25 @@ static int iwl_vendor_set_nic_txpower_limit(struct wiphy *wiphy,
 	len += sizeof(cmd.per_band);
 
 	mutex_lock(&mvm->mutex);
-	if (iwl_mvm_firmware_running(mvm))
-		err = iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD,
-					   0, len, &cmd);
-	else
+	if (iwl_mvm_firmware_running(mvm)) {
+		if (cmd_ver_limits != IWL_FW_CMD_VER_UNKNOWN)
+			err = iwl_mvm_send_cmd_pdu(mvm,
+						   WIDE_ID(PHY_OPS_GROUP,
+							   DRIVER_LIMITS_CMD),
+						   0, sizeof(driver_limits_cmd),
+						   &driver_limits_cmd);
+		else
+			err = iwl_mvm_send_cmd_pdu(mvm, REDUCE_TX_POWER_CMD,
+						   0, len, &cmd);
+	} else {
 		err = 0;
+	}
 
+	/*
+	 * Keep the REDUCED_TX_POWER command even if we have support for the
+	 * new command. We feed the same values anyway. This allows debugfs to
+	 * retrieve the right values in both cases.
+	 */
 	if (err)
 		IWL_ERR(mvm, "failed to update device TX power: %d\n", err);
 	else
