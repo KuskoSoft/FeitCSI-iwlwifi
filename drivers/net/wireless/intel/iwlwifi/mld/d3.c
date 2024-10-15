@@ -976,13 +976,16 @@ iwl_mld_process_wowlan_status(struct iwl_mld *mld,
 			     (wowlan_status->last_qos_seq +
 			     0x10) >> 4);
 
-	if (wowlan_status->wakeup_reasons &
-		(IWL_WOWLAN_WAKEUP_BY_DISCONNECTION_ON_MISSED_BEACON |
-		IWL_WOWLAN_WAKEUP_BY_DISCONNECTION_ON_DEAUTH))
+	if (!iwl_mld_update_sec_keys(mld, vif, wowlan_status))
 		return false;
 
-	else
-		return iwl_mld_update_sec_keys(mld, vif, wowlan_status);
+	if (wowlan_status->wakeup_reasons &
+	    (IWL_WOWLAN_WAKEUP_BY_DISCONNECTION_ON_MISSED_BEACON |
+	     IWL_WOWLAN_WAKEUP_BY_DISCONNECTION_ON_DEAUTH |
+	     IWL_WOWLAN_WAKEUP_BY_GTK_REKEY_FAILURE))
+		return false;
+
+	return true;
 }
 
 static bool
