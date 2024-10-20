@@ -335,6 +335,19 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 	tx_cmd->flags = cpu_to_le16(flags);
 }
 
+static void
+iwl_mld_get_queue_and_sta_ids(struct iwl_mld *mld, struct ieee80211_txq *txq,
+			      int *queue, u32 *sta_mask)
+{
+	if (txq && txq->sta) {
+		*queue = iwl_mld_txq_from_mac80211(txq)->fw_id;
+		*sta_mask = iwl_mld_fw_sta_id_mask(mld, txq->sta);
+		return;
+	}
+
+	/* TODO: get internal queue/sta_id  */
+}
+
 /* This function must be called with BHs disabled */
 static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 			   struct ieee80211_txq *txq)
@@ -343,10 +356,11 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct ieee80211_sta *sta = txq ? txq->sta : NULL;
 	struct iwl_device_tx_cmd *dev_tx_cmd;
-	int txq_id = -1;
+	int queue = -1;
+	u32 sta_mask;
 
-	/* to be removed when non-txq tx is implemented */
-	if (WARN_ON(!txq || !sta))
+	iwl_mld_get_queue_and_sta_ids(mld, txq, &queue, &sta_mask);
+	if (WARN_ONCE(queue < 0, "Invalid TX Queue id"))
 		return -1;
 
 	if (unlikely(ieee80211_is_any_nullfunc(hdr->frame_control)))
@@ -360,18 +374,8 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 
 	iwl_mld_fill_tx_cmd(mld, skb, dev_tx_cmd, sta);
 
-	if (txq)
-		txq_id = iwl_mld_txq_from_mac80211(txq)->fw_id;
-
-	/* TODO: get_internal_txq_id for non-txq*/
-
-	if (WARN_ONCE(txq_id < 0, "Invalid TXQ id"))
-		goto err;
-
-	/* TODO: get_internal_sta_id (task=soft_ap)*/
 	IWL_DEBUG_TX(mld, "TX to sta mask: 0x%x, from Q:%d. Len %d\n",
-		     iwl_mld_fw_sta_id_mask(mld, sta),
-		     txq_id, skb->len);
+		     sta_mask, queue, skb->len);
 
 	/* From now on, we cannot access info->control */
 	memset(&info->status, 0, sizeof(info->status));
@@ -379,17 +383,15 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 
 	info->driver_data[1] = dev_tx_cmd;
 
-	if (iwl_trans_tx(mld->trans, skb, dev_tx_cmd, txq_id))
+	if (iwl_trans_tx(mld->trans, skb, dev_tx_cmd, queue))
 		goto err;
 
 	return 0;
 
 err:
 	iwl_trans_free_tx_cmd(mld->trans, dev_tx_cmd);
-	/* TODO: get_internal_sta_id */
 	IWL_DEBUG_TX(mld, "TX to sta 0x%x, from Q:%d dropped\n",
-		     iwl_mld_fw_sta_id_mask(mld, sta),
-		     txq_id);
+		     sta_mask, queue);
 	return -1;
 }
 
