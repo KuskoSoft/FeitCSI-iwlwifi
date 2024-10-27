@@ -7,6 +7,7 @@
 #include "tx.h"
 #include "sta.h"
 #include "hcmd.h"
+#include "iwl-utils.h"
 
 #include "fw/dbg.h"
 
@@ -355,11 +356,166 @@ err:
 	return -1;
 }
 
+#ifdef CONFIG_INET
+
+/* This function handles the segmentation of a large TSO packet into multiple
+ * MPDUs, ensuring that the resulting segments conform to AMSDU limits and
+ * constraints.
+ */
+static int iwl_mld_tx_tso_segment(struct iwl_mld *mld, struct sk_buff *skb,
+				  struct ieee80211_sta *sta,
+				  struct sk_buff_head *mpdus_skbs)
+{
+	struct ieee80211_hdr *hdr = (void *)skb->data;
+	netdev_features_t netdev_flags = NETIF_F_CSUM_MASK | NETIF_F_SG;
+	unsigned int mss = skb_shinfo(skb)->gso_size;
+	unsigned int num_subframes, tcp_payload_len, subf_len;
+	u16 snap_ip_tcp, pad, max_tid_amsdu_len;
+	u8 tid;
+
+	snap_ip_tcp = 8 + skb_network_header_len(skb) + tcp_hdrlen(skb);
+
+	if (!ieee80211_is_data_qos(hdr->frame_control) ||
+	    !sta->cur->max_rc_amsdu_len)
+		return iwl_tx_tso_segment(skb, 1, netdev_flags, mpdus_skbs);
+
+	/* Do not build AMSDU for IPv6 with extension headers.
+	 * Ask stack to segment and checksum the generated MPDUs for us.
+	 */
+	if (skb->protocol == htons(ETH_P_IPV6) &&
+	    ((struct ipv6hdr *)skb_network_header(skb))->nexthdr !=
+	    IPPROTO_TCP) {
+		netdev_flags &= ~NETIF_F_CSUM_MASK;
+		return iwl_tx_tso_segment(skb, 1, netdev_flags, mpdus_skbs);
+	}
+
+	tid = ieee80211_get_tid(hdr);
+	if (WARN_ON_ONCE(tid >= IWL_MAX_TID_COUNT))
+		return -EINVAL;
+
+	max_tid_amsdu_len = sta->cur->max_tid_amsdu_len[tid];
+	if (!max_tid_amsdu_len)
+		return iwl_tx_tso_segment(skb, 1, netdev_flags, mpdus_skbs);
+
+	/* Sub frame header + SNAP + IP header + TCP header + MSS */
+	subf_len = sizeof(struct ethhdr) + snap_ip_tcp + mss;
+	pad = (4 - subf_len) & 0x3;
+
+	/* If we have N subframes in the A-MSDU, then the A-MSDU's size is
+	 * N * subf_len + (N - 1) * pad.
+	 */
+	num_subframes = (max_tid_amsdu_len + pad) / (subf_len + pad);
+
+	if (sta->max_amsdu_subframes &&
+	    num_subframes > sta->max_amsdu_subframes)
+		num_subframes = sta->max_amsdu_subframes;
+
+	tcp_payload_len = skb_tail_pointer(skb) - skb_transport_header(skb) -
+		tcp_hdrlen(skb) + skb->data_len;
+
+	/* Make sure we have enough TBs for the A-MSDU:
+	 *	2 for each subframe
+	 *	1 more for each fragment
+	 *	1 more for the potential data in the header
+	 */
+	if ((num_subframes * 2 + skb_shinfo(skb)->nr_frags + 1) >
+	    mld->trans->max_skb_frags)
+		num_subframes = 1;
+
+	if (num_subframes > 1)
+		*ieee80211_get_qos_ctl(hdr) |= IEEE80211_QOS_CTL_A_MSDU_PRESENT;
+
+	/* This skb fits in one single A-MSDU */
+	if (tcp_payload_len <= num_subframes * mss) {
+		__skb_queue_tail(mpdus_skbs, skb);
+		return 0;
+	}
+
+	/* Trick the segmentation function to make it create SKBs that can fit
+	 * into one A-MSDU.
+	 */
+	return iwl_tx_tso_segment(skb, num_subframes, netdev_flags, mpdus_skbs);
+}
+
+/* Manages TSO (TCP Segmentation Offload) packet transmission by segmenting
+ * large packets when necessary and transmitting each segment as MPDU.
+ */
+static int iwl_mld_tx_tso(struct iwl_mld *mld, struct sk_buff *skb,
+			  struct ieee80211_txq *txq)
+{
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	struct sk_buff *orig_skb = skb;
+	struct sk_buff_head mpdus_skbs;
+	unsigned int payload_len;
+	int ret;
+
+	if (WARN_ON(!txq || !txq->sta))
+		return -1;
+
+	payload_len = skb_tail_pointer(skb) - skb_transport_header(skb) -
+		tcp_hdrlen(skb) + skb->data_len;
+
+	if (payload_len <= skb_shinfo(skb)->gso_size)
+		return iwl_mld_tx_mpdu(mld, skb, txq);
+
+	if (!info->control.vif)
+		return -1;
+
+	__skb_queue_head_init(&mpdus_skbs);
+
+	ret = iwl_mld_tx_tso_segment(mld, skb, txq->sta, &mpdus_skbs);
+	if (ret)
+		return ret;
+
+	WARN_ON(skb_queue_empty(&mpdus_skbs));
+
+	/* TODO: A-MSDU address 3 override (task=MLO) */
+
+	while (!skb_queue_empty(&mpdus_skbs)) {
+		skb = __skb_dequeue(&mpdus_skbs);
+
+		ret = iwl_mld_tx_mpdu(mld, skb, txq);
+		if (!ret)
+			continue;
+
+		/* Free skbs created as part of TSO logic that have not yet
+		 * been dequeued
+		 */
+		__skb_queue_purge(&mpdus_skbs);
+
+		/* skb here is not necessarily same as skb that entered
+		 * this method, so free it explicitly.
+		 */
+		if (skb == orig_skb)
+			ieee80211_free_txskb(mld->hw, skb);
+		else
+			kfree_skb(skb);
+
+		/* there was error, but we consumed skb one way or
+		 * another, so return 0
+		 */
+		return 0;
+	}
+
+	return 0;
+}
+#else
+static int iwl_mld_tx_tso(struct iwl_mld *mld, struct sk_buff *skb,
+			  struct ieee80211_txq *txq)
+{
+	/* Impossible to get TSO without CONFIG_INET */
+	WARN_ON(1);
+
+	return -1;
+}
+#endif /* CONFIG_INET */
+
 static void iwl_mld_tx_skb(struct iwl_mld *mld, struct sk_buff *skb,
 			   struct ieee80211_txq *txq)
 {
 	if (skb_is_gso(skb)) {
-		IWL_ERR(mld, "GSO is not implemented\n");
+		if (!iwl_mld_tx_tso(mld, skb, txq))
+			return;
 		goto err;
 	}
 
