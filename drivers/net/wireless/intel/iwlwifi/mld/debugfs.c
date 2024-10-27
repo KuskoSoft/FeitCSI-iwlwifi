@@ -85,6 +85,21 @@ static ssize_t iwl_dbgfs_fw_restart_write(struct iwl_mld *mld, char *buf,
 MLD_DEBUGFS_WRITE_FILE_OPS(fw_nmi, 10);
 MLD_DEBUGFS_WRITE_FILE_OPS(fw_restart, 10);
 
+static ssize_t iwl_dbgfs_wifi_6e_enable_read(struct iwl_mld *mld,
+					     size_t count, u8 *buf)
+{
+	int err;
+	u32 value;
+
+	err = iwl_bios_get_dsm(&mld->fwrt, DSM_FUNC_ENABLE_6E, &value);
+	if (err)
+		return err;
+
+	return scnprintf(buf, count, "0x%08x\n", value);
+}
+
+MLD_DEBUGFS_READ_FILE_OPS(wifi_6e_enable, 64);
+
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 {
@@ -92,6 +107,7 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 
 	MLD_DEBUGFS_ADD_FILE(fw_nmi, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(fw_restart, debugfs_dir, 0200);
+	MLD_DEBUGFS_ADD_FILE(wifi_6e_enable, debugfs_dir, 0400);
 
 	/* Create a symlink with mac80211. It will be removed when mac80211
 	 * exits (before the opmode exits which removes the target.)
