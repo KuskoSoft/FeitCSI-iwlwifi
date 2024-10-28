@@ -167,7 +167,9 @@ iwl_mld_get_offload_assist(struct sk_buff *skb)
 	struct ieee80211_hdr *hdr = (void *)skb->data;
 	u16 mh_len = ieee80211_hdrlen(hdr->frame_control);
 	u16 offload_assist = 0;
-	bool amsdu = false;
+	bool amsdu = ieee80211_is_data_qos(hdr->frame_control) &&
+		     (*ieee80211_get_qos_ctl(hdr) &
+		      IEEE80211_QOS_CTL_A_MSDU_PRESENT);
 #if IS_ENABLED(CONFIG_INET)
 	u8 protocol = 0;
 
@@ -247,12 +249,6 @@ out:
 #endif
 	mh_len /= 2;
 	offload_assist |= mh_len << TX_CMD_OFFLD_MH_SIZE;
-
-	if (ieee80211_is_data_qos(hdr->frame_control)) {
-		u8 *qc = ieee80211_get_qos_ctl(hdr);
-
-		amsdu = *qc & IEEE80211_QOS_CTL_A_MSDU_PRESENT;
-	}
 
 	if (amsdu)
 		offload_assist |= BIT(TX_CMD_OFFLD_AMSDU);
