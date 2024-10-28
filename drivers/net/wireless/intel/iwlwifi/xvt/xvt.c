@@ -213,6 +213,8 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 	iwl_fw_runtime_init(&xvt->fwrt, trans, fw, &iwl_xvt_fwrt_ops, xvt,
 			    NULL, NULL, dbgfs_dir);
 
+	iwl_bios_setup_step(trans, &xvt->fwrt);
+
 	mutex_init(&xvt->mutex);
 	spin_lock_init(&xvt->notif_lock);
 
