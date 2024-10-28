@@ -205,7 +205,7 @@ iwl_mld_handle_wowlan_info_notif(struct iwl_mld *mld,
 				 struct iwl_mld_wowlan_status *wowlan_status,
 				 struct iwl_rx_packet *pkt)
 {
-	const struct iwl_wowlan_info_notif_v4 *notif = (void *)pkt->data;
+	const struct iwl_wowlan_info_notif *notif = (void *)pkt->data;
 	u32 expected_len, len = iwl_rx_packet_payload_len(pkt);
 
 	expected_len = sizeof(*notif);
@@ -221,9 +221,8 @@ iwl_mld_handle_wowlan_info_notif(struct iwl_mld *mld,
 	/* TODO: FW_CHECK the tid_offloaded_tx (task=wowlan)
 	 * With the new wowlan_info_notif we'll get this value from the FW
 	 */
-	wowlan_status->tid_offloaded_tx = IWL_WOWLAN_OFFLOAD_TID;
-	wowlan_status->last_qos_seq =
-		le16_to_cpu(notif->qos_seq_ctr[IWL_WOWLAN_OFFLOAD_TID]);
+	wowlan_status->tid_offloaded_tx = notif->tid_offloaded_tx;
+	wowlan_status->last_qos_seq = le16_to_cpu(notif->qos_seq_ctr);
 	wowlan_status->num_of_gtk_rekeys =
 		le32_to_cpu(notif->num_of_gtk_rekeys);
 	wowlan_status->wakeup_reasons = le32_to_cpu(notif->wakeup_reasons);
@@ -790,24 +789,11 @@ int iwl_mld_no_wowlan_resume(struct iwl_mld *mld)
 }
 
 static void
-iwl_mld_set_suspend_qos_seq(struct ieee80211_sta *ap_sta,
-			    struct iwl_wowlan_config_cmd_v6 *wowlan_config_cmd)
-{
-	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(ap_sta);
-	u16 seq = mld_sta->seq_number[wowlan_config_cmd->offloading_tid];
-
-	/* The firmware stores last-used value, we store next value */
-	wowlan_config_cmd->qos_seq[IWL_WOWLAN_OFFLOAD_TID] =
-		cpu_to_le16(seq - 0x10);
-}
-
-static void
 iwl_mld_set_wowlan_config_cmd(struct iwl_mld *mld,
 			      struct cfg80211_wowlan *wowlan,
-			      struct iwl_wowlan_config_cmd_v6 *wowlan_config_cmd,
+			      struct iwl_wowlan_config_cmd *wowlan_config_cmd,
 			      struct ieee80211_sta *ap_sta)
 {
-	iwl_mld_set_suspend_qos_seq(ap_sta, wowlan_config_cmd);
 	wowlan_config_cmd->is_11n_connection =
 					ap_sta->deflink.ht_cap.ht_supported;
 	wowlan_config_cmd->flags = ENABLE_L3_FILTERING |
@@ -982,7 +968,7 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(bss_vif);
 	struct ieee80211_sta *ap_sta = mld_vif->ap_sta;
-	struct iwl_wowlan_config_cmd_v6 wowlan_config_cmd = {
+	struct iwl_wowlan_config_cmd wowlan_config_cmd = {
 			.offloading_tid = IWL_WOWLAN_OFFLOAD_TID,
 	};
 	u32 sta_id_mask;
