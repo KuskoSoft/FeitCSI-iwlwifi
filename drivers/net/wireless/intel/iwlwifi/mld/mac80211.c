@@ -572,7 +572,8 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
+	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
 	}
@@ -622,7 +623,8 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
+	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return;
 	}
@@ -1270,6 +1272,15 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		/* Now the link_sta's capabilities are set, update the FW */
 		iwl_mld_config_tlc(mld, vif, sta);
 
+		if (vif->type == NL80211_IFTYPE_AP) {
+			/* Update MAC_CFG_FILTER_ACCEPT_BEACON if at least
+			 * one sta is associated
+			 */
+			if (++mld_vif->num_associated_stas == 1)
+				ret = iwl_mld_mac_fw_action(mld, vif,
+							    FW_CTXT_ACTION_MODIFY);
+		}
+
 		return ret;
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTHORIZED) {
@@ -1313,7 +1324,15 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 		iwl_mld_config_tlc(mld, vif, sta);
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTH) {
-		/* nothing */
+		if (vif->type == NL80211_IFTYPE_AP &&
+		    !WARN_ON(!mld_vif->num_associated_stas)) {
+			/* Update MAC_CFG_FILTER_ACCEPT_BEACON if the last sta
+			 * is disassociating
+			 */
+			if (--mld_vif->num_associated_stas == 0)
+				iwl_mld_mac_fw_action(mld, vif,
+						      FW_CTXT_ACTION_MODIFY);
+		}
 	} else if (old_state == IEEE80211_STA_AUTH &&
 		   new_state == IEEE80211_STA_NONE) {
 		/* nothing */

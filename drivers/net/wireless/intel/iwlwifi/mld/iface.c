@@ -187,6 +187,29 @@ static void iwl_mld_fill_mac_cmd_sta(struct iwl_mld *mld,
 	/* TODO: set MAC_CFG_FILTER_ACCEPT_PROBE_REQ in p2p (task=p2p) */
 }
 
+static void iwl_mld_fill_mac_cmd_ap(struct iwl_mld *mld,
+				    struct ieee80211_vif *vif,
+				    struct iwl_mac_config_cmd *cmd)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	WARN_ON(vif->type != NL80211_IFTYPE_AP);
+
+	WARN(vif->p2p, "not supported yet\n");
+
+	cmd->filter_flags |= cpu_to_le32(MAC_CFG_FILTER_ACCEPT_PROBE_REQ);
+
+	/* in AP mode, pass beacons from other APs (needed for ht protection).
+	 * When there're no any associated station, which means that we are not
+	 * TXing anyway, don't ask FW to pass beacons to prevent unnecessary
+	 * wake-ups.
+	 */
+	if (mld_vif->num_associated_stas)
+		cmd->filter_flags |= cpu_to_le32(MAC_CFG_FILTER_ACCEPT_BEACON);
+}
+
 static int
 iwl_mld_rm_mac_from_fw(struct iwl_mld *mld, struct ieee80211_vif *vif)
 {
@@ -216,6 +239,8 @@ int iwl_mld_mac_fw_action(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		iwl_mld_fill_mac_cmd_sta(mld, vif, action, &cmd);
 		break;
 	case NL80211_IFTYPE_AP:
+		iwl_mld_fill_mac_cmd_ap(mld, vif, &cmd);
+		break;
 	case NL80211_IFTYPE_MONITOR:
 	case NL80211_IFTYPE_P2P_DEVICE:
 	case NL80211_IFTYPE_ADHOC:
@@ -257,7 +282,8 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
+	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
 	}
@@ -280,7 +306,8 @@ int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION);
+	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
+		ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP);
 
 	ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_REMOVE);
 
