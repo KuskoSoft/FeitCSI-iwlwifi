@@ -163,14 +163,11 @@ void iwl_mld_remove_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 	(type *)(skb_network_header(skb) + (off))
 
 static __le32
-iwl_mld_get_offload_assist(struct sk_buff *skb)
+iwl_mld_get_offload_assist(struct sk_buff *skb, bool amsdu)
 {
 	struct ieee80211_hdr *hdr = (void *)skb->data;
 	u16 mh_len = ieee80211_hdrlen(hdr->frame_control);
 	u16 offload_assist = 0;
-	bool amsdu = ieee80211_is_data_qos(hdr->frame_control) &&
-		     (*ieee80211_get_qos_ctl(hdr) &
-		      IEEE80211_QOS_CTL_A_MSDU_PRESENT);
 #if IS_ENABLED(CONFIG_INET)
 	u8 protocol = 0;
 
@@ -261,6 +258,44 @@ out:
 }
 
 static void
+iwl_mld_fill_tx_cmd_hdr(struct iwl_tx_cmd_gen3 *tx_cmd,
+			struct sk_buff *skb, bool amsdu)
+{
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	struct ieee80211_hdr *hdr = (void *)skb->data;
+	struct ieee80211_vif *vif;
+
+	/* Copy MAC header from skb into command buffer */
+	memcpy(tx_cmd->hdr, hdr, ieee80211_hdrlen(hdr->frame_control));
+
+	if (!amsdu || !skb_is_gso(skb))
+		return;
+
+	/* As described in IEEE sta 802.11-2020, table 9-30 (Address
+	 * field contents), A-MSDU address 3 should contain the BSSID
+	 * address.
+	 *
+	 * In TSO, the skb header address 3 contains the original address 3 to
+	 * correctly create all the A-MSDU subframes headers from it.
+	 * Override now the address 3 in the command header with the BSSID.
+	 *
+	 * Note: we fill in the MLD address, but the firmware will do the
+	 * necessary translation to link address after encryption.
+	 */
+	vif = info->control.vif;
+	switch (vif->type) {
+	case NL80211_IFTYPE_STATION:
+		ether_addr_copy(tx_cmd->hdr->addr3, vif->cfg.ap_addr);
+		break;
+	case NL80211_IFTYPE_AP:
+		ether_addr_copy(tx_cmd->hdr->addr3, vif->addr);
+		break;
+	default:
+		break;
+	}
+}
+
+static void
 iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 		    struct iwl_device_tx_cmd *dev_tx_cmd,
 		    struct ieee80211_sta *sta)
@@ -270,6 +305,9 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 	struct iwl_mld_sta *mld_sta = sta ? iwl_mld_sta_from_mac80211(sta) :
 					    NULL;
 	struct iwl_tx_cmd_gen3 *tx_cmd;
+	bool amsdu = ieee80211_is_data_qos(hdr->frame_control) &&
+		     (*ieee80211_get_qos_ctl(hdr) &
+		      IEEE80211_QOS_CTL_A_MSDU_PRESENT);
 	u16 flags = 0;
 
 	dev_tx_cmd->hdr.cmd = TX_CMD;
@@ -287,13 +325,12 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 
 	tx_cmd = (void *)dev_tx_cmd->payload;
 
-	tx_cmd->offload_assist = iwl_mld_get_offload_assist(skb);
+	iwl_mld_fill_tx_cmd_hdr(tx_cmd, skb, amsdu);
+
+	tx_cmd->offload_assist = iwl_mld_get_offload_assist(skb, amsdu);
 
 	/* Total # bytes to be transmitted */
 	tx_cmd->len = cpu_to_le16((u16)skb->len);
-
-	/* Copy MAC header from skb into command buffer */
-	memcpy(tx_cmd->hdr, hdr, ieee80211_hdrlen(hdr->frame_control));
 
 	tx_cmd->flags = cpu_to_le16(flags);
 }
@@ -468,8 +505,6 @@ static int iwl_mld_tx_tso(struct iwl_mld *mld, struct sk_buff *skb,
 		return ret;
 
 	WARN_ON(skb_queue_empty(&mpdus_skbs));
-
-	/* TODO: A-MSDU address 3 override (task=MLO) */
 
 	while (!skb_queue_empty(&mpdus_skbs)) {
 		skb = __skb_dequeue(&mpdus_skbs);
