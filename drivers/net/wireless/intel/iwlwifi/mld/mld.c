@@ -486,9 +486,7 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode,
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 	bool trans_dead = test_bit(STATUS_TRANS_DEAD, &mld->trans->status);
 
-	if (type == IWL_ERR_TYPE_CMD_QUEUE_FULL)
-		IWL_ERR(mld, "Command queue full!\n");
-	else if (!trans_dead && !mld->fw_status.do_not_dump_once)
+	if (!trans_dead && !mld->fw_status.do_not_dump_once)
 		iwl_fwrt_dump_error_logs(&mld->fwrt);
 
 	mld->fw_status.do_not_dump_once = false;
