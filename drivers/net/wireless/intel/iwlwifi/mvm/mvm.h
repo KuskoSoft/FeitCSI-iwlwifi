@@ -2648,6 +2648,7 @@ void iwl_mvm_tcm_add_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 void iwl_mvm_tcm_rm_vif(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 u8 iwl_mvm_tcm_load_percentage(u32 airtime, u32 elapsed);
 
+void iwl_mvm_nic_restart(struct iwl_mvm *mvm);
 unsigned int iwl_mvm_get_wd_timeout(struct iwl_mvm *mvm,
 				    struct ieee80211_vif *vif);
 void iwl_mvm_connection_loss(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
