@@ -59,8 +59,10 @@ static void iwl_mld_release_frames_from_notif(struct iwl_mld *mld,
 	rcu_read_lock();
 
 	ba_data = rcu_dereference(mld->fw_id_to_ba[baid]);
-	if (IWL_FW_CHECK(mld, !ba_data, "BAID %d not found in map\n", baid))
+	if (!ba_data) {
+		IWL_DEBUG_HT(mld, "BAID %d not found in map\n", baid);
 		goto out_unlock;
+	}
 
 	/* pick any STA ID to find the pointer */
 	sta_id = ffs(ba_data->sta_mask) - 1;
