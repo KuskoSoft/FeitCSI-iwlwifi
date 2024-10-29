@@ -16,76 +16,13 @@
 #include "pcie/internal.h"
 #include "iwl-context-info-gen3.h"
 
-struct iwl_trans_reprobe {
-	struct device *dev;
-	struct work_struct work;
-};
-
-static void iwl_trans_reprobe_wk(struct work_struct *wk)
-{
-	struct iwl_trans_reprobe *reprobe;
-
-	reprobe = container_of(wk, typeof(*reprobe), work);
-
-	if (device_reprobe(reprobe->dev))
-		dev_err(reprobe->dev, "reprobe failed!\n");
-	put_device(reprobe->dev);
-	kfree(reprobe);
-	module_put(THIS_MODULE);
-}
-
-static void iwl_trans_restart_wk(struct work_struct *wk)
-{
-	struct iwl_trans *trans = container_of(wk, typeof(*trans), restart.wk);
-	struct iwl_trans_reprobe *reprobe;
-
-	if (!trans->op_mode)
-		return;
-
-	/* might have been scheduled before marked as dead, re-check */
-	if (test_bit(STATUS_TRANS_DEAD, &trans->status))
-		return;
-
-	iwl_op_mode_dump_error(trans->op_mode, trans->restart.type);
-
-	if (!iwlwifi_mod_params.fw_restart)
-		return;
-
-	if (!trans->restart.during_reset) {
-		iwl_trans_opmode_sw_reset(trans, trans->restart.type);
-		return;
-	}
-
-	IWL_ERR(trans,
-		"Device error during reconfiguration - reprobe!\n");
-
-	/*
-	 * get a module reference to avoid doing this while unloading
-	 * anyway and to avoid scheduling a work with code that's
-	 * being removed.
-	 */
-	if (!try_module_get(THIS_MODULE)) {
-		IWL_ERR(trans, "Module is being unloaded - abort\n");
-		return;
-	}
-
-	reprobe = kzalloc(sizeof(*reprobe), GFP_KERNEL);
-	if (!reprobe) {
-		module_put(THIS_MODULE);
-		return;
-	}
-	reprobe->dev = get_device(trans->dev);
-	INIT_WORK(&reprobe->work, iwl_trans_reprobe_wk);
-	schedule_work(&reprobe->work);
-}
-
 struct iwl_trans *iwl_trans_alloc(unsigned int priv_size,
 				  struct device *dev,
 				  const struct iwl_cfg_trans_params *cfg_trans)
 {
 	struct iwl_trans *trans;
 #ifdef CONFIG_LOCKDEP
-	static struct lock_class_key __sync_cmd_key;
+	static struct lock_class_key __key;
 #endif
 
 	trans = devm_kzalloc(dev, sizeof(*trans) + priv_size, GFP_KERNEL);
@@ -96,13 +33,11 @@ struct iwl_trans *iwl_trans_alloc(unsigned int priv_size,
 
 #ifdef CONFIG_LOCKDEP
 	lockdep_init_map(&trans->sync_cmd_lockdep_map, "sync_cmd_lockdep_map",
-			 &__sync_cmd_key, 0);
+			 &__key, 0);
 #endif
 
 	trans->dev = dev;
 	trans->num_rx_queues = 1;
-
-	INIT_WORK(&trans->restart.wk, iwl_trans_restart_wk);
 
 	return trans;
 }
@@ -146,7 +81,6 @@ int iwl_trans_init(struct iwl_trans *trans)
 
 void iwl_trans_free(struct iwl_trans *trans)
 {
-	cancel_work_sync(&trans->restart.wk);
 	kmem_cache_destroy(trans->dev_cmd_pool);
 }
 

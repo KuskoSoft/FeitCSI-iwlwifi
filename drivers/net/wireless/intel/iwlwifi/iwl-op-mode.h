@@ -119,11 +119,8 @@ enum iwl_fw_error_type {
  *	reclaimed by the op_mode. This can happen when the driver is freed and
  *	there are Tx packets pending in the transport layer.
  *	Must be atomic
- * @nic_error: error notification. Must be atomic, the op mode should handle
- *	the error (e.g. abort notification waiters) and print the error if
- *	applicable
- * @dump_error: NIC error dump collection (can sleep, synchronous)
- * @sw_reset: (maybe) initiate a software reset, return %true if started
+ * @nic_error: error notification. Must be atomic and must be called with BH
+ *	disabled, unless the type is IWL_ERR_TYPE_RESET_HS_TIMEOUT
  * @nic_config: configure NIC, called before firmware is started.
  *	May sleep
  * @wimax_active: invoked when WiMax becomes active. May sleep
@@ -149,10 +146,6 @@ struct iwl_op_mode_ops {
 	void (*free_skb)(struct iwl_op_mode *op_mode, struct sk_buff *skb);
 	void (*nic_error)(struct iwl_op_mode *op_mode,
 			  enum iwl_fw_error_type type);
-	void (*dump_error)(struct iwl_op_mode *op_mode,
-			   enum iwl_fw_error_type type);
-	bool (*sw_reset)(struct iwl_op_mode *op_mode,
-			 enum iwl_fw_error_type type);
 	void (*nic_config)(struct iwl_op_mode *op_mode);
 	void (*wimax_active)(struct iwl_op_mode *op_mode);
 	void (*time_point)(struct iwl_op_mode *op_mode,
@@ -234,15 +227,6 @@ static inline void iwl_op_mode_nic_error(struct iwl_op_mode *op_mode,
 					 enum iwl_fw_error_type type)
 {
 	op_mode->ops->nic_error(op_mode, type);
-}
-
-static inline void iwl_op_mode_dump_error(struct iwl_op_mode *op_mode,
-					  enum iwl_fw_error_type type)
-{
-	might_sleep();
-
-	if (op_mode->ops->dump_error)
-		op_mode->ops->dump_error(op_mode, type);
 }
 
 static inline void iwl_op_mode_nic_config(struct iwl_op_mode *op_mode)
