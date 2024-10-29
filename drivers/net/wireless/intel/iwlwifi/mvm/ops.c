@@ -2226,10 +2226,10 @@ static void iwl_mvm_dump_error(struct iwl_op_mode *op_mode,
 	/* for reset handshake we come from stop, with mutex held */
 	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
 		lockdep_assert_held(&mvm->mutex);
-		iwl_fw_error_collect(&mvm->fwrt);
+		iwl_fw_error_collect(&mvm->fwrt, true);
 	} else {
 		mutex_lock(&mvm->mutex);
-		iwl_fw_error_collect(&mvm->fwrt);
+		iwl_fw_error_collect(&mvm->fwrt, true);
 		mutex_unlock(&mvm->mutex);
 	}
 }

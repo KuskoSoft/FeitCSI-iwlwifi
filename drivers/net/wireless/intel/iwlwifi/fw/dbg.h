@@ -287,7 +287,7 @@ static inline void iwl_fw_umac_set_alive_err_table(struct iwl_trans *trans,
 		trans->dbg.umac_error_event_table = umac_error_event_table;
 }
 
-static inline void iwl_fw_error_collect(struct iwl_fw_runtime *fwrt)
+static inline void iwl_fw_error_collect(struct iwl_fw_runtime *fwrt, bool sync)
 {
 	enum iwl_fw_ini_time_point tp_id;
 
@@ -303,7 +303,7 @@ static inline void iwl_fw_error_collect(struct iwl_fw_runtime *fwrt)
 		tp_id = IWL_FW_INI_TIME_POINT_FW_ASSERT;
 	}
 
-	iwl_dbg_tlv_time_point_sync(fwrt, tp_id, NULL);
+	_iwl_dbg_tlv_time_point(fwrt, tp_id, NULL, sync);
 }
 
 static inline void iwl_fwrt_update_fw_versions(struct iwl_fw_runtime *fwrt,

@@ -512,10 +512,10 @@ static void iwl_mld_dump_error(struct iwl_op_mode *op_mode,
 	/* for reset handshake we come from stop, with mutex held */
 	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
 		lockdep_assert_wiphy(mld->wiphy);
-		iwl_fw_error_collect(&mld->fwrt);
+		iwl_fw_error_collect(&mld->fwrt, true);
 	} else {
 		wiphy_lock(mld->wiphy);
-		iwl_fw_error_collect(&mld->fwrt);
+		iwl_fw_error_collect(&mld->fwrt, true);
 		wiphy_unlock(mld->wiphy);
 	}
 }
