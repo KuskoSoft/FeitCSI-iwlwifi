@@ -8,6 +8,7 @@
 #include "sta.h"
 #include "hcmd.h"
 #include "iwl-utils.h"
+#include "iface.h"
 
 #include "fw/dbg.h"
 
@@ -257,6 +258,192 @@ out:
 	return cpu_to_le32(offload_assist);
 }
 
+static void iwl_mld_get_basic_rates_and_band(struct iwl_mld *mld,
+					     struct ieee80211_vif *vif,
+					     struct ieee80211_tx_info *info,
+					     unsigned long *basic_rates,
+					     u8 *band)
+{
+	u32 link_id = u32_get_bits(info->control.flags,
+				   IEEE80211_TX_CTRL_MLO_LINK);
+
+	*basic_rates = vif->bss_conf.basic_rates;
+	*band = info->band;
+
+	if (link_id == IEEE80211_LINK_UNSPECIFIED &&
+	    ieee80211_vif_is_mld(vif)) {
+		/* shouldn't do this when >1 link is active */
+		WARN_ON(hweight16(vif->active_links) != 1);
+		link_id = __ffs(vif->active_links);
+	}
+
+	if (link_id < IEEE80211_LINK_UNSPECIFIED) {
+		struct ieee80211_bss_conf *link_conf;
+
+		rcu_read_lock();
+		link_conf = rcu_dereference(vif->link_conf[link_id]);
+		if (link_conf) {
+			*basic_rates = link_conf->basic_rates;
+			if (link_conf->chanreq.oper.chan)
+				*band = link_conf->chanreq.oper.chan->band;
+		}
+		rcu_read_unlock();
+	}
+}
+
+static u8 iwl_mld_get_lowest_rate(struct iwl_mld *mld,
+				  struct ieee80211_tx_info *info,
+				  struct ieee80211_vif *vif)
+{
+	struct ieee80211_supported_band *sband;
+	u16 lowest_cck = IWL_RATE_COUNT, lowest_ofdm = IWL_RATE_COUNT;
+	unsigned long basic_rates;
+	u8 band, rate;
+	u32 i;
+
+	iwl_mld_get_basic_rates_and_band(mld, vif, info, &basic_rates, &band);
+
+	sband = mld->hw->wiphy->bands[band];
+	for_each_set_bit(i, &basic_rates, BITS_PER_LONG) {
+		u16 hw = sband->bitrates[i].hw_value;
+
+		if (hw >= IWL_FIRST_OFDM_RATE) {
+			if (lowest_ofdm > hw)
+				lowest_ofdm = hw;
+		} else if (lowest_cck > hw) {
+			lowest_cck = hw;
+		}
+	}
+
+	if (band == NL80211_BAND_2GHZ && !vif->p2p &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
+	    !(info->flags & IEEE80211_TX_CTL_NO_CCK_RATE)) {
+		if (lowest_cck != IWL_RATE_COUNT)
+			rate = lowest_cck;
+		else if (lowest_ofdm != IWL_RATE_COUNT)
+			rate = lowest_ofdm;
+		else
+			rate = IWL_FIRST_CCK_RATE;
+	} else if (lowest_ofdm != IWL_RATE_COUNT) {
+		rate = lowest_ofdm;
+	} else {
+		rate = IWL_FIRST_OFDM_RATE;
+	}
+
+	return rate;
+}
+
+static u32 iwl_mld_mac80211_rate_idx_to_fw(struct iwl_mld *mld,
+					   struct ieee80211_tx_info *info,
+					   int rate_idx)
+{
+	u32 rate_flags = 0;
+	u8 rate_plcp;
+
+	/* if the rate isn't a well known legacy rate, take the lowest one */
+	if (rate_idx < 0 || rate_idx >= IWL_RATE_COUNT_LEGACY)
+		rate_idx = iwl_mld_get_lowest_rate(mld, info,
+						   info->control.vif);
+
+	WARN_ON_ONCE(rate_idx < 0);
+
+	/* Set CCK or OFDM flag */
+	if (rate_idx <= IWL_LAST_CCK_RATE)
+		rate_flags |= RATE_MCS_CCK_MSK;
+	else
+		rate_flags |= RATE_MCS_LEGACY_OFDM_MSK;
+
+	/* Legacy rates are indexed:
+	 * 0 - 3 for CCK and 0 - 7 for OFDM
+	 */
+	rate_plcp = (rate_idx >= IWL_FIRST_OFDM_RATE ?
+		     rate_idx - IWL_FIRST_OFDM_RATE : rate_idx);
+
+	return (u32)rate_plcp | rate_flags;
+}
+
+static u32 iwl_mld_get_tx_ant(struct iwl_mld *mld,
+			      struct ieee80211_tx_info *info,
+			      struct ieee80211_sta *sta, __le16 fc)
+{
+	/* TODO: non_shart_ant (task=coex) */
+	/* TODO: mld_sta->tx_ant / mld->mgmt_last_ant (task=DP) */
+	return 0;
+}
+
+static u32 iwl_mld_get_inject_tx_rate(struct iwl_mld *mld,
+				      struct ieee80211_tx_info *info,
+				      struct ieee80211_sta *sta,
+				      __le16 fc)
+{
+	struct ieee80211_tx_rate *rate = &info->control.rates[0];
+	u32 result;
+
+	/* we only care about legacy/HT/VHT so far, so we can
+	 * build in v1 and use iwl_new_rate_from_v1()
+	 * FIXME: in newer devices we only support the new rates, build
+	 * the rate_n_flags in the new format here instead of using v1 and
+	 * converting it.
+	 */
+
+	if (rate->flags & IEEE80211_TX_RC_VHT_MCS) {
+		u8 mcs = ieee80211_rate_get_vht_mcs(rate);
+		u8 nss = ieee80211_rate_get_vht_nss(rate);
+
+		result = RATE_MCS_VHT_MSK_V1;
+		result |= u32_encode_bits(mcs, RATE_VHT_MCS_RATE_CODE_MSK);
+		result |= u32_encode_bits(nss, RATE_MCS_NSS_MSK);
+
+		if (rate->flags & IEEE80211_TX_RC_SHORT_GI)
+			result |= RATE_MCS_SGI_MSK_V1;
+
+		if (rate->flags & IEEE80211_TX_RC_40_MHZ_WIDTH)
+			result |= u32_encode_bits(1, RATE_MCS_CHAN_WIDTH_MSK_V1);
+		else if (rate->flags & IEEE80211_TX_RC_80_MHZ_WIDTH)
+			result |= u32_encode_bits(2, RATE_MCS_CHAN_WIDTH_MSK_V1);
+		else if (rate->flags & IEEE80211_TX_RC_160_MHZ_WIDTH)
+			result |= u32_encode_bits(3, RATE_MCS_CHAN_WIDTH_MSK_V1);
+
+		result = iwl_new_rate_from_v1(result);
+	} else if (rate->flags & IEEE80211_TX_RC_MCS) {
+		result = RATE_MCS_HT_MSK_V1;
+		result |= u32_encode_bits(rate->idx,
+					  RATE_HT_MCS_RATE_CODE_MSK_V1 |
+					  RATE_HT_MCS_NSS_MSK_V1);
+		if (rate->flags & IEEE80211_TX_RC_SHORT_GI)
+			result |= RATE_MCS_SGI_MSK_V1;
+		if (rate->flags & IEEE80211_TX_RC_40_MHZ_WIDTH)
+			result |= u32_encode_bits(1, RATE_MCS_CHAN_WIDTH_MSK_V1);
+		if (info->flags & IEEE80211_TX_CTL_LDPC)
+			result |= RATE_MCS_LDPC_MSK_V1;
+		if (u32_get_bits(info->flags, IEEE80211_TX_CTL_STBC))
+			result |= RATE_MCS_STBC_MSK;
+
+		result = iwl_new_rate_from_v1(result);
+	} else {
+		result = iwl_mld_mac80211_rate_idx_to_fw(mld, info, rate->idx);
+	}
+
+	if (info->control.antennas)
+		result |= u32_encode_bits(info->control.antennas,
+					  RATE_MCS_ANT_AB_MSK);
+	else
+		result |= iwl_mld_get_tx_ant(mld, info, sta, fc);
+
+	return result;
+}
+
+static u32 iwl_mld_get_tx_rate_n_flags(struct iwl_mld *mld,
+				       struct ieee80211_tx_info *info,
+				       struct ieee80211_sta *sta, __le16 fc)
+{
+	if (unlikely(info->control.flags & IEEE80211_TX_CTRL_RATE_INJECT))
+		return iwl_mld_get_inject_tx_rate(mld, info, sta, fc);
+
+	return iwl_mld_mac80211_rate_idx_to_fw(mld, info, -1) |
+		iwl_mld_get_tx_ant(mld, info, sta, fc);
+}
+
 static void
 iwl_mld_fill_tx_cmd_hdr(struct iwl_tx_cmd_gen3 *tx_cmd,
 			struct sk_buff *skb, bool amsdu)
@@ -308,17 +495,26 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 	bool amsdu = ieee80211_is_data_qos(hdr->frame_control) &&
 		     (*ieee80211_get_qos_ctl(hdr) &
 		      IEEE80211_QOS_CTL_A_MSDU_PRESENT);
+	u32 rate_n_flags = 0;
 	u16 flags = 0;
 
 	dev_tx_cmd->hdr.cmd = TX_CMD;
 
-	/* TODO: set rate_n_flags for non sta or injected frames */
-
 	if (!info->control.hw_key)
 		flags |= IWL_TX_FLAGS_ENCRYPT_DIS;
 
-	if (!ieee80211_is_data(hdr->frame_control) ||
-	    (mld_sta && mld_sta->sta_state < IEEE80211_STA_AUTHORIZED)) {
+	/* For data and mgmt packets rate info comes from the fw.
+	 * Only set rate/antenna for injected frames with fixed rate, or
+	 * when no sta is given.
+	 */
+	if (unlikely(!sta ||
+		     info->control.flags & IEEE80211_TX_CTRL_RATE_INJECT)) {
+		flags |= IWL_TX_FLAGS_CMD_RATE;
+		rate_n_flags = iwl_mld_get_tx_rate_n_flags(mld, info, sta,
+							   hdr->frame_control);
+	} else if (!ieee80211_is_data(hdr->frame_control) ||
+		   (mld_sta &&
+		    mld_sta->sta_state < IEEE80211_STA_AUTHORIZED)) {
 		/* These are important frames */
 		flags |= IWL_TX_FLAGS_HIGH_PRI;
 	}
@@ -333,6 +529,8 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 	tx_cmd->len = cpu_to_le16((u16)skb->len);
 
 	tx_cmd->flags = cpu_to_le16(flags);
+
+	tx_cmd->rate_n_flags = cpu_to_le32(rate_n_flags);
 }
 
 static void
