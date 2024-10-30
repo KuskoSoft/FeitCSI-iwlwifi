@@ -18,6 +18,7 @@
 #include "tx.h"
 #include "sta.h"
 #include "regulatory.h"
+#include "thermal.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -230,6 +231,7 @@ static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
  */
 static const struct iwl_hcmd_names iwl_mld_phy_names[] = {
 	HCMD_NAME(PER_CHAIN_LIMIT_OFFSET_CMD),
+	HCMD_NAME(CT_KILL_NOTIFICATION),
 };
 
 VISIBLE_IF_IWLWIFI_KUNIT
@@ -360,6 +362,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
 
 	iwl_mld_add_debugfs_files(mld, dbgfs_dir);
+	iwl_mld_thermal_initialize(mld);
 
 	return op_mode;
 
@@ -378,6 +381,9 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
 	iwl_mld_leds_exit(mld);
+	wiphy_lock(mld->wiphy);
+	iwl_mld_thermal_exit(mld);
+	wiphy_unlock(mld->wiphy);
 
 	ieee80211_unregister_hw(mld->hw);
 
@@ -442,7 +448,7 @@ iwl_mld_set_hw_rfkill_state(struct iwl_op_mode *op_mode, bool state)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
-	wiphy_rfkill_set_hw_state(mld->wiphy, state);
+	iwl_mld_set_hwkill(mld, state);
 
 	return false;
 }

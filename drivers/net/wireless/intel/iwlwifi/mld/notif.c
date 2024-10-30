@@ -23,6 +23,7 @@
 #include "tlc.h"
 #include "agg.h"
 #include "mac80211.h"
+#include "thermal.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
@@ -177,6 +178,8 @@ CMD_VERSIONS(tlc_notif,
 	     CMD_VER_ENTRY(3, iwl_tlc_update_notif))
 CMD_VERSIONS(mu_mimo_grp_notif,
 	     CMD_VER_ENTRY(1, iwl_mu_group_mgmt_notif))
+CMD_VERSIONS(ct_kill_notif,
+	     CMD_VER_ENTRY(2, ct_kill_notif))
 
 /*
  * Handlers for fw notifications
@@ -210,6 +213,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 tlc_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
 			 mu_mimo_grp_notif, RX_HANDLER_SYNC)
+	RX_HANDLER_SIZES(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
+			 ct_kill_notif, RX_HANDLER_ASYNC)
 };
 
 static bool

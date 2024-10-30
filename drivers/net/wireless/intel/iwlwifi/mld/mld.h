@@ -69,10 +69,14 @@
  *	&async_handlers_wk and RX notifcation path.
  * @async_handlers_wk: A work to run all async RX handlers from
  *	&async_handlers_list.
+ * @ct_kill_exit_wk: worker to exit thermal kill
  * @fw_status: bitmap of fw status bits
  * @fw_status.in_hw_restart: indicates that we are currently in restart flow.
  * @fw_status.in_d3: indicates FW is in suspend mode and should be resumed
  *	rather than restarted. Should be unset upon restart.
+ * @radio_kill: bitmap of radio kill status
+ * @radio_kill.hw: radio is killed by hw switch
+ * @radio_kill.ct: radio is killed because the device it too hot
  * @addresses: device MAC addresses.
  * @wowlan: WoWLAN support data.
  * @led: the led device
@@ -121,6 +125,7 @@ struct iwl_mld {
 	struct list_head async_handlers_list;
 	spinlock_t async_handlers_lock;
 	struct wiphy_work async_handlers_wk;
+	struct wiphy_delayed_work ct_kill_exit_wk;
 
 	struct {
 		u32 running:1,
@@ -131,6 +136,12 @@ struct iwl_mld {
 		    in_hw_restart:1;
 
 	} fw_status;
+
+	struct {
+		u32 hw:1,
+		    ct:1;
+	} radio_kill;
+
 	struct mac_address addresses[IWL_MLD_MAX_ADDRESSES];
 	struct iwl_mld_scan scan;
 #ifdef CONFIG_PM_SLEEP
@@ -218,6 +229,22 @@ int iwl_mld_load_fw(struct iwl_mld *mld);
 void iwl_mld_stop_fw(struct iwl_mld *mld);
 int iwl_mld_start_fw(struct iwl_mld *mld);
 void iwl_mld_send_recovery_cmd(struct iwl_mld *mld, u32 flags);
+
+static inline void iwl_mld_set_ctkill(struct iwl_mld *mld, bool state)
+{
+	mld->radio_kill.ct = state;
+
+	wiphy_rfkill_set_hw_state(mld->wiphy,
+				  mld->radio_kill.hw || mld->radio_kill.ct);
+}
+
+static inline void iwl_mld_set_hwkill(struct iwl_mld *mld, bool state)
+{
+	mld->radio_kill.hw = state;
+
+	wiphy_rfkill_set_hw_state(mld->wiphy,
+				  mld->radio_kill.hw || mld->radio_kill.ct);
+}
 
 static inline u8 iwl_mld_get_valid_tx_ant(const struct iwl_mld *mld)
 {
