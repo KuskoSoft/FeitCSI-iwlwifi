@@ -15,6 +15,7 @@
 #include "fw/api/time-event.h"
 #include "fw/api/tx.h"
 #include "fw/api/rs.h"
+#include "fw/api/offload.h"
 
 #include "mcc.h"
 #include "link.h"
@@ -158,6 +159,47 @@ static void iwl_mld_handle_mu_mimo_grp_notif(struct iwl_mld *mld,
 						   notif);
 }
 
+static void
+iwl_mld_handle_stored_beacon_notif(struct iwl_mld *mld,
+				   struct iwl_rx_packet *pkt)
+{
+	unsigned int pkt_len = iwl_rx_packet_payload_len(pkt);
+	struct iwl_stored_beacon_notif *sb = (void *)pkt->data;
+	struct ieee80211_rx_status rx_status = {};
+	struct sk_buff *skb;
+	u32 size = le32_to_cpu(sb->common.byte_count);
+
+	if (size == 0)
+		return;
+
+	if (pkt_len < struct_size(sb, data, size))
+		return;
+
+	skb = alloc_skb(size, GFP_ATOMIC);
+	if (!skb) {
+		IWL_ERR(mld, "alloc_skb failed\n");
+		return;
+	}
+
+	/* update rx_status according to the notification's metadata */
+	rx_status.mactime = le64_to_cpu(sb->common.tsf);
+	/* TSF as indicated by the firmware  is at INA time */
+	rx_status.flag |= RX_FLAG_MACTIME_PLCP_START;
+	rx_status.device_timestamp = le32_to_cpu(sb->common.system_time);
+	rx_status.band =
+		iwl_mld_phy_band_to_nl80211(le16_to_cpu(sb->common.band));
+	rx_status.freq =
+		ieee80211_channel_to_frequency(le16_to_cpu(sb->common.channel),
+					       rx_status.band);
+
+	/* copy the data */
+	skb_put_data(skb, sb->data, size);
+	memcpy(IEEE80211_SKB_RXCB(skb), &rx_status, sizeof(rx_status));
+
+	/* pass it as regular rx to mac80211 */
+	ieee80211_rx_napi(mld->hw, NULL, skb, NULL);
+}
+
 CMD_VERSIONS(scan_complete_notif,
 	     CMD_VER_ENTRY(1, iwl_umac_scan_complete))
 CMD_VERSIONS(scan_iter_complete_notif,
@@ -182,6 +224,8 @@ CMD_VERSIONS(ct_kill_notif,
 	     CMD_VER_ENTRY(2, ct_kill_notif))
 CMD_VERSIONS(temp_notif,
 	     CMD_VER_ENTRY(2, iwl_dts_measurement_notif))
+CMD_VERSIONS(stored_beacon_notif,
+	     CMD_VER_ENTRY(4, iwl_stored_beacon_notif))
 
 /*
  * Handlers for fw notifications
@@ -217,6 +261,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 tlc_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
 			 mu_mimo_grp_notif, RX_HANDLER_SYNC)
+	RX_HANDLER_SIZES(PROT_OFFLOAD_GROUP, STORED_BEACON_NTF,
+			 stored_beacon_notif, RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
 			 ct_kill_notif, RX_HANDLER_ASYNC)
 };
