@@ -299,14 +299,14 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	int ret;
 
 	if (WARN_ON(!iwl_is_mld_op_mode_supported(trans)))
-		return NULL;
+		return ERR_PTR(-EINVAL);
 
 	/* Allocate and initialize a new hardware device */
 	hw = ieee80211_alloc_hw(sizeof(struct iwl_op_mode) +
 				sizeof(struct iwl_mld),
 				&iwl_mld_hw_ops);
 	if (!hw)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	op_mode = hw->priv;
 
@@ -346,10 +346,12 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	if (ret)
 		goto free_hw;
 
-	if (iwl_mld_alloc_scan_cmd(mld))
+	ret = iwl_mld_alloc_scan_cmd(mld);
+	if (ret)
 		goto leds_exit;
 
-	if (iwl_mld_register_hw(mld))
+	ret = iwl_mld_register_hw(mld);
+	if (ret)
 		goto free_scan_cmd;
 
 	iwl_mld_add_debugfs_files(mld, dbgfs_dir);
@@ -362,7 +364,7 @@ leds_exit:
 	iwl_mld_leds_exit(mld);
 free_hw:
 	ieee80211_free_hw(mld->hw);
-	return NULL;
+	return ERR_PTR(ret);
 }
 
 static void

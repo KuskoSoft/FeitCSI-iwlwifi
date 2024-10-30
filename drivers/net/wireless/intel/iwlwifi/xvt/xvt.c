@@ -200,7 +200,7 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 	op_mode = kzalloc(sizeof(struct iwl_op_mode) +
 			  sizeof(struct iwl_xvt), GFP_KERNEL);
 	if (!op_mode)
-		return NULL;
+		return ERR_PTR(-ENOMEM);
 
 	op_mode->ops = &iwl_xvt_ops;
 
@@ -268,8 +268,10 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 
 	/* Init phy db */
 	xvt->phy_db = iwl_phy_db_init(xvt->trans);
-	if (!xvt->phy_db)
+	if (!xvt->phy_db) {
+		err = -ENOMEM;
 		goto out_free;
+	}
 
 	iwl_dnt_init(xvt->trans, dbgfs_dir);
 
@@ -300,9 +302,7 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 
 	IWL_INFO(xvt, "xVT operation mode\n");
 
-	err = iwl_xvt_dbgfs_register(xvt, dbgfs_dir);
-	if (err)
-		IWL_ERR(xvt, "failed register xvt debugfs folder (%d)\n", err);
+	iwl_xvt_dbgfs_register(xvt, dbgfs_dir);
 
 	return op_mode;
 
@@ -310,7 +310,7 @@ out_free:
 	iwl_fw_runtime_free(&xvt->fwrt);
 	kfree(op_mode);
 
-	return NULL;
+	return ERR_PTR(err);
 }
 
 static void iwl_xvt_stop(struct iwl_op_mode *op_mode)
