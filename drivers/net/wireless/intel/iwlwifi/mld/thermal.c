@@ -43,7 +43,7 @@ static void iwl_mld_exit_ctkill(struct wiphy *wiphy, struct wiphy_work *wk)
 
 void iwl_mld_handle_temp_notif(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
 {
-	const struct iwl_dts_measurement_notif_v2 *notif =
+	const struct iwl_dts_measurement_notif *notif =
 		(const void *)pkt->data;
 	int temp;
 	u32 ths_crossed;

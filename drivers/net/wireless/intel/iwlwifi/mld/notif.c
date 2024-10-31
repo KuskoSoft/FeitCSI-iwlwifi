@@ -181,7 +181,7 @@ CMD_VERSIONS(mu_mimo_grp_notif,
 CMD_VERSIONS(ct_kill_notif,
 	     CMD_VER_ENTRY(2, ct_kill_notif))
 CMD_VERSIONS(temp_notif,
-	     CMD_VER_ENTRY(2, iwl_dts_measurement_notif_v2))
+	     CMD_VER_ENTRY(2, iwl_dts_measurement_notif))
 
 /*
  * Handlers for fw notifications
