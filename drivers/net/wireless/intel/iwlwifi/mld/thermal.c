@@ -2,8 +2,16 @@
 /*
  * Copyright (C) 2024 Intel Corporation
  */
+#ifdef CONFIG_THERMAL
+#include <linux/sort.h>
+#include <linux/thermal.h>
+#endif
+
+#include "fw/api/phy.h"
+
 #include "thermal.h"
 #include "mld.h"
+#include "hcmd.h"
 
 #define IWL_MLD_CT_KILL_DURATION (5 * HZ)
 
@@ -33,12 +41,251 @@ static void iwl_mld_exit_ctkill(struct wiphy *wiphy, struct wiphy_work *wk)
 	iwl_mld_set_ctkill(mld, false);
 }
 
+void iwl_mld_handle_temp_notif(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
+{
+	const struct iwl_dts_measurement_notif_v2 *notif =
+		(const void *)pkt->data;
+	int temp;
+	u32 ths_crossed;
+
+	temp = le32_to_cpu(notif->temp);
+
+	/* shouldn't be negative, but since it's s32, make sure it isn't */
+	if (IWL_FW_CHECK(mld, temp < 0, "negative temperature %d\n", temp))
+		return;
+
+	ths_crossed = le32_to_cpu(notif->threshold_idx);
+
+	/* 0xFF in ths_crossed means the notification is not related
+	 * to a trip, so we can ignore it here.
+	 */
+	if (ths_crossed == 0xFF)
+		return;
+
+	IWL_DEBUG_TEMP(mld, "Temp = %d Threshold crossed = %d\n",
+		       temp, ths_crossed);
+
+	if (IWL_FW_CHECK(mld, ths_crossed >= IWL_MAX_DTS_TRIPS,
+			 "bad threshold: %d\n", ths_crossed))
+		return;
+
+#ifdef CONFIG_THERMAL
+	if (mld->tzone)
+		thermal_zone_device_update(mld->tzone, THERMAL_TRIP_VIOLATED);
+#endif /* CONFIG_THERMAL */
+}
+
+#ifdef CONFIG_THERMAL
+static int iwl_mld_get_temp(struct iwl_mld *mld, s32 *temp)
+{
+	struct iwl_host_cmd cmd = {
+		.id = WIDE_ID(PHY_OPS_GROUP, CMD_DTS_MEASUREMENT_TRIGGER_WIDE),
+		.flags = CMD_WANT_SKB,
+	};
+	const struct iwl_dts_measurement_resp *resp;
+	int ret;
+
+	ret = iwl_mld_send_cmd(mld, &cmd);
+	if (ret) {
+		IWL_ERR(mld,
+			"Failed to send the temperature measurement command (err=%d)\n",
+			ret);
+		return ret;
+	}
+
+	if (iwl_rx_packet_payload_len(cmd.resp_pkt) < sizeof(*resp)) {
+		IWL_ERR(mld,
+			"Failed to get a valid response to DTS measurement\n");
+		ret = -EIO;
+		goto free_resp;
+	}
+
+	resp = (const void *)cmd.resp_pkt->data;
+	*temp = le32_to_cpu(resp->temp);
+
+	IWL_DEBUG_TEMP(mld,
+		       "Got temperature measurement response: temp=%d\n",
+		       *temp);
+
+free_resp:
+	iwl_free_resp(&cmd);
+	return ret;
+}
+
+static int compare_temps(const void *a, const void *b)
+{
+	return ((s16)le16_to_cpu(*(__le16 *)a) -
+		(s16)le16_to_cpu(*(__le16 *)b));
+}
+
+struct iwl_trip_walk_data {
+	__le16 *thresholds;
+	int count;
+};
+
+static int iwl_trip_temp_iter(struct thermal_trip *trip, void *arg)
+{
+	struct iwl_trip_walk_data *twd = arg;
+
+	if (trip->temperature == THERMAL_TEMP_INVALID)
+		return 0;
+
+	twd->thresholds[twd->count++] =
+		cpu_to_le16((s16)(trip->temperature / 1000));
+	return 0;
+}
+#endif
+
+int iwl_mld_config_temp_report_ths(struct iwl_mld *mld)
+{
+	struct temp_report_ths_cmd cmd = {0};
+	int ret;
+#ifdef CONFIG_THERMAL
+	struct iwl_trip_walk_data twd = {
+		.thresholds = cmd.thresholds,
+		.count = 0
+	};
+
+	if (!mld->tzone)
+		goto send;
+
+	/* The thermal core holds an array of temperature trips that are
+	 * unsorted and uncompressed, the FW should get it compressed and
+	 * sorted.
+	 */
+
+	/* compress trips to cmd array, remove uninitialized values*/
+	for_each_thermal_trip(mld->tzone, iwl_trip_temp_iter, &twd);
+
+	cmd.num_temps = cpu_to_le32(twd.count);
+	if (twd.count)
+		sort(cmd.thresholds, twd.count, sizeof(s16),
+		     compare_temps, NULL);
+
+send:
+#endif
+	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(PHY_OPS_GROUP,
+						TEMP_REPORTING_THRESHOLDS_CMD),
+				   &cmd);
+	if (ret)
+		IWL_ERR(mld, "TEMP_REPORT_THS_CMD command failed (err=%d)\n",
+			ret);
+
+	return ret;
+}
+
+#ifdef CONFIG_THERMAL
+static int iwl_mld_tzone_get_temp(struct thermal_zone_device *device,
+				  int *temperature)
+{
+	struct iwl_mld *mld = thermal_zone_device_priv(device);
+	int ret;
+	int temp;
+
+	if (!mld->fw_status.running) {
+		/* Tell the core that there is no valid temperature value to
+		 * return, but it need not worry about this.
+		 */
+		*temperature = THERMAL_TEMP_INVALID;
+		return 0;
+	}
+
+	ret = iwl_mld_get_temp(mld, &temp);
+	if (ret)
+		return ret;
+
+	*temperature = temp * 1000;
+	return 0;
+}
+
+static int iwl_mld_tzone_set_trip_temp(struct thermal_zone_device *device,
+#if LINUX_VERSION_IS_GEQ(6,11,0)
+				       const struct thermal_trip *trip,
+#else
+				       int trip,
+#endif
+				       int temp)
+{
+	struct iwl_mld *mld = thermal_zone_device_priv(device);
+
+	if (!mld->fw_status.running)
+		return -EIO;
+
+	if ((temp / 1000) > S16_MAX)
+		return -EINVAL;
+
+	return iwl_mld_config_temp_report_ths(mld);
+}
+
+static  struct thermal_zone_device_ops tzone_ops = {
+	.get_temp = iwl_mld_tzone_get_temp,
+	.set_trip_temp = iwl_mld_tzone_set_trip_temp,
+};
+
+static void iwl_mld_thermal_zone_register(struct iwl_mld *mld)
+{
+	int ret;
+	char name[16];
+	static atomic_t counter = ATOMIC_INIT(0);
+	struct thermal_trip trips[IWL_MAX_DTS_TRIPS] = {
+		[0 ... IWL_MAX_DTS_TRIPS - 1] = {
+			.temperature = THERMAL_TEMP_INVALID,
+			.type = THERMAL_TRIP_PASSIVE,
+			.flags = THERMAL_TRIP_FLAG_RW_TEMP,
+		},
+	};
+
+	BUILD_BUG_ON(ARRAY_SIZE(name) >= THERMAL_NAME_LENGTH);
+
+	sprintf(name, "iwlwifi_%u", atomic_inc_return(&counter) & 0xFF);
+	mld->tzone =
+		thermal_zone_device_register_with_trips(name, trips,
+							IWL_MAX_DTS_TRIPS,
+							mld, &tzone_ops,
+							NULL, 0, 0);
+	if (IS_ERR(mld->tzone)) {
+		IWL_DEBUG_TEMP(mld,
+			       "Failed to register to thermal zone (err = %ld)\n",
+			       PTR_ERR(mld->tzone));
+		mld->tzone = NULL;
+		return;
+	}
+
+	ret = thermal_zone_device_enable(mld->tzone);
+	if (ret) {
+		IWL_DEBUG_TEMP(mld, "Failed to enable thermal zone\n");
+		thermal_zone_device_unregister(mld->tzone);
+	}
+}
+
+static void iwl_mld_thermal_zone_unregister(struct iwl_mld *mld)
+{
+	if (!mld->tzone)
+		return;
+
+	IWL_DEBUG_TEMP(mld, "Thermal zone device unregister\n");
+	if (mld->tzone) {
+		thermal_zone_device_unregister(mld->tzone);
+		mld->tzone = NULL;
+	}
+}
+
+#endif /* CONFIG_THERMAL */
+
 void iwl_mld_thermal_initialize(struct iwl_mld *mld)
 {
 	wiphy_delayed_work_init(&mld->ct_kill_exit_wk, iwl_mld_exit_ctkill);
+
+#ifdef CONFIG_THERMAL
+	iwl_mld_thermal_zone_register(mld);
+#endif
 }
 
 void iwl_mld_thermal_exit(struct iwl_mld *mld)
 {
 	wiphy_delayed_work_cancel(mld->wiphy, &mld->ct_kill_exit_wk);
+
+#ifdef CONFIG_THERMAL
+	iwl_mld_thermal_zone_unregister(mld);
+#endif
 }

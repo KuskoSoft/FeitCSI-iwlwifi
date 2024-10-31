@@ -96,6 +96,7 @@
  * @mcast_filter_cmd: pointer to the multicast filter command.
  * @mgmt_tx_ant: stores the last TX antenna index; used for setting
  *	TX rate_n_flags for non-STA mgmt frames (toggles on every TX failure).
+ * @tzone: thermal zone device's data
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -166,6 +167,9 @@ struct iwl_mld {
 	struct iwl_mcast_filter_cmd *mcast_filter_cmd;
 
 	u8 mgmt_tx_ant;
+#ifdef CONFIG_THERMAL
+	struct thermal_zone_device *tzone;
+#endif
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/* the hcmd number on which nmi will be triggered */
 	u8 nmi_thresh;

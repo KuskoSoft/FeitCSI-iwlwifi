@@ -230,8 +230,11 @@ static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
  * Access is done through binary search
  */
 static const struct iwl_hcmd_names iwl_mld_phy_names[] = {
+	HCMD_NAME(CMD_DTS_MEASUREMENT_TRIGGER_WIDE),
+	HCMD_NAME(TEMP_REPORTING_THRESHOLDS_CMD),
 	HCMD_NAME(PER_CHAIN_LIMIT_OFFSET_CMD),
 	HCMD_NAME(CT_KILL_NOTIFICATION),
+	HCMD_NAME(DTS_MEASUREMENT_NOTIF_WIDE),
 };
 
 VISIBLE_IF_IWLWIFI_KUNIT

@@ -7,6 +7,8 @@
 #ifndef __iwl_fw_api_phy_h__
 #define __iwl_fw_api_phy_h__
 
+#include <linux/bitops.h>
+
 /**
  * enum iwl_phy_ops_subcmd_ids - PHY group commands
  */

@@ -180,6 +180,8 @@ CMD_VERSIONS(mu_mimo_grp_notif,
 	     CMD_VER_ENTRY(1, iwl_mu_group_mgmt_notif))
 CMD_VERSIONS(ct_kill_notif,
 	     CMD_VER_ENTRY(2, ct_kill_notif))
+CMD_VERSIONS(temp_notif,
+	     CMD_VER_ENTRY(2, iwl_dts_measurement_notif_v2))
 
 /*
  * Handlers for fw notifications
@@ -205,6 +207,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_SIZES(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION, mfuart_notif,
 			 RX_HANDLER_SYNC)
 
+	RX_HANDLER_SIZES(PHY_OPS_GROUP, DTS_MEASUREMENT_NOTIF_WIDE,
+			 temp_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(MAC_CONF_GROUP, SESSION_PROTECTION_NOTIF,
 			 session_prot_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(MAC_CONF_GROUP, MISSED_BEACONS_NOTIF,

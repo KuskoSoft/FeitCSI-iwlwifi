@@ -8,8 +8,10 @@
 #include "mld.h"
 #include "iwl-trans.h"
 
+void iwl_mld_handle_temp_notif(struct iwl_mld *mld, struct iwl_rx_packet *pkt);
 void iwl_mld_handle_ct_kill_notif(struct iwl_mld *mld,
 				  struct iwl_rx_packet *pkt);
+int iwl_mld_config_temp_report_ths(struct iwl_mld *mld);
 void iwl_mld_thermal_initialize(struct iwl_mld *mld);
 void iwl_mld_thermal_exit(struct iwl_mld *mld);
 

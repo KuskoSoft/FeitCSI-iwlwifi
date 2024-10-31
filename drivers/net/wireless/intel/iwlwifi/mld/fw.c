@@ -17,6 +17,7 @@
 #include "led.h"
 #include "coex.h"
 #include "regulatory.h"
+#include "thermal.h"
 
 static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
 {
@@ -446,6 +447,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 		return ret;
 
 	iwl_mld_configure_lari(mld);
+
+	ret = iwl_mld_config_temp_report_ths(mld);
+	if (ret)
+		return ret;
 
 	ret = iwl_configure_rxq(&mld->fwrt);
 	if (ret)
