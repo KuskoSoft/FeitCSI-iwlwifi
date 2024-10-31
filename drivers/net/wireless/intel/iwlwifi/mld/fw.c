@@ -452,6 +452,12 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
+#ifdef CONFIG_THERMAL
+	ret = iwl_mld_config_ctdp(mld, mld->cooling_dev.cur_state);
+	if (ret)
+		return ret;
+#endif
+
 	ret = iwl_configure_rxq(&mld->fwrt);
 	if (ret)
 		return ret;

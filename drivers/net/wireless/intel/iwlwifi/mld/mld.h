@@ -29,6 +29,7 @@
 #include "notif.h"
 #include "scan.h"
 #include "rx.h"
+#include "thermal.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
 
@@ -97,6 +98,7 @@
  * @mgmt_tx_ant: stores the last TX antenna index; used for setting
  *	TX rate_n_flags for non-STA mgmt frames (toggles on every TX failure).
  * @tzone: thermal zone device's data
+ * @cooling_dev: cooling device's related data
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -169,6 +171,7 @@ struct iwl_mld {
 	u8 mgmt_tx_ant;
 #ifdef CONFIG_THERMAL
 	struct thermal_zone_device *tzone;
+	struct iwl_mld_cooling_device cooling_dev;
 #endif
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/* the hcmd number on which nmi will be triggered */

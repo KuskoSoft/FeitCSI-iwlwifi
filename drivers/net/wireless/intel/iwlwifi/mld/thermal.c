@@ -258,6 +258,111 @@ static void iwl_mld_thermal_zone_register(struct iwl_mld *mld)
 	}
 }
 
+/* budget in mWatt */
+static const u32 iwl_mld_cdev_budgets[] = {
+	2400,	/* cooling state 0 */
+	2000,	/* cooling state 1 */
+	1800,	/* cooling state 2 */
+	1600,	/* cooling state 3 */
+	1400,	/* cooling state 4 */
+	1200,	/* cooling state 5 */
+	1000,	/* cooling state 6 */
+	900,	/* cooling state 7 */
+	800,	/* cooling state 8 */
+	700,	/* cooling state 9 */
+	650,	/* cooling state 10 */
+	600,	/* cooling state 11 */
+	550,	/* cooling state 12 */
+	500,	/* cooling state 13 */
+	450,	/* cooling state 14 */
+	400,	/* cooling state 15 */
+	350,	/* cooling state 16 */
+	300,	/* cooling state 17 */
+	250,	/* cooling state 18 */
+	200,	/* cooling state 19 */
+	150,	/* cooling state 20 */
+};
+
+int iwl_mld_config_ctdp(struct iwl_mld *mld, u32 state)
+{
+	struct iwl_ctdp_cmd cmd = {
+		.operation = cpu_to_le32(CTDP_CMD_OPERATION_START),
+		.budget = cpu_to_le32(iwl_mld_cdev_budgets[state]),
+		.window_size = 0,
+	};
+	int ret;
+
+	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(PHY_OPS_GROUP, CTDP_CONFIG_CMD),
+				   &cmd);
+
+	if (ret) {
+		IWL_ERR(mld, "cTDP command failed (err=%d)\n", ret);
+		return ret;
+	}
+
+	mld->cooling_dev.cur_state = state;
+
+	return 0;
+}
+
+static int iwl_mld_tcool_get_max_state(struct thermal_cooling_device *cdev,
+				       unsigned long *state)
+{
+	*state = ARRAY_SIZE(iwl_mld_cdev_budgets) - 1;
+
+	return 0;
+}
+
+static int iwl_mld_tcool_get_cur_state(struct thermal_cooling_device *cdev,
+				       unsigned long *state)
+{
+	struct iwl_mld *mld = (struct iwl_mld *)(cdev->devdata);
+
+	*state = mld->cooling_dev.cur_state;
+
+	return 0;
+}
+
+static int iwl_mld_tcool_set_cur_state(struct thermal_cooling_device *cdev,
+				       unsigned long new_state)
+{
+	struct iwl_mld *mld = (struct iwl_mld *)(cdev->devdata);
+
+	if (!mld->fw_status.running)
+		return -EIO;
+
+	if (new_state >= ARRAY_SIZE(iwl_mld_cdev_budgets))
+		return -EINVAL;
+
+	return iwl_mld_config_ctdp(mld, new_state);
+}
+
+static const struct thermal_cooling_device_ops tcooling_ops = {
+	.get_max_state = iwl_mld_tcool_get_max_state,
+	.get_cur_state = iwl_mld_tcool_get_cur_state,
+	.set_cur_state = iwl_mld_tcool_set_cur_state,
+};
+
+static void iwl_mld_cooling_device_register(struct iwl_mld *mld)
+{
+	char name[] = "iwlwifi";
+
+	BUILD_BUG_ON(ARRAY_SIZE(name) >= THERMAL_NAME_LENGTH);
+
+	mld->cooling_dev.cdev =
+		thermal_cooling_device_register(name,
+						mld,
+						&tcooling_ops);
+
+	if (IS_ERR(mld->cooling_dev.cdev)) {
+		IWL_DEBUG_TEMP(mld,
+			       "Failed to register to cooling device (err = %ld)\n",
+			       PTR_ERR(mld->cooling_dev.cdev));
+		mld->cooling_dev.cdev = NULL;
+		return;
+	}
+}
+
 static void iwl_mld_thermal_zone_unregister(struct iwl_mld *mld)
 {
 	if (!mld->tzone)
@@ -270,6 +375,17 @@ static void iwl_mld_thermal_zone_unregister(struct iwl_mld *mld)
 	}
 }
 
+static void iwl_mld_cooling_device_unregister(struct iwl_mld *mld)
+{
+	if (!mld->cooling_dev.cdev)
+		return;
+
+	IWL_DEBUG_TEMP(mld, "Cooling device unregister\n");
+	if (mld->cooling_dev.cdev) {
+		thermal_cooling_device_unregister(mld->cooling_dev.cdev);
+		mld->cooling_dev.cdev = NULL;
+	}
+}
 #endif /* CONFIG_THERMAL */
 
 void iwl_mld_thermal_initialize(struct iwl_mld *mld)
@@ -277,6 +393,7 @@ void iwl_mld_thermal_initialize(struct iwl_mld *mld)
 	wiphy_delayed_work_init(&mld->ct_kill_exit_wk, iwl_mld_exit_ctkill);
 
 #ifdef CONFIG_THERMAL
+	iwl_mld_cooling_device_register(mld);
 	iwl_mld_thermal_zone_register(mld);
 #endif
 }
@@ -286,6 +403,7 @@ void iwl_mld_thermal_exit(struct iwl_mld *mld)
 	wiphy_delayed_work_cancel(mld->wiphy, &mld->ct_kill_exit_wk);
 
 #ifdef CONFIG_THERMAL
+	iwl_mld_cooling_device_unregister(mld);
 	iwl_mld_thermal_zone_unregister(mld);
 #endif
 }
