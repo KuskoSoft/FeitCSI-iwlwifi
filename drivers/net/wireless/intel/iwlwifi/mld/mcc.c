@@ -12,7 +12,6 @@
 #include "mld.h"
 #include "hcmd.h"
 #include "mcc.h"
-#include "regulatory.h"
 
 /* It is the caller's responsibility to free the pointer returned here */
 static struct iwl_mcc_update_resp_v8 *
