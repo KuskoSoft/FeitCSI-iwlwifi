@@ -200,6 +200,68 @@ iwl_mld_handle_stored_beacon_notif(struct iwl_mld *mld,
 	ieee80211_rx_napi(mld->hw, NULL, skb, NULL);
 }
 
+static void
+iwl_mld_handle_channel_switch_start_notif(struct iwl_mld *mld,
+					  struct iwl_rx_packet *pkt)
+{
+	struct iwl_channel_switch_start_notif *notif = (void *)pkt->data;
+	u32 link_id = le32_to_cpu(notif->link_id);
+	struct ieee80211_bss_conf *link_conf =
+		iwl_mld_fw_id_to_link_conf(mld, link_id);
+	struct ieee80211_vif *vif;
+
+	if (WARN_ON(!link_conf))
+		return;
+
+	vif = link_conf->vif;
+	if (vif->type != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return;
+	}
+
+	if (!link_conf->csa_active) {
+		/* Either unexpected cs notif or mac80211 chose to ignore
+		 * like in channel switch to same channel
+		 */
+		struct iwl_cancel_channel_switch_cmd cmd = {
+			.id = cpu_to_le32(link_id),
+		};
+
+		if (iwl_mld_send_cmd_pdu(mld,
+					 WIDE_ID(MAC_CONF_GROUP,
+						 CANCEL_CHANNEL_SWITCH_CMD),
+					 &cmd))
+			IWL_ERR(mld, "Failed to cancel the channel switch\n");
+	}
+
+	ieee80211_chswitch_done(vif, true, link_conf->link_id);
+}
+
+static void
+iwl_mld_handle_channel_switch_error_notif(struct iwl_mld *mld,
+					  struct iwl_rx_packet *pkt)
+{
+	struct iwl_channel_switch_error_notif *notif = (void *)pkt->data;
+	struct ieee80211_bss_conf *link_conf;
+	struct ieee80211_vif *vif;
+	u32 link_id = le32_to_cpu(notif->link_id);
+	u32 csa_err_mask = le32_to_cpu(notif->csa_err_mask);
+
+	link_conf = iwl_mld_fw_id_to_link_conf(mld, link_id);
+	if (WARN_ON(!link_conf))
+		return;
+
+	vif = link_conf->vif;
+
+	IWL_DEBUG_INFO(mld, "FW reports CSA error: id=%u, csa_err_mask=%u\n",
+		       link_id, csa_err_mask);
+
+	if (csa_err_mask & (CS_ERR_COUNT_ERROR |
+			    CS_ERR_LONG_DELAY_AFTER_CS |
+			    CS_ERR_TX_BLOCK_TIMER_EXPIRED))
+		ieee80211_channel_switch_disconnect(vif);
+}
+
 CMD_VERSIONS(scan_complete_notif,
 	     CMD_VER_ENTRY(1, iwl_umac_scan_complete))
 CMD_VERSIONS(scan_iter_complete_notif,
@@ -220,6 +282,10 @@ CMD_VERSIONS(tlc_notif,
 	     CMD_VER_ENTRY(3, iwl_tlc_update_notif))
 CMD_VERSIONS(mu_mimo_grp_notif,
 	     CMD_VER_ENTRY(1, iwl_mu_group_mgmt_notif))
+CMD_VERSIONS(channel_switch_start_notif,
+	     CMD_VER_ENTRY(3, iwl_channel_switch_start_notif))
+CMD_VERSIONS(channel_switch_error_notif,
+	     CMD_VER_ENTRY(2, iwl_channel_switch_error_notif))
 CMD_VERSIONS(ct_kill_notif,
 	     CMD_VER_ENTRY(2, ct_kill_notif))
 CMD_VERSIONS(temp_notif,
@@ -259,6 +325,10 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 missed_beacon_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF,
 			 tlc_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(MAC_CONF_GROUP, CHANNEL_SWITCH_START_NOTIF,
+			 channel_switch_start_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(MAC_CONF_GROUP, CHANNEL_SWITCH_ERROR_NOTIF,
+			 channel_switch_error_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
 			 mu_mimo_grp_notif, RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(PROT_OFFLOAD_GROUP, STORED_BEACON_NTF,
