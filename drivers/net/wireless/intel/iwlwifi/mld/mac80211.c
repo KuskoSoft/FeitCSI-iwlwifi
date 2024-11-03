@@ -948,6 +948,32 @@ int iwl_mld_mac80211_set_rts_threshold(struct ieee80211_hw *hw, u32 value)
 	return -EOPNOTSUPP;
 }
 
+static void
+iwl_mld_link_info_changed_ap_ibss(struct iwl_mld *mld,
+				  struct ieee80211_vif *vif,
+				  struct ieee80211_bss_conf *link,
+				  u64 changes)
+{
+	u32 link_changes = 0;
+
+	if (changes & BSS_CHANGED_ERP_SLOT)
+		link_changes |= LINK_CONTEXT_MODIFY_RATES_INFO;
+
+	if (changes & (BSS_CHANGED_ERP_CTS_PROT | BSS_CHANGED_HT))
+		link_changes |= LINK_CONTEXT_MODIFY_PROTECT_FLAGS;
+
+	if (changes & (BSS_CHANGED_QOS | BSS_CHANGED_BANDWIDTH))
+		link_changes |= LINK_CONTEXT_MODIFY_QOS_PARAMS;
+
+	if (changes & BSS_CHANGED_HE_BSS_COLOR)
+		link_changes |= LINK_CONTEXT_MODIFY_HE_PARAMS;
+
+	if (link_changes)
+		iwl_mld_change_link_in_fw(mld, link, link_changes);
+
+	/* TODO: BSS_CHANGED_BEACON */
+}
+
 static
 u32 iwl_mld_link_changed_mapping(struct ieee80211_vif *vif,
 				 struct ieee80211_bss_conf *link_conf,
@@ -979,21 +1005,15 @@ u32 iwl_mld_link_changed_mapping(struct ieee80211_vif *vif,
 	return link_changes;
 }
 
-static
-void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
-					struct ieee80211_vif *vif,
-					struct ieee80211_bss_conf *link_conf,
-					u64 changes)
+static void
+iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
+				       struct ieee80211_vif *vif,
+				       struct ieee80211_bss_conf *link_conf,
+				       u64 changes)
 {
-	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
-	u32 link_changes;
+	u32 link_changes = iwl_mld_link_changed_mapping(vif, link_conf,
+							changes);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return;
-	}
-
-	link_changes = iwl_mld_link_changed_mapping(vif, link_conf, changes);
 	if (link_changes)
 		iwl_mld_change_link_in_fw(mld, link_conf, link_changes);
 
@@ -1006,6 +1026,29 @@ void iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 	// todo: BSS_CHANGED_BEACON_INFO (task=beacon_filter)
 	// todo: BSS_CHANGED_BANDWIDTH (task=EMLSR)
 	// todo: BSS_CHANGED_CQM
+}
+
+static void
+iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
+				   struct ieee80211_vif *vif,
+				   struct ieee80211_bss_conf *link_conf,
+				   u64 changes)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	switch (vif->type) {
+	case NL80211_IFTYPE_STATION:
+		iwl_mld_mac80211_link_info_changed_sta(mld, vif, link_conf,
+						       changes);
+		break;
+	case NL80211_IFTYPE_AP:
+		iwl_mld_link_info_changed_ap_ibss(mld, vif, link_conf,
+						  changes);
+		break;
+	default:
+		/* shouldn't happen */
+		WARN_ON_ONCE(1);
+	}
 
 	if (changes & BSS_CHANGED_TXPOWER)
 		iwl_mld_set_tx_power(mld, link_conf, link_conf->txpower);
