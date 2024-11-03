@@ -17,6 +17,7 @@
 #include "d3.h"
 #include "tlc.h"
 #include "key.h"
+#include "ap.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #include "fw/api/filter.h"
@@ -977,7 +978,8 @@ iwl_mld_link_info_changed_ap_ibss(struct iwl_mld *mld,
 	if (link_changes)
 		iwl_mld_change_link_in_fw(mld, link, link_changes);
 
-	/* TODO: BSS_CHANGED_BEACON */
+	if (changes & BSS_CHANGED_BEACON)
+		iwl_mld_update_beacon_template(mld, vif, link);
 }
 
 static
