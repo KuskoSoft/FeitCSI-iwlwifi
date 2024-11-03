@@ -873,9 +873,15 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 	if (WARN_ON(!mld_link))
 		return -EINVAL;
 
-	/* TODO: for AP, send mac ctxt cmd to update HE cap (or in start_ap?)
-	 * (task=AP)
-	 */
+	/* for AP, mac parameters such as HE support are updated at this stage. */
+	if (vif->type == NL80211_IFTYPE_AP) {
+		ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_MODIFY);
+
+		if (ret) {
+			IWL_ERR(mld, "failed to update MAC %pM\n", vif->addr);
+			return -EINVAL;
+		}
+	}
 
 	rcu_assign_pointer(mld_link->chan_ctx, ctx);
 
