@@ -29,6 +29,7 @@
  * @ap_early_keys: The firmware cannot install keys before bcast/mcast STAs,
  *	but higher layers work differently, so we store the keys here for
  *	later installation.
+ * @csa_blocks_tx: indicates channel switch with immediate quiet
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
@@ -47,6 +48,7 @@ struct iwl_mld_link {
 
 	/* we can only have 2 GTK + 2 IGTK + 2 BIGTK active at a time */
 	struct ieee80211_key_conf *ap_early_keys[6];
+	bool csa_blocks_tx;
 };
 
 /* Cleanup function for struct iwl_mld_phy, will be called in restart */

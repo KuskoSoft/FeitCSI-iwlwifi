@@ -1833,6 +1833,93 @@ static int iwl_mld_mac80211_set_key(struct ieee80211_hw *hw,
 	return ret;
 }
 
+static int
+iwl_mld_pre_channel_switch(struct ieee80211_hw *hw,
+			   struct ieee80211_vif *vif,
+			   struct ieee80211_channel_switch *chsw)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_link *mld_link =
+		iwl_mld_link_dereference_check(mld_vif, chsw->link_id);
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (vif->type != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return 0;
+	}
+
+	if (WARN_ON(!mld_link))
+		return -EINVAL;
+
+	IWL_DEBUG_MAC80211(mld, "pre CSA to freq %d\n",
+			   chsw->chandef.center_freq1);
+	mld_link->csa_blocks_tx = chsw->block_tx;
+
+	/* TODO: choose primary link for esr (task=esr) */
+	/* TODO: teardown tdls peers (task=tdls) */
+
+	return 0;
+}
+
+static void
+iwl_mld_channel_switch(struct ieee80211_hw *hw,
+		       struct ieee80211_vif *vif,
+		       struct ieee80211_channel_switch *chsw)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* By implementing this operation, we prevent mac80211 from
+	 * starting its own channel switch timer, so that we can call
+	 * ieee80211_chswitch_done() ourselves at the right time
+	 * (Upon receiving the channel_switch_start notification from the fw)
+	 */
+	IWL_DEBUG_MAC80211(IWL_MAC80211_GET_MLD(hw),
+			   "dummy channel switch op\n");
+
+	if (vif->type != NL80211_IFTYPE_STATION)
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+}
+
+static int
+iwl_mld_post_channel_switch(struct ieee80211_hw *hw,
+			    struct ieee80211_vif *vif,
+			    struct ieee80211_bss_conf *link_conf)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link_conf);
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (vif->type != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return 0;
+	}
+
+	mld_link->csa_blocks_tx = false;
+
+	return 0;
+}
+
+static void
+iwl_mld_abort_channel_switch(struct ieee80211_hw *hw,
+			     struct ieee80211_vif *vif,
+			     struct ieee80211_bss_conf *link_conf)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link_conf);
+
+	if (vif->type != NL80211_IFTYPE_STATION) {
+		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+		return;
+	}
+
+	IWL_DEBUG_MAC80211(IWL_MAC80211_GET_MLD(hw),
+			   "abort channel switch op\n");
+	mld_link->csa_blocks_tx = false;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1869,6 +1956,10 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.link_sta_rc_update = iwl_mld_sta_rc_update,
 	.start_ap = iwl_mld_start_ap_ibss,
 	.stop_ap = iwl_mld_stop_ap_ibss,
+	.pre_channel_switch = iwl_mld_pre_channel_switch,
+	.channel_switch = iwl_mld_channel_switch,
+	.post_channel_switch = iwl_mld_post_channel_switch,
+	.abort_channel_switch = iwl_mld_abort_channel_switch,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
