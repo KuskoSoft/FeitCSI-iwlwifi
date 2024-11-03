@@ -1070,10 +1070,8 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
+	if (vif->type != NL80211_IFTYPE_STATION)
 		return;
-	}
 
 	if (changes & BSS_CHANGED_ASSOC) {
 		ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_MODIFY);
@@ -1086,8 +1084,7 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 			 */
 	}
 
-	if (changes & BSS_CHANGED_PS &&
-	    !WARN_ON(vif->type != NL80211_IFTYPE_STATION))
+	if (changes & BSS_CHANGED_PS)
 		iwl_mld_update_mac_power(mld, vif, false);
 
 	//todo: BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM - mlo_int_scan_wk
