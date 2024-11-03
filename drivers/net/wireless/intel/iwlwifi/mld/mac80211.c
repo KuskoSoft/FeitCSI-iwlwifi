@@ -1237,7 +1237,8 @@ iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *link;
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
+	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
 	}
