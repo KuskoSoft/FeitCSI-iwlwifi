@@ -1940,6 +1940,103 @@ iwl_mld_abort_channel_switch(struct ieee80211_hw *hw,
 	mld_link->csa_blocks_tx = false;
 }
 
+static int
+iwl_mld_switch_vif_chanctx_swap(struct ieee80211_hw *hw,
+				struct ieee80211_vif_chanctx_switch *vifs)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
+
+	iwl_mld_unassign_vif_chanctx(hw, vifs[0].vif, vifs[0].link_conf,
+				     vifs[0].old_ctx);
+	iwl_mld_remove_chanctx(hw, vifs[0].old_ctx);
+
+	ret = iwl_mld_add_chanctx(hw, vifs[0].new_ctx);
+	if (ret) {
+		IWL_ERR(mld, "failed to add new_ctx during channel switch\n");
+		goto out_reassign;
+	}
+
+	ret = iwl_mld_assign_vif_chanctx(hw, vifs[0].vif, vifs[0].link_conf,
+					 vifs[0].new_ctx);
+	if (ret) {
+		IWL_ERR(mld,
+			"failed to assign new_ctx during channel switch\n");
+		goto out_remove;
+	}
+
+	/* TODO: teardown tdls peers (task=TDLS) */
+	return 0;
+
+ out_remove:
+	iwl_mld_remove_chanctx(hw, vifs[0].new_ctx);
+ out_reassign:
+	if (iwl_mld_add_chanctx(hw, vifs[0].old_ctx)) {
+		IWL_ERR(mld, "failed to add old_ctx after failure\n");
+		return ret;
+	}
+
+	if (iwl_mld_assign_vif_chanctx(hw, vifs[0].vif, vifs[0].link_conf,
+				       vifs[0].old_ctx))
+		IWL_ERR(mld, "failed to reassign old_ctx after failure\n");
+
+	return ret;
+}
+
+static int
+iwl_mld_switch_vif_chanctx_reassign(struct ieee80211_hw *hw,
+				    struct ieee80211_vif_chanctx_switch *vifs)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	int ret;
+
+	iwl_mld_unassign_vif_chanctx(hw, vifs[0].vif, vifs[0].link_conf,
+				     vifs[0].old_ctx);
+	ret = iwl_mld_assign_vif_chanctx(hw, vifs[0].vif, vifs[0].link_conf,
+					 vifs[0].new_ctx);
+	if (ret) {
+		IWL_ERR(mld,
+			"failed to assign new_ctx during channel switch\n");
+		goto out_reassign;
+	}
+
+	return 0;
+
+out_reassign:
+	if (iwl_mld_assign_vif_chanctx(hw, vifs[0].vif, vifs[0].link_conf,
+				       vifs[0].old_ctx))
+		IWL_ERR(mld, "failed to reassign old_ctx after failure\n");
+
+	return ret;
+}
+
+static int
+iwl_mld_switch_vif_chanctx(struct ieee80211_hw *hw,
+			   struct ieee80211_vif_chanctx_switch *vifs,
+			   int n_vifs,
+			   enum ieee80211_chanctx_switch_mode mode)
+{
+	int ret;
+
+	/* we only support a single-vif right now */
+	if (n_vifs > 1)
+		return -EOPNOTSUPP;
+
+	switch (mode) {
+	case CHANCTX_SWMODE_SWAP_CONTEXTS:
+		ret = iwl_mld_switch_vif_chanctx_swap(hw, vifs);
+		break;
+	case CHANCTX_SWMODE_REASSIGN_VIF:
+		ret = iwl_mld_switch_vif_chanctx_reassign(hw, vifs);
+		break;
+	default:
+		ret = -EOPNOTSUPP;
+		break;
+	}
+
+	return ret;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -1980,6 +2077,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.channel_switch = iwl_mld_channel_switch,
 	.post_channel_switch = iwl_mld_post_channel_switch,
 	.abort_channel_switch = iwl_mld_abort_channel_switch,
+	.switch_vif_chanctx = iwl_mld_switch_vif_chanctx,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
