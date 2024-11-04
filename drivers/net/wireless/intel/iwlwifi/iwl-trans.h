@@ -439,6 +439,13 @@ struct iwl_trans_config {
 	u8 cb_data_offs;
 	bool fw_reset_handshake;
 	u8 queue_alloc_cmd_ver;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/**
+	 * @fseq_img: external FSEQ image
+	 */
+	const struct fw_img *fseq_img;
+#endif
 };
 
 struct iwl_trans_dump_data {

@@ -97,6 +97,67 @@ out:
 		*control_flags |= IWL_PRPH_SCRATCH_EARLY_DEBUG_EN | dbg_flags;
 }
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+static void iwl_trans_pcie_free_fseq(struct iwl_trans *trans,
+				     struct iwl_prph_scratch *prph_scratch)
+{
+	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+
+	if (prph_scratch) {
+		for (int i = 0; i < ARRAY_SIZE(prph_scratch->dram.fseq_img); i++)
+			prph_scratch->dram.fseq_img[i] = 0;
+	}
+
+	for (int i = 0; i < trans_pcie->fseq_count; i++) {
+		struct iwl_dram_data *fseq = &trans_pcie->fseq[i];
+
+		if (!fseq->block)
+			continue;
+
+		dma_free_coherent(trans->dev, fseq->size, fseq->block,
+				  fseq->physical);
+	}
+	trans_pcie->fseq_count = 0;
+	kfree(trans_pcie->fseq);
+	trans_pcie->fseq = NULL;
+}
+
+static int iwl_trans_pcie_set_fseq(struct iwl_trans *trans,
+				   const struct fw_img *img,
+				   struct iwl_prph_scratch *prph_scratch)
+{
+	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+
+	if (WARN_ON_ONCE(trans_pcie->fseq_count))
+		iwl_trans_pcie_free_fseq(trans, prph_scratch);
+
+	if (img->num_sec >= ARRAY_SIZE(prph_scratch->dram.fseq_img))
+		return -EINVAL;
+
+	trans_pcie->fseq = kcalloc(img->num_sec, sizeof(*trans_pcie->fseq),
+				   GFP_KERNEL);
+	if (!trans_pcie->fseq)
+		return -ENOMEM;
+	trans_pcie->fseq_count = img->num_sec;
+
+	for (int i = 0; i < img->num_sec; i++) {
+		struct iwl_dram_data *fseq = &trans_pcie->fseq[i];
+		int err;
+
+		err = iwl_pcie_ctxt_info_alloc_dma(trans, img->sec[i].data,
+						   img->sec[i].len, fseq);
+		if (err) {
+			iwl_trans_pcie_free_fseq(trans, prph_scratch);
+			return err;
+		}
+
+		prph_scratch->dram.fseq_img[i] = cpu_to_le64(fseq->physical);
+	}
+
+	return 0;
+}
+#endif
+
 int iwl_pcie_ctxt_info_gen3_init(struct iwl_trans *trans,
 				 const struct fw_img *fw)
 {
@@ -180,7 +241,9 @@ int iwl_pcie_ctxt_info_gen3_init(struct iwl_trans *trans,
 	iwl_pcie_ctxt_info_dbg_enable(trans, &prph_sc_ctrl->hwm_cfg,
 				      &control_flags);
 	prph_sc_ctrl->control.control_flags = cpu_to_le32(control_flags);
+#ifndef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	prph_sc_ctrl->control.control_flags_ext = cpu_to_le32(control_flags_ext);
+#endif
 
 	/* initialize the Step equalizer data */
 	prph_sc_ctrl->step_cfg.mbx_addr_0 = cpu_to_le32(trans->mbx_addr_0_step);
@@ -196,6 +259,18 @@ int iwl_pcie_ctxt_info_gen3_init(struct iwl_trans *trans,
 	if (ret)
 		goto err_free_prph_scratch;
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (trans_pcie->fseq_img) {
+		ret = iwl_trans_pcie_set_fseq(trans, trans_pcie->fseq_img,
+					      prph_scratch);
+		if (ret)
+			goto err_free_prph_scratch;
+
+		control_flags_ext |= IWL_PRPH_SCRATCH_EXT_EXT_FSEQ;
+	}
+
+	prph_sc_ctrl->control.control_flags_ext = cpu_to_le32(control_flags_ext);
+#endif
 
 	/* Allocate prph information
 	 * currently we don't assign to the prph info anything, but it would get
@@ -320,6 +395,11 @@ void iwl_pcie_ctxt_info_gen3_free(struct iwl_trans *trans, bool alive)
 	}
 
 	iwl_pcie_ctxt_info_free_fw_img(trans);
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/* free the FSEQ image, no longer needed after alive */
+	iwl_trans_pcie_free_fseq(trans, trans_pcie->prph_scratch);
+#endif
 
 	if (alive)
 		return;

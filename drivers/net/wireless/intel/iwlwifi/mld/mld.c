@@ -379,6 +379,9 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 		.n_no_reclaim_cmds = ARRAY_SIZE(no_reclaim_cmds),
 		.cb_data_offs = offsetof(struct ieee80211_tx_info,
 					 driver_data[2]),
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+		.fseq_img = &mld->fw->fseq,
+#endif
 	};
 	struct iwl_trans *trans = mld->trans;
 

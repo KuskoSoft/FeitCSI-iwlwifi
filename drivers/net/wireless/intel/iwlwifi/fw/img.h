@@ -206,6 +206,13 @@ struct iwl_fw {
 	size_t iml_len;
 	u8 *iml;
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/**
+	 * @fseq: external FSEQ image, if loaded
+	 */
+	struct fw_img fseq;
+#endif
+
 	struct iwl_ucode_capabilities ucode_capa;
 	bool enhance_sensitivity_table;
 

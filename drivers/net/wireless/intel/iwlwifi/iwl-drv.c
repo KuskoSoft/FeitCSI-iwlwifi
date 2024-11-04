@@ -24,6 +24,8 @@
 #include "fw/api/mac.h"
 #include "fw/api/mac-cfg.h"
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#include "iwl-io.h"
+#include "iwl-prph.h"
 #include "iwl-dbg-cfg.h"
 #endif
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
@@ -350,6 +352,9 @@ static void iwl_dealloc_ucode(struct iwl_drv *drv)
 
 	for (i = 0; i < IWL_UCODE_TYPE_MAX; i++)
 		iwl_free_fw_img(drv, drv->fw.img + i);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	iwl_free_fw_img(drv, &drv->fw.fseq);
+#endif
 
 	/* clear the data for the aborted load case */
 	memset(&drv->fw, 0, sizeof(drv->fw));
@@ -559,6 +564,11 @@ struct iwl_firmware_pieces {
 	struct iwl_fw_dbg_mem_seg_tlv *dbg_mem_tlv;
 	size_t n_mem_tlv;
 	u32 major;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	struct {
+		u32 major, minor;
+	} fseq_ver;
+#endif
 };
 
 static void alloc_sec_data(struct iwl_firmware_pieces *pieces,
@@ -1474,6 +1484,19 @@ fw_dbg_conf:
 				 fseq_ver->version);
 			}
 			break;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+		case IWL_UCODE_TLV_FSEQ_BIN_VERSION: {
+			const struct iwl_fw_fseq_bin_version *fseq;
+
+			if (tlv_len != sizeof(*fseq))
+				goto invalid_tlv_len;
+
+			fseq = (const void *)tlv_data;
+			pieces->fseq_ver.major = le32_to_cpu(fseq->major);
+			pieces->fseq_ver.minor = le32_to_cpu(fseq->minor);
+			}
+			break;
+#endif
 		case IWL_UCODE_TLV_FW_NUM_STATIONS:
 			if (tlv_len != sizeof(u32))
 				goto invalid_tlv_len;
@@ -1762,6 +1785,144 @@ static void _iwl_op_mode_stop(struct iwl_drv *drv)
 	}
 }
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+static int iwl_drv_load_fseq_image(struct iwl_trans *trans, struct iwl_fw *fw,
+				   struct iwl_firmware_pieces *pieces)
+{
+	struct fw_img_parsing fseq_pieces = {};
+	const struct iwl_fseq_file *fseq;
+	const struct iwl_ucode_tlv *tlv;
+	const struct firmware *fseq_fw;
+	u32 fseq_major, fseq_minor;
+	u32 tlv_len, tlv_type, len;
+	const u8 *tlv_data, *data;
+	u32 cnvi_id, cnvr_id;
+	char filename[100];
+	int err;
+
+#define FSEQ_ID(v)	(CNVI_AUX_MISC_CHIP_MAC_STEP(v) << 12 | \
+			 CNVI_AUX_MISC_CHIP_PROD_TYPE(v))
+
+	cnvi_id = trans->hw_cnv_id;
+	cnvr_id = iwl_read_prph_no_grab(trans, CNVR_AUX_MISC_CHIP);
+	scnprintf(filename, sizeof(filename), IWL_FSEQ_FILE,
+		  FSEQ_ID(cnvi_id), FSEQ_ID(cnvr_id));
+
+	if (request_firmware(&fseq_fw, filename, trans->dev))
+		return 0;
+
+	if (fseq_fw->size < sizeof(*fseq)) {
+		IWL_ERR(trans, "invalid FSEQ file size\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	fseq = (const void *)fseq_fw->data;
+
+	if (memcmp(fseq->magic, IWL_FSEQ_MAGIC, sizeof(fseq->magic))) {
+		IWL_ERR(trans, "invalid image magic\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	if (fseq_fw->size < sizeof(*fseq) +
+			    le32_to_cpu(fseq->bt_len) +
+			    le32_to_cpu(fseq->wifi_len)) {
+		IWL_ERR(trans, "invalid image sizes or file size\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	len = le32_to_cpu(fseq->wifi_len);
+	data = fseq->data + le32_to_cpu(fseq->bt_len);
+
+	while (len >= sizeof(*tlv)) {
+		len -= sizeof(*tlv);
+
+		tlv = (const void *)data;
+		tlv_len = le32_to_cpu(tlv->length);
+		tlv_type = le32_to_cpu(tlv->type);
+		tlv_data = tlv->data;
+
+		if (len < tlv_len) {
+			IWL_ERR(trans, "invalid TLV len: %u/%u\n",
+				len, tlv_len);
+			err = -EINVAL;
+			goto out;
+		}
+		len -= ALIGN(tlv_len, 4);
+		data += sizeof(*tlv) + ALIGN(tlv_len, 4);
+
+		switch (tlv_type) {
+		case IWL_UCODE_TLV_SEC_RT:
+			iwl_store_ucode_sec(&fseq_pieces, tlv_data, tlv_len);
+			break;
+		case IWL_UCODE_TLV_FW_FSEQ_VERSION: {
+			const struct {
+				u8 version[32];
+				u8 sha1[20];
+			} *fseq_ver = (const void *)tlv_data;
+
+			if (tlv_len != sizeof(*fseq_ver))
+				goto invalid_tlv_len;
+			IWL_INFO(trans, "External FSEQ Version: %.32s\n",
+				 fseq_ver->version);
+			}
+			break;
+		case IWL_UCODE_TLV_FSEQ_BIN_VERSION: {
+			const struct iwl_fw_fseq_bin_version *ver;
+
+			if (tlv_len != sizeof(*ver))
+				goto invalid_tlv_len;
+
+			ver = (const void *)tlv_data;
+			fseq_major = le32_to_cpu(ver->major);
+			fseq_minor = le32_to_cpu(ver->minor);
+			}
+			break;
+		default:
+			IWL_DEBUG_INFO(trans, "unknown FSEQ image TLV: %d\n",
+				       tlv_type);
+			break;
+		}
+	}
+
+	if (len) {
+		IWL_ERR(trans, "bad FSEQ image parsing remainder: %u\n", len);
+		iwl_print_hex_dump(trans, IWL_DL_FW, data, len);
+		err = -EINVAL;
+		goto out;
+	}
+
+	if (!fseq_pieces.sec_counter) {
+		IWL_ERR(trans, "FSEQ image file without sections\n");
+		err = -EINVAL;
+		goto out;
+	}
+
+	/* use external image if major version is different or minor is newer */
+	if (fseq_major == pieces->fseq_ver.major &&
+	    fseq_minor <= pieces->fseq_ver.minor) {
+		err = 0;
+		goto out;
+	}
+
+	IWL_INFO(trans, "Using external FSEQ %.16s\n", fseq->version);
+
+	err = iwl_alloc_ucode_mem(&fw->fseq, &fseq_pieces);
+	goto out;
+
+ invalid_tlv_len:
+	err = -EINVAL;
+	IWL_ERR(trans, "TLV %d has invalid size: %u\n", tlv_type, tlv_len);
+	iwl_print_hex_dump(trans, IWL_DL_FW, tlv_data, tlv_len);
+ out:
+	kfree(fseq_pieces.sec);
+	release_firmware(fseq_fw);
+	return err;
+}
+#endif
+
 #define IWL_MLD_SUPPORTED_FW_VERSION 97
 
 /*
@@ -2025,6 +2186,12 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	if (!load_fw_dbg_err)
 		release_firmware(fw_dbg_config);
+
+	if (drv->trans->dbg_cfg.load_external_fseq &&
+	    fw_has_capa(&fw->ucode_capa,
+			IWL_UCODE_TLV_CAPA_EXT_FSEQ_IMAGE_SUPPORT) &&
+	    iwl_drv_load_fseq_image(drv->trans, fw, pieces))
+		goto out_unbind;
 #endif
 
 	iwl_dbg_tlv_load_bin(drv->trans->dev, drv->trans);

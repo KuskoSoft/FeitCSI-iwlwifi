@@ -194,7 +194,11 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 {
 	struct iwl_op_mode *op_mode;
 	struct iwl_xvt *xvt;
-	struct iwl_trans_config trans_cfg = {};
+	struct iwl_trans_config trans_cfg = {
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+		.fseq_img = &fw->fseq,
+#endif
+	};
 	static const u8 no_reclaim_cmds[] = {
 		TX_CMD,
 	};

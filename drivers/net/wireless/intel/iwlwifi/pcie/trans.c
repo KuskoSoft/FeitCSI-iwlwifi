@@ -2049,6 +2049,10 @@ void iwl_trans_pcie_configure(struct iwl_trans *trans,
 	trans->command_groups = trans_cfg->command_groups;
 	trans->command_groups_size = trans_cfg->command_groups_size;
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (trans_cfg->fseq_img && trans_cfg->fseq_img->num_sec)
+		trans_pcie->fseq_img = trans_cfg->fseq_img;
+#endif
 
 	trans_pcie->fw_reset_handshake = trans_cfg->fw_reset_handshake;
 }
