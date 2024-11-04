@@ -56,4 +56,9 @@ int iwl_mld_ensure_queue(struct iwl_mld *mld, struct ieee80211_txq *txq);
 void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt);
 void iwl_mld_toggle_tx_ant(struct iwl_mld *mld, u8 *ant);
+
+u8 iwl_mld_get_lowest_rate(struct iwl_mld *mld,
+			   struct ieee80211_tx_info *info,
+			   struct ieee80211_vif *vif);
+
 #endif /* __iwl_mld_tx_h__ */

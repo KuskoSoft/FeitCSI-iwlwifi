@@ -9,6 +9,7 @@
 #include "ap.h"
 #include "iface.h"
 #include "hcmd.h"
+#include "tx.h"
 #include "iwl-utils.h"
 
 #include "fw/api/tx.h"
@@ -36,6 +37,38 @@ static void iwl_mld_set_tim_idx(struct iwl_mld *mld, __le32 *tim_index,
 		IWL_WARN(mld, "Unable to find TIM Element in beacon\n");
 }
 
+static u8 iwl_mld_get_rate_flags(struct iwl_mld *mld,
+				 struct ieee80211_tx_info *info,
+				 struct ieee80211_vif *vif,
+				 struct ieee80211_bss_conf *link,
+				 enum nl80211_band band)
+{
+	u32 legacy = link->beacon_tx_rate.control[band].legacy;
+	u32 rate_idx, rate_flags = 0, fw_rate;
+
+	/* if beacon rate was configured try using it */
+	if (hweight32(legacy) == 1) {
+		u32 rate = ffs(legacy) - 1;
+		struct ieee80211_supported_band *sband =
+			mld->hw->wiphy->bands[band];
+
+		rate_idx = sband->bitrates[rate].hw_value;
+	} else {
+		rate_idx = iwl_mld_get_lowest_rate(mld, info, vif);
+	}
+
+	if (rate_idx <= IWL_LAST_CCK_RATE)
+		rate_flags = IWL_MAC_BEACON_CCK;
+
+	/* Legacy rates are indexed as follows:
+	 * 0 - 3 for CCK and 0 - 7 for OFDM.
+	 */
+	fw_rate = (rate_idx >= IWL_FIRST_OFDM_RATE ?
+		     rate_idx - IWL_FIRST_OFDM_RATE : rate_idx);
+
+	return fw_rate | rate_flags;
+}
+
 static int iwl_mld_send_beacon_template_cmd(struct iwl_mld *mld,
 					    struct sk_buff *beacon,
 					    struct iwl_mac_beacon_cmd *cmd)
@@ -61,6 +94,7 @@ static int iwl_mld_fill_beacon_template_cmd(struct iwl_mld *mld,
 					    struct ieee80211_bss_conf *link)
 {
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(beacon);
 	struct ieee80211_chanctx_conf *ctx;
 	bool enable_fils;
 	u16 flags = 0;
@@ -88,7 +122,9 @@ static int iwl_mld_fill_beacon_template_cmd(struct iwl_mld *mld,
 
 	cmd->byte_cnt = cpu_to_le16((u16)beacon->len);
 
-	/* TODO: set rate flags */
+	flags |= iwl_mld_get_rate_flags(mld, info, vif, link,
+					ctx->def.chan->band);
+
 	cmd->flags = cpu_to_le16(flags);
 
 	if (vif->type == NL80211_IFTYPE_AP) {

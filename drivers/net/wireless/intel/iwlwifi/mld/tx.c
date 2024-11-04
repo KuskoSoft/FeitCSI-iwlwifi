@@ -317,9 +317,9 @@ static void iwl_mld_get_basic_rates_and_band(struct iwl_mld *mld,
 	}
 }
 
-static u8 iwl_mld_get_lowest_rate(struct iwl_mld *mld,
-				  struct ieee80211_tx_info *info,
-				  struct ieee80211_vif *vif)
+u8 iwl_mld_get_lowest_rate(struct iwl_mld *mld,
+			   struct ieee80211_tx_info *info,
+			   struct ieee80211_vif *vif)
 {
 	struct ieee80211_supported_band *sband;
 	u16 lowest_cck = IWL_RATE_COUNT, lowest_ofdm = IWL_RATE_COUNT;
