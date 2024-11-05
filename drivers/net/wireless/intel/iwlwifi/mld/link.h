@@ -24,6 +24,7 @@
  * @igtk: fw can only have one IGTK at a time, whereas mac80211 can have two.
  *	This tracks the one IGTK that currently exists in FW.
  * @bcast_sta: tation used for broadcast packets. Used in AP, GO and IBSS.
+ * @mcast_sta: station used for multicast packets. Used in AP, GO and IBSS.
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
@@ -37,6 +38,7 @@ struct iwl_mld_link {
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld_int_sta bcast_sta;
+	struct iwl_mld_int_sta mcast_sta;
 };
 
 /* Cleanup function for struct iwl_mld_phy, will be called in restart */
@@ -46,6 +48,8 @@ iwl_mld_cleanup_link(struct iwl_mld *mld, struct iwl_mld_link *link)
 	CLEANUP_STRUCT(link);
 	if (link->bcast_sta.sta_id != IWL_INVALID_STA)
 		iwl_mld_free_internal_sta(mld, &link->bcast_sta);
+	if (link->mcast_sta.sta_id != IWL_INVALID_STA)
+		iwl_mld_free_internal_sta(mld, &link->mcast_sta);
 }
 
 int iwl_mld_add_link(struct iwl_mld *mld,

@@ -635,6 +635,25 @@ int iwl_mld_add_bcast_sta(struct iwl_mld *mld,
 					IWL_MGMT_TID);
 }
 
+int iwl_mld_add_mcast_sta(struct iwl_mld *mld,
+			  struct ieee80211_vif *vif,
+			  struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	const u8 mcast_addr[] = {0x03, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+	if (WARN_ON(!mld_link))
+		return -EINVAL;
+
+	if (WARN_ON(vif->type != NL80211_IFTYPE_AP &&
+		    vif->type != NL80211_IFTYPE_ADHOC))
+		return -EINVAL;
+
+	return iwl_mld_add_internal_sta(mld, &mld_link->mcast_sta,
+					STATION_TYPE_MCAST,
+					mld_link->fw_id, mcast_addr, 0);
+}
+
 static void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
 					struct iwl_mld_int_sta *internal_sta,
 					bool flush, u8 tid)
@@ -669,4 +688,20 @@ void iwl_mld_remove_bcast_sta(struct iwl_mld *mld,
 
 	iwl_mld_remove_internal_sta(mld, &mld_link->bcast_sta, true,
 				    IWL_MGMT_TID);
+}
+
+void iwl_mld_remove_mcast_sta(struct iwl_mld *mld,
+			      struct ieee80211_vif *vif,
+			      struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+
+	if (WARN_ON(!mld_link))
+		return;
+
+	if (WARN_ON(vif->type != NL80211_IFTYPE_AP &&
+		    vif->type != NL80211_IFTYPE_ADHOC))
+		return;
+
+	iwl_mld_remove_internal_sta(mld, &mld_link->mcast_sta, true, 0);
 }
