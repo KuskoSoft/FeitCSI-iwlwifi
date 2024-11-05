@@ -25,6 +25,7 @@
  * @link: reference to link data for each valid link, for use in MLO.
  * @session_protect: session protection parameters
  * @wowlan_data: data used by the wowlan suspend flow
+ * @use_ps_poll: use ps_poll frames
  */
 struct iwl_mld_vif {
 	/* Add here fields that need clean up on restart */
@@ -42,6 +43,9 @@ struct iwl_mld_vif {
 	struct iwl_mld_link __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
 #if CONFIG_PM_SLEEP
 	struct iwl_mld_wowlan_data wowlan_data;
+#endif
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	bool use_ps_poll;
 #endif
 };
 

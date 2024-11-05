@@ -10,6 +10,7 @@
 #include "iface.h"
 #include "sta.h"
 #include "tlc.h"
+#include "power.h"
 
 #include "fw/api/rs.h"
 
@@ -213,13 +214,50 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	}
 }
 
+#define VIF_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\
+	WIPHY_DEBUGFS_WRITE_FILE_OPS(vif_##name, bufsz, vif)
+
+#define VIF_DEBUGFS_ADD_FILE_ALIAS(alias, name, parent, mode) do {	\
+	debugfs_create_file(alias, mode, parent, vif,			\
+			    &iwl_dbgfs_vif_##name##_ops);		\
+	} while (0)
+#define VIF_DEBUGFS_ADD_FILE(name, parent, mode)			\
+	VIF_DEBUGFS_ADD_FILE_ALIAS(#name, name, parent, mode)
+
+static ssize_t iwl_dbgfs_vif_pm_params_write(struct iwl_mld *mld,
+					  char *buf,
+					  size_t count, void *data)
+{
+	struct ieee80211_vif *vif = data;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int val;
+
+	if (!strncmp("use_ps_poll=", buf, 12)) {
+		if (sscanf(buf + 12, "%d", &val) != 1)
+			return -EINVAL;
+	} else {
+		return -EINVAL;
+	}
+
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	mld_vif->use_ps_poll = val;
+
+	return iwl_mld_update_mac_power(mld, vif, false) ?: count;
+}
+
+VIF_DEBUGFS_WRITE_FILE_OPS(pm_params, 32);
+
 void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 			     struct ieee80211_vif *vif)
 {
-	__maybe_unused struct dentry *mld_vif_dbgfs =
+	struct dentry *mld_vif_dbgfs =
 		debugfs_create_dir("iwlmld", vif->debugfs_dir);
 
-	/* ADD per-interface files here */
+	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM &&
+	    vif->type == NL80211_IFTYPE_STATION)
+		VIF_DEBUGFS_ADD_FILE(pm_params, mld_vif_dbgfs, 0200);
 }
 
 void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,

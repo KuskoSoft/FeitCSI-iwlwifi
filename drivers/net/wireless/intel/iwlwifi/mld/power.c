@@ -56,7 +56,8 @@ static bool iwl_mld_power_is_radar(struct iwl_mld *mld,
 
 static void iwl_mld_power_configure_uapsd(struct iwl_mld *mld,
 					  struct iwl_mld_link *link,
-					  struct iwl_mac_power_cmd *cmd)
+					  struct iwl_mac_power_cmd *cmd,
+					  bool ps_poll)
 {
 	bool tid_found = false;
 
@@ -65,15 +66,11 @@ static void iwl_mld_power_configure_uapsd(struct iwl_mld *mld,
 	cmd->tx_data_timeout_uapsd =
 		cpu_to_le32(IWL_MLD_UAPSD_TX_DATA_TIMEOUT);
 
-#ifdef CPTCFG_IWLWIFI_DEBUGFS
-	/* TODO: task=power_debugfs
-	 * set advanced pm flag with no uapsd ACs to enable ps-poll
-	if (mld_vif->dbgfs_pm.use_ps_poll) {
+	 /* set advanced pm flag with no uapsd ACs to enable ps-poll */
+	if (ps_poll) {
 		cmd->flags |= cpu_to_le16(POWER_FLAGS_ADVANCE_PM_ENA_MSK);
 		return;
 	}
-	*/
-#endif
 
 	for (enum ieee80211_ac_numbers ac = IEEE80211_AC_VO;
 	     ac <= IEEE80211_AC_BK;
@@ -157,6 +154,7 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 	struct iwl_mld_link *link = &mld_vif->deflink;
 	/* TODO: task=low_latency + p2p */
 	bool low_latency = false;
+	bool ps_poll = false;
 
 	cmd->id_and_color = cpu_to_le32(mld_vif->fw_id);
 
@@ -228,9 +226,10 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 	 * mac80211 will allow uAPSD. Always call iwl_mld_power_configure_uapsd
 	 * which will look at what mac80211 is saying.
 	 */
-	iwl_mld_power_configure_uapsd(mld, link, cmd);
-
-	/* TODO: task=power_debugfs */
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	ps_poll = mld_vif->use_ps_poll;
+#endif
+	iwl_mld_power_configure_uapsd(mld, link, cmd, ps_poll);
 }
 
 int iwl_mld_update_mac_power(struct iwl_mld *mld, struct ieee80211_vif *vif,
