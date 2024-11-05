@@ -10,6 +10,7 @@
 #include "iface.h"
 #include "hcmd.h"
 #include "tx.h"
+#include "power.h"
 #include "iwl-utils.h"
 
 #include "fw/api/tx.h"
@@ -175,4 +176,78 @@ int iwl_mld_update_beacon_template(struct iwl_mld *mld,
 	dev_kfree_skb(beacon);
 
 	return ret;
+}
+
+static void iwl_mld_send_low_latency_cmd(struct iwl_mld *mld,
+					 bool low_latency, u16 mac_id)
+{
+	struct iwl_mac_low_latency_cmd cmd = {
+		.mac_id = cpu_to_le32(mac_id)
+	};
+
+	if (low_latency) {
+		/* currently we don't care about the direction */
+		cmd.low_latency_rx = 1;
+		cmd.low_latency_tx = 1;
+	}
+
+	if (iwl_mld_send_cmd_pdu(mld, WIDE_ID(MAC_CONF_GROUP, LOW_LATENCY_CMD),
+				 &cmd))
+		IWL_ERR(mld, "Failed to send low latency command\n");
+}
+
+int iwl_mld_start_ap_ibss(struct ieee80211_hw *hw,
+			  struct ieee80211_vif *vif,
+			  struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	if (vif->type == NL80211_IFTYPE_AP)
+		iwl_mld_send_ap_tx_power_constraint_cmd(mld, vif, link);
+
+	ret = iwl_mld_update_beacon_template(mld, vif, link);
+	if (ret)
+		return ret;
+
+	/* the link should be already activated when assigning chan context,
+	 * and LINK_CONTEXT_MODIFY_EHT_PARAMS is deprecated
+	 */
+	ret = iwl_mld_change_link_in_fw(mld, link,
+					LINK_CONTEXT_MODIFY_ALL &
+					~(LINK_CONTEXT_MODIFY_ACTIVE |
+					  LINK_CONTEXT_MODIFY_EHT_PARAMS));
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_add_mcast_sta(mld, vif, link);
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_add_bcast_sta(mld, vif, link);
+	if (ret)
+		goto err;
+
+	/* TODO: send the previously stored early keys to FW */
+
+	iwl_mld_send_low_latency_cmd(mld, true, mld_vif->fw_id);
+
+	return 0;
+err:
+	iwl_mld_remove_mcast_sta(mld, vif, link);
+	return ret;
+}
+
+void iwl_mld_stop_ap_ibss(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+			  struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	iwl_mld_send_low_latency_cmd(mld, false, mld_vif->fw_id);
+
+	iwl_mld_remove_bcast_sta(mld, vif, link);
+
+	iwl_mld_remove_mcast_sta(mld, vif, link);
 }

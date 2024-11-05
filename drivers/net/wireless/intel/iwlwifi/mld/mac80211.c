@@ -1852,6 +1852,8 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.can_aggregate_in_amsdu = iwl_mld_mac80211_can_aggregate,
 	.sync_rx_queues = iwl_mld_mac80211_sync_rx_queues,
 	.link_sta_rc_update = iwl_mld_sta_rc_update,
+	.start_ap = iwl_mld_start_ap_ibss,
+	.stop_ap = iwl_mld_stop_ap_ibss,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
