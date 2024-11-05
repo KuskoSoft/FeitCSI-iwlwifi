@@ -259,6 +259,7 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM &&
 	    vif->type == NL80211_IFTYPE_STATION)
 		VIF_DEBUGFS_ADD_FILE(pm_params, mld_vif_dbgfs, 0200);
+
 }
 
 void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
