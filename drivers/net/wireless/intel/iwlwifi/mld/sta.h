@@ -184,13 +184,12 @@ iwl_mld_free_internal_sta(struct iwl_mld *mld,
 	iwl_mld_init_internal_sta(internal_sta);
 }
 
-int iwl_mld_add_internal_sta(struct iwl_mld *mld,
-			     struct iwl_mld_int_sta *internal_sta,
-			     enum iwl_fw_sta_type sta_type,
-			     u8 fw_link_id, const u8 *addr, u8 tid);
+int iwl_mld_add_bcast_sta(struct iwl_mld *mld,
+			  struct ieee80211_vif *vif,
+			  struct ieee80211_bss_conf *link);
 
-void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
-				 struct iwl_mld_int_sta *internal_sta,
-				 bool flush, u8 tid);
+void iwl_mld_remove_bcast_sta(struct iwl_mld *mld,
+			      struct ieee80211_vif *vif,
+			      struct ieee80211_bss_conf *link);
 
 #endif /* __iwl_mld_sta_h__ */

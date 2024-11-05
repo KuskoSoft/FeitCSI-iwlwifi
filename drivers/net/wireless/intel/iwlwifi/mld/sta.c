@@ -576,10 +576,10 @@ iwl_mld_add_internal_sta_to_fw(struct iwl_mld *mld,
 	return iwl_mld_send_sta_cmd(mld, &cmd);
 }
 
-int iwl_mld_add_internal_sta(struct iwl_mld *mld,
-			     struct iwl_mld_int_sta *internal_sta,
-			     enum iwl_fw_sta_type sta_type,
-			     u8 fw_link_id, const u8 *addr, u8 tid)
+static int iwl_mld_add_internal_sta(struct iwl_mld *mld,
+				    struct iwl_mld_int_sta *internal_sta,
+				    enum iwl_fw_sta_type sta_type,
+				    u8 fw_link_id, const u8 *addr, u8 tid)
 {
 	int ret, queue_id;
 
@@ -611,9 +611,33 @@ err:
 	return ret;
 }
 
-void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
-				 struct iwl_mld_int_sta *internal_sta,
-				 bool flush, u8 tid)
+int iwl_mld_add_bcast_sta(struct iwl_mld *mld,
+			  struct ieee80211_vif *vif,
+			  struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	const u8 bcast_addr[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+	const u8 *addr;
+
+	if (WARN_ON(!mld_link))
+		return -EINVAL;
+
+	if (WARN_ON(vif->type != NL80211_IFTYPE_AP &&
+		    vif->type != NL80211_IFTYPE_ADHOC))
+		return -EINVAL;
+
+	addr = vif->type == NL80211_IFTYPE_ADHOC ?
+		link->bssid : bcast_addr;
+
+	return iwl_mld_add_internal_sta(mld, &mld_link->bcast_sta,
+					STATION_TYPE_BCAST_MGMT,
+					mld_link->fw_id, addr,
+					IWL_MGMT_TID);
+}
+
+static void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
+					struct iwl_mld_int_sta *internal_sta,
+					bool flush, u8 tid)
 {
 	if (WARN_ON_ONCE(internal_sta->sta_id == IWL_INVALID_STA ||
 			 internal_sta->queue_id == IWL_MLD_INVALID_QUEUE))
@@ -628,4 +652,21 @@ void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
 	iwl_mld_rm_sta_from_fw(mld, internal_sta->sta_id);
 
 	iwl_mld_free_internal_sta(mld, internal_sta);
+}
+
+void iwl_mld_remove_bcast_sta(struct iwl_mld *mld,
+			      struct ieee80211_vif *vif,
+			      struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+
+	if (WARN_ON(!mld_link))
+		return;
+
+	if (WARN_ON(vif->type != NL80211_IFTYPE_AP &&
+		    vif->type != NL80211_IFTYPE_ADHOC))
+		return;
+
+	iwl_mld_remove_internal_sta(mld, &mld_link->bcast_sta, true,
+				    IWL_MGMT_TID);
 }

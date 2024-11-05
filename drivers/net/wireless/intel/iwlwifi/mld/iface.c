@@ -21,7 +21,7 @@ void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 		return;
 
 	for_each_mld_vif_valid_link(mld_vif, link)
-		iwl_mld_cleanup_link(link);
+		iwl_mld_cleanup_link(mld_vif->mld, link);
 
 	CLEANUP_STRUCT(mld_vif);
 }
