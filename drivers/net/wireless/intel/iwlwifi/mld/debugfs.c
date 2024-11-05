@@ -13,6 +13,7 @@
 #include "power.h"
 
 #include "fw/api/rs.h"
+#include "fw/api/dhc.h"
 
 #define MLD_DEBUGFS_READ_FILE_OPS(name, bufsz)				\
 	_MLD_DEBUGFS_READ_FILE_OPS(name, bufsz, struct iwl_mld)

@@ -141,3 +141,36 @@ static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 
 #define WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, objtype)		\
 	_WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, objtype, objtype)
+
+#define WIPHY_DEBUGFS_HANDLER_WRAPPER_MLD(name)				\
+static ssize_t iwl_dbgfs_##name##_write_handler(struct wiphy *wiphy,	\
+				       struct file *file, char *buf,	\
+				       size_t count, void *data)	\
+{									\
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);		\
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);			\
+	return iwl_dbgfs_##name##_write(mld, buf, count);		\
+}
+
+#define WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name, bufsz)			\
+WIPHY_DEBUGFS_HANDLER_WRAPPER_MLD(name)					\
+static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
+					  const char __user *user_buf,	\
+					  size_t count, loff_t *ppos)	\
+{									\
+	struct iwl_mld *mld = file->private_data;			\
+	char buf[bufsz] = {};						\
+									\
+	return wiphy_locked_debugfs_write(mld->wiphy, file,		\
+				buf, sizeof(buf),			\
+				user_buf, count,			\
+				iwl_dbgfs_##name##_write_handler,	\
+				NULL);					\
+}
+
+#define WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(name, bufsz)			\
+	WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name, bufsz)			\
+	static const struct file_operations iwl_dbgfs_##name##_ops = {	\
+		.write = __iwl_dbgfs_##name##_write,			\
+		.open = simple_open,					\
+	}
