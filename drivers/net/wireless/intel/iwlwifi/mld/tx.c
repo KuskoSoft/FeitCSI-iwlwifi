@@ -149,7 +149,7 @@ void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 	}
 }
 
-static void
+void
 iwl_mld_free_txq(struct iwl_mld *mld, u32 fw_sta_mask, u32 tid, u32 queue_id)
 {
 	struct iwl_scd_queue_cfg_cmd remove_cmd = {

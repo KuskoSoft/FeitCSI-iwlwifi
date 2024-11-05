@@ -48,6 +48,9 @@
  * @fw_id_to_link_sta: maps a fw id of a sta to the corresponding
  *	ieee80211_link_sta. This is not cleaned up on restart since we want to
  *	preserve the fw sta ids during a restart (for SN/PN restoring).
+ *	FW ids of internal stations will be mapped to ERR_PTR, and will be
+ *	re-allocated during a restart, so make sure to free it in restart
+ *	cleanup using iwl_mld_free_internal_sta
  * @netdetect: indicates the FW is in suspend mode with netdetect configured
  * @dev: pointer to device struct. For printing purposes
  * @trans: pointer to the transport layer

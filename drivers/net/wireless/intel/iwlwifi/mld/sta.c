@@ -518,3 +518,69 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	return result;
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_fw_sta_id_mask);
+
+static int iwl_mld_add_internal_sta_to_fw(struct iwl_mld *mld,
+					  struct iwl_mld_int_sta *internal_sta)
+{
+	/* TODO */
+	return 0;
+}
+
+static int iwl_mld_allocate_internal_txq(struct iwl_mld *mld,
+					 struct iwl_mld_int_sta *internal_sta)
+{
+	/* TODO */
+	return 0;
+}
+
+int iwl_mld_add_internal_sta(struct iwl_mld *mld,
+			     struct iwl_mld_int_sta *internal_sta,
+			     enum iwl_fw_sta_type sta_type)
+{
+	int ret, queue_id;
+
+	ret = iwl_mld_allocate_link_sta_fw_id(mld,
+					      &internal_sta->sta_id,
+					      ERR_PTR(-EINVAL));
+	if (ret)
+		return ret;
+
+	internal_sta->sta_type = sta_type;
+
+	ret = iwl_mld_add_internal_sta_to_fw(mld, internal_sta);
+	if (ret)
+		goto err;
+
+	queue_id = iwl_mld_allocate_internal_txq(mld, internal_sta);
+	if (queue_id < 0) {
+		iwl_mld_rm_sta_from_fw(mld, internal_sta->sta_id);
+		ret = queue_id;
+		goto err;
+	}
+
+	internal_sta->queue_id = queue_id;
+
+	return 0;
+err:
+	iwl_mld_free_internal_sta(mld, internal_sta);
+	return ret;
+}
+
+void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
+				 struct iwl_mld_int_sta *internal_sta,
+				 bool flush, u8 tid)
+{
+	if (WARN_ON_ONCE(internal_sta->sta_id == IWL_INVALID_STA ||
+			 internal_sta->queue_id == IWL_MLD_INVALID_QUEUE))
+		return;
+
+	if (flush)
+		iwl_mld_flush_link_sta_txqs(mld, internal_sta->sta_id);
+
+	iwl_mld_free_txq(mld, BIT(internal_sta->sta_id),
+			 tid, internal_sta->queue_id);
+
+	iwl_mld_rm_sta_from_fw(mld, internal_sta->sta_id);
+
+	iwl_mld_free_internal_sta(mld, internal_sta);
+}

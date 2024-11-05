@@ -152,4 +152,44 @@ void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta);
 void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld,
 				struct ieee80211_sta *sta);
 
+/**
+ * struct iwl_mld_int_sta - representation of an internal station
+ * (a station that exist in FW and in driver, but not in mac80211)
+ *
+ * @sta_id: the index of the station in the fw
+ * @queue_id: the if of the queue used by the station
+ * @sta_type: station type. One of &iwl_fw_sta_type
+ */
+struct iwl_mld_int_sta {
+	u8 sta_id;
+	u32 queue_id;
+	enum iwl_fw_sta_type sta_type;
+};
+
+static inline void
+iwl_mld_init_internal_sta(struct iwl_mld_int_sta *internal_sta)
+{
+	internal_sta->sta_id = IWL_INVALID_STA;
+	internal_sta->queue_id = IWL_MLD_INVALID_QUEUE;
+}
+
+static inline void
+iwl_mld_free_internal_sta(struct iwl_mld *mld,
+			     struct iwl_mld_int_sta *internal_sta)
+{
+	if (WARN_ON(internal_sta->sta_id == IWL_INVALID_STA))
+		return;
+
+	RCU_INIT_POINTER(mld->fw_id_to_link_sta[internal_sta->sta_id], NULL);
+	iwl_mld_init_internal_sta(internal_sta);
+}
+
+int iwl_mld_add_internal_sta(struct iwl_mld *mld,
+			     struct iwl_mld_int_sta *internal_sta,
+			     enum iwl_fw_sta_type sta_type);
+
+void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
+				 struct iwl_mld_int_sta *internal_sta,
+				 bool flush, u8 tid);
+
 #endif /* __iwl_mld_sta_h__ */
