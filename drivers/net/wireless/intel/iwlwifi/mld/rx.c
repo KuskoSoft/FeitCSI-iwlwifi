@@ -491,7 +491,7 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 			return NULL;
 
 		link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
-		if (link_sta)
+		if (!IS_ERR_OR_NULL(link_sta))
 			sta = link_sta->sta;
 	} else if (!is_multicast_ether_addr(hdr->addr2)) {
 		/* Passing NULL is fine since we prevent two stations with the

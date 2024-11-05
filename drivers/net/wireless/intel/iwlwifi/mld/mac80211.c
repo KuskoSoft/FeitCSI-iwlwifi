@@ -1438,7 +1438,7 @@ static void iwl_mld_mac80211_flush(struct ieee80211_hw *hw,
 			wiphy_dereference(mld->wiphy,
 					  mld->fw_id_to_link_sta[i]);
 
-		if (!link_sta)
+		if (IS_ERR_OR_NULL(link_sta))
 			continue;
 
 		/* Check that the sta belongs to the given vif */

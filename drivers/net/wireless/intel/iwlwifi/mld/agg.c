@@ -67,7 +67,7 @@ static void iwl_mld_release_frames_from_notif(struct iwl_mld *mld,
 	/* pick any STA ID to find the pointer */
 	sta_id = ffs(ba_data->sta_mask) - 1;
 	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
-	if (WARN_ON_ONCE(!link_sta || !link_sta->sta))
+	if (WARN_ON_ONCE(IS_ERR_OR_NULL(link_sta) || !link_sta->sta))
 		goto out_unlock;
 
 	reorder_buf = &ba_data->reorder_buf[queue];
@@ -167,7 +167,7 @@ void iwl_mld_del_ba(struct iwl_mld *mld, int queue,
 	/* pick any STA ID to find the pointer */
 	sta_id = ffs(ba_data->sta_mask) - 1;
 	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
-	if (WARN_ON_ONCE(!link_sta || !link_sta->sta))
+	if (WARN_ON_ONCE(IS_ERR_OR_NULL(link_sta) || !link_sta->sta))
 		goto out_unlock;
 
 	reorder_buf = &ba_data->reorder_buf[queue];
@@ -345,7 +345,7 @@ static void iwl_mld_rx_agg_session_expired(struct timer_list *t)
 	 * A-MPDU and hence the timer continues to run. Then, the
 	 * timer expires and sta is NULL.
 	 */
-	if (!link_sta || WARN_ON(!link_sta->sta))
+	if (IS_ERR_OR_NULL(link_sta) || WARN_ON(!link_sta->sta))
 		goto unlock;
 
 	mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
