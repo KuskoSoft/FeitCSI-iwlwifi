@@ -25,6 +25,7 @@
  *	This tracks the one IGTK that currently exists in FW.
  * @bcast_sta: tation used for broadcast packets. Used in AP, GO and IBSS.
  * @mcast_sta: station used for multicast packets. Used in AP, GO and IBSS.
+ * @mld: points to the mld object
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
@@ -39,6 +40,7 @@ struct iwl_mld_link {
 	/* And here fields that survive a fw restart */
 	struct iwl_mld_int_sta bcast_sta;
 	struct iwl_mld_int_sta mcast_sta;
+	struct iwl_mld *mld;
 };
 
 /* Cleanup function for struct iwl_mld_phy, will be called in restart */

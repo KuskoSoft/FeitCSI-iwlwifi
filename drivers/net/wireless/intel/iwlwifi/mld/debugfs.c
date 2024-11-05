@@ -262,6 +262,17 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 
 }
 
+#define LINK_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\
+	_WIPHY_DEBUGFS_WRITE_FILE_OPS(link_##name, bufsz,		\
+				      bss_conf, link)
+
+#define LINK_DEBUGFS_ADD_FILE_ALIAS(alias, name, parent, mode) do {	\
+	debugfs_create_file(alias, mode, parent, link_conf,		\
+			    &iwl_dbgfs_link_##name##_ops);		\
+	} while (0)
+#define LINK_DEBUGFS_ADD_FILE(name, parent, mode)			\
+	LINK_DEBUGFS_ADD_FILE_ALIAS(#name, name, parent, mode)
+
 void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
 			      struct ieee80211_vif *vif,
 			      struct ieee80211_bss_conf *link_conf,
@@ -279,7 +290,6 @@ void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
 	if (!mld_link_dir)
 		mld_link_dir = debugfs_create_dir("iwlmld", dir);
 
-	/* Add here per-links files to mld_link_dir */
 }
 
 static ssize_t iwl_dbgfs_fixed_rate_write(struct iwl_mld *mld, char *buf,
