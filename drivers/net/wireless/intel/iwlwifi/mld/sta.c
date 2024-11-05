@@ -520,10 +520,23 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_fw_sta_id_mask);
 
 static int iwl_mld_allocate_internal_txq(struct iwl_mld *mld,
-					 struct iwl_mld_int_sta *internal_sta)
+					 struct iwl_mld_int_sta *internal_sta,
+					 u8 tid)
 {
-	/* TODO */
-	return 0;
+	u32 sta_mask = BIT(internal_sta->sta_id);
+	int queue, size;
+
+	size = max_t(u32, IWL_MGMT_QUEUE_SIZE,
+		     mld->trans->cfg->min_txq_size);
+
+	queue = iwl_trans_txq_alloc(mld->trans, 0, sta_mask, tid, size,
+				    IWL_WATCHDOG_DISABLED);
+
+	if (queue >= 0)
+		IWL_DEBUG_TX_QUEUES(mld,
+				    "Enabling TXQ #%d for sta mask 0x%x tid %d\n",
+				    queue, sta_mask, tid);
+	return queue;
 }
 
 static int iwl_mld_send_aux_sta_cmd(void)
@@ -566,7 +579,7 @@ iwl_mld_add_internal_sta_to_fw(struct iwl_mld *mld,
 int iwl_mld_add_internal_sta(struct iwl_mld *mld,
 			     struct iwl_mld_int_sta *internal_sta,
 			     enum iwl_fw_sta_type sta_type,
-			     u8 fw_link_id, const u8 *addr)
+			     u8 fw_link_id, const u8 *addr, u8 tid)
 {
 	int ret, queue_id;
 
@@ -583,7 +596,7 @@ int iwl_mld_add_internal_sta(struct iwl_mld *mld,
 	if (ret)
 		goto err;
 
-	queue_id = iwl_mld_allocate_internal_txq(mld, internal_sta);
+	queue_id = iwl_mld_allocate_internal_txq(mld, internal_sta, tid);
 	if (queue_id < 0) {
 		iwl_mld_rm_sta_from_fw(mld, internal_sta->sta_id);
 		ret = queue_id;
