@@ -242,6 +242,13 @@ int iwl_mld_mac_fw_action(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		iwl_mld_fill_mac_cmd_ap(mld, vif, &cmd);
 		break;
 	case NL80211_IFTYPE_MONITOR:
+		cmd.filter_flags =
+			cpu_to_le32(MAC_CFG_FILTER_PROMISC |
+				    MAC_CFG_FILTER_ACCEPT_CONTROL_AND_MGMT |
+				    MAC_CFG_FILTER_ACCEPT_BEACON |
+				    MAC_CFG_FILTER_ACCEPT_PROBE_REQ |
+				    MAC_CFG_FILTER_ACCEPT_GRP);
+		break;
 	case NL80211_IFTYPE_P2P_DEVICE:
 	case NL80211_IFTYPE_ADHOC:
 	default:
@@ -283,7 +290,8 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	lockdep_assert_wiphy(mld->wiphy);
 
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
+	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
 	}
@@ -307,7 +315,8 @@ int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	lockdep_assert_wiphy(mld->wiphy);
 
 	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-		ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP);
+		ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+		vif->type != NL80211_IFTYPE_MONITOR);
 
 	ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_REMOVE);
 

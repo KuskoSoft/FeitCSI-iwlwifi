@@ -574,7 +574,8 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	lockdep_assert_wiphy(mld->wiphy);
 
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
+	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
 	}
@@ -605,7 +606,10 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_STATION)
 		iwl_mld_update_mac_power(mld, vif, false);
 
-	/* TODO: set mld->monitor_on for monitor iface (task=sniffer) */
+	if (vif->type == NL80211_IFTYPE_MONITOR) {
+		mld->monitor_on = true;
+		ieee80211_hw_set(mld->hw, RX_INCLUDES_FCS);
+	}
 
 	return 0;
 
@@ -625,7 +629,8 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 	lockdep_assert_wiphy(mld->wiphy);
 
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
+	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return;
 	}
@@ -634,7 +639,10 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 		vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER |
 				       IEEE80211_VIF_SUPPORTS_CQM_RSSI);
 
-	/* TODO: clear mld->monitor_on  for monitor iface (task=sniffer) */
+	if (vif->type == NL80211_IFTYPE_MONITOR) {
+		__clear_bit(IEEE80211_HW_RX_INCLUDES_FCS, mld->hw->flags);
+		mld->monitor_on = false;
+	}
 
 	iwl_mld_remove_link(mld, &vif->bss_conf);
 
@@ -911,6 +919,8 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_STATION)
 		iwl_mld_send_ap_tx_power_constraint_cmd(mld, vif, link);
 
+	/* TODO: task=sniffer add sniffer station */
+
 	return 0;
 err:
 	RCU_INIT_POINTER(mld_link->chan_ctx, NULL);
@@ -934,6 +944,8 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	ret = iwl_mld_deactivate_link(mld, link);
 	if (ret)
 		return;
+
+	/* TODO: task=sniffer remove sniffer station */
 
 	/* TODO: detect exiting EMLSR (task=EMLSR)*/
 
@@ -1036,6 +1048,27 @@ iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
 	// todo: BSS_CHANGED_CQM
 }
 
+static int iwl_mld_update_mu_groups(struct iwl_mld *mld,
+				    struct ieee80211_bss_conf *link_conf)
+{
+	struct iwl_mu_group_mgmt_cmd cmd = {};
+
+	BUILD_BUG_ON(sizeof(cmd.membership_status) !=
+		     sizeof(link_conf->mu_group.membership));
+	BUILD_BUG_ON(sizeof(cmd.user_position) !=
+		     sizeof(link_conf->mu_group.position));
+
+	memcpy(cmd.membership_status, link_conf->mu_group.membership,
+	       WLAN_MEMBERSHIP_LEN);
+	memcpy(cmd.user_position, link_conf->mu_group.position,
+	       WLAN_USER_POSITION_LEN);
+
+	return iwl_mld_send_cmd_pdu(mld,
+				    WIDE_ID(DATA_PATH_GROUP,
+					    UPDATE_MU_GROUPS_CMD),
+				    &cmd);
+}
+
 static void
 iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 				   struct ieee80211_vif *vif,
@@ -1052,6 +1085,13 @@ iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 	case NL80211_IFTYPE_AP:
 		iwl_mld_link_info_changed_ap_ibss(mld, vif, link_conf,
 						  changes);
+		break;
+	case NL80211_IFTYPE_MONITOR:
+		/* The firmware tracks this on its own in STATION mode, but
+		 * obviously not in sniffer mode.
+		 */
+		if (changes & BSS_CHANGED_MU_GROUPS)
+			iwl_mld_update_mu_groups(mld, link_conf);
 		break;
 	default:
 		/* shouldn't happen */
