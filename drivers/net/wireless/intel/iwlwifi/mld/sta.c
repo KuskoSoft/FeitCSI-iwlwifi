@@ -519,13 +519,6 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_fw_sta_id_mask);
 
-static int iwl_mld_add_internal_sta_to_fw(struct iwl_mld *mld,
-					  struct iwl_mld_int_sta *internal_sta)
-{
-	/* TODO */
-	return 0;
-}
-
 static int iwl_mld_allocate_internal_txq(struct iwl_mld *mld,
 					 struct iwl_mld_int_sta *internal_sta)
 {
@@ -533,9 +526,47 @@ static int iwl_mld_allocate_internal_txq(struct iwl_mld *mld,
 	return 0;
 }
 
+static int iwl_mld_send_aux_sta_cmd(void)
+{
+	/* TODO: send aux cmd. (task=p2p) */
+	return -EOPNOTSUPP;
+}
+
+static int
+iwl_mld_add_internal_sta_to_fw(struct iwl_mld *mld,
+			       const struct iwl_mld_int_sta *internal_sta,
+			       u8 fw_link_id,
+			       const u8 *addr)
+{
+	struct iwl_sta_cfg_cmd cmd = {};
+
+	if (internal_sta->sta_type == STATION_TYPE_AUX)
+		return iwl_mld_send_aux_sta_cmd();
+
+	cmd.sta_id = cpu_to_le32((u8)internal_sta->sta_id);
+	cmd.link_id = cpu_to_le32(fw_link_id);
+	cmd.station_type = cpu_to_le32(internal_sta->sta_type);
+
+	/* FW doesn't allow to add a IGTK/BIGTK if the sta isn't marked as MFP.
+	 * On the other hand, FW will never check this flag during RX since
+	 * an AP/GO doesn't receive protected broadcast management frames.
+	 * So, we can set it unconditionally.
+	 */
+	if (internal_sta->sta_type == STATION_TYPE_BCAST_MGMT)
+		cmd.mfp = cpu_to_le32(1);
+
+	if (addr) {
+		memcpy(cmd.peer_mld_address, addr, ETH_ALEN);
+		memcpy(cmd.peer_link_address, addr, ETH_ALEN);
+	}
+
+	return iwl_mld_send_sta_cmd(mld, &cmd);
+}
+
 int iwl_mld_add_internal_sta(struct iwl_mld *mld,
 			     struct iwl_mld_int_sta *internal_sta,
-			     enum iwl_fw_sta_type sta_type)
+			     enum iwl_fw_sta_type sta_type,
+			     u8 fw_link_id, const u8 *addr)
 {
 	int ret, queue_id;
 
@@ -547,7 +578,8 @@ int iwl_mld_add_internal_sta(struct iwl_mld *mld,
 
 	internal_sta->sta_type = sta_type;
 
-	ret = iwl_mld_add_internal_sta_to_fw(mld, internal_sta);
+	ret = iwl_mld_add_internal_sta_to_fw(mld, internal_sta, fw_link_id,
+					     addr);
 	if (ret)
 		goto err;
 

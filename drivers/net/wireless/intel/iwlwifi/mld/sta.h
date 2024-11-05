@@ -186,7 +186,8 @@ iwl_mld_free_internal_sta(struct iwl_mld *mld,
 
 int iwl_mld_add_internal_sta(struct iwl_mld *mld,
 			     struct iwl_mld_int_sta *internal_sta,
-			     enum iwl_fw_sta_type sta_type);
+			     enum iwl_fw_sta_type sta_type,
+			     u8 fw_link_id, const u8 *addr);
 
 void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
 				 struct iwl_mld_int_sta *internal_sta,
