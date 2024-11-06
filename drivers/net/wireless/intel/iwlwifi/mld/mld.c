@@ -217,7 +217,6 @@ static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
  */
 static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
 	HCMD_NAME(TRIGGER_RX_QUEUES_NOTIF_CMD),
-	HCMD_NAME(RLC_CONFIG_CMD),
 	HCMD_NAME(RFH_QUEUE_CONFIG_CMD),
 	HCMD_NAME(TLC_MNG_CONFIG_CMD),
 	HCMD_NAME(RX_BAID_ALLOCATION_CONFIG_CMD),

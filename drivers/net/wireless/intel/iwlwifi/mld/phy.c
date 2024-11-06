@@ -7,8 +7,6 @@
 #include "phy.h"
 #include "hcmd.h"
 #include "fw/api/phy-ctxt.h"
-/* TODO: remove on RLC offload */
-#include "fw/api/datapath.h"
 
 int iwl_mld_allocate_fw_phy_id(struct iwl_mld *mld)
 {
@@ -115,29 +113,4 @@ int iwl_mld_phy_fw_action(struct iwl_mld *mld,
 		IWL_ERR(mld, "Failed to send PHY_CONTEXT_CMD ret = %d\n", ret);
 
 	return ret;
-}
-
-/* TODO: remove on RLC offload */
-int iwl_mld_send_rlc_cmd(struct iwl_mld *mld, u8 phy_id)
-{
-	struct iwl_rlc_config_cmd cmd = {
-		.phy_id = cpu_to_le32(phy_id),
-	};
-
-	if(iwl_fw_lookup_cmd_ver(mld->fw,
-				 WIDE_ID(DATA_PATH_GROUP, RLC_CONFIG_CMD),
-				 0) >= 3)
-		return 0;
-
-	cmd.rlc.rx_chain_info =
-		cpu_to_le32(iwl_mld_get_valid_rx_ant(mld) <<
-				PHY_RX_CHAIN_VALID_POS);
-	cmd.rlc.rx_chain_info |= cpu_to_le32(2 << PHY_RX_CHAIN_CNT_POS);
-	cmd.rlc.rx_chain_info |= cpu_to_le32(2 << PHY_RX_CHAIN_MIMO_CNT_POS);
-
-	IWL_DEBUG_FW(mld, "Send RLC command: phy=%d, rx_chain_info=0x%x\n",
-		     phy_id, cmd.rlc.rx_chain_info);
-
-	return iwl_mld_send_cmd_pdu(mld, iwl_cmd_id(RLC_CONFIG_CMD,
-						    DATA_PATH_GROUP, 2), &cmd);
 }

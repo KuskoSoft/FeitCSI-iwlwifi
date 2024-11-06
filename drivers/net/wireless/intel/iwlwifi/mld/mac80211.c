@@ -807,8 +807,7 @@ int iwl_mld_add_chanctx(struct ieee80211_hw *hw,
 		return ret;
 	}
 
-	/* TODO: remove on RLC offload */
-	return iwl_mld_send_rlc_cmd(mld, fw_id);
+	return 0;
 }
 
 static
