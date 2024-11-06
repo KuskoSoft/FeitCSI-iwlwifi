@@ -76,6 +76,8 @@ struct iwl_mld_ptk_pn {
  * @sta_type: type of this station. See &enum iwl_fw_sta_type
  * @mld: a pointer to the iwl_mld object
  * @dup_data: per queue duplicate packet detection data
+ * @data_tx_ant: stores the last TX antenna index; used for setting
+ *	TX rate_n_flags for injected data frames (toggles on every TX failure).
  * @tid_to_baid: a simple map of TID to Block-Ack fw id
  * @deflink: This holds the default link STA information, for non MLO STA all
  *	link specific STA information is accessed through @deflink or through
@@ -102,6 +104,7 @@ struct iwl_mld_sta {
 	struct ieee80211_vif *vif;
 	struct iwl_mld_rxq_dup_data *dup_data;
 	u8 tid_to_baid[IWL_MAX_TID_COUNT];
+	u8 data_tx_ant;
 
 	struct iwl_mld_link_sta deflink;
 	struct iwl_mld_link_sta __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];

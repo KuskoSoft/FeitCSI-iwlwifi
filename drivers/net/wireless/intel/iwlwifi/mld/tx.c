@@ -17,6 +17,32 @@
 #include "fw/api/txq.h"
 #include "fw/api/datapath.h"
 
+#define MAX_ANT_NUM 2
+
+/* Toggles between TX antennas. Receives the bitmask of valid TX antennas and
+ * the *index* used for the last TX, and returns the next valid *index* to use.
+ * In order to set it in the tx_cmd, must do BIT(idx).
+ */
+static u8 iwl_mld_next_ant(u8 valid, u8 last_idx)
+{
+	u8 index = last_idx;
+
+	for (int i = 0; i < MAX_ANT_NUM; i++) {
+		index = (index + 1) % MAX_ANT_NUM;
+		if (valid & BIT(index))
+			return index;
+	}
+
+	WARN_ONCE(1, "Failed to toggle between antennas 0x%x", valid);
+
+	return last_idx;
+}
+
+void iwl_mld_toggle_tx_ant(struct iwl_mld *mld, u8 *ant)
+{
+	*ant = iwl_mld_next_ant(iwl_mld_get_valid_tx_ant(mld), *ant);
+}
+
 static int
 iwl_mld_get_queue_size(struct iwl_mld *mld, struct ieee80211_txq *txq)
 {
@@ -367,8 +393,14 @@ static u32 iwl_mld_get_tx_ant(struct iwl_mld *mld,
 			      struct ieee80211_sta *sta, __le16 fc)
 {
 	/* TODO: non_shart_ant (task=coex) */
-	/* TODO: mld_sta->tx_ant / mld->mgmt_last_ant (task=DP) */
-	return 0;
+
+	if (sta && ieee80211_is_data(fc)) {
+		struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+
+		return BIT(mld_sta->data_tx_ant) << RATE_MCS_ANT_POS;
+	}
+
+	return BIT(mld->mgmt_tx_ant) << RATE_MCS_ANT_POS;
 }
 
 static u32 iwl_mld_get_inject_tx_rate(struct iwl_mld *mld,
@@ -856,6 +888,43 @@ static void iwl_mld_hwrate_to_tx_rate(u32 rate_n_flags,
 	}
 }
 
+static void iwl_mld_tx_failure_toggle_ant(struct iwl_mld *mld,
+					  bool mgmt, int sta_id)
+{
+	struct ieee80211_link_sta *link_sta;
+	struct iwl_mld_sta *mld_sta;
+
+	if (mgmt) {
+		iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
+		return;
+	}
+
+	if (IWL_FW_CHECK(mld, sta_id >= mld->fw->ucode_capa.num_stations,
+			 "Got invalid sta_id (%d)\n", sta_id))
+		return;
+
+	rcu_read_lock();
+
+	/* sta can't be NULL otherwise it'd mean that the sta has been freed in
+	 * the firmware while we still have packets for it in the Tx queues.
+	 */
+	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
+	if (IWL_FW_CHECK(mld, !link_sta || !link_sta->sta,
+			 "Got valid sta_id (%d) but sta is NULL\n", sta_id))
+		goto out;
+
+	if (IS_ERR(link_sta))
+		goto out;
+
+	mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+
+	if (mld_sta->sta_state < IEEE80211_STA_AUTHORIZED)
+		iwl_mld_toggle_tx_ant(mld, &mld_sta->data_tx_ant);
+
+out:
+	rcu_read_unlock();
+}
+
 void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 				  struct iwl_rx_packet *pkt)
 {
@@ -865,9 +934,11 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 	u32 status = le16_to_cpu(agg_status->status);
 	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
 	size_t notif_size = sizeof(*tx_resp) + sizeof(u32);
+	int sta_id = IWL_TX_RES_GET_RA(tx_resp->ra_tid);
 	u16 ssn;
 	struct sk_buff_head skbs;
 	u8 skb_freed = 0;
+	bool mgmt = false;
 
 	if (IWL_FW_CHECK(mld, tx_resp->frame_count != 1,
 			 "Invalid tx_resp notif frame_count (%d)\n",
@@ -924,6 +995,8 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 
 			if (ieee80211_is_action(hdr->frame_control))
 				tp = IWL_FW_INI_TIME_POINT_TX_WFD_ACTION_FRAME_FAILED;
+			else if (ieee80211_is_mgmt(hdr->frame_control))
+				mgmt = true;
 
 			iwl_dbg_tlv_time_point(&mld->fwrt, tp, NULL);
 		}
@@ -939,6 +1012,9 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 			   txq_id, status, ssn);
 
 	/* TODO: print more info here */
+
+	if ((status & TX_STATUS_MSK) != TX_STATUS_SUCCESS)
+		iwl_mld_tx_failure_toggle_ant(mld, mgmt, sta_id);
 }
 
 static void iwl_mld_tx_reclaim_txq(struct iwl_mld *mld, int txq, int index,

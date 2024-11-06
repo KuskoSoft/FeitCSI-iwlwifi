@@ -87,6 +87,8 @@
  *	from firmware upon fw/hw error and sent back to the firmware in
  *	reconfig flow (after NIC reset).
  * @mcast_filter_cmd: pointer to the multicast filter command.
+ * @mgmt_tx_ant: stores the last TX antenna index; used for setting
+ *	TX rate_n_flags for non-STA mgmt frames (toggles on every TX failure).
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -148,6 +150,8 @@ struct iwl_mld {
 
 	u8 *error_recovery_buf;
 	struct iwl_mcast_filter_cmd *mcast_filter_cmd;
+
+	u8 mgmt_tx_ant;
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/* the hcmd number on which nmi will be triggered */
 	u8 nmi_thresh;

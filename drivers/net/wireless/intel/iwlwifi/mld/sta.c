@@ -398,6 +398,8 @@ iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		iwl_mld_init_txq(iwl_mld_txq_from_mac80211(sta->txq[i]));
 
+	iwl_mld_toggle_tx_ant(mld, &mld_sta->data_tx_ant);
+
 	return iwl_mld_alloc_dup_data(mld, mld_sta);
 }
 

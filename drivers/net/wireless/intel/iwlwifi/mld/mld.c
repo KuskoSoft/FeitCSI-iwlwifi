@@ -357,6 +357,8 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	if (ret)
 		goto free_scan_cmd;
 
+	iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
+
 	iwl_mld_add_debugfs_files(mld, dbgfs_dir);
 
 	return op_mode;
