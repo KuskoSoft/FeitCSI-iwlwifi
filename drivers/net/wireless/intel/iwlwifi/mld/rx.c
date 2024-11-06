@@ -737,6 +737,38 @@ static void iwl_mld_rx_eht(struct sk_buff *skb,
 	}
 }
 
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+static void iwl_mld_add_rtap_sniffer_config(struct iwl_mld *mld,
+					    struct sk_buff *skb)
+{
+	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	struct ieee80211_radiotap_vendor_content *radiotap;
+	const u16 vendor_data_len = sizeof(mld->monitor.cur_aid);
+
+	if (!mld->monitor.cur_aid)
+		return;
+
+	radiotap =
+		iwl_mld_radiotap_put_tlv(skb,
+					 IEEE80211_RADIOTAP_VENDOR_NAMESPACE,
+					 sizeof(*radiotap) + vendor_data_len);
+
+	/* Intel OUI */
+	radiotap->oui[0] = 0xf6;
+	radiotap->oui[1] = 0x54;
+	radiotap->oui[2] = 0x25;
+	/* radiotap sniffer config sub-namespace */
+	radiotap->oui_subtype = 1;
+	radiotap->vendor_type = 0;
+
+	/* fill the data now */
+	memcpy(radiotap->data, &mld->monitor.cur_aid,
+	       sizeof(mld->monitor.cur_aid));
+
+	rx_status->flag |= RX_FLAG_RADIOTAP_TLV_AT_END;
+}
+#endif
+
 static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 				   struct iwl_mld_rx_phy_data *phy_data,
 				   struct iwl_rx_mpdu_desc *mpdu_desc,
@@ -829,7 +861,10 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	if (format == RATE_MCS_EHT_MSK)
 		iwl_mld_rx_eht(skb, phy_data, queue);
 
-	/* TODO: radtio tap sniffer config (task=sniffer) */
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	if (unlikely(mld->monitor.on))
+		iwl_mld_add_rtap_sniffer_config(mld, skb);
+#endif
 
 	if (format != RATE_MCS_CCK_MSK && is_sgi)
 		rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
