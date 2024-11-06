@@ -47,6 +47,8 @@
  * @num_igtks: the number if iGTKs that were sent to the FW.
  * @monitor: monitor related data
  * @monitor.on: does a monitor vif exist (singleton hence bool)
+ * @monitor.ampdu_ref: the id of the A-MPDU for sniffer
+ * @monitor.ampdu_toggle: the state of the previous packet to track A-MPDU
  * @monitor.cur_aid: current association id tracked by the sniffer
  * @monitor.cur_bssid: current bssid tracked by the sniffer
  * @fw_id_to_link_sta: maps a fw id of a sta to the corresponding
@@ -113,6 +115,8 @@ struct iwl_mld {
 		u8 num_igtks;
 		struct {
 			bool on;
+			u32 ampdu_ref;
+			bool ampdu_toggle;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 			__le16 cur_aid;
 			u8 cur_bssid[ETH_ALEN];

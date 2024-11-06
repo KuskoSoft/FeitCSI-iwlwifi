@@ -1330,6 +1330,28 @@ static int iwl_mld_rx_crypto(struct iwl_mld *mld,
 	return 0;
 }
 
+static void iwl_mld_rx_update_ampdu_ref(struct iwl_mld *mld,
+					struct iwl_mld_rx_phy_data *phy_data,
+					struct ieee80211_rx_status *rx_status)
+{
+	bool toggle_bit =
+		phy_data->phy_info & IWL_RX_MPDU_PHY_AMPDU_TOGGLE;
+
+	rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
+	/* Toggle is switched whenever new aggregation starts. Make
+	 * sure ampdu_reference is never 0 so we can later use it to
+	 * see if the frame was really part of an A-MPDU or not.
+	 */
+	if (toggle_bit != mld->monitor.ampdu_toggle) {
+		mld->monitor.ampdu_ref++;
+		if (mld->monitor.ampdu_ref == 0)
+			mld->monitor.ampdu_ref++;
+		mld->monitor.ampdu_toggle = toggle_bit;
+		phy_data->first_subframe = true;
+	}
+	rx_status->ampdu_reference = mld->monitor.ampdu_ref;
+}
+
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		     struct iwl_rx_cmd_buffer *rxb, int queue)
 {
@@ -1382,9 +1404,6 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		skb_reserve(skb, 2);
 	}
 
-	/* TODO: update aggregation data (task=sniffer) */
-	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue);
-
 	rcu_read_lock();
 
 	sta = iwl_mld_rx_with_sta(mld, hdr, skb, mpdu_desc, pkt, queue, &drop);
@@ -1392,6 +1411,12 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		goto drop;
 
 	rx_status = IEEE80211_SKB_RXCB(skb);
+
+	/* update aggregation data for monitor sake on default queue */
+	if (!queue && (phy_data.phy_info & IWL_RX_MPDU_PHY_AMPDU))
+		iwl_mld_rx_update_ampdu_ref(mld, &phy_data, rx_status);
+
+	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue);
 
 	if (iwl_mld_rx_crypto(mld, sta, hdr, rx_status, mpdu_desc, queue,
 			      le32_to_cpu(pkt->len_n_flags), &crypto_len))
