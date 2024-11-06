@@ -332,11 +332,35 @@ void iwl_fw_disable_dbg_asserts(struct iwl_fw_runtime *fwrt);
 void iwl_fw_dbg_clear_monitor_buf(struct iwl_fw_runtime *fwrt);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+static inline void iwl_fw_check_failed_nmi(struct iwl_trans *trans)
+{
+	if (trans->dbg_cfg.FW_MISBEHAVE_NMI)
+		iwl_force_nmi(trans);
+}
+
+struct iwl_incorrect_object {
+	struct iwl_trans *trans;
+};
+
+struct iwl_incorrect_object *__iwl_fw_check_incorrect_object(void);
+
+#define ___GET_TRANS_HOLDER(_obj)					\
+	_Generic(_obj,							\
+		 struct iwl_mvm *: (_obj),				\
+		 struct iwl_mld *: (_obj),				\
+		 struct iwl_xvt *: (_obj),				\
+		 struct iwl_prod *: (_obj),				\
+		 default: __iwl_fw_check_incorrect_object())
+
+#define __GET_TRANS_HOLDER(_obj)					\
+	_Generic(_obj,							\
+		 struct iwl_trans *: _obj,				\
+		 default: ___GET_TRANS_HOLDER(_obj)->trans)
+
 #define IWL_FW_CHECK_FAILED(_obj, ...)					\
 	do {								\
 		IWL_ERR(_obj, __VA_ARGS__);				\
-		if ((_obj)->trans->dbg_cfg.FW_MISBEHAVE_NMI)		\
-			iwl_force_nmi((_obj)->trans);			\
+		iwl_fw_check_failed_nmi(__GET_TRANS_HOLDER(_obj));	\
 	} while (0)
 #else
 #define IWL_FW_CHECK_FAILED(_obj, ...)					\
