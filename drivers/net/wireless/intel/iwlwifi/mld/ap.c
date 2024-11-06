@@ -91,7 +91,7 @@ static int iwl_mld_fill_beacon_template_cmd(struct iwl_mld *mld,
 	/* TODO: set rate flags */
 	cmd->flags = cpu_to_le16(flags);
 
-	if (vif->type != NL80211_IFTYPE_AP) {
+	if (vif->type == NL80211_IFTYPE_AP) {
 		iwl_mld_set_tim_idx(mld, &cmd->tim_idx,
 				    beacon->data, beacon->len);
 
