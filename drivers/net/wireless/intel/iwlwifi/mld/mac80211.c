@@ -607,7 +607,7 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 		iwl_mld_update_mac_power(mld, vif, false);
 
 	if (vif->type == NL80211_IFTYPE_MONITOR) {
-		mld->monitor_on = true;
+		mld->monitor.on = true;
 		ieee80211_hw_set(mld->hw, RX_INCLUDES_FCS);
 	}
 
@@ -641,7 +641,7 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 
 	if (vif->type == NL80211_IFTYPE_MONITOR) {
 		__clear_bit(IEEE80211_HW_RX_INCLUDES_FCS, mld->hw->flags);
-		mld->monitor_on = false;
+		mld->monitor.on = false;
 	}
 
 	iwl_mld_remove_link(mld, &vif->bss_conf);

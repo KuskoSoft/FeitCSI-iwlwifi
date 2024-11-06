@@ -1236,7 +1236,7 @@ static int iwl_mld_rx_crypto(struct iwl_mld *mld,
 	 * have the keys).
 	 */
 	if ((status & IWL_RX_MPDU_STATUS_SEC_MASK) ==
-	    IWL_RX_MPDU_STATUS_SEC_UNKNOWN && !mld->monitor_on) {
+	    IWL_RX_MPDU_STATUS_SEC_UNKNOWN && !mld->monitor.on) {
 		IWL_DEBUG_DROP(mld, "Dropping packets, bad enc status\n");
 		return -1;
 	}
@@ -1288,7 +1288,7 @@ static int iwl_mld_rx_crypto(struct iwl_mld *mld,
 		 * before the GTK is installed. Silently drop those frames.
 		 */
 		if (!is_multicast_ether_addr(hdr->addr1) &&
-		    !mld->monitor_on && net_ratelimit())
+		    !mld->monitor.on && net_ratelimit())
 			IWL_WARN(mld, "Unhandled alg: 0x%x\n", status);
 	}
 

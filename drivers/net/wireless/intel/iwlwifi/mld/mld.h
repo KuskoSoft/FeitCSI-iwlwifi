@@ -45,7 +45,10 @@
  * @used_phy_ids: a bitmap of the phy IDs used. If a bit is set, it means
  *	that the index of this bit is already used as a PHY id.
  * @num_igtks: the number if iGTKs that were sent to the FW.
- * @monitor_on: does a monitor vif exist (only one can exist hence bool)
+ * @monitor: monitor related data
+ * @monitor.on: does a monitor vif exist (singleton hence bool)
+ * @monitor.cur_aid: current association id tracked by the sniffer
+ * @monitor.cur_bssid: current bssid tracked by the sniffer
  * @fw_id_to_link_sta: maps a fw id of a sta to the corresponding
  *	ieee80211_link_sta. This is not cleaned up on restart since we want to
  *	preserve the fw sta ids during a restart (for SN/PN restoring).
@@ -108,7 +111,13 @@ struct iwl_mld {
 		struct ieee80211_txq __rcu *fw_id_to_txq[IWL_MAX_TVQM_QUEUES];
 		u8 used_phy_ids: NUM_PHY_CTX;
 		u8 num_igtks;
-		bool monitor_on;
+		struct {
+			bool on;
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+			__le16 cur_aid;
+			u8 cur_bssid[ETH_ALEN];
+#endif
+		} monitor;
 #ifdef CONFIG_PM_SLEEP
 		bool netdetect;
 #endif /* CONFIG_PM_SLEEP */

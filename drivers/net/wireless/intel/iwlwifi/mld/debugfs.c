@@ -82,8 +82,99 @@ static ssize_t iwl_dbgfs_fw_restart_write(struct iwl_mld *mld, char *buf,
 	return count;
 }
 
+struct iwl_mld_sniffer_apply {
+	struct iwl_mld *mld;
+	const u8 *bssid;
+	u16 aid;
+};
+
+static bool iwl_mld_sniffer_apply(struct iwl_notif_wait_data *notif_data,
+				  struct iwl_rx_packet *pkt, void *data)
+{
+	struct iwl_mld_sniffer_apply *apply = data;
+
+	apply->mld->monitor.cur_aid = cpu_to_le16(apply->aid);
+	memcpy(apply->mld->monitor.cur_bssid, apply->bssid,
+	       sizeof(apply->mld->monitor.cur_bssid));
+
+	return true;
+}
+
+static ssize_t
+iwl_dbgfs_he_sniffer_params_write(struct iwl_mld *mld, char *buf,
+				  size_t count)
+{
+	struct iwl_notification_wait wait;
+	struct iwl_he_monitor_cmd he_mon_cmd = {};
+	struct iwl_mld_sniffer_apply apply = {
+		.mld = mld,
+	};
+	u16 wait_cmds[] = {
+		WIDE_ID(DATA_PATH_GROUP, HE_AIR_SNIFFER_CONFIG_CMD),
+	};
+	u32 aid;
+	int ret;
+
+	if (!iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	if (!mld->monitor.on)
+		return -ENODEV;
+
+	ret = sscanf(buf, "%x %2hhx:%2hhx:%2hhx:%2hhx:%2hhx:%2hhx", &aid,
+		     &he_mon_cmd.bssid[0], &he_mon_cmd.bssid[1],
+		     &he_mon_cmd.bssid[2], &he_mon_cmd.bssid[3],
+		     &he_mon_cmd.bssid[4], &he_mon_cmd.bssid[5]);
+	if (ret != 7)
+		return -EINVAL;
+
+	he_mon_cmd.aid = cpu_to_le16(aid);
+
+	apply.aid = aid;
+	apply.bssid = (void *)he_mon_cmd.bssid;
+
+	wiphy_lock(mld->wiphy);
+
+	/* Use the notification waiter to get our function triggered
+	 * in sequence with other RX. This ensures that frames we get
+	 * on the RX queue _before_ the new configuration is applied
+	 * still have mld->cur_aid pointing to the old AID, and that
+	 * frames on the RX queue _after_ the firmware processed the
+	 * new configuration (and sent the response, synchronously)
+	 * get mld->cur_aid correctly set to the new AID.
+	 */
+	iwl_init_notification_wait(&mld->notif_wait, &wait,
+				   wait_cmds, ARRAY_SIZE(wait_cmds),
+				   iwl_mld_sniffer_apply, &apply);
+
+	ret = iwl_mld_send_cmd_pdu(mld,
+				   WIDE_ID(DATA_PATH_GROUP,
+					   HE_AIR_SNIFFER_CONFIG_CMD),
+				   &he_mon_cmd);
+
+	/* no need to really wait, we already did anyway */
+	iwl_remove_notification(&mld->notif_wait, &wait);
+
+	wiphy_unlock(mld->wiphy);
+
+	return ret ?: count;
+}
+
+static ssize_t
+iwl_dbgfs_he_sniffer_params_read(struct iwl_mld *mld, size_t count,
+				 char *buf)
+{
+	return scnprintf(buf, sizeof(buf),
+			 "%d %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
+			 le16_to_cpu(mld->monitor.cur_aid),
+			 mld->monitor.cur_bssid[0], mld->monitor.cur_bssid[1],
+			 mld->monitor.cur_bssid[2], mld->monitor.cur_bssid[3],
+			 mld->monitor.cur_bssid[4], mld->monitor.cur_bssid[5]);
+}
+
 MLD_DEBUGFS_WRITE_FILE_OPS(fw_nmi, 10);
 MLD_DEBUGFS_WRITE_FILE_OPS(fw_restart, 10);
+MLD_DEBUGFS_READ_WRITE_FILE_OPS(he_sniffer_params, 32);
 
 static ssize_t iwl_dbgfs_wifi_6e_enable_read(struct iwl_mld *mld,
 					     size_t count, u8 *buf)
@@ -108,6 +199,7 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	MLD_DEBUGFS_ADD_FILE(fw_nmi, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(fw_restart, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(wifi_6e_enable, debugfs_dir, 0400);
+	MLD_DEBUGFS_ADD_FILE(he_sniffer_params, debugfs_dir, 0600);
 
 	/* Create a symlink with mac80211. It will be removed when mac80211
 	 * exits (before the opmode exits which removes the target.)
