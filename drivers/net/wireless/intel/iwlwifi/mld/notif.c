@@ -170,7 +170,7 @@ CMD_VERSIONS(session_prot_notif,
 CMD_VERSIONS(missed_beacon_notif,
 	     CMD_VER_ENTRY(5, iwl_missed_beacons_notif))
 CMD_VERSIONS(tx_resp_notif,
-	     CMD_VER_ENTRY(7, iwl_tx_resp))
+	     CMD_VER_ENTRY(8, iwl_tx_resp))
 CMD_VERSIONS(compressed_ba_notif,
 	     CMD_VER_ENTRY(5, iwl_compressed_ba_notif))
 CMD_VERSIONS(tlc_notif,
