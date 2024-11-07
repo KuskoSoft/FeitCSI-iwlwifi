@@ -573,14 +573,69 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 	tx_cmd->rate_n_flags = cpu_to_le32(rate_n_flags);
 }
 
-static int
-iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq)
+/* Caller of this need to check that info->control.vif is not NULL */
+static struct iwl_mld_link *
+iwl_mld_get_link_from_tx_info(struct ieee80211_tx_info *info)
 {
+	struct iwl_mld_vif *mld_vif =
+		iwl_mld_vif_from_mac80211(info->control.vif);
+	u32 link_id = u32_get_bits(info->control.flags,
+				   IEEE80211_TX_CTRL_MLO_LINK);
+
+	if (link_id == IEEE80211_LINK_UNSPECIFIED) {
+		if (info->control.vif->active_links)
+			link_id = ffs(info->control.vif->active_links) - 1;
+		else
+			link_id = 0;
+	}
+
+	return rcu_dereference(mld_vif->link[link_id]);
+}
+
+static int
+iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq,
+			struct sk_buff *skb)
+{
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	struct ieee80211_hdr *hdr = (void *)skb->data;
+	__le16 fc = hdr->frame_control;
+	struct iwl_mld_link *link;
+
 	if (txq && txq->sta)
 		return iwl_mld_txq_from_mac80211(txq)->fw_id;
 
-	return -1;
-	/* TODO: get internal queue/sta_id  */
+	if (!info->control.vif)
+		return IWL_MLD_INVALID_QUEUE;
+
+	switch (info->control.vif->type) {
+	case NL80211_IFTYPE_AP:
+		link = iwl_mld_get_link_from_tx_info(info);
+
+		if (WARN_ON(!link))
+			break;
+
+		/* ucast disassociate/deauth frames without a station might
+		 * happen, especially with reason 7 ("Class 3 frame received
+		 * from nonassociated STA").
+		 */
+		if (ieee80211_is_mgmt(fc) &&
+		    (!ieee80211_is_bufferable_mmpdu(skb) ||
+		     ieee80211_is_deauth(fc) || ieee80211_is_disassoc(fc)))
+			return link->bcast_sta.queue_id;
+
+		if (is_multicast_ether_addr(hdr->addr1) &&
+		    !ieee80211_has_order(fc))
+			return link->mcast_sta.queue_id;
+
+		WARN_ONCE(1, "Couldn't find a TXQ. fc=0x%02x", le16_to_cpu(fc));
+		return link->bcast_sta.queue_id;
+	default:
+		WARN_ONCE(1, "Unsupported vif type\n");
+		break;
+	}
+
+	return IWL_MLD_INVALID_QUEUE;
+	/* TODO: consider IBSS, monitor and p2p device (task=IBSS, monitor, p2p) */
 }
 
 /* This function must be called with BHs disabled */
@@ -591,9 +646,9 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct ieee80211_sta *sta = txq ? txq->sta : NULL;
 	struct iwl_device_tx_cmd *dev_tx_cmd;
-	int queue = iwl_mld_get_tx_queue_id(mld, txq);
+	int queue = iwl_mld_get_tx_queue_id(mld, txq, skb);
 
-	if (WARN_ONCE(queue < 0, "Invalid TX Queue id"))
+	if (WARN_ONCE(queue == IWL_MLD_INVALID_QUEUE, "Invalid TX Queue id"))
 		return -1;
 
 	if (unlikely(ieee80211_is_any_nullfunc(hdr->frame_control)))
