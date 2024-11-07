@@ -40,6 +40,20 @@ static bool iwl_mld_dbgfs_fw_cmd_disabled(struct iwl_mld *mld)
 #endif /* CONFIG_PM_SLEEP */
 }
 
+static ssize_t iwl_dbgfs_fw_dbg_clear_write(struct iwl_mld *mld,
+					    char *buf, size_t count)
+{
+	/* If the firmware is not running, silently succeed since there is
+	 * no data to clear.
+	 */
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return 0;
+
+	iwl_fw_dbg_clear_monitor_buf(&mld->fwrt);
+
+	return count;
+}
+
 static ssize_t iwl_dbgfs_fw_nmi_write(struct iwl_mld *mld, char *buf,
 				      size_t count)
 {
@@ -177,6 +191,7 @@ iwl_dbgfs_he_sniffer_params_read(struct iwl_mld *mld, size_t count,
 MLD_DEBUGFS_WRITE_FILE_OPS(fw_nmi, 10);
 MLD_DEBUGFS_WRITE_FILE_OPS(fw_restart, 10);
 MLD_DEBUGFS_READ_WRITE_FILE_OPS(he_sniffer_params, 32);
+WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_dbg_clear, 10);
 
 static ssize_t iwl_dbgfs_wifi_6e_enable_read(struct iwl_mld *mld,
 					     size_t count, u8 *buf)
@@ -202,6 +217,7 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	MLD_DEBUGFS_ADD_FILE(fw_restart, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(wifi_6e_enable, debugfs_dir, 0400);
 	MLD_DEBUGFS_ADD_FILE(he_sniffer_params, debugfs_dir, 0600);
+	MLD_DEBUGFS_ADD_FILE(fw_dbg_clear, debugfs_dir, 0200);
 
 	/* Create a symlink with mac80211. It will be removed when mac80211
 	 * exits (before the opmode exits which removes the target.)
