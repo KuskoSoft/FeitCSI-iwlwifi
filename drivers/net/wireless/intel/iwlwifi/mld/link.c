@@ -372,30 +372,21 @@ int iwl_mld_activate_link(struct iwl_mld *mld,
 	return ret;
 }
 
-int iwl_mld_deactivate_link(struct iwl_mld *mld,
-			    struct ieee80211_bss_conf *link)
+void iwl_mld_deactivate_link(struct iwl_mld *mld,
+			     struct ieee80211_bss_conf *link)
 {
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
-	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
 	if (WARN_ON(!mld_link))
-		return -EINVAL;
+		return;
 
-	ret = iwl_mld_cancel_session_protection(mld, link->vif, link->link_id);
-	if (ret)
-		return ret;
+	iwl_mld_cancel_session_protection(mld, link->vif, link->link_id);
 
 	mld_link->active = false;
 
-	ret = iwl_mld_change_link_in_fw(mld, link,
-					LINK_CONTEXT_MODIFY_ACTIVE);
-
-	if (ret)
-		mld_link->active = true;
-
-	return ret;
+	iwl_mld_change_link_in_fw(mld, link, LINK_CONTEXT_MODIFY_ACTIVE);
 }
 
 static int

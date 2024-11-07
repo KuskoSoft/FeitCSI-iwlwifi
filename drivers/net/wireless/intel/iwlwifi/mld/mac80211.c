@@ -943,14 +943,11 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
-	int ret;
 
 	if (WARN_ON(!mld_link))
 		return;
 
-	ret = iwl_mld_deactivate_link(mld, link);
-	if (ret)
-		return;
+	iwl_mld_deactivate_link(mld, link);
 
 	/* TODO: task=sniffer remove sniffer station */
 
