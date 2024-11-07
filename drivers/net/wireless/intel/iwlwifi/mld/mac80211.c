@@ -18,6 +18,7 @@
 #include "tlc.h"
 #include "key.h"
 #include "ap.h"
+#include "tx.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #include "fw/api/filter.h"
@@ -447,7 +448,13 @@ static void
 iwl_mld_mac80211_tx(struct ieee80211_hw *hw,
 		    struct ieee80211_tx_control *control, struct sk_buff *skb)
 {
-	WARN_ON("Not supported yet\n");
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	/* TODO: drop offchannel if there is no active ROC (task=offchannel) */
+
+	/* TODO: translate MLD to link address in MLD AP (task=MLO) */
+
+	iwl_mld_tx_skb(mld, skb, NULL);
 }
 
 static void

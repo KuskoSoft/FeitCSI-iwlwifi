@@ -658,7 +658,7 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	if (unlikely(!dev_tx_cmd))
 		return -1;
 
-	/* TODO: iwl_mvm_probe_resp_set_noa */
+	/* TODO: iwl_mvm_probe_resp_set_noa (task=p2p)*/
 
 	iwl_mld_fill_tx_cmd(mld, skb, dev_tx_cmd, sta);
 
@@ -833,8 +833,8 @@ static int iwl_mld_tx_tso(struct iwl_mld *mld, struct sk_buff *skb,
 }
 #endif /* CONFIG_INET */
 
-static void iwl_mld_tx_skb(struct iwl_mld *mld, struct sk_buff *skb,
-			   struct ieee80211_txq *txq)
+void iwl_mld_tx_skb(struct iwl_mld *mld, struct sk_buff *skb,
+		    struct ieee80211_txq *txq)
 {
 	if (skb_is_gso(skb)) {
 		if (!iwl_mld_tx_tso(mld, skb, txq))
