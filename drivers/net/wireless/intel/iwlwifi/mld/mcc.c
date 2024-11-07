@@ -256,6 +256,7 @@ int iwl_mld_init_mcc(struct iwl_mld *mld)
 {
 	const struct ieee80211_regdomain *r;
 	struct ieee80211_regdomain *regd;
+	char mcc[3];
 	int retval;
 
 	/* try to replay the last set MCC to FW */
@@ -268,7 +269,12 @@ int iwl_mld_init_mcc(struct iwl_mld *mld)
 	if (IS_ERR_OR_NULL(regd))
 		return -EIO;
 
-	/* TODO: task BIOS UEFI ACPI iwl_bios_get_mcc */
+	if (!iwl_bios_get_mcc(&mld->fwrt, mcc)) {
+		kfree(regd);
+		regd = iwl_mld_get_regdomain(mld, mcc, MCC_SOURCE_BIOS, NULL);
+		if (IS_ERR_OR_NULL(regd))
+			return -EIO;
+	}
 
 	retval = regulatory_set_wiphy_regd_sync(mld->wiphy, regd);
 
