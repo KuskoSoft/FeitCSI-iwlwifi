@@ -573,16 +573,13 @@ iwl_mld_fill_tx_cmd(struct iwl_mld *mld, struct sk_buff *skb,
 	tx_cmd->rate_n_flags = cpu_to_le32(rate_n_flags);
 }
 
-static void
-iwl_mld_get_queue_and_sta_ids(struct iwl_mld *mld, struct ieee80211_txq *txq,
-			      int *queue, u32 *sta_mask)
+static int
+iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq)
 {
-	if (txq && txq->sta) {
-		*queue = iwl_mld_txq_from_mac80211(txq)->fw_id;
-		*sta_mask = iwl_mld_fw_sta_id_mask(mld, txq->sta);
-		return;
-	}
+	if (txq && txq->sta)
+		return iwl_mld_txq_from_mac80211(txq)->fw_id;
 
+	return -1;
 	/* TODO: get internal queue/sta_id  */
 }
 
@@ -594,10 +591,8 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct ieee80211_sta *sta = txq ? txq->sta : NULL;
 	struct iwl_device_tx_cmd *dev_tx_cmd;
-	int queue = -1;
-	u32 sta_mask;
+	int queue = iwl_mld_get_tx_queue_id(mld, txq);
 
-	iwl_mld_get_queue_and_sta_ids(mld, txq, &queue, &sta_mask);
 	if (WARN_ONCE(queue < 0, "Invalid TX Queue id"))
 		return -1;
 
@@ -612,8 +607,7 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 
 	iwl_mld_fill_tx_cmd(mld, skb, dev_tx_cmd, sta);
 
-	IWL_DEBUG_TX(mld, "TX to sta mask: 0x%x, from Q:%d. Len %d\n",
-		     sta_mask, queue, skb->len);
+	IWL_DEBUG_TX(mld, "TX from Q:%d. Len %d\n", queue, skb->len);
 
 	/* From now on, we cannot access info->control */
 	memset(&info->status, 0, sizeof(info->status));
@@ -628,8 +622,7 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 
 err:
 	iwl_trans_free_tx_cmd(mld->trans, dev_tx_cmd);
-	IWL_DEBUG_TX(mld, "TX to sta 0x%x, from Q:%d dropped\n",
-		     sta_mask, queue);
+	IWL_DEBUG_TX(mld, "TX from Q:%d dropped\n", queue);
 	return -1;
 }
 
