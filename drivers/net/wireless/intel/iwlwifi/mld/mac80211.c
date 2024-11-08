@@ -1730,9 +1730,12 @@ static void iwl_mld_set_key_remove(struct iwl_mld *mld,
 	     key->cipher == WLAN_CIPHER_SUITE_GCMP_256)) {
 		struct iwl_mld_ptk_pn *ptk_pn;
 
+		if (WARN_ON(keyidx >= ARRAY_SIZE(mld_sta->ptk_pn)))
+			return;
+
 		ptk_pn = wiphy_dereference(mld->wiphy,
-					   mld_sta->ptk_pn[key->keyidx]);
-		RCU_INIT_POINTER(mld_sta->ptk_pn[key->keyidx], NULL);
+					   mld_sta->ptk_pn[keyidx]);
+		RCU_INIT_POINTER(mld_sta->ptk_pn[keyidx], NULL);
 		if (!WARN_ON(!ptk_pn))
 			kfree_rcu(ptk_pn, rcu_head);
 	}
