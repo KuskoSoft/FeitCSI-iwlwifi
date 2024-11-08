@@ -1454,7 +1454,8 @@ static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
 	IWL_DEBUG_MAC80211(mld, "station %pM state change %d->%d\n",
 			   sta->addr, old_state, new_state);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION ||
+	if ((ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
+	     ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) ||
 	    sta->tdls) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET %s\n", __func__);
 		return -EINVAL;
