@@ -324,6 +324,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_uefi_get_sgom_table(trans, &mld->fwrt);
 	iwl_uefi_get_step_table(trans);
 	iwl_bios_setup_step(trans, &mld->fwrt);
+	mld->bios_enable_puncturing = iwl_uefi_get_puncturing(&mld->fwrt);
 
 	/* Configure transport layer with the opmode specific params */
 	iwl_mld_configure_trans(op_mode);
