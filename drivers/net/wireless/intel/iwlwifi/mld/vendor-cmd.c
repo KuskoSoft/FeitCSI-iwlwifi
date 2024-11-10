@@ -126,6 +126,58 @@ static int iwl_mld_vendor_set_dynamic_txp_profile(struct wiphy *wiphy,
 	return err;
 }
 
+static int iwl_mld_vendor_ppag_get_table(struct wiphy *wiphy,
+					 struct wireless_dev *wdev,
+					 const void *data,
+					 int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct sk_buff *skb = NULL;
+	struct nlattr *nl_table;
+	int ret, per_chain_size, chain;
+
+	/* if ppag is disabled */
+	if (!mld->fwrt.ppag_flags)
+		return -ENOENT;
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 180);
+	if (!skb)
+		return -ENOMEM;
+
+	nl_table = nla_nest_start(skb, IWL_MVM_VENDOR_ATTR_PPAG_TABLE |
+				   NLA_F_NESTED);
+	if (!nl_table) {
+		ret = -ENOBUFS;
+		goto err;
+	}
+
+	per_chain_size = (mld->fwrt.ppag_ver == 0) ?
+		IWL_NUM_SUB_BANDS_V1 : IWL_NUM_SUB_BANDS_V2;
+
+	for (chain = 0; chain < IWL_NUM_CHAIN_LIMITS; chain++) {
+		if (nla_put(skb, chain + 1, per_chain_size,
+			    &mld->fwrt.ppag_chains[chain].subbands[0])) {
+			ret = -ENOBUFS;
+			goto err;
+		}
+	}
+
+	nla_nest_end(skb, nl_table);
+
+	/* put the ppag version */
+	if (nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_PPAG_NUM_SUB_BANDS,
+			per_chain_size)) {
+		ret = -ENOBUFS;
+		goto err;
+	}
+
+	return cfg80211_vendor_cmd_reply(skb);
+err:
+	kfree_skb(skb);
+	return ret;
+}
+
 static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 	{
 		.info = {
@@ -145,6 +197,16 @@ static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
 		.doit = iwl_mld_vendor_set_dynamic_txp_profile,
+		.policy = iwl_mld_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_PPAG_GET_TABLE,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
+		.doit = iwl_mld_vendor_ppag_get_table,
 		.policy = iwl_mld_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},
