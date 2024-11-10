@@ -11,6 +11,7 @@
 #include "sta.h"
 #include "tlc.h"
 #include "power.h"
+#include "notif.h"
 
 #include "fw/api/rs.h"
 #include "fw/api/dhc.h"
@@ -194,6 +195,47 @@ static ssize_t iwl_dbgfs_wifi_6e_enable_read(struct iwl_mld *mld,
 
 MLD_DEBUGFS_READ_FILE_OPS(wifi_6e_enable, 64);
 
+static ssize_t iwl_dbgfs_inject_packet_write(struct iwl_mld *mld,
+					     char *buf, size_t count)
+{
+	struct iwl_op_mode *opmode = container_of((void *)mld,
+						  struct iwl_op_mode,
+						  op_mode_specific);
+	struct iwl_rx_cmd_buffer rxb = {};
+	struct iwl_rx_packet *pkt;
+	int n_bytes = count / 2;
+	int ret = -EINVAL;
+
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	rxb._page = alloc_pages(GFP_KERNEL, 0);
+	if (!rxb._page)
+		return -ENOMEM;
+	pkt = rxb_addr(&rxb);
+
+	ret = hex2bin(page_address(rxb._page), buf, n_bytes);
+	if (ret)
+		goto out;
+
+	/* avoid invalid memory access and malformed packet */
+	if (n_bytes < sizeof(*pkt) ||
+	    n_bytes != sizeof(*pkt) + iwl_rx_packet_payload_len(pkt))
+		goto out;
+
+	local_bh_disable();
+	iwl_mld_rx(opmode, NULL, &rxb);
+	local_bh_enable();
+	ret = 0;
+
+out:
+	iwl_free_rxb(&rxb);
+
+	return ret ?: count;
+}
+
+WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(inject_packet, 512);
+
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 {
@@ -204,6 +246,7 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	MLD_DEBUGFS_ADD_FILE(wifi_6e_enable, debugfs_dir, 0400);
 	MLD_DEBUGFS_ADD_FILE(he_sniffer_params, debugfs_dir, 0600);
 	MLD_DEBUGFS_ADD_FILE(fw_dbg_clear, debugfs_dir, 0200);
+	MLD_DEBUGFS_ADD_FILE(inject_packet, debugfs_dir, 0200);
 
 	/* Create a symlink with mac80211. It will be removed when mac80211
 	 * exits (before the opmode exits which removes the target.)
