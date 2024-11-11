@@ -382,6 +382,9 @@ struct iwl_mvm_vif_link_info {
  * @IWL_MVM_ESR_EXIT_RFI: EMLSR not allowed due to RFI
  * @IWL_MVM_ESR_EXIT_LINK_USAGE: Exit EMLSR due to low tpt on secondary link
  * @IWL_MVM_ESR_EXIT_FAIL_ENTRY: Exit EMLSR due to entry failure
+ * @IWL_MVM_ESR_EXIT_EQUAL_BAND: Exit EMLSR due do equal band in the links.
+ * @IWL_MVM_ESR_EXIT_CHANNEL_LOAD: Exit EMLSR due do channel load criteria
+ *	is not satisfied in the primary link.
  */
 enum iwl_mvm_esr_state {
 	IWL_MVM_ESR_BLOCKED_PREVENTION	= 0x1,
@@ -399,6 +402,8 @@ enum iwl_mvm_esr_state {
 	IWL_MVM_ESR_EXIT_RFI		= 0x200000,
 	IWL_MVM_ESR_EXIT_LINK_USAGE	= 0x400000,
 	IWL_MVM_ESR_EXIT_FAIL_ENTRY	= 0x800000,
+	IWL_MVM_ESR_EXIT_EQUAL_BAND	= 0x1000000,
+	IWL_MVM_ESR_EXIT_CHANNEL_LOAD	= 0x2000000,
 };
 
 #define IWL_MVM_BLOCK_ESR_REASONS 0xffff

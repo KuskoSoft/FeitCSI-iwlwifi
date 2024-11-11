@@ -20,7 +20,9 @@
 	HOW(EXIT_CSA)			\
 	HOW(EXIT_RFI)			\
 	HOW(EXIT_LINK_USAGE)		\
-	HOW(EXIT_FAIL_ENTRY)
+	HOW(EXIT_FAIL_ENTRY)		\
+	HOW(EXIT_EQUAL_BAND)		\
+	HOW(EXIT_CHANNEL_LOAD)
 
 static const char *const iwl_mvm_esr_states_names[] = {
 #define NAME_ENTRY(x) [ilog2(IWL_MVM_ESR_##x)] = #x,
@@ -748,6 +750,57 @@ iwl_mvm_esr_disallowed_with_link(struct iwl_mvm *mvm,
 	return ret;
 }
 
+static u32 iwl_mvm_get_bw_ratio(enum nl80211_chan_width chan_width_a,
+				enum nl80211_chan_width chan_width_b)
+{
+	u32 bw_a, bw_b, bw_ratio;
+
+	bw_a = nl80211_chan_width_to_mhz(chan_width_a);
+	bw_b = nl80211_chan_width_to_mhz(chan_width_b);
+	return bw_ratio = (bw_a > bw_b) ? bw_a / bw_b : bw_b / bw_a;
+}
+
+static u32 iwl_mvm_mld_check_channel_load_criteria(struct ieee80211_vif *vif,
+						   u8 link_id, u32 bw_ratio)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	struct iwl_mvm_vif_link_info *mvm_link = NULL;
+	unsigned int primary_load_perc = 0;
+	struct iwl_mvm *mvm = mvmvif->mvm;
+
+	/* In low latency, the required channel load is 10% and is
+	 * indicated by BLOCKED_FW.
+	 */
+	if (iwl_mvm_vif_low_latency(mvmvif))
+		return 0;
+
+	mvm_link = mvmvif->link[link_id];
+
+	if (!mvm_link || WARN_ON(!mvm_link->phy_ctxt))
+		return IWL_MVM_ESR_EXIT_BANDWIDTH;
+
+	primary_load_perc = mvm_link->phy_ctxt->channel_load_not_by_us;
+
+	IWL_DEBUG_INFO(mvm,
+		       "channel load of link: %d with bw_ratio: %d is: %d\n",
+		       link_id, bw_ratio, primary_load_perc);
+
+	switch (bw_ratio) {
+	case 2:
+		return primary_load_perc > 25 ? 0 :
+			IWL_MVM_ESR_EXIT_CHANNEL_LOAD;
+	case 4:
+		return primary_load_perc > 40 ? 0 :
+			IWL_MVM_ESR_EXIT_CHANNEL_LOAD;
+	case 8:
+	case 16:
+		return primary_load_perc > 50 ? 0 :
+			IWL_MVM_ESR_EXIT_CHANNEL_LOAD;
+	}
+
+	return IWL_MVM_ESR_EXIT_BANDWIDTH;
+}
+
 VISIBLE_IF_IWLWIFI_KUNIT
 bool iwl_mvm_mld_valid_link_pair(struct ieee80211_vif *vif,
 				 const struct iwl_mvm_link_sel_data *a,
@@ -762,10 +815,15 @@ bool iwl_mvm_mld_valid_link_pair(struct ieee80211_vif *vif,
 	    iwl_mvm_esr_disallowed_with_link(mvm, vif, b, false))
 		return false;
 
-	if (a->chandef->chan->band == b->chandef->chan->band ||
-	    a->chandef->width != b->chandef->width)
-		ret |= IWL_MVM_ESR_EXIT_BANDWIDTH;
+	if (a->chandef->chan->band == b->chandef->chan->band) {
+		ret |= IWL_MVM_ESR_EXIT_EQUAL_BAND;
+	} else if (a->chandef->width != b->chandef->width) {
+		u32 bw_ratio = iwl_mvm_get_bw_ratio(a->chandef->width,
+						    b->chandef->width);
 
+		ret |= iwl_mvm_mld_check_channel_load_criteria(vif, a->link_id,
+							       bw_ratio);
+	}
 	/* RFI considerations */
 	ret |= iwl_mvm_rfi_esr_state_link_pair(vif, a, b);
 
@@ -773,6 +831,10 @@ bool iwl_mvm_mld_valid_link_pair(struct ieee80211_vif *vif,
 		IWL_DEBUG_INFO(mvm,
 			       "Links %d and %d are not a valid pair for EMLSR\n",
 			       a->link_id, b->link_id);
+		IWL_DEBUG_INFO(mvm,
+			       "Links bandwidth are: %d and %d\n",
+			       nl80211_chan_width_to_mhz(a->chandef->width),
+			       nl80211_chan_width_to_mhz(b->chandef->width));
 		iwl_mvm_print_esr_state(mvm, ret);
 		return false;
 	}
