@@ -79,6 +79,9 @@ struct iwl_test_ops {
  *	the device will be shut down
  * @IWL_ERR_TYPE_CMD_QUEUE_FULL: command queue was full
  * @IWL_ERR_TYPE_TOP_RESET_BY_BT: TOP reset initiated by BT
+ * @IWL_ERR_TYPE_TOP_FATAL_ERROR: TOP fatal error
+ * @IWL_ERR_TYPE_TOP_RESET_FAILED: TOP reset failed
+ * @IWL_ERR_TYPE_DEBUGFS: error/reset indication from debugfs
  */
 enum iwl_fw_error_type {
 	IWL_ERR_TYPE_IRQ,
@@ -86,6 +89,9 @@ enum iwl_fw_error_type {
 	IWL_ERR_TYPE_RESET_HS_TIMEOUT,
 	IWL_ERR_TYPE_CMD_QUEUE_FULL,
 	IWL_ERR_TYPE_TOP_RESET_BY_BT,
+	IWL_ERR_TYPE_TOP_FATAL_ERROR,
+	IWL_ERR_TYPE_TOP_RESET_FAILED,
+	IWL_ERR_TYPE_DEBUGFS,
 };
 
 /**
