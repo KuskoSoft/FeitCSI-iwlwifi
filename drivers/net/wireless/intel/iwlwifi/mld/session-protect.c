@@ -30,6 +30,8 @@ void iwl_mld_handle_session_prot_notif(struct iwl_mld *mld,
 	// TODO assoc: iwl_mvm_te_check_disconnect
 		memset(session_protect, 0, sizeof(*session_protect));
 	else if (le32_to_cpu(notif->start)) {
+		/* End_jiffies indicates an active session */
+		session_protect->session_requested = false;
 		session_protect->end_jiffies =
 			TU_TO_EXP_TIME(session_protect->duration);
 		/* !session_protect->end_jiffies means inactive session */
@@ -75,15 +77,18 @@ void iwl_mld_schedule_session_protection(struct iwl_mld *mld,
 	IWL_DEBUG_TE(mld, "Add a new session protection, duration %d TU\n",
 		     le32_to_cpu(cmd.duration_tu));
 
+	if (iwl_mld_send_cmd_pdu(mld,
+				 WIDE_ID(MAC_CONF_GROUP,
+					 SESSION_PROTECTION_CMD), &cmd)) {
+		IWL_ERR(mld,
+			"Couldn't send the SESSION_PROTECTION_CMD\n");
+		return;
+	}
+
 	/* end_jiffies will be updated when handling session_prot_notif */
 	session_protect->end_jiffies = 0;
 	session_protect->duration = duration;
-
-	if (iwl_mld_send_cmd_pdu(mld,
-				 WIDE_ID(MAC_CONF_GROUP,
-					 SESSION_PROTECTION_CMD), &cmd))
-		IWL_ERR(mld,
-			"Couldn't send the SESSION_PROTECTION_CMD\n");
+	session_protect->session_requested = true;
 }
 
 int iwl_mld_cancel_session_protection(struct iwl_mld *mld,
@@ -104,8 +109,11 @@ int iwl_mld_cancel_session_protection(struct iwl_mld *mld,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* If there isn't an active session on this link do nothing */
-	if (!session_protect->end_jiffies)
+	/* If there isn't an active session or a requested one for this
+	 * link do nothing
+	 */
+	if (!session_protect->session_requested &&
+	    !session_protect->end_jiffies)
 		return 0;
 
 	ret = iwl_mld_send_cmd_pdu(mld,

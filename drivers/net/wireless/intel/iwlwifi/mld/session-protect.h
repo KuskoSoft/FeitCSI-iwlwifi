@@ -16,10 +16,13 @@
  * @end_jiffies: expected end_jiffies of current session protection.
  *	0 if not active
  * @duration: the duration in tu of current session
+ * @session_requested: A session protection command was sent and wasn't yet
+ *	answered
  */
 struct iwl_mld_session_protect {
 	unsigned long end_jiffies;
 	u32 duration;
+	bool session_requested;
 };
 
 #define IWL_MLD_SESSION_PROTECTION_ASSOC_TIME_MS 900
