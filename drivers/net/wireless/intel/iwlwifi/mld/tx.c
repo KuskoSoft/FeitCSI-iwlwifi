@@ -913,7 +913,7 @@ static void iwl_mld_tx_failure_toggle_ant(struct iwl_mld *mld,
 	 * the firmware while we still have packets for it in the Tx queues.
 	 */
 	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
-	if (IWL_FW_CHECK(mld, !link_sta || !link_sta->sta,
+	if (IWL_FW_CHECK(mld, !link_sta,
 			 "Got valid sta_id (%d) but sta is NULL\n", sta_id))
 		goto out;
 
