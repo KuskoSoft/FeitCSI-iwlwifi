@@ -944,43 +944,6 @@ static void iwl_mld_hwrate_to_tx_rate(u32 rate_n_flags,
 	}
 }
 
-static void iwl_mld_tx_failure_toggle_ant(struct iwl_mld *mld,
-					  bool mgmt, int sta_id)
-{
-	struct ieee80211_link_sta *link_sta;
-	struct iwl_mld_sta *mld_sta;
-
-	if (mgmt) {
-		iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
-		return;
-	}
-
-	if (IWL_FW_CHECK(mld, sta_id >= mld->fw->ucode_capa.num_stations,
-			 "Got invalid sta_id (%d)\n", sta_id))
-		return;
-
-	rcu_read_lock();
-
-	/* sta can't be NULL otherwise it'd mean that the sta has been freed in
-	 * the firmware while we still have packets for it in the Tx queues.
-	 */
-	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
-	if (IWL_FW_CHECK(mld, !link_sta,
-			 "Got valid sta_id (%d) but sta is NULL\n", sta_id))
-		goto out;
-
-	if (IS_ERR(link_sta))
-		goto out;
-
-	mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
-
-	if (mld_sta->sta_state < IEEE80211_STA_AUTHORIZED)
-		iwl_mld_toggle_tx_ant(mld, &mld_sta->data_tx_ant);
-
-out:
-	rcu_read_unlock();
-}
-
 void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 				  struct iwl_rx_packet *pkt)
 {
@@ -991,10 +954,14 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
 	size_t notif_size = sizeof(*tx_resp) + sizeof(u32);
 	int sta_id = IWL_TX_RES_GET_RA(tx_resp->ra_tid);
+	int tid = IWL_TX_RES_GET_TID(tx_resp->ra_tid);
+	struct ieee80211_link_sta *link_sta;
+	struct iwl_mld_sta *mld_sta;
 	u16 ssn;
 	struct sk_buff_head skbs;
 	u8 skb_freed = 0;
 	bool mgmt = false;
+	bool tx_failure = (status & TX_STATUS_MSK) != TX_STATUS_SUCCESS;
 
 	if (IWL_FW_CHECK(mld, tx_resp->frame_count != 1,
 			 "Invalid tx_resp notif frame_count (%d)\n",
@@ -1044,7 +1011,7 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 		if (skb_freed > 1)
 			info->flags |= IEEE80211_TX_STAT_ACK;
 
-		if ((status & TX_STATUS_MSK) != TX_STATUS_SUCCESS) {
+		if (tx_failure) {
 			struct ieee80211_hdr *hdr = (void *)skb->data;
 			enum iwl_fw_ini_time_point tp =
 				IWL_FW_INI_TIME_POINT_TX_FAILED;
@@ -1069,8 +1036,36 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 
 	/* TODO: print more info here */
 
-	if ((status & TX_STATUS_MSK) != TX_STATUS_SUCCESS)
-		iwl_mld_tx_failure_toggle_ant(mld, mgmt, sta_id);
+	if (tx_failure && mgmt)
+		iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
+
+	if (IWL_FW_CHECK(mld, sta_id >= mld->fw->ucode_capa.num_stations,
+			 "Got invalid sta_id (%d)\n", sta_id))
+		return;
+
+	rcu_read_lock();
+
+	/* sta can't be NULL otherwise it'd mean that the sta has been freed in
+	 * the firmware while we still have packets for it in the Tx queues.
+	 */
+	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
+	if (IWL_FW_CHECK(mld, !link_sta,
+			 "Got valid sta_id (%d) but sta is NULL\n", sta_id))
+		goto out;
+
+	if (IS_ERR(link_sta))
+		goto out;
+
+	mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+
+	if (tx_failure && mld_sta->sta_state < IEEE80211_STA_AUTHORIZED)
+		iwl_mld_toggle_tx_ant(mld, &mld_sta->data_tx_ant);
+
+	if (tid != IWL_MGMT_TID)
+		iwl_mld_count_mpdu_tx(link_sta, 1);
+
+out:
+	rcu_read_unlock();
 }
 
 static void iwl_mld_tx_reclaim_txq(struct iwl_mld *mld, int txq, int index,
@@ -1202,6 +1197,8 @@ void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
 	struct iwl_compressed_ba_notif *ba_res = (void *)pkt->data;
 	u32 pkt_len = iwl_rx_packet_payload_len(pkt);
 	u16 tfd_cnt = le16_to_cpu(ba_res->tfd_cnt);
+	u8 sta_id = ba_res->sta_id;
+	struct ieee80211_link_sta *link_sta;
 
 	if (!tfd_cnt)
 		return;
@@ -1213,7 +1210,7 @@ void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
 
 	IWL_DEBUG_TX_REPLY(mld,
 			   "BA notif received from sta_id=%d, flags=0x%x, sent:%d, acked:%d\n",
-			   ba_res->sta_id, le32_to_cpu(ba_res->flags),
+			   sta_id, le32_to_cpu(ba_res->flags),
 			   le16_to_cpu(ba_res->txed),
 			   le16_to_cpu(ba_res->done));
 
@@ -1230,6 +1227,21 @@ void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
 		iwl_mld_tx_reclaim_txq(mld, txq_id, index, false);
 	}
 
-	/* TODO: count_mpdu (task=EMLSR) */
+	if (IWL_FW_CHECK(mld, sta_id >= mld->fw->ucode_capa.num_stations,
+			 "Got invalid sta_id (%d)\n", sta_id))
+		return;
+
+	rcu_read_lock();
+
 	/* TODO: iwl_mvm_tx_airtime (task=tcm) */
+
+	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
+	if (IWL_FW_CHECK(mld, IS_ERR_OR_NULL(link_sta),
+			 "Got valid sta_id (%d) but link_sta is NULL\n",
+			 sta_id))
+		goto out;
+
+	iwl_mld_count_mpdu_tx(link_sta, le16_to_cpu(ba_res->txed));
+out:
+	rcu_read_unlock();
 }
