@@ -124,6 +124,10 @@ void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
+	/* will reschedule to run after restart */
+	if (mld->fw_status.in_hw_restart)
+		return;
+
 	while (!list_empty(&mld->txqs_to_add)) {
 		struct ieee80211_txq *txq;
 		struct iwl_mld_txq *mld_txq =
