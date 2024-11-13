@@ -68,6 +68,30 @@ struct iwl_mld_ptk_pn {
 };
 
 /**
+ * struct iwl_mld_per_link_mpdu_counter - per-link TX/RX MPDU counters
+ *
+ * @tx: Number of TX MPDUs.
+ * @rx: Number of RX MPDUs.
+ */
+struct iwl_mld_per_link_mpdu_counter {
+	u32 tx;
+	u32 rx;
+};
+
+/**
+ * struct iwl_mld_per_q_mpdu_counter - per-queue MPDU counter
+ *
+ * @lock: Needed to protect the counters when modified from statistics.
+ * @per_link: per-link counters.
+ * @window_start: timestamp of the counting-window start.
+ */
+struct iwl_mld_per_q_mpdu_counter {
+	spinlock_t lock;
+	struct iwl_mld_per_link_mpdu_counter per_link[IWL_FW_MAX_LINK_ID];
+	unsigned long window_start;
+} ____cacheline_aligned_in_smp;
+
+/**
  * struct iwl_mld_sta - representation of a station in the driver.
  *
  * This represent the MLD-level sta, and will not be added to the FW.
@@ -94,6 +118,7 @@ struct iwl_mld_ptk_pn {
  *	by the AP.
  * @ptk_pn: Array of pointers to PTK PN data, used to track the Packet Number
  *	per key index and per queue (TID).
+ * @mpdu_counters: RX/TX MPDUs counters for each queue.
  */
 struct iwl_mld_sta {
 	/* Add here fields that need clean up on restart */
@@ -111,6 +136,7 @@ struct iwl_mld_sta {
 	struct iwl_mld_link_sta deflink;
 	struct iwl_mld_link_sta __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
 	struct iwl_mld_ptk_pn __rcu *ptk_pn[IWL_NUM_DEFAULT_KEYS];
+	struct iwl_mld_per_q_mpdu_counter *mpdu_counters;
 };
 
 static inline struct iwl_mld_sta *

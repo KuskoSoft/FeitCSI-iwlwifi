@@ -354,6 +354,7 @@ static void iwl_mld_destroy_sta(struct ieee80211_sta *sta)
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 
 	kfree(mld_sta->dup_data);
+	kfree(mld_sta->mpdu_counters);
 }
 
 static int
@@ -385,6 +386,30 @@ iwl_mld_alloc_dup_data(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta)
 	return 0;
 }
 
+static void iwl_mld_alloc_mpdu_counters(struct iwl_mld *mld,
+					struct ieee80211_sta *sta)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct ieee80211_vif *vif = mld_sta->vif;
+
+	if (mld->fw_status.in_hw_restart)
+		return;
+
+	/* MPDUs are counted only when EMLSR is possible */
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION ||
+	    sta->tdls || !ieee80211_vif_is_mld(vif))
+		return;
+
+	mld_sta->mpdu_counters = kcalloc(mld->trans->num_rx_queues,
+					 sizeof(*mld_sta->mpdu_counters),
+					 GFP_KERNEL);
+	if (!mld_sta->mpdu_counters)
+		return;
+
+	for (int q = 0; q < mld->trans->num_rx_queues; q++)
+		spin_lock_init(&mld_sta->mpdu_counters[q].lock);
+}
+
 static int
 iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 		 struct ieee80211_vif *vif, enum iwl_fw_sta_type type)
@@ -397,6 +422,8 @@ iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		iwl_mld_init_txq(iwl_mld_txq_from_mac80211(sta->txq[i]));
+
+	iwl_mld_alloc_mpdu_counters(mld, sta);
 
 	iwl_mld_toggle_tx_ant(mld, &mld_sta->data_tx_ant);
 
