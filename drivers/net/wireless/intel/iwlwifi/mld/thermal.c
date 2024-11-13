@@ -222,11 +222,22 @@ static  struct thermal_zone_device_ops tzone_ops = {
 	.set_trip_temp = iwl_mld_tzone_set_trip_temp,
 };
 
+#if LINUX_VERSION_IS_LESS(6,9,0)
+static struct thermal_trip trips[IWL_MAX_DTS_TRIPS] = {
+	[0 ... IWL_MAX_DTS_TRIPS - 1] = {
+		.temperature = THERMAL_TEMP_INVALID,
+		.type = THERMAL_TRIP_PASSIVE,
+		.flags = THERMAL_TRIP_FLAG_RW_TEMP,
+	},
+};
+#endif
+
 static void iwl_mld_thermal_zone_register(struct iwl_mld *mld)
 {
 	int ret;
 	char name[16];
 	static atomic_t counter = ATOMIC_INIT(0);
+#if LINUX_VERSION_IS_GEQ(6,9,0)
 	struct thermal_trip trips[IWL_MAX_DTS_TRIPS] = {
 		[0 ... IWL_MAX_DTS_TRIPS - 1] = {
 			.temperature = THERMAL_TEMP_INVALID,
@@ -234,6 +245,7 @@ static void iwl_mld_thermal_zone_register(struct iwl_mld *mld)
 			.flags = THERMAL_TRIP_FLAG_RW_TEMP,
 		},
 	};
+#endif
 
 	BUILD_BUG_ON(ARRAY_SIZE(name) >= THERMAL_NAME_LENGTH);
 
