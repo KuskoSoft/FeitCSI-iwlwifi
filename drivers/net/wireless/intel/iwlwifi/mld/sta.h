@@ -178,6 +178,9 @@ int iwl_mld_update_all_link_stations(struct iwl_mld *mld,
 void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta);
 void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld,
 				struct ieee80211_sta *sta);
+void iwl_mld_count_mpdu_rx(struct ieee80211_link_sta *link_sta, int queue,
+			   u32 count);
+void iwl_mld_count_mpdu_tx(struct ieee80211_link_sta *link_sta, u32 count);
 
 /**
  * struct iwl_mld_int_sta - representation of an internal station

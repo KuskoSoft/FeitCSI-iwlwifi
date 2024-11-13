@@ -546,6 +546,62 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_fw_sta_id_mask);
 
+static void iwl_mld_count_mpdu(struct ieee80211_link_sta *link_sta, int queue,
+			       u32 count, bool tx)
+{
+	struct iwl_mld_per_q_mpdu_counter *queue_counter;
+	struct iwl_mld_per_link_mpdu_counter *link_counter;
+	struct iwl_mld_vif *mld_vif;
+	struct iwl_mld_sta *mld_sta;
+	struct iwl_mld_link *mld_link;
+
+	if (WARN_ON(!link_sta))
+		return;
+
+	mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+	if (!mld_sta->mpdu_counters)
+		return;
+
+	mld_vif = iwl_mld_vif_from_mac80211(mld_sta->vif);
+	mld_link = iwl_mld_link_dereference_check(mld_vif, link_sta->link_id);
+
+	if (WARN_ON_ONCE(!mld_link))
+		return;
+
+	queue_counter = &mld_sta->mpdu_counters[queue];
+	link_counter = &queue_counter->per_link[mld_link->fw_id];
+
+	spin_lock_bh(&queue_counter->lock);
+
+	if (tx)
+		link_counter->tx += count;
+	else
+		link_counter->rx += count;
+
+	/* TODO (task=EMLSR)
+	 * 1. Return early if esr_active is set.
+	 * 2. Sum total_mpdus in the queue_counter.
+	 * 3. Clear counters when the defined window time has passed.
+	 * 4. Compare total_mpdus to the threshold to unblock EMLSR.
+	 */
+
+	spin_unlock_bh(&queue_counter->lock);
+}
+
+/* must be called under rcu_read_lock() */
+void iwl_mld_count_mpdu_rx(struct ieee80211_link_sta *link_sta, int queue,
+			   u32 count)
+{
+	iwl_mld_count_mpdu(link_sta, queue, count, false);
+}
+
+/* must be called under rcu_read_lock() */
+void iwl_mld_count_mpdu_tx(struct ieee80211_link_sta *link_sta, u32 count)
+{
+	/* use queue 0 for all TX */
+	iwl_mld_count_mpdu(link_sta, 0, count, true);
+}
+
 static int iwl_mld_allocate_internal_txq(struct iwl_mld *mld,
 					 struct iwl_mld_int_sta *internal_sta,
 					 u8 tid)
