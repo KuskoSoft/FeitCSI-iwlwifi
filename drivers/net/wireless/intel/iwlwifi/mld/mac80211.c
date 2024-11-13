@@ -1722,9 +1722,15 @@ static int iwl_mld_set_key_add(struct iwl_mld *mld,
 	    (keyidx == 6 || keyidx == 7))
 		rcu_assign_pointer(mld_vif->bigtks[keyidx - 6], key);
 
-	/* TODO: for AP/IBSS, store the GTK and IGTK, and send it when
-	 * start_ap_ibss is called (see ap_early_keys) (task=soft_ap)
+	/* After exiting from RFKILL, hostapd configures GTK/ITGK before the
+	 * AP is started, but those keys can't be sent to the FW before the
+	 * MCAST/BCAST STAs are added to it (which happens upon AP start).
+	 * Store it here to be sent later when the AP is started.
 	 */
+	if ((vif->type == NL80211_IFTYPE_ADHOC ||
+	     vif->type == NL80211_IFTYPE_AP) && !sta &&
+	     !mld_vif->ap_ibss_active)
+		return iwl_mld_store_ap_early_key(mld, key, mld_vif);
 
 	if (!mld->fw_status.in_hw_restart && mld_sta &&
 	    key->flags & IEEE80211_KEY_FLAG_PAIRWISE &&
@@ -1787,6 +1793,9 @@ static void iwl_mld_set_key_remove(struct iwl_mld *mld,
 		if (!WARN_ON(!ptk_pn))
 			kfree_rcu(ptk_pn, rcu_head);
 	}
+
+	/* if this key was stored to be added later to the FW - free it here */
+	iwl_mld_free_ap_early_key(mld, key, mld_vif);
 
 	/* We already removed it */
 	if (key->hw_key_idx == STA_KEY_IDX_INVALID)

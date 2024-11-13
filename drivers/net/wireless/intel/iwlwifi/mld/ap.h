@@ -7,6 +7,7 @@
 #define __iwl_ap_h__
 
 #include "mld.h"
+#include "iface.h"
 
 int iwl_mld_update_beacon_template(struct iwl_mld *mld,
 				   struct ieee80211_vif *vif,
@@ -18,5 +19,13 @@ int iwl_mld_start_ap_ibss(struct ieee80211_hw *hw,
 
 void iwl_mld_stop_ap_ibss(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			  struct ieee80211_bss_conf *link);
+
+int iwl_mld_store_ap_early_key(struct iwl_mld *mld,
+			       struct ieee80211_key_conf *key,
+			       struct iwl_mld_vif *mld_vif);
+
+void iwl_mld_free_ap_early_key(struct iwl_mld *mld,
+			       struct ieee80211_key_conf *key,
+			       struct iwl_mld_vif *mld_vif);
 
 #endif /* __iwl_ap_h__ */

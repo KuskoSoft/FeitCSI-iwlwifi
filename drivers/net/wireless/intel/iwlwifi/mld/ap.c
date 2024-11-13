@@ -7,13 +7,14 @@
 #include <net/mac80211.h>
 
 #include "ap.h"
-#include "iface.h"
 #include "hcmd.h"
 #include "tx.h"
 #include "power.h"
+#include "key.h"
 #include "iwl-utils.h"
 
 #include "fw/api/tx.h"
+#include "fw/api/sta.h"
 
 static void iwl_mld_set_tim_idx(struct iwl_mld *mld, __le32 *tim_index,
 				u8 *beacon, u32 frame_size)
@@ -196,6 +197,74 @@ static void iwl_mld_send_low_latency_cmd(struct iwl_mld *mld,
 		IWL_ERR(mld, "Failed to send low latency command\n");
 }
 
+void iwl_mld_free_ap_early_key(struct iwl_mld *mld,
+			       struct ieee80211_key_conf *key,
+			       struct iwl_mld_vif *mld_vif)
+{
+	u8 link_id = key->link_id >= 0 ? key->link_id : 0;
+	struct iwl_mld_link *link =
+		iwl_mld_link_dereference_check(mld_vif, link_id);
+
+	if (WARN_ON(!link))
+		return;
+
+	for (int i = 0; i < ARRAY_SIZE(link->ap_early_keys); i++) {
+		if (link->ap_early_keys[i] != key)
+			continue;
+		/* Those weren't sent to FW, so should be marked as INVALID */
+		if (WARN_ON(key->hw_key_idx != STA_KEY_IDX_INVALID))
+			key->hw_key_idx = STA_KEY_IDX_INVALID;
+		link->ap_early_keys[i] = NULL;
+	}
+}
+
+int iwl_mld_store_ap_early_key(struct iwl_mld *mld,
+			       struct ieee80211_key_conf *key,
+			       struct iwl_mld_vif *mld_vif)
+{
+	u8 link_id = key->link_id >= 0 ? key->link_id : 0;
+	struct iwl_mld_link *link =
+		iwl_mld_link_dereference_check(mld_vif, link_id);
+
+	if (WARN_ON(!link))
+		return -EINVAL;
+
+	for (int i = 0; i < ARRAY_SIZE(link->ap_early_keys); i++) {
+		if (!link->ap_early_keys[i]) {
+			key->hw_key_idx = STA_KEY_IDX_INVALID;
+			link->ap_early_keys[i] = key;
+			return 0;
+		}
+	}
+
+	return -ENOSPC;
+}
+
+static int iwl_mld_send_ap_early_keys(struct iwl_mld *mld,
+				      struct ieee80211_vif *vif,
+				      struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	int ret = 0;
+
+	if (WARN_ON(!link))
+		return -EINVAL;
+
+	for (int i = 0; i < ARRAY_SIZE(mld_link->ap_early_keys); i++) {
+		struct ieee80211_key_conf *key = mld_link->ap_early_keys[i];
+
+		if (!key)
+			continue;
+
+		mld_link->ap_early_keys[i] = NULL;
+
+		ret = iwl_mld_add_key(mld, vif, NULL, key);
+		if (ret)
+			break;
+	}
+	return ret;
+}
+
 int iwl_mld_start_ap_ibss(struct ieee80211_hw *hw,
 			  struct ieee80211_vif *vif,
 			  struct ieee80211_bss_conf *link)
@@ -227,14 +296,24 @@ int iwl_mld_start_ap_ibss(struct ieee80211_hw *hw,
 
 	ret = iwl_mld_add_bcast_sta(mld, vif, link);
 	if (ret)
-		goto err;
+		goto rm_mcast;
 
-	/* TODO: send the previously stored early keys to FW */
+	/* Those keys were configured by the upper layers before starting the
+	 * AP. Now that it is started and the bcast and mcast sta were added to
+	 * the FW, we can add the keys too.
+	 */
+	ret = iwl_mld_send_ap_early_keys(mld, vif, link);
+	if (ret)
+		goto rm_bcast;
 
 	iwl_mld_send_low_latency_cmd(mld, true, mld_vif->fw_id);
 
+	mld_vif->ap_ibss_active = true;
+
 	return 0;
-err:
+rm_bcast:
+	iwl_mld_remove_bcast_sta(mld, vif, link);
+rm_mcast:
 	iwl_mld_remove_mcast_sta(mld, vif, link);
 	return ret;
 }
@@ -250,4 +329,6 @@ void iwl_mld_stop_ap_ibss(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	iwl_mld_remove_bcast_sta(mld, vif, link);
 
 	iwl_mld_remove_mcast_sta(mld, vif, link);
+
+	mld_vif->ap_ibss_active = false;
 }
