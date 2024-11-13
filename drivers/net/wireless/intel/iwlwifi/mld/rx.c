@@ -1167,6 +1167,15 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 	if (baid != IWL_RX_REORDER_DATA_INVALID_BAID)
 		iwl_mld_update_last_rx_timestamp(mld, baid);
 
+	if (link_sta && ieee80211_is_data(hdr->frame_control)) {
+		u8 sub_frame_idx = mpdu_desc->amsdu_info &
+			IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
+
+		/* 0 means not an A-MSDU, and 1 means a new A-MSDU */
+		if (!sub_frame_idx || sub_frame_idx == 1)
+			iwl_mld_count_mpdu_rx(link_sta, queue, 1);
+	}
+
 	return sta;
 }
 
