@@ -492,6 +492,10 @@ static void iwl_mld_send_tlc_cmd(struct iwl_mld *mld,
 				own_he_cap, own_eht_cap,
 				&cmd);
 
+	IWL_DEBUG_RATE(mld,
+		       "TLC CONFIG CMD, sta_id=%d, max_ch_width=%d, mode=%d\n",
+		       cmd.sta_id, cmd.max_ch_width, cmd.mode);
+
 	/* Send async since this can be called within a RCU-read section */
 	ret = iwl_mld_send_cmd_with_flags_pdu(mld, WIDE_ID(DATA_PATH_GROUP,
 							   TLC_MNG_CONFIG_CMD),
