@@ -1214,6 +1214,7 @@ iwl_mld_mac80211_reconfig_complete(struct ieee80211_hw *hw,
 		mld->fw_status.in_hw_restart = false;
 		iwl_mld_send_recovery_cmd(mld, ERROR_RECOVERY_END_OF_RECOVERY);
 		iwl_trans_finish_sw_reset(mld->trans);
+		/* no need to lock, adding in parallel would schedule too */
 		if (!list_empty(&mld->txqs_to_add))
 			wiphy_work_queue(mld->wiphy, &mld->add_txqs_wk);
 		break;
