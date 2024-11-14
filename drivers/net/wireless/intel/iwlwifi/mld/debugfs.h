@@ -102,28 +102,42 @@ static const struct file_operations iwl_dbgfs_##name##_ops = {		\
 	.release = _iwl_dbgfs_release,					\
 }
 
-#define WIPHY_DEBUGFS_WRITE_WRAPPER(name, bufsz, objtype)		\
+#define WIPHY_DEBUGFS_HANDLER_WRAPPER(name)				\
+static ssize_t iwl_dbgfs_##name##_write_handler(struct wiphy *wiphy,	\
+				       struct file *file, char *buf,	\
+				       size_t count, void *data)	\
+{									\
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);		\
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);			\
+	return iwl_dbgfs_##name##_write(mld, buf, count, data);		\
+}
+
+#define WIPHY_DEBUGFS_WRITE_WRAPPER(name, bufsz, objtype, mldtype)	\
+WIPHY_DEBUGFS_HANDLER_WRAPPER(name)					\
 static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 					  const char __user *user_buf,	\
 					  size_t count, loff_t *ppos)	\
 {									\
 	struct ieee80211_##objtype *arg = file->private_data;		\
-	struct iwl_mld_##objtype *obj =					\
-		iwl_mld_##objtype##_from_mac80211(arg);			\
-	struct iwl_mld *mld = obj->mld;					\
+	struct iwl_mld_##mldtype *mldobj =				\
+		iwl_mld_##mldtype##_from_mac80211(arg);			\
+	struct iwl_mld *mld = mldobj->mld;				\
 	char buf[bufsz] = {};						\
 									\
 	return wiphy_locked_debugfs_write(mld->wiphy, file,		\
-					  buf, sizeof(buf),		\
-					  user_buf, count,		\
-					  iwl_dbgfs_##name##_write,	\
-					  arg);				\
+				buf, sizeof(buf),			\
+				user_buf, count,			\
+				iwl_dbgfs_##name##_write_handler,	\
+				arg);					\
 }
 
-#define WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, objtype)		\
-	WIPHY_DEBUGFS_WRITE_WRAPPER(name, bufsz, objtype)		\
+#define _WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, objtype, mldtype)	\
+	WIPHY_DEBUGFS_WRITE_WRAPPER(name, bufsz, objtype, mldtype)	\
 	static const struct file_operations iwl_dbgfs_##name##_ops = {	\
 		.write = __iwl_dbgfs_##name##_write,			\
 		.open = simple_open,					\
 		.llseek = generic_file_llseek,				\
 	}
+
+#define WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, objtype)		\
+	_WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, objtype, objtype)

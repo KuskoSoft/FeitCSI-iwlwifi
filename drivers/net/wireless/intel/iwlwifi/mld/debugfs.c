@@ -242,12 +242,9 @@ void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
 	/* Add here per-links files to mld_link_dir */
 }
 
-static ssize_t iwl_dbgfs_fixed_rate_write(struct wiphy *wiphy,
-					  struct file *file, char *buf,
+static ssize_t iwl_dbgfs_fixed_rate_write(struct iwl_mld *mld, char *buf,
 					  size_t count, void *data)
 {
-	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
-	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct ieee80211_link_sta *link_sta = data;
 	struct iwl_mld_link_sta *mld_link_sta;
 	u32 rate;
@@ -281,39 +278,33 @@ static ssize_t iwl_dbgfs_fixed_rate_write(struct wiphy *wiphy,
 	return ret ? : count;
 }
 
-static ssize_t iwl_dbgfs_tlc_dhc_write(struct ieee80211_link_sta *link_sta,
-				       char *buf, size_t count)
+static ssize_t iwl_dbgfs_tlc_dhc_write(struct iwl_mld *mld, char *buf,
+				       size_t count, void *data)
 {
-	struct iwl_mld *mld = iwl_mld_sta_from_mac80211(link_sta->sta)->mld;
+	struct ieee80211_link_sta *link_sta = data;
 	struct iwl_mld_link_sta *mld_link_sta;
 	u32 type, value;
 	int ret;
 	u8 fw_sta_id;
 
-	rcu_read_lock();
-
 	mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
-	if (WARN_ON(!mld_link_sta)) {
-		rcu_read_unlock();
+	if (WARN_ON(!mld_link_sta))
 		return -EINVAL;
-	}
 
 	fw_sta_id = mld_link_sta->fw_id;
-
-	rcu_read_unlock();
 
 	if (sscanf(buf, "%i %i", &type, &value) != 2) {
 		IWL_DEBUG_RATE(mld, "usage <type> <value>\n");
 		return -EINVAL;
 	}
 
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
 	ret = iwl_mld_send_tlc_dhc(mld, fw_sta_id, type, value);
 
 	return ret ? : count;
 }
-
-#define LINK_STA_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\
-	_MLD_DEBUGFS_WRITE_FILE_OPS(name, bufsz, struct ieee80211_link_sta)
 
 #define LINK_STA_DEBUGFS_ADD_FILE_ALIAS(alias, name, parent, mode) do {	\
 	debugfs_create_file(alias, mode, parent, link_sta,		\
@@ -325,7 +316,7 @@ static ssize_t iwl_dbgfs_tlc_dhc_write(struct ieee80211_link_sta *link_sta,
 #define LINK_STA_WIPHY_DEBUGFS_WRITE_OPS(name, bufsz)			\
 	WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, link_sta)
 
-LINK_STA_DEBUGFS_WRITE_FILE_OPS(tlc_dhc, 64);
+LINK_STA_WIPHY_DEBUGFS_WRITE_OPS(tlc_dhc, 64);
 LINK_STA_WIPHY_DEBUGFS_WRITE_OPS(fixed_rate, 64);
 
 void iwl_mld_add_link_sta_debugfs(struct ieee80211_hw *hw,
