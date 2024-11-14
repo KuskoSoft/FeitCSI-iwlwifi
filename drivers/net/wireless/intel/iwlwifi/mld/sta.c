@@ -284,6 +284,7 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	}
 
 	mld_link_sta->fw_id = fw_id;
+	mld_link_sta->mld = mld;
 	rcu_assign_pointer(mld_sta->link[link_sta->link_id], mld_link_sta);
 
 add_to_fw:

@@ -101,3 +101,29 @@ static const struct file_operations iwl_dbgfs_##name##_ops = {		\
 	.llseek = generic_file_llseek,					\
 	.release = _iwl_dbgfs_release,					\
 }
+
+#define WIPHY_DEBUGFS_WRITE_WRAPPER(name, bufsz, objtype)		\
+static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
+					  const char __user *user_buf,	\
+					  size_t count, loff_t *ppos)	\
+{									\
+	struct ieee80211_##objtype *arg = file->private_data;		\
+	struct iwl_mld_##objtype *obj =					\
+		iwl_mld_##objtype##_from_mac80211(arg);			\
+	struct iwl_mld *mld = obj->mld;					\
+	char buf[bufsz] = {};						\
+									\
+	return wiphy_locked_debugfs_write(mld->wiphy, file,		\
+					  buf, sizeof(buf),		\
+					  user_buf, count,		\
+					  iwl_dbgfs_##name##_write,	\
+					  arg);				\
+}
+
+#define WIPHY_DEBUGFS_WRITE_FILE_OPS(name, bufsz, objtype)		\
+	WIPHY_DEBUGFS_WRITE_WRAPPER(name, bufsz, objtype)		\
+	static const struct file_operations iwl_dbgfs_##name##_ops = {	\
+		.write = __iwl_dbgfs_##name##_write,			\
+		.open = simple_open,					\
+		.llseek = generic_file_llseek,				\
+	}
