@@ -533,7 +533,8 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode,
 	 * It might not actually be true that we'll restart, but the
 	 * setting doesn't matter if we're going to be unbound either.
 	 */
-	mld->fw_status.in_hw_restart = true;
+	if (type != IWL_ERR_TYPE_RESET_HS_TIMEOUT)
+		mld->fw_status.in_hw_restart = true;
 }
 
 static void iwl_mld_dump_error(struct iwl_op_mode *op_mode,
