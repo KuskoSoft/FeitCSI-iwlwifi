@@ -2228,7 +2228,8 @@ static void iwl_mvm_nic_error(struct iwl_op_mode *op_mode,
 	 * setting of the bit doesn't matter if we're going to be
 	 * unbound either.
 	 */
-	set_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status);
+	if (type != IWL_ERR_TYPE_RESET_HS_TIMEOUT)
+		set_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status);
 }
 
 static void iwl_mvm_dump_error(struct iwl_op_mode *op_mode,
