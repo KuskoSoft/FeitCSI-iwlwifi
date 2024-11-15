@@ -1701,6 +1701,11 @@ _iwl_op_mode_start(struct iwl_drv *drv, struct iwlwifi_opmode_table *op)
 							drv->dbgfs_drv);
 		dbgfs_dir = drv->dbgfs_op_mode;
 #endif
+#ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
+		if (!strcmp(op->name, "iwlmld"))
+			debugfs_create_symlink("iwlmvm", drv->dbgfs_drv,
+					       "iwlmld");
+#endif
 
 		op_mode = ops->start(drv->trans, drv->trans->cfg,
 				     &drv->fw, dbgfs_dir);

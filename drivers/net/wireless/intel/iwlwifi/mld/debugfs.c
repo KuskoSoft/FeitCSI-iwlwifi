@@ -272,6 +272,10 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 	struct dentry *mld_vif_dbgfs =
 		debugfs_create_dir("iwlmld", vif->debugfs_dir);
 
+#ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
+	debugfs_create_symlink("iwlmvm", vif->debugfs_dir, "iwlmld");
+#endif
+
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM &&
 	    vif->type == NL80211_IFTYPE_STATION)
 		VIF_DEBUGFS_ADD_FILE(pm_params, mld_vif_dbgfs, 0200);
@@ -305,6 +309,15 @@ void iwl_mld_add_link_debugfs(struct ieee80211_hw *hw,
 	 */
 	if (!mld_link_dir)
 		mld_link_dir = debugfs_create_dir("iwlmld", dir);
+
+#ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
+	{
+		struct dentry *mvm_link_dir = debugfs_lookup("iwlmvm", dir);
+
+		if (!mvm_link_dir)
+			debugfs_create_symlink("iwlmvm", dir, "iwlmld");
+	}
+#endif
 
 }
 
