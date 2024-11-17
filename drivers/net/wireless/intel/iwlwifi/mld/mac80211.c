@@ -1893,11 +1893,6 @@ iwl_mld_pre_channel_switch(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (vif->type != NL80211_IFTYPE_STATION) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return 0;
-	}
-
 	if (WARN_ON(!mld_link))
 		return -EINVAL;
 
@@ -1923,11 +1918,9 @@ iwl_mld_channel_switch(struct ieee80211_hw *hw,
 	 * ieee80211_chswitch_done() ourselves at the right time
 	 * (Upon receiving the channel_switch_start notification from the fw)
 	 */
-	IWL_DEBUG_MAC80211(IWL_MAC80211_GET_MLD(hw),
+	IWL_DEBUG_MAC80211(mld,
 			   "dummy channel switch op\n");
 
-	if (vif->type != NL80211_IFTYPE_STATION)
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 }
 
 static int
@@ -1939,11 +1932,6 @@ iwl_mld_post_channel_switch(struct ieee80211_hw *hw,
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link_conf);
 
 	lockdep_assert_wiphy(mld->wiphy);
-
-	if (vif->type != NL80211_IFTYPE_STATION) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return 0;
-	}
 
 	mld_link->csa_blocks_tx = false;
 
@@ -1958,12 +1946,7 @@ iwl_mld_abort_channel_switch(struct ieee80211_hw *hw,
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link_conf);
 
-	if (vif->type != NL80211_IFTYPE_STATION) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return;
-	}
-
-	IWL_DEBUG_MAC80211(IWL_MAC80211_GET_MLD(hw),
+	IWL_DEBUG_MAC80211(mld,
 			   "abort channel switch op\n");
 	mld_link->csa_blocks_tx = false;
 }
