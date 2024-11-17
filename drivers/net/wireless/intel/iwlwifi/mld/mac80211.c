@@ -1301,6 +1301,7 @@ iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
 	struct iwl_mld_link *link;
 
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
@@ -1317,7 +1318,10 @@ iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
 	/* No need to update right away, we'll get BSS_CHANGED_QOS
 	 * The exception is P2P_DEVICE interface which needs immediate update.
 	 */
-	/* TODO: change link for p2p device (task=P2P) */
+	if (vif->type == NL80211_IFTYPE_P2P_DEVICE)
+		iwl_mld_change_link_in_fw(mld, &vif->bss_conf,
+					  LINK_CONTEXT_MODIFY_QOS_PARAMS);
+
 	return 0;
 }
 
