@@ -587,6 +587,7 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
 	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
@@ -618,6 +619,9 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 		ieee80211_hw_set(mld->hw, RX_INCLUDES_FCS);
 	}
 
+	if (vif->type == NL80211_IFTYPE_P2P_DEVICE)
+		mld->p2p_device_vif = vif;
+
 	return 0;
 
 err:
@@ -635,6 +639,7 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
 	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return;
@@ -648,6 +653,9 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 		__clear_bit(IEEE80211_HW_RX_INCLUDES_FCS, mld->hw->flags);
 		mld->monitor.on = false;
 	}
+
+	if (vif->type == NL80211_IFTYPE_P2P_DEVICE)
+		mld->p2p_device_vif = NULL;
 
 	iwl_mld_remove_link(mld, &vif->bss_conf);
 

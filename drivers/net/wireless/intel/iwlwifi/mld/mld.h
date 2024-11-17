@@ -58,6 +58,7 @@
  *	re-allocated during a restart, so make sure to free it in restart
  *	cleanup using iwl_mld_free_internal_sta
  * @netdetect: indicates the FW is in suspend mode with netdetect configured
+ * @p2p_device_vif: points to the p2p device vif if exists
  * @dev: pointer to device struct. For printing purposes
  * @trans: pointer to the transport layer
  * @cfg: pointer to the device configuration
@@ -125,6 +126,7 @@ struct iwl_mld {
 #ifdef CONFIG_PM_SLEEP
 		bool netdetect;
 #endif /* CONFIG_PM_SLEEP */
+		struct ieee80211_vif *p2p_device_vif;
 	);
 	struct ieee80211_link_sta __rcu *fw_id_to_link_sta[IWL_STATION_COUNT_MAX];
 	/* And here fields that survive a fw restart */

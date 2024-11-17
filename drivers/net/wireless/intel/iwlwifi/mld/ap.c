@@ -310,6 +310,10 @@ int iwl_mld_start_ap_ibss(struct ieee80211_hw *hw,
 
 	mld_vif->ap_ibss_active = true;
 
+	if (vif->p2p && mld->p2p_device_vif)
+		return iwl_mld_mac_fw_action(mld, mld->p2p_device_vif,
+					     FW_CTXT_ACTION_MODIFY);
+
 	return 0;
 rm_bcast:
 	iwl_mld_remove_bcast_sta(mld, vif, link);
@@ -324,11 +328,15 @@ void iwl_mld_stop_ap_ibss(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 
+	mld_vif->ap_ibss_active = false;
+
+	if (vif->p2p && mld->p2p_device_vif)
+		iwl_mld_mac_fw_action(mld, mld->p2p_device_vif,
+				      FW_CTXT_ACTION_MODIFY);
+
 	iwl_mld_send_low_latency_cmd(mld, false, mld_vif->fw_id);
 
 	iwl_mld_remove_bcast_sta(mld, vif, link);
 
 	iwl_mld_remove_mcast_sta(mld, vif, link);
-
-	mld_vif->ap_ibss_active = false;
 }

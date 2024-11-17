@@ -210,6 +210,51 @@ static void iwl_mld_fill_mac_cmd_ap(struct iwl_mld *mld,
 		cmd->filter_flags |= cpu_to_le32(MAC_CFG_FILTER_ACCEPT_BEACON);
 }
 
+static void iwl_mld_go_iterator(void *_data, u8 *mac, struct ieee80211_vif *vif)
+{
+	bool *go_active = _data;
+
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_P2P_GO &&
+	    iwl_mld_vif_from_mac80211(vif)->ap_ibss_active)
+		*go_active = true;
+}
+
+static bool iwl_mld_p2p_dev_has_extended_disc(struct iwl_mld *mld)
+{
+	bool go_active = false;
+
+	/* This flag should be set to true when the P2P Device is
+	 * discoverable and there is at least a P2P GO. Setting
+	 * this flag will allow the P2P Device to be discoverable on other
+	 * channels in addition to its listen channel.
+	 * Note that this flag should not be set in other cases as it opens the
+	 * Rx filters on all MAC and increases the number of interrupts.
+	 */
+	ieee80211_iterate_active_interfaces(mld->hw,
+					IEEE80211_IFACE_ITER_RESUME_ALL,
+					iwl_mld_go_iterator, &go_active);
+
+	return go_active;
+}
+
+static void iwl_mld_fill_mac_cmd_p2p_dev(struct iwl_mld *mld,
+					 struct ieee80211_vif *vif,
+					 struct iwl_mac_config_cmd *cmd)
+{
+	bool ext_disc = iwl_mld_p2p_dev_has_extended_disc(mld);
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* Override the filter flags to accept all management frames. This is
+	 * needed to support both P2P device discovery using probe requests and
+	 * P2P service discovery using action frames
+	 */
+	cmd->filter_flags = cpu_to_le32(MAC_CFG_FILTER_ACCEPT_CONTROL_AND_MGMT);
+
+	if (ext_disc)
+		cmd->p2p_dev.is_disc_extended = cpu_to_le32(1);
+}
+
 static int
 iwl_mld_rm_mac_from_fw(struct iwl_mld *mld, struct ieee80211_vif *vif)
 {
@@ -250,6 +295,8 @@ int iwl_mld_mac_fw_action(struct iwl_mld *mld, struct ieee80211_vif *vif,
 				    MAC_CFG_FILTER_ACCEPT_GRP);
 		break;
 	case NL80211_IFTYPE_P2P_DEVICE:
+		iwl_mld_fill_mac_cmd_p2p_dev(mld, vif, &cmd);
+		break;
 	case NL80211_IFTYPE_ADHOC:
 	default:
 		WARN(1, "not supported yet\n");
@@ -291,6 +338,7 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
 	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
@@ -316,6 +364,7 @@ int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
 		ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+		vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 		vif->type != NL80211_IFTYPE_MONITOR);
 
 	ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_REMOVE);
