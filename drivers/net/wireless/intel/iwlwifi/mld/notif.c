@@ -261,27 +261,46 @@ iwl_mld_handle_channel_switch_start_notif(struct iwl_mld *mld,
 		return;
 
 	vif = link_conf->vif;
-	if (vif->type != NL80211_IFTYPE_STATION) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return;
-	}
 
-	if (!link_conf->csa_active) {
-		/* Either unexpected cs notif or mac80211 chose to ignore
-		 * like in channel switch to same channel
+	IWL_DEBUG_INFO(mld,
+		       "CSA Start Notification with vif type: %d, link_id: %d\n",
+		       vif->type,
+		       link_conf->link_id);
+
+	switch (vif->type) {
+	case NL80211_IFTYPE_AP:
+		/* We don't support canceling a CSA as it was advertised
+		 * by the AP itself
 		 */
-		struct iwl_cancel_channel_switch_cmd cmd = {
-			.id = cpu_to_le32(link_id),
-		};
+		if (!link_conf->csa_active)
+			return;
 
-		if (iwl_mld_send_cmd_pdu(mld,
-					 WIDE_ID(MAC_CONF_GROUP,
-						 CANCEL_CHANNEL_SWITCH_CMD),
-					 &cmd))
-			IWL_ERR(mld, "Failed to cancel the channel switch\n");
+		ieee80211_csa_finish(vif, link_conf->link_id);
+		break;
+	case NL80211_IFTYPE_STATION:
+		if (!link_conf->csa_active) {
+			/* Either unexpected cs notif or mac80211 chose to
+			 * ignore, for example in channel switch to same channel
+			 */
+			struct iwl_cancel_channel_switch_cmd cmd = {
+				.id = cpu_to_le32(link_id),
+			};
+
+			if (iwl_mld_send_cmd_pdu(mld,
+						 WIDE_ID(MAC_CONF_GROUP,
+							 CANCEL_CHANNEL_SWITCH_CMD),
+						 &cmd))
+				IWL_ERR(mld,
+					"Failed to cancel the channel switch\n");
+			return;
+		}
+
+		ieee80211_chswitch_done(vif, true, link_conf->link_id);
+		break;
+
+	default:
+		WARN(1, "CSA on invalid vif type: %d", vif->type);
 	}
-
-	ieee80211_chswitch_done(vif, true, link_conf->link_id);
 }
 
 static void
