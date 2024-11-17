@@ -16,6 +16,7 @@
 #include "fw/api/rs.h"
 #include "fw/api/txq.h"
 #include "fw/api/datapath.h"
+#include "fw/api/time-event.h"
 
 #define MAX_ANT_NUM 2
 
@@ -599,6 +600,7 @@ iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq,
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct ieee80211_hdr *hdr = (void *)skb->data;
 	__le16 fc = hdr->frame_control;
+	struct iwl_mld_vif *mld_vif;
 	struct iwl_mld_link *link;
 
 	if (txq && txq->sta)
@@ -629,13 +631,24 @@ iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq,
 
 		WARN_ONCE(1, "Couldn't find a TXQ. fc=0x%02x", le16_to_cpu(fc));
 		return link->bcast_sta.queue_id;
+	case NL80211_IFTYPE_P2P_DEVICE:
+		mld_vif = iwl_mld_vif_from_mac80211(info->control.vif);
+
+		if (mld_vif->roc_activity == ROC_NUM_ACTIVITIES) {
+			IWL_DEBUG_DROP(mld, "Drop tx outside ROC\n");
+			return IWL_MLD_INVALID_DROP_TX;
+		}
+
+		WARN_ON(!ieee80211_is_mgmt(fc));
+
+		return mld_vif->deflink.aux_sta.queue_id;
 	default:
 		WARN_ONCE(1, "Unsupported vif type\n");
 		break;
 	}
 
 	return IWL_MLD_INVALID_QUEUE;
-	/* TODO: consider IBSS, monitor and p2p device (task=IBSS, monitor, p2p) */
+	/* TODO: consider IBSS, monitor (task=IBSS, monitor) */
 }
 
 /* This function must be called with BHs disabled */
@@ -648,7 +661,8 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	struct iwl_device_tx_cmd *dev_tx_cmd;
 	int queue = iwl_mld_get_tx_queue_id(mld, txq, skb);
 
-	if (WARN_ONCE(queue == IWL_MLD_INVALID_QUEUE, "Invalid TX Queue id"))
+	if (WARN_ONCE(queue == IWL_MLD_INVALID_QUEUE, "Invalid TX Queue id") ||
+	    queue == IWL_MLD_INVALID_DROP_TX)
 		return -1;
 
 	if (unlikely(ieee80211_is_any_nullfunc(hdr->frame_control)))

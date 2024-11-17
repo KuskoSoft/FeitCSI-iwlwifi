@@ -456,8 +456,6 @@ iwl_mld_mac80211_tx(struct ieee80211_hw *hw,
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 
-	/* TODO: drop offchannel if there is no active ROC (task=offchannel) */
-
 	/* TODO: translate MLD to link address in MLD AP (task=MLO) */
 
 	iwl_mld_tx_skb(mld, skb, NULL);

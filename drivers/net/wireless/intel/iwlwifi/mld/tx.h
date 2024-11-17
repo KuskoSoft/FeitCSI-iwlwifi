@@ -8,6 +8,7 @@
 #include "mld.h"
 
 #define IWL_MLD_INVALID_QUEUE		0xFFFF
+#define IWL_MLD_INVALID_DROP_TX		0xFFFE
 
 /**
  * struct iwl_mld_txq - TX Queue data
