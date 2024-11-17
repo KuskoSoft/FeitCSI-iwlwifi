@@ -149,8 +149,6 @@ static void iwl_mld_fill_mac_cmd_sta(struct iwl_mld *mld,
 
 	WARN_ON(vif->type != NL80211_IFTYPE_STATION);
 
-	WARN(vif->p2p, "not supported yet\n");
-
 	/* We always want to hear MCAST frames, if we're not authorized yet,
 	 * we'll drop them.
 	 */
@@ -187,8 +185,14 @@ static void iwl_mld_fill_mac_cmd_sta(struct iwl_mld *mld,
 	}
 
 	/* TODO: set TWT flags. (task=TWT) */
-	/* TODO: set ctwin in p2p (task=p2p) */
-	/* TODO: set MAC_CFG_FILTER_ACCEPT_PROBE_REQ in p2p (task=p2p) */
+	if (vif->probe_req_reg && vif->cfg.assoc && vif->p2p)
+		cmd->filter_flags |=
+			cpu_to_le32(MAC_CFG_FILTER_ACCEPT_PROBE_REQ);
+
+	if (vif->p2p)
+		cmd->client.ctwin =
+			cpu_to_le32(vif->bss_conf.p2p_noa_attr.oppps_ctwindow &
+				    IEEE80211_P2P_OPPPS_CTWINDOW_MASK);
 }
 
 static void iwl_mld_fill_mac_cmd_ap(struct iwl_mld *mld,
@@ -200,8 +204,6 @@ static void iwl_mld_fill_mac_cmd_ap(struct iwl_mld *mld,
 	lockdep_assert_wiphy(mld->wiphy);
 
 	WARN_ON(vif->type != NL80211_IFTYPE_AP);
-
-	WARN(vif->p2p, "not supported yet\n");
 
 	cmd->filter_flags |= cpu_to_le32(MAC_CFG_FILTER_ACCEPT_PROBE_REQ);
 
@@ -341,8 +343,8 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	if (vif->type != NL80211_IFTYPE_STATION &&
+	    vif->type != NL80211_IFTYPE_AP &&
 	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
@@ -367,8 +369,8 @@ int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	WARN_ON(ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-		ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	WARN_ON(vif->type != NL80211_IFTYPE_STATION &&
+		vif->type != NL80211_IFTYPE_AP &&
 		vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 		vif->type != NL80211_IFTYPE_MONITOR);
 

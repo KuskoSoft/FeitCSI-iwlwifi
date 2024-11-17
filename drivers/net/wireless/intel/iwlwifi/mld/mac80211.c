@@ -584,8 +584,8 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	if (vif->type != NL80211_IFTYPE_STATION &&
+	    vif->type != NL80211_IFTYPE_AP &&
 	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
@@ -602,10 +602,12 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	if (ret)
 		goto err;
 
-	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
-		vif->driver_flags |= IEEE80211_VIF_BEACON_FILTER |
-				     IEEE80211_VIF_SUPPORTS_CQM_RSSI |
-				     IEEE80211_VIF_REMOVE_AP_AFTER_DISASSOC;
+	if (vif->type == NL80211_IFTYPE_STATION) {
+		vif->driver_flags |= IEEE80211_VIF_REMOVE_AP_AFTER_DISASSOC;
+		if (!vif->p2p)
+			vif->driver_flags |= IEEE80211_VIF_BEACON_FILTER |
+					     IEEE80211_VIF_SUPPORTS_CQM_RSSI;
+	}
 
 	if (vif->p2p || iwl_fw_lookup_cmd_ver(mld->fw, PHY_CONTEXT_CMD, 0) < 5)
 		vif->driver_flags |= IEEE80211_VIF_IGNORE_OFDMA_WIDER_BW;
@@ -636,8 +638,8 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP &&
+	if (vif->type != NL80211_IFTYPE_STATION &&
+	    vif->type != NL80211_IFTYPE_AP &&
 	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
 	    vif->type != NL80211_IFTYPE_MONITOR) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
@@ -1300,9 +1302,9 @@ iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *link;
 
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
-	    ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) {
+	if (vif->type != NL80211_IFTYPE_STATION &&
+	    vif->type != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
 		return 0;
 	}
@@ -1469,8 +1471,8 @@ static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
 	IWL_DEBUG_MAC80211(mld, "station %pM state change %d->%d\n",
 			   sta->addr, old_state, new_state);
 
-	if ((ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION &&
-	     ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_AP) ||
+	if ((vif->type != NL80211_IFTYPE_STATION &&
+	     vif->type != NL80211_IFTYPE_AP) ||
 	    sta->tdls) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET %s\n", __func__);
 		return -EINVAL;
