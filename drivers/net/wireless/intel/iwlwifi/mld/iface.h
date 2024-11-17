@@ -22,6 +22,8 @@
  *	Only valid for STA. (FIXME: needs to be per link)
  * @num_associated_stas: number of associated STAs. Relevant only for AP mode.
  * @ap_ibss_active: whether the AP/IBSS was started
+ * @roc_activity: the id of the roc_activity running. Relevant for p2p device
+ *	only. Set to %ROC_NUM_ACTIVITIES when not in use.
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
@@ -39,6 +41,7 @@ struct iwl_mld_vif {
 		struct ieee80211_key_conf __rcu *bigtks[2];
 		u8 num_associated_stas;
 		bool ap_ibss_active;
+		u32 roc_activity;
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld *mld;

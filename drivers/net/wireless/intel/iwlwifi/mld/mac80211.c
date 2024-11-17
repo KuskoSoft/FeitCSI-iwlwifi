@@ -19,6 +19,7 @@
 #include "key.h"
 #include "ap.h"
 #include "tx.h"
+#include "roc.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #include "fw/api/filter.h"
@@ -2124,6 +2125,8 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.abort_channel_switch = iwl_mld_abort_channel_switch,
 	.switch_vif_chanctx = iwl_mld_switch_vif_chanctx,
 	.sta_pre_rcu_remove = iwl_mld_sta_pre_rcu_remove,
+	.remain_on_channel = iwl_mld_start_roc,
+	.cancel_remain_on_channel = iwl_mld_cancel_roc,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,

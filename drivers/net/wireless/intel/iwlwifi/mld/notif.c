@@ -25,6 +25,7 @@
 #include "agg.h"
 #include "mac80211.h"
 #include "thermal.h"
+#include "roc.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
@@ -292,6 +293,8 @@ CMD_VERSIONS(temp_notif,
 	     CMD_VER_ENTRY(2, iwl_dts_measurement_notif))
 CMD_VERSIONS(stored_beacon_notif,
 	     CMD_VER_ENTRY(4, iwl_stored_beacon_notif))
+CMD_VERSIONS(roc_notif,
+	     CMD_VER_ENTRY(1, iwl_roc_notif))
 
 /*
  * Handlers for fw notifications
@@ -329,6 +332,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 channel_switch_start_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(MAC_CONF_GROUP, CHANNEL_SWITCH_ERROR_NOTIF,
 			 channel_switch_error_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(MAC_CONF_GROUP, ROC_NOTIF,
+			 roc_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
 			 mu_mimo_grp_notif, RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(PROT_OFFLOAD_GROUP, STORED_BEACON_NTF,

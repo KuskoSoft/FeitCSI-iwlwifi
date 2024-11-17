@@ -9,6 +9,7 @@
 
 #include "fw/api/context.h"
 #include "fw/api/mac.h"
+#include "fw/api/time-event.h"
 
 /* Cleanup function for struct iwl_mld_vif, will be called in restart */
 void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
@@ -16,10 +17,12 @@ void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *link;
 
-	/* TODO: remove (task=p2p) */
 	if (vif->type != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_AP)
+	    vif->type != NL80211_IFTYPE_AP &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE)
 		return;
+
+	mld_vif->roc_activity = ROC_NUM_ACTIVITIES;
 
 	for_each_mld_vif_valid_link(mld_vif, link)
 		iwl_mld_cleanup_link(mld_vif->mld, link);
@@ -319,6 +322,7 @@ iwl_mld_init_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	lockdep_assert_wiphy(mld->wiphy);
 
 	mld_vif->mld = mld;
+	mld_vif->roc_activity = ROC_NUM_ACTIVITIES;
 
 	ret = iwl_mld_allocate_vif_fw_id(mld, &mld_vif->fw_id, vif);
 	if (ret)

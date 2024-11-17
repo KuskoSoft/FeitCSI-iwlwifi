@@ -1,0 +1,173 @@
+// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+/*
+ * Copyright (C) 2024 Intel Corporation
+ */
+#include <net/cfg80211.h>
+#include <net/mac80211.h>
+
+#include "mld.h"
+#include "roc.h"
+#include "hcmd.h"
+#include "iface.h"
+#include "sta.h"
+
+#include "fw/api/context.h"
+#include "fw/api/time-event.h"
+
+#define AUX_ROC_MAX_DELAY MSEC_TO_TU(200)
+
+int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+		      struct ieee80211_channel *channel, int duration,
+		      enum ieee80211_roc_type type)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_int_sta *aux_sta;
+	struct iwl_roc_req cmd = {
+		.action = cpu_to_le32(FW_CTXT_ACTION_ADD),
+	};
+	enum iwl_roc_activity activity;
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* Make sure all the handlers have run. We can have a race when mac80211
+	 * cancels and starts another ROC immediately while holding the wiphy
+	 * lock. The ASYNC handler that handles the notification can be stuck
+	 * on the lock and then, we can start the handling the notification of
+	 * ROC number n while we already started ROC n + 1.
+	 * Avoid this by waiting for all the handlers to complete.
+	 */
+	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
+
+	/* TODO: Hotspot 2.0 */
+	if (vif->type != NL80211_IFTYPE_P2P_DEVICE) {
+		IWL_ERR(mld, "NOT SUPPORTED: ROC on vif->type %d\n",
+			vif->type);
+
+		return -EOPNOTSUPP;
+	}
+
+	switch (type) {
+	case IEEE80211_ROC_TYPE_NORMAL:
+		activity = ROC_ACTIVITY_P2P_DISC;
+		break;
+	case IEEE80211_ROC_TYPE_MGMT_TX:
+		activity = ROC_ACTIVITY_P2P_NEG;
+		break;
+	default:
+		WARN_ONCE(1, "Got an invalid P2P ROC type\n");
+		return -EINVAL;
+	}
+
+	if (WARN_ON(mld_vif->roc_activity != ROC_NUM_ACTIVITIES))
+		return -EBUSY;
+
+	/* No MLO on P2P device */
+	aux_sta = &mld_vif->deflink.aux_sta;
+
+	ret = iwl_mld_add_aux_sta(mld, aux_sta);
+	if (ret)
+		return ret;
+
+	cmd.activity = cpu_to_le32(activity);
+	cmd.sta_id = cpu_to_le32(aux_sta->sta_id);
+	cmd.channel_info.channel = cpu_to_le32(channel->hw_value);
+	cmd.channel_info.band = iwl_mld_nl80211_band_to_fw(channel->band);
+	cmd.channel_info.width = IWL_PHY_CHANNEL_MODE20;
+	/* TODO: Hotspot 2.0, revisit those parameters when we add an ROC
+	 * on the BSS vif
+	 */
+	cmd.max_delay = cpu_to_le32(AUX_ROC_MAX_DELAY);
+	cmd.duration = cpu_to_le32(MSEC_TO_TU(duration));
+
+	memcpy(cmd.node_addr, vif->addr, ETH_ALEN);
+
+	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(MAC_CONF_GROUP, ROC_CMD),
+				   &cmd);
+	if (ret) {
+		IWL_ERR(mld, "Couldn't send the ROC_CMD\n");
+		return ret;
+	}
+	mld_vif->roc_activity = activity;
+
+	return 0;
+}
+
+static void iwl_mld_destroy_roc(struct iwl_mld *mld,
+				struct ieee80211_vif *vif,
+				struct iwl_mld_vif *mld_vif)
+{
+	mld_vif->roc_activity = ROC_NUM_ACTIVITIES;
+
+	/* wait until every tx has seen that roc_activity has been reset */
+	synchronize_net();
+	/* from here, no new tx will be added
+	 * we can flush the Tx on the queues
+	 */
+
+	iwl_mld_flush_link_sta_txqs(mld, mld_vif->deflink.aux_sta.sta_id);
+
+	iwl_mld_remove_aux_sta(mld, vif, &vif->bss_conf);
+}
+
+int iwl_mld_cancel_roc(struct ieee80211_hw *hw,
+		       struct ieee80211_vif *vif)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_roc_req cmd = {
+		.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE),
+	};
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* TODO: task=Hotspot 2.0 */
+	if (WARN_ON(vif->type != NL80211_IFTYPE_P2P_DEVICE))
+		return -EOPNOTSUPP;
+
+	/* No roc activity running it's probably already done */
+	if (mld_vif->roc_activity == ROC_NUM_ACTIVITIES)
+		return 0;
+
+	cmd.activity = cpu_to_le32(mld_vif->roc_activity);
+
+	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(MAC_CONF_GROUP, ROC_CMD),
+				   &cmd);
+	if (ret)
+		IWL_ERR(mld, "Couldn't send the command to cancel the ROC\n");
+
+	iwl_mld_destroy_roc(mld, vif, mld_vif);
+
+	return 0;
+}
+
+void iwl_mld_handle_roc_notif(struct iwl_mld *mld,
+			      struct iwl_rx_packet *pkt)
+{
+	const struct iwl_roc_notif *notif = (void *)pkt->data;
+	u32 activity = le32_to_cpu(notif->activity);
+	bool started = le32_to_cpu(notif->success) &&
+		le32_to_cpu(notif->started);
+	/* TODO: task=Hotspot 2.0 - roc can run on BSS */
+	struct ieee80211_vif *vif = mld->p2p_device_vif;
+	struct iwl_mld_vif *mld_vif;
+
+	if (WARN_ON(!vif))
+		return;
+
+	mld_vif = iwl_mld_vif_from_mac80211(vif);
+	/* It is possible that the ROC was canceled
+	 * but the notification was already fired.
+	 */
+	if (mld_vif->roc_activity != activity)
+		return;
+
+	if (started) {
+		ieee80211_ready_on_channel(mld->hw);
+	} else {
+		iwl_mld_destroy_roc(mld, vif, mld_vif);
+		ieee80211_remain_on_channel_expired(mld->hw);
+	}
+}
