@@ -25,6 +25,7 @@
  *	This tracks the one IGTK that currently exists in FW.
  * @bcast_sta: tation used for broadcast packets. Used in AP, GO and IBSS.
  * @mcast_sta: station used for multicast packets. Used in AP, GO and IBSS.
+ * @aux_sta: station used for remain on channel. Used in P2P device.
  * @mld: points to the mld object
  * @ap_early_keys: The firmware cannot install keys before bcast/mcast STAs,
  *	but higher layers work differently, so we store the keys here for
@@ -44,6 +45,7 @@ struct iwl_mld_link {
 	/* And here fields that survive a fw restart */
 	struct iwl_mld_int_sta bcast_sta;
 	struct iwl_mld_int_sta mcast_sta;
+	struct iwl_mld_int_sta aux_sta;
 	struct iwl_mld *mld;
 
 	/* we can only have 2 GTK + 2 IGTK + 2 BIGTK active at a time */
@@ -60,6 +62,8 @@ iwl_mld_cleanup_link(struct iwl_mld *mld, struct iwl_mld_link *link)
 		iwl_mld_free_internal_sta(mld, &link->bcast_sta);
 	if (link->mcast_sta.sta_id != IWL_INVALID_STA)
 		iwl_mld_free_internal_sta(mld, &link->mcast_sta);
+	if (link->aux_sta.sta_id != IWL_INVALID_STA)
+		iwl_mld_free_internal_sta(mld, &link->aux_sta);
 }
 
 int iwl_mld_add_link(struct iwl_mld *mld,

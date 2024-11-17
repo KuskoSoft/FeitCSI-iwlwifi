@@ -622,10 +622,17 @@ static int iwl_mld_allocate_internal_txq(struct iwl_mld *mld,
 	return queue;
 }
 
-static int iwl_mld_send_aux_sta_cmd(void)
+static int iwl_mld_send_aux_sta_cmd(struct iwl_mld *mld,
+				    const struct iwl_mld_int_sta *internal_sta)
 {
-	/* TODO: send aux cmd. (task=p2p) */
-	return -EOPNOTSUPP;
+	struct iwl_aux_sta_cmd cmd = {
+		.sta_id = cpu_to_le32(internal_sta->sta_id),
+		/* TODO: CDB - properly set the lmac_id */
+		.lmac_id = cpu_to_le32(IWL_LMAC_24G_INDEX),
+	};
+
+	return iwl_mld_send_cmd_pdu(mld, WIDE_ID(MAC_CONF_GROUP, AUX_STA_CMD),
+				    &cmd);
 }
 
 static int
@@ -637,7 +644,7 @@ iwl_mld_add_internal_sta_to_fw(struct iwl_mld *mld,
 	struct iwl_sta_cfg_cmd cmd = {};
 
 	if (internal_sta->sta_type == STATION_TYPE_AUX)
-		return iwl_mld_send_aux_sta_cmd();
+		return iwl_mld_send_aux_sta_cmd(mld, internal_sta);
 
 	cmd.sta_id = cpu_to_le32((u8)internal_sta->sta_id);
 	cmd.link_id = cpu_to_le32(fw_link_id);
@@ -737,6 +744,13 @@ int iwl_mld_add_mcast_sta(struct iwl_mld *mld,
 					mld_link->fw_id, mcast_addr, 0);
 }
 
+int iwl_mld_add_aux_sta(struct iwl_mld *mld,
+			struct iwl_mld_int_sta *internal_sta)
+{
+	return iwl_mld_add_internal_sta(mld, internal_sta, STATION_TYPE_AUX,
+					0, NULL, IWL_MAX_TID_COUNT);
+}
+
 static void iwl_mld_remove_internal_sta(struct iwl_mld *mld,
 					struct iwl_mld_int_sta *internal_sta,
 					bool flush, u8 tid)
@@ -787,4 +801,21 @@ void iwl_mld_remove_mcast_sta(struct iwl_mld *mld,
 		return;
 
 	iwl_mld_remove_internal_sta(mld, &mld_link->mcast_sta, true, 0);
+}
+
+void iwl_mld_remove_aux_sta(struct iwl_mld *mld,
+			    struct ieee80211_vif *vif,
+			    struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+
+	if (WARN_ON(!mld_link))
+		return;
+
+	/* TODO: Hotspot 2.0 */
+	if (WARN_ON(vif->type != NL80211_IFTYPE_P2P_DEVICE))
+		return;
+
+	iwl_mld_remove_internal_sta(mld, &mld_link->aux_sta, false,
+				    IWL_MAX_TID_COUNT);
 }
