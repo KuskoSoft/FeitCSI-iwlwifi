@@ -678,10 +678,17 @@ iwl_vendor_exit_emlsr(struct wiphy *wiphy, struct wireless_dev *wdev,
 		      const void *data, int data_len)
 {
 	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
-	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
-	struct iwl_mvm *mvm = mvmvif->mvm;
+	struct iwl_mvm_vif *mvmvif;
+	struct iwl_mvm *mvm;
+
+	if (!vif)
+		return -ENODEV;
+
+	mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	mvm = mvmvif->mvm;
 
 	guard(mvm)(mvm);
+
 	if (mvm->rfi_wlan_master)
 		return -EINVAL;
 
