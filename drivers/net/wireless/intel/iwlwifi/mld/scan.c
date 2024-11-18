@@ -8,6 +8,7 @@
 #include "scan.h"
 #include "hcmd.h"
 #include "iface.h"
+#include "phy.h"
 
 #include "fw/api/scan.h"
 #include "fw/dbg.h"
@@ -36,6 +37,12 @@
 
 /* adaptive dwell number of APs override for P2P social channels */
 #define IWL_SCAN_ADWELL_N_APS_SOCIAL_CHS 2
+
+/* adaptive dwell number of APs override mask for p2p friendly GO */
+#define IWL_SCAN_ADWELL_N_APS_GO_FRIENDLY_BIT BIT(20)
+
+/* adaptive dwell number of APs override mask for social channels */
+#define IWL_SCAN_ADWELL_N_APS_SOCIAL_CHS_BIT BIT(21)
 
 #define SCAN_TIMEOUT_MSEC (30000 * HZ * CPTCFG_IWL_TIMEOUT_FACTOR)
 #define IWL_MLD_6GHZ_PASSIVE_SCAN_TIMEOUT 3000 /* in seconds */
@@ -99,7 +106,7 @@ struct iwl_mld_scan_params {
 	int n_scan_plans;
 	struct cfg80211_sched_scan_plan *scan_plans;
 	bool iter_notif;
-	/* TODO: respect_p2p_go (task=p2p)*/
+	bool respect_p2p_go;
 	s8 fw_link_id;
 	struct cfg80211_scan_6ghz_params *scan_6ghz_params;
 	u32 n_6ghz_params;
@@ -107,6 +114,47 @@ struct iwl_mld_scan_params {
 	bool enable_6ghz_passive;
 	u8 bssid[ETH_ALEN] __aligned(2);
 };
+
+struct iwl_mld_scan_respect_p2p_go_iter_data {
+	struct ieee80211_vif *current_vif;
+	bool p2p_go;
+};
+
+static void iwl_mld_scan_respect_p2p_go_iter(void *_data, u8 *mac,
+					     struct ieee80211_vif *vif)
+{
+	struct iwl_mld_scan_respect_p2p_go_iter_data *data = _data;
+
+	/* exclude the given vif */
+	if (vif == data->current_vif)
+		return;
+
+	/* TODO: CDB check the band of the GO */
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_P2P_GO &&
+	    iwl_mld_vif_from_mac80211(vif)->ap_ibss_active)
+		data->p2p_go = true;
+}
+
+static bool iwl_mld_get_respect_p2p_go(struct iwl_mld *mld,
+				       struct ieee80211_vif *vif)
+{
+	struct iwl_mld_scan_respect_p2p_go_iter_data data = {
+		.current_vif = vif,
+		.p2p_go = false,
+	};
+	/* TODO task=low_latency iwl_mld_low_latency */
+	bool low_latency = false;
+
+	if (!low_latency)
+		return false;
+
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_scan_respect_p2p_go_iter,
+						&data);
+
+	return data.p2p_go;
+}
 
 static u8 *
 iwl_mld_scan_add_2ghz_elems(struct iwl_mld *mld, const u8 *ies,
@@ -349,15 +397,13 @@ iwl_mld_scan_get_cmd_gen_flags2(struct iwl_mld *mld,
 {
 	u8 flags = 0;
 
-	/* TODO: respect_p2p_go (task=p2p)
-	 * IWL_UMAC_SCAN_GEN_PARAMS_FLAGS2_RESPECT_P2P_GO_LB |
-	 * IWL_UMAC_SCAN_GEN_PARAMS_FLAGS2_RESPECT_P2P_GO_HB
-	 */
+	/* TODO: CDB */
+	if (params->respect_p2p_go)
+		flags |= IWL_UMAC_SCAN_GEN_PARAMS_FLAGS2_RESPECT_P2P_GO_LB |
+			IWL_UMAC_SCAN_GEN_PARAMS_FLAGS2_RESPECT_P2P_GO_HB;
 
 	if (params->scan_6ghz)
 		flags |= IWL_UMAC_SCAN_GEN_PARAMS_FLAGS2_DONT_TOGGLE_ANT;
-
-	/* TODO: ACS IWL_UMAC_SCAN_GEN_FLAGS2_COLLECT_CHANNEL_STATS (task=AP/p2p) */
 
 	return flags;
 }
@@ -631,9 +677,43 @@ iwl_mld_scan_cmd_set_chan_flags(struct iwl_mld *mld,
 	if (iwl_mld_scan_is_fragmented(params->type))
 		flags |= IWL_SCAN_CHANNEL_FLAG_EBS_FRAG;
 
-	/* TODO: IWL_SCAN_CHANNEL_FLAG_FORCE_EBS (task=p2p) */
+	/* Force EBS in case the scan is a fragmented and there is a need
+	 * to take P2P GO operation into consideration during scan operation.
+	 */
+	/* TODO: CDB */
+	if (iwl_mld_scan_is_fragmented(params->type) &&
+	    params->respect_p2p_go) {
+		IWL_DEBUG_SCAN(mld, "Respect P2P GO. Force EBS\n");
+		flags |= IWL_SCAN_CHANNEL_FLAG_FORCE_EBS;
+	}
 
 	return flags;
+}
+
+static const u8 p2p_go_friendly_chs[] = {
+	36, 40, 44, 48, 149, 153, 157, 161, 165,
+};
+
+static const u8 social_chs[] = {
+	1, 6, 11
+};
+
+static u32 iwl_mld_scan_ch_n_aps_flag(enum nl80211_iftype vif_type, u8 ch_id)
+{
+	if (vif_type != NL80211_IFTYPE_P2P_DEVICE)
+		return 0;
+
+	for (int i = 0; i < ARRAY_SIZE(p2p_go_friendly_chs); i++) {
+		if (ch_id == p2p_go_friendly_chs[i])
+			return IWL_SCAN_ADWELL_N_APS_GO_FRIENDLY_BIT;
+	}
+
+	for (int i = 0; i < ARRAY_SIZE(social_chs); i++) {
+		if (ch_id == social_chs[i])
+			return IWL_SCAN_ADWELL_N_APS_SOCIAL_CHS_BIT;
+	}
+
+	return 0;
 }
 
 static void
@@ -647,9 +727,11 @@ iwl_mld_scan_cmd_set_channels(struct iwl_mld *mld,
 		enum nl80211_band band = channels[i]->band;
 		struct iwl_scan_channel_cfg_umac *cfg = &cp->channel_config[i];
 		u8 iwl_band = iwl_mld_nl80211_band_to_fw(band);
+		u32 n_aps_flag =
+			iwl_mld_scan_ch_n_aps_flag(vif_type,
+						   channels[i]->hw_value);
 
-		/* TODO: scan_ch_n_aps_flag (task=p2p) */
-		cfg->flags = cpu_to_le32(flags);
+		cfg->flags = cpu_to_le32(flags | n_aps_flag);
 		cfg->channel_num = channels[i]->hw_value;
 		if (cfg80211_channel_is_psc(channels[i]))
 			cfg->flags = 0;
@@ -1272,8 +1354,8 @@ _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	params.scan_6ghz = req->scan_6ghz;
 
 	ether_addr_copy(params.bssid, req->bssid);
-
-	/* TODO: fill_respect_p2p_go (task=p2p)*/
+	/* TODO: CDB - per-band flag */
+	params.respect_p2p_go = iwl_mld_get_respect_p2p_go(mld, vif);
 
 	if (req->duration)
 		params.iter_notif = true;
@@ -1459,6 +1541,8 @@ int iwl_mld_sched_scan_start(struct iwl_mld *mld,
 	params.match_sets = req->match_sets;
 	params.n_scan_plans = req->n_scan_plans;
 	params.scan_plans = req->scan_plans;
+	/* TODO: CDB - per-band flag */
+	params.respect_p2p_go = iwl_mld_get_respect_p2p_go(mld, vif);
 
 	/* UMAC scan supports up to 16-bit delays, trim it down to 16-bits */
 	params.delay = req->delay > U16_MAX ? U16_MAX : req->delay;
