@@ -71,20 +71,23 @@ static u32 iwl_mld_get_key_sta_mask(struct iwl_mld *mld,
 				    struct ieee80211_key_conf *key)
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
-	u8 link_id = key->link_id >= 0 ? key->link_id : 0;
-	struct iwl_mld_link *link =
-		iwl_mld_link_dereference_check(mld_vif, link_id);
 	struct ieee80211_link_sta *link_sta;
 	int sta_id;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (WARN_ON(!link))
-		return 0;
-
 	/* AP group keys are per link and should be on the mcast/bcast STA */
 	if (vif->type == NL80211_IFTYPE_AP &&
 	    !(key->flags & IEEE80211_KEY_FLAG_PAIRWISE)) {
+		struct iwl_mld_link *link = NULL;
+
+		if (key->link_id >= 0)
+			link = iwl_mld_link_dereference_check(mld_vif,
+							      key->link_id);
+
+		if (WARN_ON(!link))
+			return 0;
+
 		/* In this stage we should have both the bcast and mcast STAs */
 		if (WARN_ON(link->bcast_sta.sta_id == IWL_INVALID_STA ||
 			    link->mcast_sta.sta_id == IWL_INVALID_STA))
