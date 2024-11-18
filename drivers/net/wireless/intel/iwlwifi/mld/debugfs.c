@@ -18,12 +18,6 @@
 #define MLD_DEBUGFS_READ_FILE_OPS(name, bufsz)				\
 	_MLD_DEBUGFS_READ_FILE_OPS(name, bufsz, struct iwl_mld)
 
-#define MLD_DEBUGFS_WRITE_FILE_OPS(name, bufsz)				\
-	_MLD_DEBUGFS_WRITE_FILE_OPS(name, bufsz, struct iwl_mld)
-
-#define MLD_DEBUGFS_READ_WRITE_FILE_OPS(name, bufsz)			\
-	_MLD_DEBUGFS_READ_WRITE_FILE_OPS(name, bufsz, struct iwl_mld)
-
 #define MLD_DEBUGFS_ADD_FILE_ALIAS(alias, name, parent, mode) do {	\
 	debugfs_create_file(alias, mode, parent, mld,			\
 			    &iwl_dbgfs_##name##_ops);			\
@@ -81,8 +75,6 @@ static ssize_t iwl_dbgfs_fw_restart_write(struct iwl_mld *mld, char *buf,
 	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
 		return -EIO;
 
-	wiphy_lock(mld->wiphy);
-
 	if (count == 6 && !strcmp(buf, "nolog\n")) {
 		mld->fw_status.do_not_dump_once = true;
 		set_bit(STATUS_SUPPRESS_CMD_ERROR_ONCE, &mld->trans->status);
@@ -92,8 +84,6 @@ static ssize_t iwl_dbgfs_fw_restart_write(struct iwl_mld *mld, char *buf,
 	 * fail anyway
 	 */
 	ret = iwl_mld_send_cmd_empty(mld, WIDE_ID(LONG_GROUP, REPLY_ERROR));
-
-	wiphy_unlock(mld->wiphy);
 
 	return count;
 }
@@ -131,7 +121,7 @@ iwl_dbgfs_he_sniffer_params_write(struct iwl_mld *mld, char *buf,
 	u32 aid;
 	int ret;
 
-	if (!iwl_mld_dbgfs_fw_cmd_disabled(mld))
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
 		return -EIO;
 
 	if (!mld->monitor.on)
@@ -148,8 +138,6 @@ iwl_dbgfs_he_sniffer_params_write(struct iwl_mld *mld, char *buf,
 
 	apply.aid = aid;
 	apply.bssid = (void *)he_mon_cmd.bssid;
-
-	wiphy_lock(mld->wiphy);
 
 	/* Use the notification waiter to get our function triggered
 	 * in sequence with other RX. This ensures that frames we get
@@ -171,8 +159,6 @@ iwl_dbgfs_he_sniffer_params_write(struct iwl_mld *mld, char *buf,
 	/* no need to really wait, we already did anyway */
 	iwl_remove_notification(&mld->notif_wait, &wait);
 
-	wiphy_unlock(mld->wiphy);
-
 	return ret ?: count;
 }
 
@@ -188,9 +174,9 @@ iwl_dbgfs_he_sniffer_params_read(struct iwl_mld *mld, size_t count,
 			 mld->monitor.cur_bssid[4], mld->monitor.cur_bssid[5]);
 }
 
-MLD_DEBUGFS_WRITE_FILE_OPS(fw_nmi, 10);
-MLD_DEBUGFS_WRITE_FILE_OPS(fw_restart, 10);
-MLD_DEBUGFS_READ_WRITE_FILE_OPS(he_sniffer_params, 32);
+WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_nmi, 10);
+WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_restart, 10);
+WIPHY_DEBUGFS_READ_WRITE_FILE_OPS_MLD(he_sniffer_params, 32);
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_dbg_clear, 10);
 
 static ssize_t iwl_dbgfs_wifi_6e_enable_read(struct iwl_mld *mld,

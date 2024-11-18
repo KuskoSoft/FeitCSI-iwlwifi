@@ -46,24 +46,6 @@ static ssize_t _iwl_dbgfs_##name##_read(struct file *file,		\
 				       data->rbuf, data->rlen);		\
 }
 
-#define MLD_DEBUGFS_WRITE_WRAPPER(name, buflen, argtype)		\
-static ssize_t _iwl_dbgfs_##name##_write(struct file *file,		\
-					 const char __user *user_buf,	\
-					 size_t count, loff_t *ppos)	\
-{									\
-	argtype *arg =							\
-		((struct dbgfs_##name##_data *)file->private_data)->arg;\
-	char buf[buflen] = {};						\
-	size_t buf_size = min(count, sizeof(buf) -  1);			\
-									\
-	if (copy_from_user(buf, user_buf, buf_size))			\
-		return -EFAULT;						\
-	if (*ppos)							\
-		return -EINVAL;						\
-									\
-	return iwl_dbgfs_##name##_write(arg, buf, buf_size);		\
-}
-
 static int _iwl_dbgfs_release(struct inode *inode, struct file *file)
 {
 	kfree(file->private_data);
@@ -74,28 +56,6 @@ static int _iwl_dbgfs_release(struct inode *inode, struct file *file)
 MLD_DEBUGFS_OPEN_WRAPPER(name, buflen, argtype)				\
 MLD_DEBUGFS_READ_WRAPPER(name)						\
 static const struct file_operations iwl_dbgfs_##name##_ops = {		\
-	.read = _iwl_dbgfs_##name##_read,				\
-	.open = _iwl_dbgfs_##name##_open,				\
-	.llseek = generic_file_llseek,					\
-	.release = _iwl_dbgfs_release,					\
-}
-
-#define _MLD_DEBUGFS_WRITE_FILE_OPS(name, buflen, argtype)		\
-MLD_DEBUGFS_OPEN_WRAPPER(name, buflen, argtype)				\
-MLD_DEBUGFS_WRITE_WRAPPER(name, buflen, argtype)			\
-static const struct file_operations iwl_dbgfs_##name##_ops = {		\
-	.write = _iwl_dbgfs_##name##_write,				\
-	.open = _iwl_dbgfs_##name##_open,				\
-	.llseek = generic_file_llseek,					\
-	.release = _iwl_dbgfs_release,					\
-}
-
-#define _MLD_DEBUGFS_READ_WRITE_FILE_OPS(name, buflen, argtype)		\
-MLD_DEBUGFS_OPEN_WRAPPER(name, buflen, argtype)				\
-MLD_DEBUGFS_WRITE_WRAPPER(name, buflen, argtype)			\
-MLD_DEBUGFS_READ_WRAPPER(name)						\
-static const struct file_operations iwl_dbgfs_##name##_ops = {		\
-	.write = _iwl_dbgfs_##name##_write,				\
 	.read = _iwl_dbgfs_##name##_read,				\
 	.open = _iwl_dbgfs_##name##_open,				\
 	.llseek = generic_file_llseek,					\
@@ -158,7 +118,8 @@ static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 					  const char __user *user_buf,	\
 					  size_t count, loff_t *ppos)	\
 {									\
-	struct iwl_mld *mld = file->private_data;			\
+	struct dbgfs_##name##_data *data = file->private_data;		\
+	struct iwl_mld *mld = data->arg;				\
 	char buf[bufsz] = {};						\
 									\
 	return wiphy_locked_debugfs_write(mld->wiphy, file,		\
@@ -169,8 +130,23 @@ static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 }
 
 #define WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(name, bufsz)			\
+	MLD_DEBUGFS_OPEN_WRAPPER(name, bufsz, struct iwl_mld)		\
 	WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name, bufsz)			\
 	static const struct file_operations iwl_dbgfs_##name##_ops = {	\
 		.write = __iwl_dbgfs_##name##_write,			\
-		.open = simple_open,					\
+		.open = _iwl_dbgfs_##name##_open,			\
+		.llseek = generic_file_llseek,				\
+		.release = _iwl_dbgfs_release,				\
+	}
+
+#define WIPHY_DEBUGFS_READ_WRITE_FILE_OPS_MLD(name, bufsz)		\
+	MLD_DEBUGFS_OPEN_WRAPPER(name, bufsz, struct iwl_mld)		\
+	WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name, bufsz)			\
+	MLD_DEBUGFS_READ_WRAPPER(name)					\
+	static const struct file_operations iwl_dbgfs_##name##_ops = {	\
+		.write = __iwl_dbgfs_##name##_write,			\
+		.read = _iwl_dbgfs_##name##_read,			\
+		.open = _iwl_dbgfs_##name##_open,			\
+		.llseek = generic_file_llseek,				\
+		.release = _iwl_dbgfs_release,				\
 	}
