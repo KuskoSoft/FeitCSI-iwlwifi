@@ -13,11 +13,10 @@
 #include "key.h"
 #include "iwl-utils.h"
 
-#include "fw/api/tx.h"
 #include "fw/api/sta.h"
 
-static void iwl_mld_set_tim_idx(struct iwl_mld *mld, __le32 *tim_index,
-				u8 *beacon, u32 frame_size)
+void iwl_mld_set_tim_idx(struct iwl_mld *mld, __le32 *tim_index,
+			 u8 *beacon, u32 frame_size)
 {
 	u32 tim_idx;
 	struct ieee80211_mgmt *mgmt = (void *)beacon;
@@ -39,11 +38,11 @@ static void iwl_mld_set_tim_idx(struct iwl_mld *mld, __le32 *tim_index,
 		IWL_WARN(mld, "Unable to find TIM Element in beacon\n");
 }
 
-static u8 iwl_mld_get_rate_flags(struct iwl_mld *mld,
-				 struct ieee80211_tx_info *info,
-				 struct ieee80211_vif *vif,
-				 struct ieee80211_bss_conf *link,
-				 enum nl80211_band band)
+u8 iwl_mld_get_rate_flags(struct iwl_mld *mld,
+			  struct ieee80211_tx_info *info,
+			  struct ieee80211_vif *vif,
+			  struct ieee80211_bss_conf *link,
+			  enum nl80211_band band)
 {
 	u32 legacy = link->beacon_tx_rate.control[band].legacy;
 	u32 rate_idx, rate_flags = 0, fw_rate;
@@ -71,9 +70,9 @@ static u8 iwl_mld_get_rate_flags(struct iwl_mld *mld,
 	return fw_rate | rate_flags;
 }
 
-static int iwl_mld_send_beacon_template_cmd(struct iwl_mld *mld,
-					    struct sk_buff *beacon,
-					    struct iwl_mac_beacon_cmd *cmd)
+int iwl_mld_send_beacon_template_cmd(struct iwl_mld *mld,
+				     struct sk_buff *beacon,
+				     struct iwl_mac_beacon_cmd *cmd)
 {
 	struct iwl_host_cmd hcmd = {
 		.id = BEACON_TEMPLATE_CMD,
@@ -159,10 +158,21 @@ int iwl_mld_update_beacon_template(struct iwl_mld *mld,
 	struct iwl_mac_beacon_cmd cmd = {};
 	struct sk_buff *beacon;
 	int ret;
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+#endif
 
 	WARN_ON(vif->type != NL80211_IFTYPE_AP &&
 		vif->type != NL80211_IFTYPE_ADHOC);
 
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	if (mld_vif->beacon_inject_active) {
+		IWL_DEBUG_INFO(mld,
+			       "Can't update template, beacon injection's active\n");
+		return -EBUSY;
+	}
+
+#endif
 	beacon = ieee80211_beacon_get_template(mld->hw, vif, NULL,
 					       link_conf->link_id);
 	if (!beacon)

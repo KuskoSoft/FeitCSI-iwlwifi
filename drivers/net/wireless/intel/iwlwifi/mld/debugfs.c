@@ -12,6 +12,8 @@
 #include "tlc.h"
 #include "power.h"
 #include "notif.h"
+#include "ap.h"
+#include "iwl-utils.h"
 
 #include "fw/api/rs.h"
 #include "fw/api/dhc.h"
@@ -331,6 +333,111 @@ static ssize_t iwl_dbgfs_vif_pm_params_write(struct iwl_mld *mld,
 VIF_DEBUGFS_WRITE_FILE_OPS(pm_params, 32);
 VIF_DEBUGFS_WRITE_FILE_OPS(bf_params, 32);
 
+static int
+_iwl_dbgfs_inject_beacon_ie(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			    char *bin, ssize_t len,
+			    bool restore)
+{
+	struct iwl_mld_vif *mld_vif;
+	struct iwl_mld_link *mld_link;
+	struct iwl_mac_beacon_cmd beacon_cmd = {};
+	int n_bytes = len / 2;
+
+	/* Element len should be represented by u8 */
+	if (n_bytes >= U8_MAX)
+		return -EINVAL;
+
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	if (!vif)
+		return -EINVAL;
+
+	mld_vif = iwl_mld_vif_from_mac80211(vif);
+	mld_vif->beacon_inject_active = true;
+	mld->hw->extra_beacon_tailroom = n_bytes;
+
+	for_each_mld_vif_valid_link(mld_vif, mld_link) {
+		u32 offset;
+		struct ieee80211_tx_info *info;
+		struct ieee80211_bss_conf *link_conf =
+			link_conf_dereference_protected(vif, link_id);
+		struct ieee80211_chanctx_conf *ctx =
+			wiphy_dereference(mld->wiphy, link_conf->chanctx_conf);
+		struct sk_buff *beacon =
+			ieee80211_beacon_get_template(mld->hw, vif,
+						      NULL, link_id);
+
+		if (!beacon)
+			return -EINVAL;
+
+		if (!restore && (WARN_ON(!n_bytes || !bin) ||
+				 hex2bin(skb_put_zero(beacon, n_bytes),
+					 bin, n_bytes))) {
+			dev_kfree_skb(beacon);
+			return -EINVAL;
+		}
+
+		info = IEEE80211_SKB_CB(beacon);
+
+		beacon_cmd.flags =
+			cpu_to_le16(iwl_mld_get_rate_flags(mld, info, vif,
+							   link_conf,
+							   ctx->def.chan->band));
+		beacon_cmd.byte_cnt = cpu_to_le16((u16)beacon->len);
+		beacon_cmd.link_id =
+			cpu_to_le32(mld_link->fw_id);
+
+		iwl_mld_set_tim_idx(mld, &beacon_cmd.tim_idx,
+				    beacon->data, beacon->len);
+
+		offset = iwl_find_ie_offset(beacon->data,
+					    WLAN_EID_S1G_TWT,
+					    beacon->len);
+
+		beacon_cmd.btwt_offset = cpu_to_le32(offset);
+
+		iwl_mld_send_beacon_template_cmd(mld, beacon, &beacon_cmd);
+		dev_kfree_skb(beacon);
+	}
+
+	if (restore)
+		mld_vif->beacon_inject_active = false;
+
+	return 0;
+}
+
+static ssize_t
+iwl_dbgfs_vif_inject_beacon_ie_write(struct iwl_mld *mld,
+				     char *buf, size_t count,
+				     void *data)
+{
+	struct ieee80211_vif *vif = data;
+	int ret = _iwl_dbgfs_inject_beacon_ie(mld, vif, buf,
+					      count, false);
+
+	mld->hw->extra_beacon_tailroom = 0;
+	return ret ?: count;
+}
+
+VIF_DEBUGFS_WRITE_FILE_OPS(inject_beacon_ie, 512);
+
+static ssize_t
+iwl_dbgfs_vif_inject_beacon_ie_restore_write(struct iwl_mld *mld,
+					     char *buf,
+					     size_t count,
+					     void *data)
+{
+	struct ieee80211_vif *vif = data;
+	int ret = _iwl_dbgfs_inject_beacon_ie(mld, vif, NULL,
+					      0, true);
+
+	mld->hw->extra_beacon_tailroom = 0;
+	return ret ?: count;
+}
+
+VIF_DEBUGFS_WRITE_FILE_OPS(inject_beacon_ie_restore, 512);
+
 void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 			     struct ieee80211_vif *vif)
 {
@@ -360,6 +467,12 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 	    vif->type == NL80211_IFTYPE_STATION) {
 		VIF_DEBUGFS_ADD_FILE(pm_params, mld_vif_dbgfs, 0200);
 		VIF_DEBUGFS_ADD_FILE(bf_params, mld_vif_dbgfs, 0200);
+	}
+
+	if (vif->type == NL80211_IFTYPE_AP) {
+		VIF_DEBUGFS_ADD_FILE(inject_beacon_ie, mld_vif_dbgfs, 0200);
+		VIF_DEBUGFS_ADD_FILE(inject_beacon_ie_restore,
+				     mld_vif_dbgfs, 0200);
 	}
 
 }

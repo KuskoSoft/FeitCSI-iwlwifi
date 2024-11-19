@@ -33,6 +33,7 @@ enum iwl_mld_cca_40mhz_wa_status {
  * @cca_40mhz_workaround: When we are connected in 2.4 GHz and 40 MHz, and the
  *	environment is too loaded, we work around this by reconnecting to the
  *	same AP with 20 MHz. This manages the status of the workaround.
+ * @beacon_inject_active: indicates an active debugfs beacon ie injection
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
@@ -52,6 +53,9 @@ struct iwl_mld_vif {
 		bool ap_ibss_active;
 		u32 roc_activity;
 		enum iwl_mld_cca_40mhz_wa_status cca_40mhz_workaround;
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+		bool beacon_inject_active;
+#endif
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld *mld;
