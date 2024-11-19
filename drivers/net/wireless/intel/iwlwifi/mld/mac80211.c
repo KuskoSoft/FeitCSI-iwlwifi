@@ -25,6 +25,7 @@
 #include "fw/api/context.h"
 #include "fw/api/filter.h"
 #include "fw/api/sta.h"
+#include "fw/api/tdls.h"
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
 #endif /* CONFIG_PM_SLEEP */
@@ -794,6 +795,31 @@ void iwl_mld_mac80211_wake_tx_queue(struct ieee80211_hw *hw,
 	spin_unlock_bh(&mld->add_txqs_lock);
 }
 
+static void iwl_mld_teardown_tdls_peers(struct iwl_mld *mld)
+{
+	lockdep_assert_wiphy(mld->wiphy);
+
+	for (int i = 0; i < mld->fw->ucode_capa.num_stations; i++) {
+		struct ieee80211_link_sta *link_sta;
+		struct iwl_mld_sta *mld_sta;
+
+		link_sta = wiphy_dereference(mld->wiphy,
+					     mld->fw_id_to_link_sta[i]);
+		if (IS_ERR_OR_NULL(link_sta))
+			continue;
+
+		if (!link_sta->sta->tdls)
+			continue;
+
+		mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+
+		ieee80211_tdls_oper_request(mld_sta->vif, link_sta->addr,
+					    NL80211_TDLS_TEARDOWN,
+					    WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED,
+					    GFP_KERNEL);
+	}
+}
+
 static
 int iwl_mld_add_chanctx(struct ieee80211_hw *hw,
 			struct ieee80211_chanctx_conf *ctx)
@@ -814,6 +840,9 @@ int iwl_mld_add_chanctx(struct ieee80211_hw *hw,
 		mld->used_phy_ids &= ~BIT(phy->fw_id);
 		return ret;
 	}
+
+	if (hweight8(mld->used_phy_ids) > 1)
+		iwl_mld_teardown_tdls_peers(mld);
 
 	return 0;
 }
@@ -1354,6 +1383,29 @@ static void iwl_mld_set_uapsd(struct iwl_mld *mld, struct ieee80211_vif *vif)
 		vif->driver_flags |= IEEE80211_VIF_SUPPORTS_UAPSD;
 }
 
+int iwl_mld_tdls_sta_count(struct iwl_mld *mld)
+{
+	int count = 0;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	for (int i = 0; i < mld->fw->ucode_capa.num_stations; i++) {
+		struct ieee80211_link_sta *link_sta;
+
+		link_sta = wiphy_dereference(mld->wiphy,
+					     mld->fw_id_to_link_sta[i]);
+		if (IS_ERR_OR_NULL(link_sta))
+			continue;
+
+		if (!link_sta->sta->tdls)
+			continue;
+
+		count++;
+	}
+
+	return count;
+}
+
 static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 				     struct ieee80211_vif *vif,
 				     struct ieee80211_sta *sta,
@@ -1361,13 +1413,27 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 				     enum ieee80211_sta_state new_state)
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int tdls_count = 0;
 	int ret;
 
 	if (old_state == IEEE80211_STA_NOTEXIST &&
 	    new_state == IEEE80211_STA_NONE) {
+		if (sta->tdls) {
+			if (vif->p2p || hweight8(mld->used_phy_ids) != 1)
+				return -EBUSY;
+
+			tdls_count = iwl_mld_tdls_sta_count(mld);
+			if (tdls_count >= IWL_TDLS_STA_COUNT)
+				return -EBUSY;
+		}
+
 		ret = iwl_mld_add_sta(mld, sta, vif, STATION_TYPE_PEER);
 		if (ret)
 			return ret;
+
+		/* just added first TDLS STA, so disable PM */
+		if (sta->tdls && tdls_count == 0)
+			iwl_mld_update_mac_power(mld, vif, false);
 
 		if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
 			mld_vif->ap_sta = sta;
@@ -1408,12 +1474,15 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		return ret;
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTHORIZED) {
-		mld_vif->authorized = true;
+		if (!sta->tdls) {
+			mld_vif->authorized = true;
 
-		/* clear COEX_HIGH_PRIORITY_ENABLE */
-		ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_MODIFY);
-		if (ret)
-			return ret;
+			/* clear COEX_HIGH_PRIORITY_ENABLE */
+			ret = iwl_mld_mac_fw_action(mld, vif,
+						    FW_CTXT_ACTION_MODIFY);
+			if (ret)
+				return ret;
+		}
 
 		/* MFP is set by default before the station is authorized.
 		 * Clear it here in case it's not used.
@@ -1441,13 +1510,15 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 
 	if (old_state == IEEE80211_STA_AUTHORIZED &&
 	    new_state == IEEE80211_STA_ASSOC) {
-		mld_vif->authorized = false;
+		if (!sta->tdls) {
+			mld_vif->authorized = false;
+			iwl_mld_reset_cca_40mhz_workaround(mld, vif);
+		}
+
 		/* once we move into assoc state, need to update the FW to
 		 * stop using wide bandwidth
 		 */
 		iwl_mld_config_tlc(mld, vif, sta);
-
-		iwl_mld_reset_cca_40mhz_workaround(mld, vif);
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTH) {
 		if (vif->type == NL80211_IFTYPE_AP &&
@@ -1465,6 +1536,11 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 	} else if (old_state == IEEE80211_STA_NONE &&
 		   new_state == IEEE80211_STA_NOTEXIST) {
 		iwl_mld_remove_sta(mld, sta);
+
+		if (sta->tdls && iwl_mld_tdls_sta_count(mld) == 0) {
+			/* just removed last TDLS STA, so enable PM */
+			iwl_mld_update_mac_power(mld, vif, false);
+		}
 	} else {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET\n");
 		return -EINVAL;
@@ -1484,9 +1560,8 @@ static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
 	IWL_DEBUG_MAC80211(mld, "station %pM state change %d->%d\n",
 			   sta->addr, old_state, new_state);
 
-	if ((vif->type != NL80211_IFTYPE_STATION &&
-	     vif->type != NL80211_IFTYPE_AP) ||
-	    sta->tdls) {
+	if (vif->type != NL80211_IFTYPE_STATION &&
+	    vif->type != NL80211_IFTYPE_AP) {
 		IWL_ERR(mld, "NOT IMPLEMENTED YET %s\n", __func__);
 		return -EINVAL;
 	}
@@ -2075,6 +2150,32 @@ static void iwl_mld_sta_pre_rcu_remove(struct ieee80211_hw *hw,
 		mld_vif->ap_sta = NULL;
 }
 
+static void
+iwl_mld_mac80211_mgd_protect_tdls_discover(struct ieee80211_hw *hw,
+					   struct ieee80211_vif *vif,
+					   unsigned int link_id)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct ieee80211_bss_conf *link_conf;
+	u32 duration;
+	int ret;
+
+	link_conf = wiphy_dereference(hw->wiphy, vif->link_conf[link_id]);
+	if (WARN_ON_ONCE(!link_conf))
+		return;
+
+	/* Protect the session to hear the TDLS setup response on the channel */
+
+	duration = 2 * link_conf->dtim_period * link_conf->beacon_int;
+
+	ret = iwl_mld_start_session_protection(mld, vif, duration, duration,
+					       link_id, HZ / 5);
+	if (ret)
+		IWL_ERR(mld,
+			"Failed to start session protection for TDLS: %d\n",
+			ret);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2134,4 +2235,5 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.link_add_debugfs = iwl_mld_add_link_debugfs,
 	.link_sta_add_debugfs = iwl_mld_add_link_sta_debugfs,
 #endif
+	.mgd_protect_tdls_discover = iwl_mld_mac80211_mgd_protect_tdls_discover,
 };

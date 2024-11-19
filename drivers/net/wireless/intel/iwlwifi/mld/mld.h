@@ -440,4 +440,6 @@ static inline bool iwl_mld_error_before_recovery(struct iwl_mld *mld)
 		!iwl_trans_fw_running(mld->trans);
 }
 
+int iwl_mld_tdls_sta_count(struct iwl_mld *mld);
+
 #endif /* __iwl_mld_h__ */

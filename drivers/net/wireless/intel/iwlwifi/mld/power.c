@@ -224,7 +224,7 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
 		cmd->flags |= cpu_to_le16(POWER_FLAGS_POWER_SAVE_ENA_MSK);
 
-	if (!vif->cfg.ps)
+	if (!vif->cfg.ps || iwl_mld_tdls_sta_count(mld) > 0)
 		return;
 
 	cmd->flags |= cpu_to_le16(POWER_FLAGS_POWER_MANAGEMENT_ENA_MSK);
@@ -269,8 +269,6 @@ int iwl_mld_update_mac_power(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			     bool d3)
 {
 	struct iwl_mac_power_cmd cmd = {};
-
-	/* TODO: task=tdls don't enable power management */
 
 	iwl_mld_power_build_cmd(mld, vif, &cmd, d3);
 

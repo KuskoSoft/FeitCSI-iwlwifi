@@ -50,6 +50,25 @@ void iwl_mld_schedule_session_protection(struct iwl_mld *mld,
 					 int link_id);
 
 /**
+ * iwl_mld_start_session_protection - start a session protection
+ * @mld: the mld component
+ * @vif: the virtual interface for which the protection issued
+ * @duration: the requested duration of the protection
+ * @min_duration: the minimum duration of the protection
+ * @link_id: The link to schedule a session protection for
+ * @timeout: timeout for waiting
+ *
+ * This schedules the session protection, and waits for it to start
+ * (with timeout)
+ *
+ * Returns: 0 if successful, error code otherwise
+ */
+int iwl_mld_start_session_protection(struct iwl_mld *mld,
+				     struct ieee80211_vif *vif,
+				     u32 duration, u32 min_duration,
+				     int link_id, unsigned long timeout);
+
+/**
  * iwl_mld_cancel_session_protection - cancel the session protection.
  * @mld: the mld component
  * @vif: the virtual interface for which the session is issued
