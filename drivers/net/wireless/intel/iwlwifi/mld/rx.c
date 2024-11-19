@@ -1267,15 +1267,6 @@ static int iwl_mld_rx_crypto(struct iwl_mld *mld,
 {
 	u32 status = le32_to_cpu(desc->status);
 
-	/* Drop UNKNOWN frames, unless in monitor mode (where we don't
-	 * have the keys).
-	 */
-	if ((status & IWL_RX_MPDU_STATUS_SEC_MASK) ==
-	    IWL_RX_MPDU_STATUS_SEC_UNKNOWN && !mld->monitor.on) {
-		IWL_DEBUG_DROP(mld, "Dropping packets, bad enc status\n");
-		return -1;
-	}
-
 	if (unlikely(ieee80211_is_mgmt(hdr->frame_control) &&
 		     !ieee80211_has_protected(hdr->frame_control)))
 		return iwl_mld_rx_mgmt_prot(sta, hdr, rx_status, status,
@@ -1314,17 +1305,8 @@ static int iwl_mld_rx_crypto(struct iwl_mld *mld,
 		*crypto_len = IEEE80211_TKIP_IV_LEN;
 		rx_status->flag |= RX_FLAG_DECRYPTED;
 		return 0;
-	case RX_MPDU_RES_STATUS_SEC_CMAC_GMAC_ENC:
-		break;
 	default:
-		/* Sometimes we can get frames that were not decrypted
-		 * because the firmware didn't have the keys yet. This can
-		 * happen after connection where we can get multicast frames
-		 * before the GTK is installed. Silently drop those frames.
-		 */
-		if (!is_multicast_ether_addr(hdr->addr1) &&
-		    !mld->monitor.on && net_ratelimit())
-			IWL_WARN(mld, "Unhandled alg: 0x%x\n", status);
+		break;
 	}
 
 	return 0;
