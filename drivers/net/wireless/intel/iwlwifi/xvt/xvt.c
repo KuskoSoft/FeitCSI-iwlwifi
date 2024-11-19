@@ -296,9 +296,6 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 
 	trans->dbg.dest_tlv = xvt->fw->dbg.dest_tlv;
 	trans->dbg.n_dest_reg = xvt->fw->dbg.n_dest_reg;
-	memcpy(trans->dbg.conf_tlv, xvt->fw->dbg.conf_tlv,
-	       sizeof(trans->dbg.conf_tlv));
-	trans->dbg.trigger_tlv = xvt->fw->dbg.trigger_tlv;
 
 	IWL_INFO(xvt, "xVT operation mode\n");
 
