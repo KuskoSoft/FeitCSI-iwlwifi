@@ -612,8 +612,12 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	if (ret)
 		return ret;
 
-	/* Add the default link (now pointed to by link[0]) */
-	ret = iwl_mld_add_link(mld, &vif->bss_conf);
+	/*
+	 * Add the default link, but not if this is an MLD vif as that implies
+	 * the HW is restarting and it will be configured by change_vif_links.
+	 */
+	if (!ieee80211_vif_is_mld(vif))
+		ret = iwl_mld_add_link(mld, &vif->bss_conf);
 	if (ret)
 		goto err;
 
