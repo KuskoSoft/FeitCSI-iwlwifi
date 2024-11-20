@@ -2227,6 +2227,86 @@ iwl_mld_mac80211_mgd_protect_tdls_discover(struct ieee80211_hw *hw,
 			ret);
 }
 
+static bool iwl_mld_can_activate_links(struct ieee80211_hw *hw,
+				       struct ieee80211_vif *vif,
+				       u16 desired_links)
+{
+	int n_links = hweight16(desired_links);
+
+	if (n_links <= 1)
+		return true;
+
+	return false;
+}
+
+static int
+iwl_mld_change_vif_links(struct ieee80211_hw *hw,
+			 struct ieee80211_vif *vif,
+			 u16 old_links, u16 new_links,
+			 struct ieee80211_bss_conf *old[IEEE80211_MLD_MAX_NUM_LINKS])
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct ieee80211_bss_conf *link_conf;
+	u16 removed = old_links & ~new_links;
+	u16 added = new_links & ~old_links;
+	int err;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/*
+	 * No bits designate non-MLO mode. We can handle MLO exit/enter by
+	 * simply mapping that to link ID zero internally.
+	 * Note that mac80211 does such a non-MLO to MLO switch during restart
+	 * if it was in MLO before. In that case, we do not have a link to
+	 * remove.
+	 */
+	if (old_links == 0 && !mld->fw_status.in_hw_restart)
+		removed |= BIT(0);
+
+	if (new_links == 0)
+		added |= BIT(0);
+
+	for (int i = 0; i < IEEE80211_MLD_MAX_NUM_LINKS; i++) {
+		if (removed & BIT(i)) {
+			link_conf = old[i];
+
+			err = iwl_mld_remove_link(mld, link_conf);
+			if (err)
+				return err;
+		}
+	}
+
+	for (int i = 0; i < IEEE80211_MLD_MAX_NUM_LINKS; i++) {
+		if (added & BIT(i)) {
+			link_conf = link_conf_dereference_protected(vif, i);
+			if (WARN_ON(!link_conf))
+				return -EINVAL;
+
+			err = iwl_mld_add_link(mld, link_conf);
+			if (err)
+				goto remove_added_links;
+		}
+	}
+
+	/* TODO: select a primary link task=EMLSR */
+
+	return 0;
+
+remove_added_links:
+	for (int i = 0; i < IEEE80211_MLD_MAX_NUM_LINKS; i++) {
+		if (!(added & BIT(i)))
+			continue;
+
+		link_conf = link_conf_dereference_protected(vif, i);
+		if (!link_conf || !iwl_mld_link_from_mac80211(link_conf))
+			continue;
+
+		iwl_mld_remove_link(mld, link_conf);
+	}
+
+	return err;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2272,6 +2352,8 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.sta_pre_rcu_remove = iwl_mld_sta_pre_rcu_remove,
 	.remain_on_channel = iwl_mld_start_roc,
 	.cancel_remain_on_channel = iwl_mld_cancel_roc,
+	.can_activate_links = iwl_mld_can_activate_links,
+	.change_vif_links = iwl_mld_change_vif_links,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
