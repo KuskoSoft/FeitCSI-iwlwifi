@@ -25,6 +25,7 @@ struct iwl_probe_resp_data {
 /**
  * struct iwl_mld_link - link configuration parameters
  *
+ * @rcu_head: RCU head for freeing this data.
  * @fw_id: the fw id of the link.
  * @active: if the link is active or not.
  * @queue_params: QoS data from mac80211. This is updated with a call to
@@ -35,7 +36,7 @@ struct iwl_probe_resp_data {
  * @he_ru_2mhz_block: 26-tone RU OFDMA transmissions should be blocked.
  * @igtk: fw can only have one IGTK at a time, whereas mac80211 can have two.
  *	This tracks the one IGTK that currently exists in FW.
- * @bcast_sta: tation used for broadcast packets. Used in AP, GO and IBSS.
+ * @bcast_sta: station used for broadcast packets. Used in AP, GO and IBSS.
  * @mcast_sta: station used for multicast packets. Used in AP, GO and IBSS.
  * @aux_sta: station used for remain on channel. Used in P2P device.
  * @ap_early_keys: The firmware cannot install keys before bcast/mcast STAs,
@@ -46,6 +47,8 @@ struct iwl_probe_resp_data {
  *	inserted into probe response.
  */
 struct iwl_mld_link {
+	struct rcu_head rcu_head;
+
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
 		u8 fw_id;

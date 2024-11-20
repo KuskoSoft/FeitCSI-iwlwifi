@@ -353,9 +353,6 @@ iwl_mld_init_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	if (ret)
 		return ret;
 
-	/* the first link points to the default one when in non-MLO */
-	RCU_INIT_POINTER(mld_vif->link[0], &mld_vif->deflink);
-
 	return 0;
 }
 

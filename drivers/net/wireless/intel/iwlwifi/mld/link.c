@@ -443,17 +443,38 @@ iwl_mld_init_link(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 int iwl_mld_add_link(struct iwl_mld *mld,
 		     struct ieee80211_bss_conf *bss_conf)
 {
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(bss_conf->vif);
 	struct iwl_mld_link *link = iwl_mld_link_from_mac80211(bss_conf);
+	bool is_deflink = bss_conf == &bss_conf->vif->bss_conf;
 	int ret;
+
+	if (!link) {
+		if (is_deflink)
+			link = &mld_vif->deflink;
+		else
+			link = kzalloc(sizeof(*link), GFP_KERNEL);
+	} else {
+		WARN_ON(!mld->fw_status.in_hw_restart);
+	}
 
 	ret = iwl_mld_init_link(mld, bss_conf, link);
 	if (ret)
-		return ret;
+		goto free;
+
+	rcu_assign_pointer(mld_vif->link[bss_conf->link_id], link);
 
 	ret = iwl_mld_add_link_to_fw(mld, bss_conf);
-	if (ret)
+	if (ret) {
 		RCU_INIT_POINTER(mld->fw_id_to_bss_conf[link->fw_id], NULL);
+		RCU_INIT_POINTER(mld_vif->link[bss_conf->link_id], NULL);
+		goto free;
+	}
 
+	return ret;
+
+free:
+	if (!is_deflink)
+		kfree(link);
 	return ret;
 }
 
@@ -461,22 +482,28 @@ int iwl_mld_add_link(struct iwl_mld *mld,
 int iwl_mld_remove_link(struct iwl_mld *mld,
 			struct ieee80211_bss_conf *bss_conf)
 {
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(bss_conf->vif);
 	struct iwl_mld_link *link = iwl_mld_link_from_mac80211(bss_conf);
+	bool is_deflink = link == &mld_vif->deflink;
 	int ret;
 
 	if (WARN_ON(link->active))
 		return -EINVAL;
 
 	ret = iwl_mld_rm_link_from_fw(mld, bss_conf);
-	if (ret)
-		return ret;
+	/* Continue cleanup on failure */
+
+	if (!is_deflink)
+		kfree_rcu(link, rcu_head);
+
+	RCU_INIT_POINTER(mld_vif->link[bss_conf->link_id], NULL);
 
 	if (WARN_ON(link->fw_id >= mld->fw->ucode_capa.num_links))
 		return -EINVAL;
 
 	RCU_INIT_POINTER(mld->fw_id_to_bss_conf[link->fw_id], NULL);
 
-	return 0;
+	return ret;
 }
 
 void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
