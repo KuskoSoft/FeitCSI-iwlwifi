@@ -27,8 +27,23 @@ void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 
 	mld_vif->roc_activity = ROC_NUM_ACTIVITIES;
 
-	for_each_mld_vif_valid_link(mld_vif, link)
+	for_each_mld_vif_valid_link(mld_vif, link) {
 		iwl_mld_cleanup_link(mld_vif->mld, link);
+
+		/* Correctly allocated primary link in non-MLO mode */
+		if (!ieee80211_vif_is_mld(vif) &&
+		    link_id == 0 && link == &mld_vif->deflink)
+			continue;
+
+		if (vif->active_links & BIT(link_id))
+			continue;
+
+		/* Should not happen as link removal should always succeed */
+		WARN_ON(1);
+		if (link != &mld_vif->deflink)
+			kfree_rcu(link, rcu_head);
+		RCU_INIT_POINTER(mld_vif->link[link_id], NULL);
+	}
 
 	ieee80211_iter_keys(mld->hw, vif, iwl_mld_cleanup_keys_iter, NULL);
 
