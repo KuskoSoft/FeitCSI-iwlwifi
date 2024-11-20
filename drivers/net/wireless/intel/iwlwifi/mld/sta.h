@@ -30,7 +30,6 @@ struct iwl_mld_rxq_dup_data {
  *
  * @last_rate_n_flags: rate_n_flags from the last &iwl_tlc_update_notif
  * @rcu_head: RCU head for freeing this object
- * @mld: pointer to iwl_mld
  * @fw_id: the FW id of this link sta.
  */
 struct iwl_mld_link_sta {
@@ -40,7 +39,6 @@ struct iwl_mld_link_sta {
 	);
 	/* And here fields that survive a fw restart */
 	struct rcu_head rcu_head;
-	struct iwl_mld *mld;
 	u32 fw_id;
 };
 
