@@ -506,8 +506,15 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	 * will recover SN/PN for them
 	 */
 	if (mld->fw_status.in_hw_restart) {
-		fw_id = iwl_mld_fw_sta_id_from_link_sta(link_sta);
-		goto add_to_fw;
+		mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+
+		if (mld_link_sta) {
+			fw_id = mld_link_sta->fw_id;
+			goto add_to_fw;
+		} else {
+			/* Link sta was not allocated before the restart. */
+			WARN_ON(1);
+		}
 	}
 
 	/* Allocate a fw id and map it to the link_sta */
