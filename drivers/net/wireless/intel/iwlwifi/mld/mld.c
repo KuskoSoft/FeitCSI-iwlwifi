@@ -184,6 +184,8 @@ static const struct iwl_hcmd_names iwl_mld_system_names[] = {
 	HCMD_NAME(SOC_CONFIGURATION_CMD),
 	HCMD_NAME(INIT_EXTENDED_CFG_CMD),
 	HCMD_NAME(FW_ERROR_RECOVERY_CMD),
+	HCMD_NAME(SYSTEM_STATISTICS_CMD),
+	HCMD_NAME(SYSTEM_STATISTICS_END_NOTIF),
 };
 
 /* Please keep this array *SORTED* by hex value.
@@ -247,6 +249,14 @@ static const struct iwl_hcmd_names iwl_mld_phy_names[] = {
 	HCMD_NAME(DTS_MEASUREMENT_NOTIF_WIDE),
 };
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_statistics_names[] = {
+	HCMD_NAME(STATISTICS_OPER_NOTIF),
+	HCMD_NAME(STATISTICS_OPER_PART1_NOTIF),
+};
+
 VISIBLE_IF_IWLWIFI_KUNIT
 const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
@@ -257,6 +267,7 @@ const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[REGULATORY_AND_NVM_GROUP] = HCMD_ARR(iwl_mld_reg_and_nvm_names),
 	[DEBUG_GROUP] = HCMD_ARR(iwl_mld_debug_names),
 	[PHY_OPS_GROUP] = HCMD_ARR(iwl_mld_phy_names),
+	[STATISTICS_GROUP] = HCMD_ARR(iwl_mld_statistics_names),
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_groups);
 

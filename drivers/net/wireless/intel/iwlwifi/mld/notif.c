@@ -17,6 +17,7 @@
 #include "fw/api/tx.h"
 #include "fw/api/rs.h"
 #include "fw/api/offload.h"
+#include "fw/api/stats.h"
 
 #include "mcc.h"
 #include "link.h"
@@ -28,6 +29,7 @@
 #include "thermal.h"
 #include "roc.h"
 #include "iface.h"
+#include "stats.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
@@ -364,6 +366,10 @@ CMD_VERSIONS(probe_resp_data_notif,
 	     CMD_VER_ENTRY(1, iwl_probe_resp_data_notif))
 CMD_VERSIONS(datapath_monitor_notif,
 	     CMD_VER_ENTRY(1, iwl_datapath_monitor_notif))
+CMD_VERSIONS(stats_oper_notif,
+	     CMD_VER_ENTRY(3, iwl_system_statistics_notif_oper))
+CMD_VERSIONS(stats_oper_part1_notif,
+	     CMD_VER_ENTRY(4, iwl_system_statistics_part1_notif_oper))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -393,6 +399,12 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     RX_HANDLER_SYNC)
 	RX_HANDLER_NO_VAL(LEGACY_GROUP, MATCH_FOUND_NOTIFICATION,
 			  match_found_notif, RX_HANDLER_SYNC)
+
+	RX_HANDLER_NO_OBJECT(STATISTICS_GROUP, STATISTICS_OPER_NOTIF,
+			     stats_oper_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(STATISTICS_GROUP, STATISTICS_OPER_PART1_NOTIF,
+			     stats_oper_part1_notif, RX_HANDLER_ASYNC)
+
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION,
 			     mfuart_notif, RX_HANDLER_SYNC)
 
