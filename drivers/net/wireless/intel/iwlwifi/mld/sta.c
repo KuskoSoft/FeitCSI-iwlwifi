@@ -517,7 +517,7 @@ void iwl_mld_remove_sta(struct iwl_mld *mld, struct ieee80211_sta *sta)
 		 * the STA is, so remove them all here.
 		 */
 		if (vif->type == NL80211_IFTYPE_STATION)
-			iwl_mld_remove_ap_keys(mld, vif, link_id);
+			iwl_mld_remove_ap_keys(mld, vif, sta, link_id);
 
 		/* Remove the link_sta */
 		iwl_mld_remove_link_sta(mld, link_sta);

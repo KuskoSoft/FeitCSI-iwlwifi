@@ -18,5 +18,6 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 		    struct ieee80211_key_conf *key);
 void iwl_mld_remove_ap_keys(struct iwl_mld *mld,
 			    struct ieee80211_vif *vif,
+			    struct ieee80211_sta *sta,
 			    unsigned int link_id);
 #endif /* __iwl_mld_key_h__ */

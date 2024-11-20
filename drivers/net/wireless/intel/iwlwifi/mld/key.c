@@ -271,36 +271,46 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 	return 0;
 }
 
+struct remove_ap_keys_iter_data {
+	u8 link_id;
+	struct ieee80211_sta *sta;
+};
+
 static void iwl_mld_remove_ap_keys_iter(struct ieee80211_hw *hw,
 					struct ieee80211_vif *vif,
 					struct ieee80211_sta *sta,
 					struct ieee80211_key_conf *key,
-					void *data)
+					void *_data)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
-	unsigned int link_id = (uintptr_t)data;
+	struct remove_ap_keys_iter_data *data = _data;
 
 	if (key->hw_key_idx == STA_KEY_IDX_INVALID)
 		return;
 
-	if (sta)
+	/* All the pairwise keys should have been removed by now */
+	if (WARN_ON(sta))
 		return;
 
-	if (key->link_id >= 0 && key->link_id != link_id)
+	if (key->link_id >= 0 && key->link_id != data->link_id)
 		return;
 
-	iwl_mld_remove_key(mld, vif, NULL, key);
+	iwl_mld_remove_key(mld, vif, data->sta, key);
 	key->hw_key_idx = STA_KEY_IDX_INVALID;
 }
 
-void iwl_mld_remove_ap_keys(struct iwl_mld *mld,
-			    struct ieee80211_vif *vif,
-			    unsigned int link_id)
+void iwl_mld_remove_ap_keys(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			    struct ieee80211_sta *sta, unsigned int link_id)
 {
+	struct remove_ap_keys_iter_data iter_data = {
+		.link_id = link_id,
+		.sta = sta,
+	};
+
 	if (WARN_ON_ONCE(vif->type != NL80211_IFTYPE_STATION))
 		return;
 
 	ieee80211_iter_keys(mld->hw, vif,
 			    iwl_mld_remove_ap_keys_iter,
-			    (void *)(uintptr_t)link_id);
+			    &iter_data);
 }

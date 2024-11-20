@@ -2052,6 +2052,32 @@ iwl_mld_switch_vif_chanctx(struct ieee80211_hw *hw,
 	return ret;
 }
 
+static void iwl_mld_sta_pre_rcu_remove(struct ieee80211_hw *hw,
+				       struct ieee80211_vif *vif,
+				       struct ieee80211_sta *sta)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_link_sta *mld_link_sta;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* This is called before mac80211 does RCU synchronisation,
+	 * so here we already invalidate our internal RCU-protected
+	 * station pointer. The rest of the code will thus no longer
+	 * be able to find the station this way, and we don't rely
+	 * on further RCU synchronisation after the sta_state()
+	 * callback deleted the station.
+	 */
+	for_each_mld_link_sta(mld_sta, mld_link_sta)
+		RCU_INIT_POINTER(mld->fw_id_to_link_sta[mld_link_sta->fw_id],
+				 NULL);
+
+	if (sta == mld_vif->ap_sta)
+		mld_vif->ap_sta = NULL;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2093,6 +2119,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.post_channel_switch = iwl_mld_post_channel_switch,
 	.abort_channel_switch = iwl_mld_abort_channel_switch,
 	.switch_vif_chanctx = iwl_mld_switch_vif_chanctx,
+	.sta_pre_rcu_remove = iwl_mld_sta_pre_rcu_remove,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,
