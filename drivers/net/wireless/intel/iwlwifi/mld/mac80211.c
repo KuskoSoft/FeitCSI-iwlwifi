@@ -965,7 +965,8 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	 * In MLO, it'll be done in drv_change_vif_link
 	 */
 	if (!ieee80211_vif_is_mld(vif) && !mld_vif->ap_sta &&
-	    !WARN_ON_ONCE(vif->cfg.assoc)) {
+	    !WARN_ON_ONCE(vif->cfg.assoc) &&
+	    vif->type != NL80211_IFTYPE_AP) {
 		iwl_mld_remove_link(mld, link);
 		iwl_mld_add_link(mld, link);
 	}
