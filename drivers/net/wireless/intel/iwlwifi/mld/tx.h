@@ -58,6 +58,10 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 int iwl_mld_flush_link_sta_txqs(struct iwl_mld *mld, u32 fw_sta_id);
 int iwl_mld_ensure_queue(struct iwl_mld *mld, struct ieee80211_txq *txq);
 
+int iwl_mld_update_sta_txqs(struct iwl_mld *mld,
+			    struct ieee80211_sta *sta,
+			    u32 old_sta_mask, u32 new_sta_mask);
+
 void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt);
 void iwl_mld_toggle_tx_ant(struct iwl_mld *mld, u8 *ant);

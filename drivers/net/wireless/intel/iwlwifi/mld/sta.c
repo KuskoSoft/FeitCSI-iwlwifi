@@ -10,6 +10,8 @@
 #include "hcmd.h"
 #include "iface.h"
 #include "key.h"
+#include "agg.h"
+#include "tlc.h"
 #include "fw/api/sta.h"
 #include "fw/api/mac.h"
 #include "fw/api/rx.h"
@@ -1071,4 +1073,128 @@ void iwl_mld_remove_aux_sta(struct iwl_mld *mld,
 
 	iwl_mld_remove_internal_sta(mld, &mld_link->aux_sta, false,
 				    IWL_MAX_TID_COUNT);
+}
+
+static int iwl_mld_update_sta_resources(struct iwl_mld *mld,
+					struct ieee80211_vif *vif,
+					struct ieee80211_sta *sta,
+					u32 old_sta_mask,
+					u32 new_sta_mask)
+{
+	int ret;
+
+	ret = iwl_mld_update_sta_txqs(mld, sta, old_sta_mask, new_sta_mask);
+	if (ret)
+		return ret;
+
+	ret = iwl_mld_update_sta_keys(mld, vif, sta, old_sta_mask, new_sta_mask);
+	if (ret)
+		return ret;
+
+	return iwl_mld_update_sta_baids(mld, old_sta_mask, new_sta_mask);
+}
+
+int iwl_mld_update_link_stas(struct iwl_mld *mld,
+			     struct ieee80211_vif *vif,
+			     struct ieee80211_sta *sta,
+			     u16 old_links, u16 new_links)
+{
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_link_sta *mld_link_sta;
+	unsigned long links_to_add = ~old_links & new_links;
+	unsigned long links_to_rem = old_links & ~new_links;
+	unsigned long old_links_long = old_links;
+	unsigned long sta_mask_added = 0;
+	u32 current_sta_mask = 0, sta_mask_to_rem = 0;
+	unsigned int link_id;
+	int ret;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	for_each_set_bit(link_id, &old_links_long,
+			 IEEE80211_MLD_MAX_NUM_LINKS) {
+		mld_link_sta =
+			iwl_mld_link_sta_dereference_check(mld_sta, link_id);
+
+		if (WARN_ON(!mld_link_sta))
+			return -EINVAL;
+
+		current_sta_mask |= BIT(mld_link_sta->fw_id);
+		if (links_to_rem & BIT(link_id))
+			sta_mask_to_rem |= BIT(mld_link_sta->fw_id);
+	}
+
+	if (sta_mask_to_rem) {
+		ret = iwl_mld_update_sta_resources(mld, vif, sta,
+						   current_sta_mask,
+						   current_sta_mask &
+							~sta_mask_to_rem);
+		if (ret)
+			return ret;
+
+		current_sta_mask &= ~sta_mask_to_rem;
+	}
+
+	for_each_set_bit(link_id, &links_to_rem, IEEE80211_MLD_MAX_NUM_LINKS) {
+		struct ieee80211_link_sta *link_sta =
+			link_sta_dereference_protected(sta, link_id);
+
+		if (WARN_ON(!link_sta))
+			return -EINVAL;
+
+		iwl_mld_remove_link_sta(mld, link_sta);
+	}
+
+	for_each_set_bit(link_id, &links_to_add, IEEE80211_MLD_MAX_NUM_LINKS) {
+		struct ieee80211_link_sta *link_sta =
+			link_sta_dereference_protected(sta, link_id);
+		struct ieee80211_bss_conf *link;
+
+		if (WARN_ON(!link_sta))
+			return -EINVAL;
+
+		mld_link_sta =
+			iwl_mld_link_sta_dereference_check(mld_sta, link_id);
+
+		/* We may only have an mld_link_sta already when restarting */
+		if (WARN_ON(mld_link_sta && !mld->fw_status.in_hw_restart))
+			return -EINVAL;
+
+		if (!mld_link_sta) {
+			ret = iwl_mld_add_link_sta(mld, link_sta);
+			if (ret)
+				goto remove_added_link_stas;
+
+			mld_link_sta =
+				iwl_mld_link_sta_dereference_check(mld_sta,
+								   link_id);
+		}
+
+		link = link_conf_dereference_protected(mld_sta->vif,
+						       link_sta->link_id);
+		iwl_mld_config_tlc_link(mld, vif, link, link_sta);
+
+		sta_mask_added |= BIT(mld_link_sta->fw_id);
+	}
+
+	if (sta_mask_added) {
+		ret = iwl_mld_update_sta_resources(mld, vif, sta,
+						   current_sta_mask,
+						   current_sta_mask |
+							sta_mask_added);
+		if (ret)
+			goto remove_added_link_stas;
+	}
+
+	return 0;
+
+remove_added_link_stas:
+	for_each_set_bit(link_id, &sta_mask_added, IEEE80211_MLD_MAX_NUM_LINKS) {
+		struct ieee80211_link_sta *link_sta =
+			link_sta_dereference_protected(sta, link_id);
+
+		iwl_mld_remove_link_sta(mld, link_sta);
+	}
+
+	return ret;
 }

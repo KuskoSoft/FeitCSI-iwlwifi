@@ -121,4 +121,8 @@ void iwl_mld_handle_bar_frame_release_notif(struct iwl_mld *mld,
 void iwl_mld_del_ba(struct iwl_mld *mld, int queue,
 		    struct iwl_mld_delba_data *data);
 
+int iwl_mld_update_sta_baids(struct iwl_mld *mld,
+			     u32 old_sta_mask,
+			     u32 new_sta_mask);
+
 #endif /* __iwl_agg_h__ */

@@ -22,6 +22,12 @@ void iwl_mld_remove_ap_keys(struct iwl_mld *mld,
 			    struct ieee80211_sta *sta,
 			    unsigned int link_id);
 
+int iwl_mld_update_sta_keys(struct iwl_mld *mld,
+			    struct ieee80211_vif *vif,
+			    struct ieee80211_sta *sta,
+			    u32 old_sta_mask,
+			    u32 new_sta_mask);
+
 static inline void
 iwl_mld_cleanup_keys_iter(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			  struct ieee80211_sta *sta,

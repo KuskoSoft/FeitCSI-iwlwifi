@@ -237,4 +237,9 @@ void iwl_mld_remove_aux_sta(struct iwl_mld *mld,
 			    struct ieee80211_vif *vif,
 			    struct ieee80211_bss_conf *link);
 
+
+int iwl_mld_update_link_stas(struct iwl_mld *mld,
+			     struct ieee80211_vif *vif,
+			     struct ieee80211_sta *sta,
+			     u16 old_links, u16 new_links);
 #endif /* __iwl_mld_sta_h__ */

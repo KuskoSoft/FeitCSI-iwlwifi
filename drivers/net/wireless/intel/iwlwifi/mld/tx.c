@@ -1254,6 +1254,45 @@ int iwl_mld_ensure_queue(struct iwl_mld *mld, struct ieee80211_txq *txq)
 	return ret;
 }
 
+int iwl_mld_update_sta_txqs(struct iwl_mld *mld,
+			    struct ieee80211_sta *sta,
+			    u32 old_sta_mask, u32 new_sta_mask)
+{
+	struct iwl_scd_queue_cfg_cmd cmd = {
+		.operation = cpu_to_le32(IWL_SCD_QUEUE_MODIFY),
+		.u.modify.old_sta_mask = cpu_to_le32(old_sta_mask),
+		.u.modify.new_sta_mask = cpu_to_le32(new_sta_mask),
+	};
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	for (int tid = 0; tid <= IWL_MAX_TID_COUNT; tid++) {
+		struct ieee80211_txq *txq =
+			sta->txq[tid != IWL_MAX_TID_COUNT ?
+					tid : IEEE80211_NUM_TIDS];
+		struct iwl_mld_txq *mld_txq =
+			iwl_mld_txq_from_mac80211(txq);
+		int ret;
+
+		if (!mld_txq->status.allocated)
+			continue;
+
+		if (tid == IWL_MAX_TID_COUNT)
+			cmd.u.modify.tid = cpu_to_le32(IWL_MGMT_TID);
+		else
+			cmd.u.modify.tid = cpu_to_le32(tid);
+
+		ret = iwl_mld_send_cmd_pdu(mld,
+					   WIDE_ID(DATA_PATH_GROUP,
+						   SCD_QUEUE_CONFIG_CMD),
+					   &cmd);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt)
 {

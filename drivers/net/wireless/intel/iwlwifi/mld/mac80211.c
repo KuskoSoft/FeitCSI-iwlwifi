@@ -2307,6 +2307,16 @@ remove_added_links:
 	return err;
 }
 
+static int iwl_mld_change_sta_links(struct ieee80211_hw *hw,
+				    struct ieee80211_vif *vif,
+				    struct ieee80211_sta *sta,
+				    u16 old_links, u16 new_links)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	return iwl_mld_update_link_stas(mld, vif, sta, old_links, new_links);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2354,6 +2364,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.cancel_remain_on_channel = iwl_mld_cancel_roc,
 	.can_activate_links = iwl_mld_can_activate_links,
 	.change_vif_links = iwl_mld_change_vif_links,
+	.change_sta_links = iwl_mld_change_sta_links,
 #ifdef CONFIG_PM_SLEEP
 	.suspend = iwl_mld_suspend,
 	.resume = iwl_mld_resume,

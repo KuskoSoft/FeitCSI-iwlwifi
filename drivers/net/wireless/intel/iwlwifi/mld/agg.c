@@ -619,3 +619,47 @@ int iwl_mld_ampdu_rx_stop(struct iwl_mld *mld, struct ieee80211_sta *sta,
 
 	return 0;
 }
+
+int iwl_mld_update_sta_baids(struct iwl_mld *mld,
+			     u32 old_sta_mask,
+			     u32 new_sta_mask)
+{
+	struct iwl_rx_baid_cfg_cmd cmd = {
+		.action = cpu_to_le32(IWL_RX_BAID_ACTION_MODIFY),
+		.modify.old_sta_id_mask = cpu_to_le32(old_sta_mask),
+		.modify.new_sta_id_mask = cpu_to_le32(new_sta_mask),
+	};
+	u32 cmd_id = WIDE_ID(DATA_PATH_GROUP, RX_BAID_ALLOCATION_CONFIG_CMD);
+	int baid;
+
+	/* mac80211 will remove sessions later, but we ignore all that */
+	if (mld->fw_status.in_hw_restart)
+		return 0;
+
+	BUILD_BUG_ON(sizeof(struct iwl_rx_baid_cfg_resp) != sizeof(baid));
+
+	for (baid = 0; baid < ARRAY_SIZE(mld->fw_id_to_ba); baid++) {
+		struct iwl_mld_baid_data *data;
+		int ret;
+
+		data = wiphy_dereference(mld->wiphy, mld->fw_id_to_ba[baid]);
+		if (!data)
+			continue;
+
+		if (!(data->sta_mask & old_sta_mask))
+			continue;
+
+		WARN_ONCE(data->sta_mask != old_sta_mask,
+			  "BAID data for %d corrupted - expected 0x%x found 0x%x\n",
+			  baid, old_sta_mask, data->sta_mask);
+
+		cmd.modify.tid = cpu_to_le32(data->tid);
+
+		ret = iwl_mld_send_cmd_pdu(mld, cmd_id, &cmd);
+		if (ret)
+			return ret;
+		data->sta_mask = new_sta_mask;
+	}
+
+	return 0;
+}
