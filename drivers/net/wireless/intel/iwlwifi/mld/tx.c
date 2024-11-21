@@ -1061,7 +1061,7 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 	if (tx_failure && mld_sta->sta_state < IEEE80211_STA_AUTHORIZED)
 		iwl_mld_toggle_tx_ant(mld, &mld_sta->data_tx_ant);
 
-	if (tid != IWL_MGMT_TID)
+	if (tid < IWL_MAX_TID_COUNT)
 		iwl_mld_count_mpdu_tx(link_sta, 1);
 
 out:
