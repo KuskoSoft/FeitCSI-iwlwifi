@@ -17,7 +17,8 @@ void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 	struct iwl_mld_link *link;
 
 	/* TODO: remove (task=p2p) */
-	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION)
+	if (vif->type != NL80211_IFTYPE_STATION &&
+	    vif->type != NL80211_IFTYPE_AP)
 		return;
 
 	for_each_mld_vif_valid_link(mld_vif, link)
