@@ -287,8 +287,6 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 	trans->iml_len = mld->fw->iml_len;
 	trans->wide_cmd_header = true;
 
-	/*TODO: add more configurations here */
-
 	iwl_trans_configure(trans, &trans_cfg);
 }
 
