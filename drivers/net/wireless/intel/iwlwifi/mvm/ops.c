@@ -2230,17 +2230,18 @@ static void iwl_mvm_nic_error(struct iwl_op_mode *op_mode,
 }
 
 static void iwl_mvm_dump_error(struct iwl_op_mode *op_mode,
-			       enum iwl_fw_error_type type)
+			       struct iwl_fw_error_dump_mode *mode)
 {
 	struct iwl_mvm *mvm = IWL_OP_MODE_GET_MVM(op_mode);
 
-	/* for reset handshake we come from stop, with mutex held */
-	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
+	/* if we come in from opmode we have the mutex held */
+	if (mode->context == IWL_ERR_CONTEXT_FROM_OPMODE) {
 		lockdep_assert_held(&mvm->mutex);
 		iwl_fw_error_collect(&mvm->fwrt);
 	} else {
 		mutex_lock(&mvm->mutex);
-		iwl_fw_error_collect(&mvm->fwrt);
+		if (mode->context != IWL_ERR_CONTEXT_ABORT)
+			iwl_fw_error_collect(&mvm->fwrt);
 		mutex_unlock(&mvm->mutex);
 	}
 }

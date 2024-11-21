@@ -87,6 +87,39 @@ enum iwl_fw_error_type {
 };
 
 /**
+ * enum iwl_fw_error_context - error dump context
+ * @IWL_ERR_CONTEXT_WORKER: regular from worker context,
+ *	opmode must acquire locks and must also check
+ *	for @IWL_ERR_CONTEXT_ABORT after acquiring locks
+ * @IWL_ERR_CONTEXT_FROM_OPMODE: context is in a call
+ *	originating from the opmode, e.g. while resetting
+ *	or stopping the device, so opmode must not acquire
+ *	any locks
+ * @IWL_ERR_CONTEXT_ABORT: after lock acquisition, indicates
+ *	that the dump already happened via another callback
+ *	(currently only while stopping the device) via the
+ *	@IWL_ERR_CONTEXT_FROM_OPMODE context, and this call
+ *	must be aborted
+ */
+enum iwl_fw_error_context {
+	IWL_ERR_CONTEXT_WORKER,
+	IWL_ERR_CONTEXT_FROM_OPMODE,
+	IWL_ERR_CONTEXT_ABORT,
+};
+
+/**
+ * struct iwl_fw_error_dump_mode - error dump mode for callback
+ * @type: The reason for the dump, per &enum iwl_fw_error_type.
+ * @context: The context for the dump, may also indicate this
+ *	call needs to be skipped. This MUST be checked before
+ *	and after acquiring any locks in the op-mode!
+ */
+struct iwl_fw_error_dump_mode {
+	enum iwl_fw_error_type type;
+	enum iwl_fw_error_context context;
+};
+
+/**
  * struct iwl_op_mode_ops - op_mode specific operations
  *
  * The op_mode exports its ops so that external components can start it and
@@ -150,7 +183,7 @@ struct iwl_op_mode_ops {
 	void (*nic_error)(struct iwl_op_mode *op_mode,
 			  enum iwl_fw_error_type type);
 	void (*dump_error)(struct iwl_op_mode *op_mode,
-			   enum iwl_fw_error_type type);
+			   struct iwl_fw_error_dump_mode *mode);
 	bool (*sw_reset)(struct iwl_op_mode *op_mode,
 			 enum iwl_fw_error_type type);
 	void (*nic_config)(struct iwl_op_mode *op_mode);
@@ -237,12 +270,12 @@ static inline void iwl_op_mode_nic_error(struct iwl_op_mode *op_mode,
 }
 
 static inline void iwl_op_mode_dump_error(struct iwl_op_mode *op_mode,
-					  enum iwl_fw_error_type type)
+					  struct iwl_fw_error_dump_mode *mode)
 {
 	might_sleep();
 
 	if (op_mode->ops->dump_error)
-		op_mode->ops->dump_error(op_mode, type);
+		op_mode->ops->dump_error(op_mode, mode);
 }
 
 static inline void iwl_op_mode_nic_config(struct iwl_op_mode *op_mode)

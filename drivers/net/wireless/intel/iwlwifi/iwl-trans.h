@@ -312,6 +312,8 @@ enum iwl_d3_status {
  *	e.g. for testing
  * @STATUS_IN_SW_RESET: device is undergoing reset, cleared by opmode
  *	via iwl_trans_finish_sw_reset()
+ * @STATUS_RESET_PENDING: reset worker was scheduled, but didn't dump
+ *	the firmware state yet
  */
 enum iwl_trans_status {
 	STATUS_SYNC_HCMD_ACTIVE,
@@ -324,6 +326,7 @@ enum iwl_trans_status {
 	STATUS_TRANS_DEAD,
 	STATUS_SUPPRESS_CMD_ERROR_ONCE,
 	STATUS_IN_SW_RESET,
+	STATUS_RESET_PENDING,
 };
 
 static inline int
@@ -888,7 +891,7 @@ struct iwl_txq {
  * @step_urm: STEP is in URM, no support for MCS>9 in 320 MHz
  * @restart: restart worker data
  * @restart.wk: restart worker
- * @restart.type: error type leading to the restart
+ * @restart.mode: reset/restart error mode information
  * @restart.during_reset: error occurred during previous software reset
  * @trans_specific: data for the specific transport this is allocated for/with
  * @dsbr_urm_fw_dependent: switch to URM based on fw settings
@@ -987,7 +990,7 @@ struct iwl_trans {
 
 	struct {
 		struct work_struct wk;
-		enum iwl_fw_error_type type;
+		struct iwl_fw_error_dump_mode mode;
 		bool during_reset;
 	} restart;
 
@@ -1173,7 +1176,11 @@ static inline void iwl_trans_schedule_reset(struct iwl_trans *trans,
 	if (test_bit(STATUS_TRANS_DEAD, &trans->status))
 		return;
 
-	trans->restart.type = type;
+	trans->restart.mode.type = type;
+	trans->restart.mode.context = IWL_ERR_CONTEXT_WORKER;
+
+	set_bit(STATUS_RESET_PENDING, &trans->status);
+
 	/*
 	 * keep track of whether or not this happened while resetting,
 	 * by the timer the worker runs it might have finished

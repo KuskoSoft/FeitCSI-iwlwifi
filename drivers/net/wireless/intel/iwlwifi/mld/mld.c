@@ -540,17 +540,18 @@ iwl_mld_nic_error(struct iwl_op_mode *op_mode,
 }
 
 static void iwl_mld_dump_error(struct iwl_op_mode *op_mode,
-			       enum iwl_fw_error_type type)
+			       struct iwl_fw_error_dump_mode *mode)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
-	/* for reset handshake we come from stop, with mutex held */
-	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
+	/* if we come in from opmode we have the mutex held */
+	if (mode->context == IWL_ERR_CONTEXT_FROM_OPMODE) {
 		lockdep_assert_wiphy(mld->wiphy);
 		iwl_fw_error_collect(&mld->fwrt);
 	} else {
 		wiphy_lock(mld->wiphy);
-		iwl_fw_error_collect(&mld->fwrt);
+		if (mode->context != IWL_ERR_CONTEXT_ABORT)
+			iwl_fw_error_collect(&mld->fwrt);
 		wiphy_unlock(mld->wiphy);
 	}
 }

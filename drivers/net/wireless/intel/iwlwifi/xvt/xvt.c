@@ -673,17 +673,18 @@ static void iwl_xvt_nic_error(struct iwl_op_mode *op_mode,
 }
 
 static void iwl_xvt_dump_error(struct iwl_op_mode *op_mode,
-			       enum iwl_fw_error_type type)
+			       struct iwl_fw_error_dump_mode *mode)
 {
 	struct iwl_xvt *xvt = IWL_OP_MODE_GET_XVT(op_mode);
 
-	/* for reset handshake we come from stop, with mutex held */
-	if (type == IWL_ERR_TYPE_RESET_HS_TIMEOUT) {
+	/* if we come in from opmode we have the mutex held */
+	if (mode->context == IWL_ERR_CONTEXT_FROM_OPMODE) {
 		lockdep_assert_held(&xvt->mutex);
 		iwl_fw_error_collect(&xvt->fwrt);
 	} else {
 		mutex_lock(&xvt->mutex);
-		iwl_fw_error_collect(&xvt->fwrt);
+		if (mode->context != IWL_ERR_CONTEXT_ABORT)
+			iwl_fw_error_collect(&xvt->fwrt);
 		mutex_unlock(&xvt->mutex);
 	}
 }
