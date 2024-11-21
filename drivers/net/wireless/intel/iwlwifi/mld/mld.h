@@ -359,11 +359,15 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 				 struct ieee80211_##_mac80211_type *mac80211_ptr)	\
 {											\
 	u8 rand = get_random_u8();							\
-	for (int i = 0; i < ARRAY_SIZE(mld->fw_id_to_##_mac80211_type); i++) {		\
-		u8 idx = (i + rand) % ARRAY_SIZE(mld->fw_id_to_##_mac80211_type);	\
+	u8 arr_sz = ARRAY_SIZE(mld->fw_id_to_##_mac80211_type);				\
+	if (__builtin_types_compatible_p(typeof(*mac80211_ptr),				\
+					 struct ieee80211_link_sta))			\
+		arr_sz = mld->fw->ucode_capa.num_stations;				\
+	for (int i = 0; i < arr_sz; i++) {						\
+		u8 idx = (i + rand) % arr_sz;						\
 		if (rcu_access_pointer(mld->fw_id_to_##_mac80211_type[idx]))		\
 			continue;							\
-		IWL_DEBUG_INFO(mld, "Allocated at index %d\n", idx);			\
+		IWL_DEBUG_INFO(mld, "Allocated at index %d / %d\n", idx, arr_sz);	\
 		*fw_id = idx;								\
 		rcu_assign_pointer(mld->fw_id_to_##_mac80211_type[idx], mac80211_ptr);	\
 		return 0;								\
