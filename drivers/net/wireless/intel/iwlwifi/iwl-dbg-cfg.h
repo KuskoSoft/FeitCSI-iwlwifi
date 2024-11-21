@@ -309,7 +309,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(bool, amsdu_in_ampdu_disabled)
 	IWL_DBG_CFG_NODEF(bool, disable_eml)
 	IWL_DBG_CFG_NODEF(u32, step_analog_params)
-	IWL_DBG_CFG_NODEF(bool, MVM_DISABLE_SPP_AMSDU_ADV)
+	IWL_DBG_CFG_NODEF(bool, DISABLE_SPP_AMSDU_ADV)
 	IWL_DBG_CFG_DEF(int, SPP_AMSDU_ACTIVATE, -1)
 	IWL_DBG_CFG_NODEF(bool, HW_CSUM_DISABLE)
 #ifdef CPTCFG_IWLWIFI_DEBUG
