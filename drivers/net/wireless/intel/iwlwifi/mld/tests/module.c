@@ -6,5 +6,6 @@
  */
 #include <linux/module.h>
 
+MODULE_IMPORT_NS(IWLWIFI);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("kunit tests for iwlmld");

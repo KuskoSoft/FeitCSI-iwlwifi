@@ -358,11 +358,14 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 				 u8 *fw_id,				\
 				 struct ieee80211_##_mac80211_type *mac80211_ptr)	\
 {											\
+	u8 rand = get_random_u8();							\
 	for (int i = 0; i < ARRAY_SIZE(mld->fw_id_to_##_mac80211_type); i++) {		\
-		if (rcu_access_pointer(mld->fw_id_to_##_mac80211_type[i]))		\
+		u8 idx = (i + rand) % ARRAY_SIZE(mld->fw_id_to_##_mac80211_type);	\
+		if (rcu_access_pointer(mld->fw_id_to_##_mac80211_type[idx]))		\
 			continue;							\
-		*fw_id = i;								\
-		rcu_assign_pointer(mld->fw_id_to_##_mac80211_type[i], mac80211_ptr);	\
+		IWL_DEBUG_INFO(mld, "Allocated at index %d\n", idx);			\
+		*fw_id = idx;								\
+		rcu_assign_pointer(mld->fw_id_to_##_mac80211_type[idx], mac80211_ptr);	\
 		return 0;								\
 	}										\
 	return -ENOSPC;									\

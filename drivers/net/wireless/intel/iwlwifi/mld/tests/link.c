@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "mld.h"
 #include "link.h"
+#include "iface.h"
 #include "fw/api/mac-cfg.h"
 
 static const struct missed_beacon_test_case {
@@ -55,6 +56,7 @@ static void fake_ieee80211_connection_loss(struct ieee80211_vif *vif)
 static void test_missed_beacon(struct kunit *test)
 {
 	struct iwl_mld *mld = test->priv;
+	struct iwl_missed_beacons_notif *notif;
 	const struct missed_beacon_test_case *test_param =
 		(const void *)(test->param_value);
 	struct ieee80211_vif *vif;
@@ -62,14 +64,19 @@ static void test_missed_beacon(struct kunit *test)
 
 	kunit_activate_static_stub(test, ieee80211_connection_loss,
 				   fake_ieee80211_connection_loss);
-
 	pkt = iwl_mld_kunit_create_pkt(test_param->input.notif);
+	notif = (void *)pkt->data;
 
-	if (test_param->input.emlsr)
+	if (test_param->input.emlsr) {
 		vif = iwlmld_kunit_assoc_emlsr(0x3, NL80211_BAND_5GHZ,
 					       NL80211_BAND_6GHZ);
-	else
+	} else {
+		struct iwl_mld_vif *mld_vif;
+
 		vif = iwlmld_kunit_setup_non_mlo_assoc(NL80211_BAND_6GHZ);
+		mld_vif = iwl_mld_vif_from_mac80211(vif);
+		notif->link_id = cpu_to_le32(mld_vif->deflink.fw_id);
+	}
 
 	wiphy_lock(mld->wiphy);
 
