@@ -101,7 +101,6 @@ int iwl_mld_cancel_session_protection(struct iwl_mld *mld,
 	struct iwl_mld_session_protect *session_protect =
 		&mld_vif->session_protect;
 	struct iwl_session_prot_cmd cmd = {
-		.id_and_color = cpu_to_le32(link->fw_id),
 		.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE),
 		.conf_id = cpu_to_le32(SESSION_PROTECT_CONF_ASSOC),
 	};
@@ -115,6 +114,11 @@ int iwl_mld_cancel_session_protection(struct iwl_mld *mld,
 	if (!session_protect->session_requested &&
 	    !session_protect->end_jiffies)
 		return 0;
+
+	if (WARN_ON(!link))
+		return -EINVAL;
+
+	cmd.id_and_color = cpu_to_le32(link->fw_id),
 
 	ret = iwl_mld_send_cmd_pdu(mld,
 				   WIDE_ID(MAC_CONF_GROUP,
