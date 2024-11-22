@@ -631,7 +631,12 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 	if (vif->p2p || iwl_fw_lookup_cmd_ver(mld->fw, PHY_CONTEXT_CMD, 0) < 5)
 		vif->driver_flags |= IEEE80211_VIF_IGNORE_OFDMA_WIDER_BW;
 
-	if (vif->type == NL80211_IFTYPE_STATION)
+	/*
+	 * For an MLD vif (in restart) we may not have a link; delay the call
+	 * the initial change_vif_links.
+	 */
+	if (vif->type == NL80211_IFTYPE_STATION &&
+	    !ieee80211_vif_is_mld(vif))
 		iwl_mld_update_mac_power(mld, vif, false);
 
 	if (vif->type == NL80211_IFTYPE_MONITOR) {
@@ -2289,6 +2294,13 @@ iwl_mld_change_vif_links(struct ieee80211_hw *hw,
 	}
 
 	/* TODO: select a primary link task=EMLSR */
+
+	/*
+	 * Special MLO restart case. We did not have a link when the interface
+	 * was added, so do the power configuration now.
+	 */
+	if (old_links == 0 && mld->fw_status.in_hw_restart)
+		iwl_mld_update_mac_power(mld, vif, false);
 
 	return 0;
 
