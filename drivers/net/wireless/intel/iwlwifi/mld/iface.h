@@ -27,6 +27,7 @@
  * @link: reference to link data for each valid link, for use in MLO.
  * @wowlan_data: data used by the wowlan suspend flow
  * @use_ps_poll: use ps_poll frames
+ * @disable_bf: disable beacon filter
  */
 struct iwl_mld_vif {
 	/* Add here fields that need clean up on restart */
@@ -49,6 +50,7 @@ struct iwl_mld_vif {
 #endif
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	bool use_ps_poll;
+	bool disable_bf;
 #endif
 };
 

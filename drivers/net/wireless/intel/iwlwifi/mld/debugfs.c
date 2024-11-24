@@ -270,6 +270,41 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 #define VIF_DEBUGFS_ADD_FILE(name, parent, mode)			\
 	VIF_DEBUGFS_ADD_FILE_ALIAS(#name, name, parent, mode)
 
+static ssize_t iwl_dbgfs_vif_bf_params_write(struct iwl_mld *mld, char *buf,
+					     size_t count, void *data)
+{
+	struct ieee80211_vif *vif = data;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int link_id = vif->active_links ? __ffs(vif->active_links) : 0;
+	struct ieee80211_bss_conf *link_conf;
+	int val;
+
+	if (!strncmp("bf_enable_beacon_filter=", buf, 24)) {
+		if (sscanf(buf + 24, "%d", &val) != 1)
+			return -EINVAL;
+	} else {
+		return -EINVAL;
+	}
+
+	if (val != 0 && val != 1)
+		return -EINVAL;
+
+	link_conf = link_conf_dereference_protected(vif, link_id);
+	if (WARN_ON(!link_conf))
+		return -ENODEV;
+
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	mld_vif->disable_bf = !val;
+
+	if (val)
+		return iwl_mld_enable_beacon_filter(mld, link_conf,
+						    false) ?: count;
+	else
+		return iwl_mld_disable_beacon_filter(mld, vif) ?: count;
+}
+
 static ssize_t iwl_dbgfs_vif_pm_params_write(struct iwl_mld *mld,
 					  char *buf,
 					  size_t count, void *data)
@@ -294,6 +329,7 @@ static ssize_t iwl_dbgfs_vif_pm_params_write(struct iwl_mld *mld,
 }
 
 VIF_DEBUGFS_WRITE_FILE_OPS(pm_params, 32);
+VIF_DEBUGFS_WRITE_FILE_OPS(bf_params, 32);
 
 void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 			     struct ieee80211_vif *vif)
@@ -306,8 +342,10 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 #endif
 
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM &&
-	    vif->type == NL80211_IFTYPE_STATION)
+	    vif->type == NL80211_IFTYPE_STATION) {
 		VIF_DEBUGFS_ADD_FILE(pm_params, mld_vif_dbgfs, 0200);
+		VIF_DEBUGFS_ADD_FILE(bf_params, mld_vif_dbgfs, 0200);
+	}
 
 }
 

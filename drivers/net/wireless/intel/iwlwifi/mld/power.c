@@ -42,6 +42,11 @@ int iwl_mld_enable_beacon_filter(struct iwl_mld *mld,
 	if (ieee80211_vif_type_p2p(link_conf->vif) != NL80211_IFTYPE_STATION)
 		return 0;
 
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	if (iwl_mld_vif_from_mac80211(link_conf->vif)->disable_bf)
+		return 0;
+#endif
+
 	if (link_conf->cqm_rssi_thold) {
 		cmd.bf_energy_delta =
 			cpu_to_le32(link_conf->cqm_rssi_hyst);
