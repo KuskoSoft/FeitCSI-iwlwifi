@@ -651,6 +651,67 @@ iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq,
 	/* TODO: consider IBSS, monitor (task=IBSS, monitor) */
 }
 
+static void iwl_mld_probe_resp_set_noa(struct iwl_mld *mld,
+				       struct sk_buff *skb)
+{
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	struct iwl_mld_link *mld_link =
+		&iwl_mld_vif_from_mac80211(info->control.vif)->deflink;
+	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *)skb->data;
+	int base_len = (u8 *)mgmt->u.probe_resp.variable - (u8 *)mgmt;
+	struct iwl_probe_resp_data *resp_data;
+	const u8 *ie;
+	u8 *pos;
+	u8 match[] = {
+		(WLAN_OUI_WFA >> 16) & 0xff,
+		(WLAN_OUI_WFA >> 8) & 0xff,
+		WLAN_OUI_WFA & 0xff,
+		WLAN_OUI_TYPE_WFA_P2P,
+	};
+
+	rcu_read_lock();
+
+	resp_data = rcu_dereference(mld_link->probe_resp_data);
+	if (!resp_data)
+		goto out;
+
+	if (!resp_data->notif.noa_active)
+		goto out;
+
+	ie = cfg80211_find_ie_match(WLAN_EID_VENDOR_SPECIFIC,
+				    mgmt->u.probe_resp.variable,
+				    skb->len - base_len,
+				    match, 4, 2);
+	if (!ie) {
+		IWL_DEBUG_TX(mld, "probe resp doesn't have P2P IE\n");
+		goto out;
+	}
+
+	if (skb_tailroom(skb) < resp_data->noa_len) {
+		if (pskb_expand_head(skb, 0, resp_data->noa_len, GFP_ATOMIC)) {
+			IWL_ERR(mld,
+				"Failed to reallocate probe resp\n");
+			goto out;
+		}
+	}
+
+	pos = skb_put(skb, resp_data->noa_len);
+
+	*pos++ = WLAN_EID_VENDOR_SPECIFIC;
+	/* Set length of IE body (not including ID and length itself) */
+	*pos++ = resp_data->noa_len - 2;
+	*pos++ = (WLAN_OUI_WFA >> 16) & 0xff;
+	*pos++ = (WLAN_OUI_WFA >> 8) & 0xff;
+	*pos++ = WLAN_OUI_WFA & 0xff;
+	*pos++ = WLAN_OUI_TYPE_WFA_P2P;
+
+	memcpy(pos, &resp_data->notif.noa_attr,
+	       resp_data->noa_len - sizeof(struct ieee80211_vendor_ie));
+
+out:
+	rcu_read_unlock();
+}
+
 /* This function must be called with BHs disabled */
 static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 			   struct ieee80211_txq *txq)
@@ -672,7 +733,8 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	if (unlikely(!dev_tx_cmd))
 		return -1;
 
-	/* TODO: iwl_mvm_probe_resp_set_noa (task=p2p)*/
+	if (unlikely(ieee80211_is_probe_resp(hdr->frame_control)))
+		iwl_mld_probe_resp_set_noa(mld, skb);
 
 	iwl_mld_fill_tx_cmd(mld, skb, dev_tx_cmd, sta);
 

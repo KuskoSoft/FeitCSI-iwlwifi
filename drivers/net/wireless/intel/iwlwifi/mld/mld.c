@@ -219,6 +219,7 @@ static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
 	HCMD_NAME(MISSED_BEACONS_NOTIF),
 	HCMD_NAME(ROC_NOTIF),
 	HCMD_NAME(SESSION_PROTECTION_NOTIF),
+	HCMD_NAME(PROBE_RESPONSE_DATA_NOTIF),
 };
 
 /* Please keep this array *SORTED* by hex value.

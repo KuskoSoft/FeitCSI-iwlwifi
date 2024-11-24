@@ -92,5 +92,7 @@ int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif);
 void iwl_mld_set_vif_associated(struct iwl_mld *mld,
 				struct ieee80211_vif *vif);
 u8 iwl_mld_get_fw_bss_vifs_ids(struct iwl_mld *mld);
+void iwl_mld_handle_probe_resp_data_notif(struct iwl_mld *mld,
+					  struct iwl_rx_packet *pkt);
 
 #endif /* __iwl_mld_iface_h__ */

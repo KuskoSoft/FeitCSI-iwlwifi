@@ -26,6 +26,7 @@
 #include "mac80211.h"
 #include "thermal.h"
 #include "roc.h"
+#include "iface.h"
 
 /**
  * enum iwl_rx_handler_context: context for Rx handler
@@ -295,6 +296,8 @@ CMD_VERSIONS(stored_beacon_notif,
 	     CMD_VER_ENTRY(4, iwl_stored_beacon_notif))
 CMD_VERSIONS(roc_notif,
 	     CMD_VER_ENTRY(1, iwl_roc_notif))
+CMD_VERSIONS(probe_resp_data_notif,
+	     CMD_VER_ENTRY(1, iwl_probe_resp_data_notif))
 
 /*
  * Handlers for fw notifications
@@ -338,6 +341,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 mu_mimo_grp_notif, RX_HANDLER_SYNC)
 	RX_HANDLER_SIZES(PROT_OFFLOAD_GROUP, STORED_BEACON_NTF,
 			 stored_beacon_notif, RX_HANDLER_SYNC)
+	RX_HANDLER_SIZES(MAC_CONF_GROUP, PROBE_RESPONSE_DATA_NOTIF,
+			 probe_resp_data_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
 			 ct_kill_notif, RX_HANDLER_ASYNC)
 };

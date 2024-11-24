@@ -11,6 +11,18 @@
 #include "sta.h"
 
 /**
+ * struct iwl_probe_resp_data - data for NoA/CSA updates
+ * @rcu_head: used for freeing the data on update
+ * @notif: notification data
+ * @noa_len: length of NoA attribute, calculated from the notification
+ */
+struct iwl_probe_resp_data {
+	struct rcu_head rcu_head;
+	struct iwl_probe_resp_data_notif notif;
+	int noa_len;
+};
+
+/**
  * struct iwl_mld_link - link configuration parameters
  *
  * @fw_id: the fw id of the link.
@@ -30,6 +42,8 @@
  *	but higher layers work differently, so we store the keys here for
  *	later installation.
  * @csa_blocks_tx: indicates channel switch with immediate quiet
+ * @probe_resp_data: data from FW notification to store NOA related data to be
+ *	inserted into probe response.
  */
 struct iwl_mld_link {
 	/* Add here fields that need clean up on restart */
@@ -49,12 +63,20 @@ struct iwl_mld_link {
 	/* we can only have 2 GTK + 2 IGTK + 2 BIGTK active at a time */
 	struct ieee80211_key_conf *ap_early_keys[6];
 	bool csa_blocks_tx;
+	struct iwl_probe_resp_data __rcu *probe_resp_data;
 };
 
 /* Cleanup function for struct iwl_mld_phy, will be called in restart */
 static inline void
 iwl_mld_cleanup_link(struct iwl_mld *mld, struct iwl_mld_link *link)
 {
+	struct iwl_probe_resp_data *probe_data;
+
+	probe_data = wiphy_dereference(mld->wiphy, link->probe_resp_data);
+	RCU_INIT_POINTER(link->probe_resp_data, NULL);
+	if (probe_data)
+		kfree_rcu(probe_data, rcu_head);
+
 	CLEANUP_STRUCT(link);
 	if (link->bcast_sta.sta_id != IWL_INVALID_STA)
 		iwl_mld_free_internal_sta(mld, &link->bcast_sta);

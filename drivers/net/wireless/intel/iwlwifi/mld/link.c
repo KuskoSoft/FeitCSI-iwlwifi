@@ -376,6 +376,7 @@ void iwl_mld_deactivate_link(struct iwl_mld *mld,
 			     struct ieee80211_bss_conf *link)
 {
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	struct iwl_probe_resp_data *probe_data;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -383,6 +384,15 @@ void iwl_mld_deactivate_link(struct iwl_mld *mld,
 		return;
 
 	iwl_mld_cancel_session_protection(mld, link->vif, link->link_id);
+
+	/* If we deactivate the link, we will probably remove it, or switch
+	 * channel. In both cases, the CSA or Notice of Absence information is
+	 * now irrelevant. Remove the data here.
+	 */
+	probe_data = wiphy_dereference(mld->wiphy, mld_link->probe_resp_data);
+	RCU_INIT_POINTER(mld_link->probe_resp_data, NULL);
+	if (probe_data)
+		kfree_rcu(probe_data, rcu_head);
 
 	mld_link->active = false;
 

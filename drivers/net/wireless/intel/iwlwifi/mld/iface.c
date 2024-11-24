@@ -423,3 +423,56 @@ u8 iwl_mld_get_fw_bss_vifs_ids(struct iwl_mld *mld)
 
 	return fw_id_bitmap;
 }
+
+void iwl_mld_handle_probe_resp_data_notif(struct iwl_mld *mld,
+					  struct iwl_rx_packet *pkt)
+{
+	const struct iwl_probe_resp_data_notif *notif = (void *)pkt->data;
+	struct iwl_probe_resp_data *old_data, *new_data;
+	struct ieee80211_vif *vif;
+	struct iwl_mld_link *mld_link;
+
+	IWL_DEBUG_INFO(mld, "Probe response data notif: noa %d, csa %d\n",
+		       notif->noa_active, notif->csa_counter);
+
+	if (IWL_FW_CHECK(mld, le32_to_cpu(notif->mac_id) >=
+			 ARRAY_SIZE(mld->fw_id_to_vif),
+			 "mac id is invalid: %d\n",
+			 le32_to_cpu(notif->mac_id)))
+		return;
+
+	vif = wiphy_dereference(mld->wiphy,
+				mld->fw_id_to_vif[le32_to_cpu(notif->mac_id)]);
+	if (WARN_ON(!vif))
+		return;
+
+	mld_link = &iwl_mld_vif_from_mac80211(vif)->deflink;
+
+	new_data = kzalloc(sizeof(*new_data), GFP_KERNEL);
+	if (!new_data)
+		return;
+
+	memcpy(&new_data->notif, notif, sizeof(new_data->notif));
+
+	/* noa_attr contains 1 reserved byte, need to substruct it */
+	new_data->noa_len = sizeof(struct ieee80211_vendor_ie) +
+			    sizeof(new_data->notif.noa_attr) - 1;
+
+	/*
+	 * If it's a one time NoA, only one descriptor is needed,
+	 * adjust the length according to len_low.
+	 */
+	if (new_data->notif.noa_attr.len_low ==
+	    sizeof(struct ieee80211_p2p_noa_desc) + 2)
+		new_data->noa_len -= sizeof(struct ieee80211_p2p_noa_desc);
+
+	old_data = wiphy_dereference(mld->wiphy, mld_link->probe_resp_data);
+	rcu_assign_pointer(mld_link->probe_resp_data, new_data);
+
+	if (old_data)
+		kfree_rcu(old_data, rcu_head);
+
+	if (notif->csa_counter != IWL_PROBE_RESP_DATA_NO_CSA &&
+	    notif->csa_counter >= 1)
+		ieee80211_beacon_set_cntdwn(vif, notif->csa_counter);
+}
