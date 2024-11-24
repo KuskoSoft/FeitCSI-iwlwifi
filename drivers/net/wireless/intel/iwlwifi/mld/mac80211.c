@@ -1435,6 +1435,8 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 		 * stop using wide bandwidth
 		 */
 		iwl_mld_config_tlc(mld, vif, sta);
+
+		iwl_mld_reset_cca_40mhz_workaround(mld, vif);
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTH) {
 		if (vif->type == NL80211_IFTYPE_AP &&

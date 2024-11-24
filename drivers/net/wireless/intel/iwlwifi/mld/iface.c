@@ -10,6 +10,7 @@
 #include "fw/api/context.h"
 #include "fw/api/mac.h"
 #include "fw/api/time-event.h"
+#include "fw/api/datapath.h"
 
 /* Cleanup function for struct iwl_mld_vif, will be called in restart */
 void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
@@ -475,4 +476,109 @@ void iwl_mld_handle_probe_resp_data_notif(struct iwl_mld *mld,
 	if (notif->csa_counter != IWL_PROBE_RESP_DATA_NO_CSA &&
 	    notif->csa_counter >= 1)
 		ieee80211_beacon_set_cntdwn(vif, notif->csa_counter);
+}
+
+void iwl_mld_handle_datapath_monitor_notif(struct iwl_mld *mld,
+					   struct iwl_rx_packet *pkt)
+{
+	struct iwl_datapath_monitor_notif *notif = (void *)pkt->data;
+	struct ieee80211_bss_conf *link;
+	struct ieee80211_supported_band *sband;
+	const struct ieee80211_sta_he_cap *he_cap;
+	struct ieee80211_vif *vif;
+	struct iwl_mld_vif *mld_vif;
+
+	if (notif->type != cpu_to_le32(IWL_DP_MON_NOTIF_TYPE_EXT_CCA))
+		return;
+
+	/* Although the name says otherwise, it is actually the link id */
+	link = iwl_mld_fw_id_to_link_conf(mld, notif->mac_id);
+	if (WARN_ON(!link))
+		return;
+
+	vif = link->vif;
+	if (WARN_ON(!vif) || vif->type != NL80211_IFTYPE_STATION ||
+	    !vif->cfg.assoc)
+		return;
+
+	if (!link->chanreq.oper.chan ||
+	    link->chanreq.oper.chan->band != NL80211_BAND_2GHZ ||
+	    link->chanreq.oper.width < NL80211_CHAN_WIDTH_40)
+		return;
+
+	mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	/* this shouldn't happen *again*, ignore it */
+	if (mld_vif->cca_40mhz_workaround != CCA_40_MHZ_WA_NONE)
+		return;
+
+	mld_vif->cca_40mhz_workaround = CCA_40_MHZ_WA_RECONNECT;
+
+	/*
+	 * This capability manipulation isn't really ideal, but it's the
+	 * easiest choice - otherwise we'd have to do some major changes
+	 * in mac80211 to support this, which isn't worth it. This does
+	 * mean that userspace may have outdated information, but that's
+	 * actually not an issue at all.
+	 */
+	sband = mld->wiphy->bands[NL80211_BAND_2GHZ];
+
+	WARN_ON(!sband->ht_cap.ht_supported);
+	WARN_ON(!(sband->ht_cap.cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40));
+	sband->ht_cap.cap &= ~IEEE80211_HT_CAP_SUP_WIDTH_20_40;
+
+	he_cap = ieee80211_get_he_iftype_cap_vif(sband, vif);
+
+	if (he_cap) {
+		/* we know that ours is writable */
+		struct ieee80211_sta_he_cap *he = (void *)(uintptr_t)he_cap;
+
+		WARN_ON(!he->has_he);
+		WARN_ON(!(he->he_cap_elem.phy_cap_info[0] &
+			  IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G));
+		he->he_cap_elem.phy_cap_info[0] &=
+			~IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G;
+	}
+
+	ieee80211_disconnect(vif, true);
+}
+
+void iwl_mld_reset_cca_40mhz_workaround(struct iwl_mld *mld,
+					struct ieee80211_vif *vif)
+{
+	struct ieee80211_supported_band *sband;
+	const struct ieee80211_sta_he_cap *he_cap;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	if (vif->type != NL80211_IFTYPE_STATION)
+		return;
+
+	if (mld_vif->cca_40mhz_workaround == CCA_40_MHZ_WA_NONE)
+		return;
+
+	/* Now we are just reconnecting with the new capabilities,
+	 * but remember to reset the capabilities when we disconnect for real
+	 */
+	if (mld_vif->cca_40mhz_workaround == CCA_40_MHZ_WA_RECONNECT) {
+		mld_vif->cca_40mhz_workaround = CCA_40_MHZ_WA_RESET;
+		return;
+	}
+
+	/* Now cca_40mhz_workaround == CCA_40_MHZ_WA_RESET */
+
+	sband = mld->wiphy->bands[NL80211_BAND_2GHZ];
+
+	sband->ht_cap.cap |= IEEE80211_HT_CAP_SUP_WIDTH_20_40;
+
+	he_cap = ieee80211_get_he_iftype_cap_vif(sband, vif);
+
+	if (he_cap) {
+		/* we know that ours is writable */
+		struct ieee80211_sta_he_cap *he = (void *)(uintptr_t)he_cap;
+
+		he->he_cap_elem.phy_cap_info[0] |=
+			IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G;
+	}
+
+	mld_vif->cca_40mhz_workaround = CCA_40_MHZ_WA_NONE;
 }

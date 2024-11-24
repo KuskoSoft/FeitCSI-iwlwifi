@@ -6,6 +6,7 @@
 #include "mld.h"
 #include "notif.h"
 #include "scan.h"
+#include "iface.h"
 #include "iwl-trans.h"
 #include "fw/file.h"
 #include "fw/dbg.h"
@@ -298,6 +299,8 @@ CMD_VERSIONS(roc_notif,
 	     CMD_VER_ENTRY(1, iwl_roc_notif))
 CMD_VERSIONS(probe_resp_data_notif,
 	     CMD_VER_ENTRY(1, iwl_probe_resp_data_notif))
+CMD_VERSIONS(datapath_monitor_notif,
+	     CMD_VER_ENTRY(1, iwl_datapath_monitor_notif))
 
 /*
  * Handlers for fw notifications
@@ -345,6 +348,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			 probe_resp_data_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_SIZES(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
 			 ct_kill_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_SIZES(DATA_PATH_GROUP, MONITOR_NOTIF,
+			 datapath_monitor_notif, RX_HANDLER_ASYNC)
 };
 
 static bool

@@ -231,6 +231,7 @@ static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
 	HCMD_NAME(TLC_MNG_CONFIG_CMD),
 	HCMD_NAME(RX_BAID_ALLOCATION_CONFIG_CMD),
 	HCMD_NAME(SCD_QUEUE_CONFIG_CMD),
+	HCMD_NAME(MONITOR_NOTIF),
 };
 
 /* Please keep this array *SORTED* by hex value.

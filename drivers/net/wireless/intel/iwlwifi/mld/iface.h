@@ -10,6 +10,12 @@
 #include "session-protect.h"
 #include "d3.h"
 
+enum iwl_mld_cca_40mhz_wa_status {
+	CCA_40_MHZ_WA_NONE,
+	CCA_40_MHZ_WA_RESET,
+	CCA_40_MHZ_WA_RECONNECT,
+};
+
 /**
  * struct iwl_mld_vif - virtual interface (MAC context) configuration parameters
  *
@@ -24,6 +30,9 @@
  * @ap_ibss_active: whether the AP/IBSS was started
  * @roc_activity: the id of the roc_activity running. Relevant for p2p device
  *	only. Set to %ROC_NUM_ACTIVITIES when not in use.
+ * @cca_40mhz_workaround: When we are connected in 2.4 GHz and 40 MHz, and the
+ *	environment is too loaded, we work around this by reconnecting to the
+ *	same AP with 20 MHz. This manages the status of the workaround.
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
@@ -42,6 +51,7 @@ struct iwl_mld_vif {
 		u8 num_associated_stas;
 		bool ap_ibss_active;
 		u32 roc_activity;
+		enum iwl_mld_cca_40mhz_wa_status cca_40mhz_workaround;
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld *mld;
@@ -94,5 +104,11 @@ void iwl_mld_set_vif_associated(struct iwl_mld *mld,
 u8 iwl_mld_get_fw_bss_vifs_ids(struct iwl_mld *mld);
 void iwl_mld_handle_probe_resp_data_notif(struct iwl_mld *mld,
 					  struct iwl_rx_packet *pkt);
+
+void iwl_mld_handle_datapath_monitor_notif(struct iwl_mld *mld,
+					   struct iwl_rx_packet *pkt);
+
+void iwl_mld_reset_cca_40mhz_workaround(struct iwl_mld *mld,
+					struct ieee80211_vif *vif);
 
 #endif /* __iwl_mld_iface_h__ */
