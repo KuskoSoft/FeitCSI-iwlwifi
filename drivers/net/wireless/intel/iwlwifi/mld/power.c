@@ -185,8 +185,6 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct ieee80211_bss_conf *link_conf = &vif->bss_conf;
 	struct iwl_mld_link *link = &mld_vif->deflink;
-	/* TODO: task=low_latency + p2p */
-	bool low_latency = false;
 	bool ps_poll = false;
 
 	cmd->id_and_color = cpu_to_le32(mld_vif->fw_id);
@@ -243,7 +241,7 @@ static void iwl_mld_power_build_cmd(struct iwl_mld *mld,
 			cpu_to_le32(IWL_MLD_WOWLAN_PS_RX_DATA_TIMEOUT);
 		cmd->tx_data_timeout =
 			cpu_to_le32(IWL_MLD_WOWLAN_PS_TX_DATA_TIMEOUT);
-	} else if (low_latency) {
+	} else if (iwl_mld_vif_low_latency(mld_vif) && vif->p2p) {
 		cmd->tx_data_timeout =
 			cpu_to_le32(IWL_MLD_SHORT_PS_TX_DATA_TIMEOUT);
 		cmd->rx_data_timeout =

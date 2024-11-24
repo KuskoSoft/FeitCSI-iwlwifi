@@ -3,7 +3,10 @@
  * Copyright (C) 2024 Intel Corporation
  */
 #include "mld.h"
+#include "iface.h"
 #include "low_latency.h"
+#include "hcmd.h"
+#include "power.h"
 
 static void iwl_mld_low_latency_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 {
@@ -68,3 +71,62 @@ void iwl_mld_low_latency_restart_cleanup(struct iwl_mld *mld)
 
 	iwl_mld_low_latency_setup_timestamps(mld);
 }
+
+static int iwl_mld_send_low_latency_cmd(struct iwl_mld *mld, bool low_latency,
+					u16 mac_id)
+{
+	struct iwl_mac_low_latency_cmd cmd = {
+		.mac_id = cpu_to_le32(mac_id)
+	};
+	u16 cmd_id = WIDE_ID(MAC_CONF_GROUP, LOW_LATENCY_CMD);
+	int ret;
+
+	if (low_latency) {
+		/* Currently we don't care about the direction */
+		cmd.low_latency_rx = 1;
+		cmd.low_latency_tx = 1;
+	}
+
+	ret = iwl_mld_send_cmd_pdu(mld, cmd_id, &cmd);
+	if (ret)
+		IWL_ERR(mld, "Failed to send low latency command\n");
+
+	return ret;
+}
+
+static void iwl_mld_vif_set_low_latency(struct iwl_mld_vif *mld_vif, bool set,
+					enum iwl_mld_low_latency_cause cause)
+{
+	if (set)
+		mld_vif->low_latency_causes |= cause;
+	else
+		mld_vif->low_latency_causes &= ~cause;
+}
+
+void iwl_mld_vif_update_low_latency(struct iwl_mld *mld,
+				    struct ieee80211_vif *vif,
+				    bool low_latency,
+				    enum iwl_mld_low_latency_cause cause)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	bool prev;
+
+	prev = iwl_mld_vif_low_latency(mld_vif);
+	iwl_mld_vif_set_low_latency(mld_vif, low_latency, cause);
+
+	low_latency = iwl_mld_vif_low_latency(mld_vif);
+	if (low_latency == prev)
+		return;
+
+	if (iwl_mld_send_low_latency_cmd(mld, low_latency, mld_vif->fw_id)) {
+		/* revert to previous low-latency state */
+		iwl_mld_vif_set_low_latency(mld_vif, prev, cause);
+		return;
+	}
+
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_P2P_CLIENT)
+		return;
+
+	iwl_mld_update_mac_power(mld, vif, false);
+}
+

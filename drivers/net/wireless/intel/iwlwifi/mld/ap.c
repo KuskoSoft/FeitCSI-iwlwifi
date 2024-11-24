@@ -189,24 +189,6 @@ int iwl_mld_update_beacon_template(struct iwl_mld *mld,
 	return ret;
 }
 
-static void iwl_mld_send_low_latency_cmd(struct iwl_mld *mld,
-					 bool low_latency, u16 mac_id)
-{
-	struct iwl_mac_low_latency_cmd cmd = {
-		.mac_id = cpu_to_le32(mac_id)
-	};
-
-	if (low_latency) {
-		/* currently we don't care about the direction */
-		cmd.low_latency_rx = 1;
-		cmd.low_latency_tx = 1;
-	}
-
-	if (iwl_mld_send_cmd_pdu(mld, WIDE_ID(MAC_CONF_GROUP, LOW_LATENCY_CMD),
-				 &cmd))
-		IWL_ERR(mld, "Failed to send low latency command\n");
-}
-
 void iwl_mld_free_ap_early_key(struct iwl_mld *mld,
 			       struct ieee80211_key_conf *key,
 			       struct iwl_mld_vif *mld_vif)
@@ -319,7 +301,7 @@ int iwl_mld_start_ap_ibss(struct ieee80211_hw *hw,
 	if (ret)
 		goto rm_bcast;
 
-	iwl_mld_send_low_latency_cmd(mld, true, mld_vif->fw_id);
+	iwl_mld_vif_update_low_latency(mld, vif, true, LOW_LATENCY_VIF_TYPE);
 
 	mld_vif->ap_ibss_active = true;
 
@@ -347,7 +329,7 @@ void iwl_mld_stop_ap_ibss(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		iwl_mld_mac_fw_action(mld, mld->p2p_device_vif,
 				      FW_CTXT_ACTION_MODIFY);
 
-	iwl_mld_send_low_latency_cmd(mld, false, mld_vif->fw_id);
+	iwl_mld_vif_update_low_latency(mld, vif, false, LOW_LATENCY_VIF_TYPE);
 
 	iwl_mld_remove_bcast_sta(mld, vif, link);
 

@@ -16,12 +16,26 @@ struct iwl_mld_low_latency_packets_counters {
 } ____cacheline_aligned_in_smp;
 
 /**
- * struct iwl_mld_low_latency - Manage low-latency detection and activation
- * @work: Monitors the number of voice and video packets transmitted and
- *	received over a period to detect low-latency. If the threshold is met,
- *	low-latency is activated. If the threshold is not met within a
- *	10-second period while active, it will be deactivated
- * @timestamp: timestamp of the last execution of &work
+ * enum iwl_mld_low_latency_cause - low-latency set causes
+ *
+ * @LOW_LATENCY_TRAFFIC: indicates low-latency traffic was detected
+ * @LOW_LATENCY_DEBUGFS: low-latency mode set from debugfs
+ * @LOW_LATENCY_VIF_TYPE: low-latency mode set because of vif type (AP)
+ */
+enum iwl_mld_low_latency_cause {
+	LOW_LATENCY_TRAFFIC	= BIT(0),
+	LOW_LATENCY_DEBUGFS	= BIT(1),
+	LOW_LATENCY_VIF_TYPE	= BIT(2),
+};
+
+/**
+ * struct iwl_mld_low_latency - Manage low-latency detection and activation.
+ * @work: this work is used to detect low-latency by monitoring the number of
+ *	voice and video packets transmitted in a period of time. If the
+ *	threshold is reached, low-latency is activated. When active,
+ *	it is deactivated if the threshold is not reached within a
+ *	10-second period.
+ * @timestamp: timestamp of the last update.
  * @window_start: per-mac, timestamp of the start of the current window. when
  *	the window is over, the counters are reset.
  * @pkts_counters: per-queue array voice/video packet counters
@@ -39,5 +53,9 @@ int iwl_mld_low_latency_init(struct iwl_mld *mld);
 void iwl_mld_low_latency_exit(struct iwl_mld *mld);
 void iwl_mld_low_latency_free(struct iwl_mld *mld);
 void iwl_mld_low_latency_restart_cleanup(struct iwl_mld *mld);
+void iwl_mld_vif_update_low_latency(struct iwl_mld *mld,
+				    struct ieee80211_vif *vif,
+				    bool low_latency,
+				    enum iwl_mld_low_latency_cause cause);
 
 #endif /* __iwl_mld_low_latency_h__ */

@@ -34,6 +34,8 @@ enum iwl_mld_cca_40mhz_wa_status {
  *	environment is too loaded, we work around this by reconnecting to the
  *	same AP with 20 MHz. This manages the status of the workaround.
  * @beacon_inject_active: indicates an active debugfs beacon ie injection
+ * @low_latency_causes: bit flags, indicating the causes for low-latency,
+ *	see @iwl_mld_low_latency_cause.
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
@@ -58,6 +60,7 @@ struct iwl_mld_vif {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 		bool beacon_inject_active;
 #endif
+		u8 low_latency_causes;
 	);
 	/* And here fields that survive a fw restart */
 	struct iwl_mld *mld;
@@ -120,5 +123,10 @@ void iwl_mld_handle_datapath_monitor_notif(struct iwl_mld *mld,
 
 void iwl_mld_reset_cca_40mhz_workaround(struct iwl_mld *mld,
 					struct ieee80211_vif *vif);
+
+static inline bool iwl_mld_vif_low_latency(const struct iwl_mld_vif *mld_vif)
+{
+	return !!mld_vif->low_latency_causes;
+}
 
 #endif /* __iwl_mld_iface_h__ */
