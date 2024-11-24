@@ -420,8 +420,9 @@ iwl_mld_init_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	mld_sta->sta_type = type;
 	mld_sta->mld = mld;
 
-	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
-		iwl_mld_init_txq(iwl_mld_txq_from_mac80211(sta->txq[i]));
+	if (!mld->fw_status.in_hw_restart)
+		for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
+			iwl_mld_init_txq(iwl_mld_txq_from_mac80211(sta->txq[i]));
 
 	iwl_mld_alloc_mpdu_counters(mld, sta);
 

@@ -13,10 +13,10 @@
  * struct iwl_mld_txq - TX Queue data
  *
  * @fw_id: the fw id of this txq. Only valid when &status.allocated is true.
- * @list: list pointer, for &mld::txqs_to_add
  * @status: bitmap of the txq status
  * @status.allocated: Indicates that the queue was allocated.
  * @status.stop_full: Indicates that the queue is full and should stop TXing.
+ * @list: list pointer, for &mld::txqs_to_add
  * @tx_request: makes sure that if there are multiple threads that want to tx
  *	from this txq, only one of them will do all the TXing.
  *	This is needed to avoid spinning the trans txq lock, which is expensive
@@ -25,13 +25,13 @@ struct iwl_mld_txq {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
 		u16 fw_id;
-		struct list_head list;
 		struct {
 			u8 allocated:1;
 			u8 stop_full:1;
 		} status;
-		atomic_t tx_request;
 	);
+	struct list_head list;
+	atomic_t tx_request;
 	/* And here fields that survive a fw restart */
 };
 
