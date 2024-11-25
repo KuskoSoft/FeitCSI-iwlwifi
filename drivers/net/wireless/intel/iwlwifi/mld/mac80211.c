@@ -1230,6 +1230,8 @@ iwl_mld_mac80211_reconfig_complete(struct ieee80211_hw *hw,
 		/* no need to lock, adding in parallel would schedule too */
 		if (!list_empty(&mld->txqs_to_add))
 			wiphy_work_queue(mld->wiphy, &mld->add_txqs_wk);
+
+		IWL_INFO(mld, "restart completed\n");
 		break;
 	case IEEE80211_RECONFIG_TYPE_SUSPEND:
 		break;
