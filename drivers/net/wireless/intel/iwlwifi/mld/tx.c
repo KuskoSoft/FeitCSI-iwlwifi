@@ -740,6 +740,12 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	if (iwl_trans_tx(mld->trans, skb, dev_tx_cmd, queue))
 		goto err;
 
+	/* Update low-latency counter when a packet is queued instead
+	 * of after TX, it makes sense for early low-latency detection
+	 */
+	if (sta)
+		iwl_mld_low_latency_update_counters(mld, hdr, sta, 0);
+
 	return 0;
 
 err:

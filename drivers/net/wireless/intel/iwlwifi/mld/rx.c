@@ -1553,6 +1553,10 @@ iwl_mld_rx_with_sta(struct iwl_mld *mld, struct ieee80211_hdr *hdr,
 		/* 0 means not an A-MSDU, and 1 means a new A-MSDU */
 		if (!sub_frame_idx || sub_frame_idx == 1)
 			iwl_mld_count_mpdu_rx(link_sta, queue, 1);
+
+		if (!is_multicast_ether_addr(hdr->addr1))
+			iwl_mld_low_latency_update_counters(mld, hdr, sta,
+							    queue);
 	}
 
 	return sta;

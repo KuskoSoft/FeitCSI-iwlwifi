@@ -264,16 +264,20 @@ static bool iwl_mld_is_vo_vi_pkt(struct ieee80211_hdr *hdr)
 
 void iwl_mld_low_latency_update_counters(struct iwl_mld *mld,
 					 struct ieee80211_hdr *hdr,
-					 u8 mac_id, u8 queue)
+					 struct ieee80211_sta *sta,
+					 u8 queue)
 {
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(mld_sta->vif);
 	struct iwl_mld_low_latency_packets_counters *counters;
 	unsigned long ts = jiffies ? jiffies : 1;
+	u8 fw_id = mld_vif->fw_id;
 
 	/* we should have failed op mode init if NULL */
 	if (WARN_ON_ONCE(!mld->low_latency.pkts_counters))
 		return;
 
-	if (WARN_ON_ONCE(mac_id >= ARRAY_SIZE(counters->vo_vi) ||
+	if (WARN_ON_ONCE(fw_id >= ARRAY_SIZE(counters->vo_vi) ||
 			 queue >= mld->trans->num_rx_queues))
 		return;
 
@@ -283,12 +287,12 @@ void iwl_mld_low_latency_update_counters(struct iwl_mld *mld,
 	counters = &mld->low_latency.pkts_counters[queue];
 
 	spin_lock_bh(&counters->lock);
-	counters->vo_vi[mac_id]++;
+	counters->vo_vi[fw_id]++;
 	spin_unlock_bh(&counters->lock);
 
 	/* Initialize the window_start on the first vo/vi packet */
-	if (!mld->low_latency.window_start[mac_id])
-		mld->low_latency.window_start[mac_id] = ts;
+	if (!mld->low_latency.window_start[fw_id])
+		mld->low_latency.window_start[fw_id] = ts;
 
 	if (time_is_before_jiffies(mld->low_latency.timestamp + MLD_LL_PERIOD))
 		wiphy_delayed_work_queue(mld->wiphy, &mld->low_latency.work,
