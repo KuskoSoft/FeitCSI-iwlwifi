@@ -8,6 +8,9 @@
 #include "hcmd.h"
 #include "power.h"
 
+#define MLD_LL_WK_INTERVAL_MSEC 500
+#define MLD_LL_PERIOD (HZ * MLD_LL_WK_INTERVAL_MSEC / 1000)
+
 static void iwl_mld_low_latency_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 {
   /* TODO */
@@ -130,3 +133,54 @@ void iwl_mld_vif_update_low_latency(struct iwl_mld *mld,
 	iwl_mld_update_mac_power(mld, vif, false);
 }
 
+static bool iwl_mld_is_vo_vi_pkt(struct ieee80211_hdr *hdr)
+{
+	u8 tid;
+	static const u8 tid_to_mac80211_ac[] = {
+		IEEE80211_AC_BE,
+		IEEE80211_AC_BK,
+		IEEE80211_AC_BK,
+		IEEE80211_AC_BE,
+		IEEE80211_AC_VI,
+		IEEE80211_AC_VI,
+		IEEE80211_AC_VO,
+		IEEE80211_AC_VO,
+	};
+
+	if (!hdr || !ieee80211_is_data_qos(hdr->frame_control))
+		return false;
+
+	tid = ieee80211_get_tid(hdr);
+	if (tid >= IWL_MAX_TID_COUNT)
+		return false;
+
+	return tid_to_mac80211_ac[tid] < IEEE80211_AC_VI;
+}
+
+void iwl_mld_low_latency_update_counters(struct iwl_mld *mld,
+					 struct ieee80211_hdr *hdr,
+					 u8 mac_id, u8 queue)
+{
+	struct iwl_mld_low_latency_packets_counters *counters;
+
+	/* we should have failed op mode init if NULL */
+	if (WARN_ON_ONCE(!mld->low_latency.pkts_counters))
+		return;
+
+	if (WARN_ON_ONCE(mac_id >= ARRAY_SIZE(counters->vo_vi) ||
+			 queue >= mld->trans->num_rx_queues))
+		return;
+
+	if (!iwl_mld_is_vo_vi_pkt(hdr))
+		return;
+
+	counters = &mld->low_latency.pkts_counters[queue];
+
+	spin_lock_bh(&counters->lock);
+	counters->vo_vi[mac_id]++;
+	spin_unlock_bh(&counters->lock);
+
+	if (time_is_before_jiffies(mld->low_latency.timestamp + MLD_LL_PERIOD))
+		wiphy_delayed_work_queue(mld->wiphy, &mld->low_latency.work,
+					 0);
+}

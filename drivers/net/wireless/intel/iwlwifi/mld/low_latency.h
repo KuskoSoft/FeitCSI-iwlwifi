@@ -57,5 +57,8 @@ void iwl_mld_vif_update_low_latency(struct iwl_mld *mld,
 				    struct ieee80211_vif *vif,
 				    bool low_latency,
 				    enum iwl_mld_low_latency_cause cause);
+void iwl_mld_low_latency_update_counters(struct iwl_mld *mld,
+					 struct ieee80211_hdr *hdr,
+					 u8 mac, u8 queue);
 
 #endif /* __iwl_mld_low_latency_h__ */
