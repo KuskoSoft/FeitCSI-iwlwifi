@@ -30,6 +30,7 @@
 #include "scan.h"
 #include "rx.h"
 #include "thermal.h"
+#include "low_latency.h"
 #include "constants.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
@@ -106,6 +107,7 @@
  * @mcast_filter_cmd: pointer to the multicast filter command.
  * @mgmt_tx_ant: stores the last TX antenna index; used for setting
  *	TX rate_n_flags for non-STA mgmt frames (toggles on every TX failure).
+ * @low_latency: low-latency manager.
  * @tzone: thermal zone device's data
  * @cooling_dev: cooling device's related data
  */
@@ -188,6 +190,8 @@ struct iwl_mld {
 	struct iwl_mcast_filter_cmd *mcast_filter_cmd;
 
 	u8 mgmt_tx_ant;
+
+	struct iwl_mld_low_latency low_latency;
 #ifdef CONFIG_THERMAL
 	struct thermal_zone_device *tzone;
 	struct iwl_mld_cooling_device cooling_dev;
@@ -213,6 +217,9 @@ iwl_cleanup_mld(struct iwl_mld *mld)
 	CLEANUP_STRUCT(&mld->scan);
 
 	mld->fw_status.in_d3 = false;
+
+	iwl_mld_low_latency_restart_cleanup(mld);
+
 	/* Empty the list of async notification handlers so we won't process
 	 * notifications from the dead fw after the reconfig flow.
 	 */

@@ -20,6 +20,7 @@
 #include "sta.h"
 #include "regulatory.h"
 #include "thermal.h"
+#include "low_latency.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -389,9 +390,13 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	if (ret)
 		goto leds_exit;
 
-	ret = iwl_mld_register_hw(mld);
+	ret = iwl_mld_low_latency_init(mld);
 	if (ret)
 		goto free_scan_cmd;
+
+	ret = iwl_mld_register_hw(mld);
+	if (ret)
+		goto low_latency_free;
 
 	iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
 
@@ -400,6 +405,8 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	return op_mode;
 
+low_latency_free:
+	iwl_mld_low_latency_free(mld);
 free_scan_cmd:
 	kfree(mld->scan.cmd);
 leds_exit:
@@ -417,8 +424,10 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
 	iwl_mld_leds_exit(mld);
+
 	wiphy_lock(mld->wiphy);
 	iwl_mld_thermal_exit(mld);
+	iwl_mld_low_latency_exit(mld);
 	wiphy_unlock(mld->wiphy);
 
 	ieee80211_unregister_hw(mld->hw);
