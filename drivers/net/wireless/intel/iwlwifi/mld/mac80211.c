@@ -1833,7 +1833,8 @@ static void iwl_mld_set_key_remove(struct iwl_mld *mld,
 	}
 
 	/* if this key was stored to be added later to the FW - free it here */
-	iwl_mld_free_ap_early_key(mld, key, mld_vif);
+	if (!(key->flags & IEEE80211_KEY_FLAG_PAIRWISE))
+		iwl_mld_free_ap_early_key(mld, key, mld_vif);
 
 	/* We already removed it */
 	if (key->hw_key_idx == STA_KEY_IDX_INVALID)

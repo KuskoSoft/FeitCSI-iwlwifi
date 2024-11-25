@@ -201,10 +201,12 @@ void iwl_mld_free_ap_early_key(struct iwl_mld *mld,
 			       struct ieee80211_key_conf *key,
 			       struct iwl_mld_vif *mld_vif)
 {
-	u8 link_id = key->link_id >= 0 ? key->link_id : 0;
-	struct iwl_mld_link *link =
-		iwl_mld_link_dereference_check(mld_vif, link_id);
+	struct iwl_mld_link *link;
 
+	if (WARN_ON(key->link_id < 0))
+		return;
+
+	link = iwl_mld_link_dereference_check(mld_vif, key->link_id);
 	if (WARN_ON(!link))
 		return;
 
@@ -222,10 +224,12 @@ int iwl_mld_store_ap_early_key(struct iwl_mld *mld,
 			       struct ieee80211_key_conf *key,
 			       struct iwl_mld_vif *mld_vif)
 {
-	u8 link_id = key->link_id >= 0 ? key->link_id : 0;
-	struct iwl_mld_link *link =
-		iwl_mld_link_dereference_check(mld_vif, link_id);
+	struct iwl_mld_link *link;
 
+	if (WARN_ON(key->link_id < 0))
+		return -EINVAL;
+
+	link = iwl_mld_link_dereference_check(mld_vif, key->link_id);
 	if (WARN_ON(!link))
 		return -EINVAL;
 
