@@ -336,6 +336,21 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 {
 	struct dentry *mld_vif_dbgfs =
 		debugfs_create_dir("iwlmld", vif->debugfs_dir);
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	char target[3 * 3 + 11 + (NL80211_WIPHY_NAME_MAXLEN + 1) +
+		    (7 + IFNAMSIZ + 1) + 6 + 1];
+	char name[7 + IFNAMSIZ + 1];
+
+	/* Create symlink for convenience pointing to interface specific
+	 * debugfs entries for the driver. For example, under
+	 * /sys/kernel/debug/iwlwifi/0000\:02\:00.0/iwlmld/
+	 * find
+	 * netdev:wlan0 -> ../../../ieee80211/phy0/netdev:wlan0/iwlmld/
+	 */
+	snprintf(name, sizeof(name), "%pd", vif->debugfs_dir);
+	snprintf(target, sizeof(target), "../../../%pd3/iwlmld",
+		 vif->debugfs_dir);
+	debugfs_create_symlink(name, mld->debugfs_dir, target);
 
 #ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
 	debugfs_create_symlink("iwlmvm", vif->debugfs_dir, "iwlmld");

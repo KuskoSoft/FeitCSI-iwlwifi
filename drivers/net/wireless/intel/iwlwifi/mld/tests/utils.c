@@ -39,7 +39,7 @@ int iwlmld_kunit_test_init(struct kunit *test)
 
 	/* Allocate and initialize the mld structure */
 	KUNIT_ALLOC_AND_ASSERT(test, mld);
-	iwl_construct_mld(mld, trans, cfg, fw, hw);
+	iwl_construct_mld(mld, trans, cfg, fw, hw, NULL);
 
 	fw->ucode_capa.num_stations = IWL_STATION_COUNT_MAX;
 	fw->ucode_capa.num_links = IWL_FW_MAX_LINK_ID + 1;

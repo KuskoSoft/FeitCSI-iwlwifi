@@ -348,7 +348,7 @@ iwl_mld_is_dup(struct iwl_mld *mld, struct ieee80211_sta *sta,
 
 void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 		       const struct iwl_cfg *cfg, const struct iwl_fw *fw,
-		       struct ieee80211_hw *hw);
+		       struct ieee80211_hw *hw, struct dentry *dbgfs_dir);
 #endif
 
 #define IWL_MLD_INVALID_FW_ID 0xff
