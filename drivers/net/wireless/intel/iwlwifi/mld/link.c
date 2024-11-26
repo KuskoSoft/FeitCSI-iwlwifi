@@ -455,7 +455,7 @@ int iwl_mld_remove_link(struct iwl_mld *mld,
 	if (ret)
 		return ret;
 
-	if (WARN_ON(link->fw_id >= ARRAY_SIZE(mld->fw_id_to_bss_conf)))
+	if (WARN_ON(link->fw_id >= mld->fw->ucode_capa.num_links))
 		return -EINVAL;
 
 	RCU_INIT_POINTER(mld->fw_id_to_bss_conf[link->fw_id], NULL);

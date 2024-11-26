@@ -12,6 +12,7 @@
 #include <linux/device.h>
 
 #include "fw/api/scan.h"
+#include "fw/api/mac-cfg.h"
 #include "iwl-trans.h"
 #include "mld.h"
 #include "iface.h"
@@ -41,6 +42,7 @@ int iwlmld_kunit_test_init(struct kunit *test)
 	iwl_construct_mld(mld, trans, cfg, fw, hw);
 
 	fw->ucode_capa.num_stations = IWL_STATION_COUNT_MAX;
+	fw->ucode_capa.num_links = IWL_FW_MAX_LINK_ID + 1;
 
 	mld->fwrt.trans = trans;
 	mld->fwrt.fw = fw;

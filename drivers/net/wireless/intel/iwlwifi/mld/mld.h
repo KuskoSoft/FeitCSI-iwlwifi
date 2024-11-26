@@ -363,6 +363,9 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 	if (__builtin_types_compatible_p(typeof(*mac80211_ptr),				\
 					 struct ieee80211_link_sta))			\
 		arr_sz = mld->fw->ucode_capa.num_stations;				\
+	if (__builtin_types_compatible_p(typeof(*mac80211_ptr),				\
+					 struct ieee80211_bss_conf))			\
+		arr_sz = mld->fw->ucode_capa.num_links;					\
 	for (int i = 0; i < arr_sz; i++) {						\
 		u8 idx = (i + rand) % arr_sz;						\
 		if (rcu_access_pointer(mld->fw_id_to_##_mac80211_type[idx]))		\
@@ -378,7 +381,7 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 static inline struct ieee80211_bss_conf *
 iwl_mld_fw_id_to_link_conf(struct iwl_mld *mld, u8 fw_link_id)
 {
-	if (IWL_FW_CHECK(mld, fw_link_id >= ARRAY_SIZE(mld->fw_id_to_bss_conf),
+	if (IWL_FW_CHECK(mld, fw_link_id >= mld->fw->ucode_capa.num_links,
 			 "Invalid fw_link_id: %d\n", fw_link_id))
 		return NULL;
 
