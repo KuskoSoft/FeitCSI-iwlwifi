@@ -9,10 +9,10 @@
 #include <net/mac80211.h>
 #include "fw/api/sta.h"
 
-int iwl_mld_remove_key(struct iwl_mld *mld,
-		       struct ieee80211_vif *vif,
-		       struct ieee80211_sta *sta,
-		       struct ieee80211_key_conf *key);
+void iwl_mld_remove_key(struct iwl_mld *mld,
+			struct ieee80211_vif *vif,
+			struct ieee80211_sta *sta,
+			struct ieee80211_key_conf *key);
 int iwl_mld_add_key(struct iwl_mld *mld,
 		    struct ieee80211_vif *vif,
 		    struct ieee80211_sta *sta,

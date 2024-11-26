@@ -156,8 +156,8 @@ static int iwl_mld_add_key_to_fw(struct iwl_mld *mld, u32 sta_mask,
 				    &cmd);
 }
 
-static int iwl_mld_remove_key_from_fw(struct iwl_mld *mld, u32 sta_mask,
-				      u32 key_flags, u32 keyidx)
+static void iwl_mld_remove_key_from_fw(struct iwl_mld *mld, u32 sta_mask,
+				       u32 key_flags, u32 keyidx)
 {
 	struct iwl_sec_key_cmd cmd = {
 		.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE),
@@ -167,21 +167,18 @@ static int iwl_mld_remove_key_from_fw(struct iwl_mld *mld, u32 sta_mask,
 	};
 
 	if (WARN_ON(!sta_mask))
-		return -EINVAL;
+		return;
 
-	return iwl_mld_send_cmd_pdu(mld, WIDE_ID(DATA_PATH_GROUP, SEC_KEY_CMD),
-				    &cmd);
+	iwl_mld_send_cmd_pdu(mld, WIDE_ID(DATA_PATH_GROUP, SEC_KEY_CMD), &cmd);
 }
 
-int iwl_mld_remove_key(struct iwl_mld *mld,
-		       struct ieee80211_vif *vif,
-		       struct ieee80211_sta *sta,
-		       struct ieee80211_key_conf *key)
+void iwl_mld_remove_key(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			struct ieee80211_sta *sta,
+			struct ieee80211_key_conf *key)
 {
 	u32 sta_mask = iwl_mld_get_key_sta_mask(mld, vif, sta, key);
 	u32 key_flags = iwl_mld_get_key_flags(mld, vif, sta, key);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
-	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -195,7 +192,7 @@ int iwl_mld_remove_key(struct iwl_mld *mld,
 
 		mld_link = iwl_mld_link_dereference_check(mld_vif, link_id);
 		if (WARN_ON(!mld_link))
-			return -EINVAL;
+			return;
 
 		if (mld_link->igtk == key)
 			mld_link->igtk = NULL;
@@ -203,14 +200,10 @@ int iwl_mld_remove_key(struct iwl_mld *mld,
 		mld->num_igtks--;
 	}
 
-	ret = iwl_mld_remove_key_from_fw(mld, sta_mask, key_flags,
-					 key->keyidx);
+	iwl_mld_remove_key_from_fw(mld, sta_mask, key_flags, key->keyidx);
 
 	/* no longer in HW */
-	if (!ret)
-		key->hw_key_idx = STA_KEY_IDX_INVALID;
-
-	return ret;
+	key->hw_key_idx = STA_KEY_IDX_INVALID;
 }
 
 int iwl_mld_add_key(struct iwl_mld *mld,
@@ -245,11 +238,7 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 		if (mld_link->igtk) {
 			IWL_DEBUG_MAC80211(mld, "remove old IGTK %d\n",
 					   mld_link->igtk->keyidx);
-			ret = iwl_mld_remove_key(mld, vif, sta, mld_link->igtk);
-			if (ret)
-				IWL_ERR(mld,
-					"failed to remove old IGTK (ret=%d)\n",
-					ret);
+			iwl_mld_remove_key(mld, vif, sta, mld_link->igtk);
 		}
 
 		WARN_ON(mld_link->igtk);
