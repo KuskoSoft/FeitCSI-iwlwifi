@@ -61,5 +61,7 @@ void iwl_mld_low_latency_update_counters(struct iwl_mld *mld,
 					 struct ieee80211_hdr *hdr,
 					 struct ieee80211_sta *sta,
 					 u8 queue);
+void iwl_mld_low_latency_stop(struct iwl_mld *mld);
+void iwl_mld_low_latency_restart(struct iwl_mld *mld);
 
 #endif /* __iwl_mld_low_latency_h__ */

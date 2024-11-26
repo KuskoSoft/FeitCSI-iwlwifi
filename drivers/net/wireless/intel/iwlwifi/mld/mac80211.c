@@ -22,6 +22,7 @@
 #include "roc.h"
 #include "iface.h"
 #include "stats.h"
+#include "low_latency.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
 #include "fw/api/filter.h"
@@ -1935,11 +1936,14 @@ static int iwl_mld_resume(struct ieee80211_hw *hw)
 	int ret;
 
 	ret = iwl_mld_wowlan_resume(mld);
+	if (ret)
+		return ret;
 
-	if (!ret)
-		iwl_fw_runtime_resume(&mld->fwrt);
+	iwl_fw_runtime_resume(&mld->fwrt);
 
-	return ret;
+	iwl_mld_low_latency_restart(mld);
+
+	return 0;
 }
 
 static int iwl_mld_alloc_ptk_pn(struct iwl_mld *mld,

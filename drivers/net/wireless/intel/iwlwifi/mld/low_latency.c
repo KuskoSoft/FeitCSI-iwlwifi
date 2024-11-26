@@ -161,8 +161,7 @@ void iwl_mld_low_latency_exit(struct iwl_mld *mld)
 {
 	lockdep_assert_wiphy(mld->wiphy);
 
-	wiphy_delayed_work_cancel(mld->wiphy, &mld->low_latency.work);
-
+	iwl_mld_low_latency_stop(mld);
 	iwl_mld_low_latency_free(mld);
 }
 
@@ -297,4 +296,39 @@ void iwl_mld_low_latency_update_counters(struct iwl_mld *mld,
 	if (time_is_before_jiffies(mld->low_latency.timestamp + MLD_LL_PERIOD))
 		wiphy_delayed_work_queue(mld->wiphy, &mld->low_latency.work,
 					 0);
+}
+
+void iwl_mld_low_latency_stop(struct iwl_mld *mld)
+{
+	lockdep_assert_wiphy(mld->wiphy);
+
+	wiphy_delayed_work_cancel(mld->wiphy, &mld->low_latency.work);
+}
+
+void iwl_mld_low_latency_restart(struct iwl_mld *mld)
+{
+	struct iwl_mld_low_latency *ll = &mld->low_latency;
+	bool low_latency = false;
+	unsigned long ts = jiffies;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	ll->timestamp = ts;
+
+	for (int mac = 0; mac < NUM_MAC_INDEX_DRIVER; mac++) {
+		ll->window_start[mac] = 0;
+		low_latency |= ll->result[mac];
+
+		for (int q = 0; q < mld->trans->num_rx_queues; q++) {
+			spin_lock_bh(&ll->pkts_counters[q].lock);
+			ll->pkts_counters[q].vo_vi[mac] = 0;
+			spin_unlock_bh(&ll->pkts_counters[q].lock);
+		}
+	}
+
+	/* if low latency is active, force re-evaluation to cover the case of
+	 * no traffic.
+	 */
+	if (low_latency)
+		wiphy_delayed_work_queue(mld->wiphy, &ll->work, MLD_LL_PERIOD);
 }

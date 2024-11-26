@@ -1321,6 +1321,8 @@ int iwl_mld_no_wowlan_suspend(struct iwl_mld *mld)
 
 	IWL_DEBUG_WOWLAN(mld, "Starting the no wowlan suspend flow\n");
 
+	iwl_mld_low_latency_stop(mld);
+
 	/* This will happen if iwl_mld_supsend failed with FW error */
 	if (mld->trans->state == IWL_TRANS_NO_FW &&
 	    test_bit(STATUS_FW_ERROR, &mld->trans->status))
@@ -1385,6 +1387,8 @@ int iwl_mld_no_wowlan_resume(struct iwl_mld *mld)
 	if (ret) {
 		mld->trans->state = IWL_TRANS_NO_FW;
 		set_bit(STATUS_FW_ERROR, &mld->trans->status);
+	} else {
+		iwl_mld_low_latency_restart(mld);
 	}
 
 	return iwl_mld_update_device_power(mld, false);
