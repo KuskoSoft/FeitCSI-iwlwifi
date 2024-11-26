@@ -265,6 +265,9 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 #define VIF_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\
 	WIPHY_DEBUGFS_WRITE_FILE_OPS(vif_##name, bufsz, vif)
 
+#define VIF_DEBUGFS_READ_WRITE_FILE_OPS(name, bufsz)			    \
+	IEEE80211_WIPHY_DEBUGFS_READ_WRITE_FILE_OPS(vif_##name, bufsz, vif) \
+
 #define VIF_DEBUGFS_ADD_FILE_ALIAS(alias, name, parent, mode) do {	\
 	debugfs_create_file(alias, mode, parent, vif,			\
 			    &iwl_dbgfs_vif_##name##_ops);		\
@@ -330,8 +333,51 @@ static ssize_t iwl_dbgfs_vif_pm_params_write(struct iwl_mld *mld,
 	return iwl_mld_update_mac_power(mld, vif, false) ?: count;
 }
 
+static ssize_t iwl_dbgfs_vif_low_latency_write(struct iwl_mld *mld,
+					       char *buf, size_t count,
+					       void *data)
+{
+	struct ieee80211_vif *vif = data;
+	u8 value;
+	int ret;
+
+	ret = kstrtou8(buf, 0, &value);
+	if (ret)
+		return ret;
+
+	if (value > 1)
+		return -EINVAL;
+
+	iwl_mld_vif_update_low_latency(mld, vif, value, LOW_LATENCY_DEBUGFS);
+
+	return count;
+}
+
+static ssize_t iwl_dbgfs_vif_low_latency_read(struct ieee80211_vif *vif,
+					      size_t count, char *buf)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	char format[] = "traffic=%d\ndbgfs=%d\nvif_type=%d\nactual=%d\n";
+	u8 ll_causes;
+
+	if (WARN_ON(count < sizeof(format)))
+		return -EINVAL;
+
+	ll_causes = READ_ONCE(mld_vif->low_latency_causes);
+
+	/* all values in format are boolean so the size of format is enough
+	 * for holding the result string
+	 */
+	return scnprintf(buf, count, format,
+			 !!(ll_causes & LOW_LATENCY_TRAFFIC),
+			 !!(ll_causes & LOW_LATENCY_DEBUGFS),
+			 !!(ll_causes & LOW_LATENCY_VIF_TYPE),
+			 !!(ll_causes));
+}
+
 VIF_DEBUGFS_WRITE_FILE_OPS(pm_params, 32);
 VIF_DEBUGFS_WRITE_FILE_OPS(bf_params, 32);
+VIF_DEBUGFS_READ_WRITE_FILE_OPS(low_latency, 45);
 
 static int
 _iwl_dbgfs_inject_beacon_ie(struct iwl_mld *mld, struct ieee80211_vif *vif,
@@ -477,6 +523,8 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 		VIF_DEBUGFS_ADD_FILE(inject_beacon_ie_restore,
 				     mld_vif_dbgfs, 0200);
 	}
+
+	VIF_DEBUGFS_ADD_FILE(low_latency, mld_vif_dbgfs, 0600);
 
 }
 
