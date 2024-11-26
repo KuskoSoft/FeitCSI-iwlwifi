@@ -6,6 +6,7 @@
 
 #include "iface.h"
 #include "hcmd.h"
+#include "key.h"
 
 #include "fw/api/context.h"
 #include "fw/api/mac.h"
@@ -16,6 +17,7 @@
 void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld *mld = mld_vif->mld;
 	struct iwl_mld_link *link;
 
 	if (vif->type != NL80211_IFTYPE_STATION &&
@@ -27,6 +29,8 @@ void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 
 	for_each_mld_vif_valid_link(mld_vif, link)
 		iwl_mld_cleanup_link(mld_vif->mld, link);
+
+	ieee80211_iter_keys(mld->hw, vif, iwl_mld_cleanup_keys_iter, NULL);
 
 	CLEANUP_STRUCT(mld_vif);
 }

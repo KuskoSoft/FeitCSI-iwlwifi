@@ -231,7 +231,6 @@ int iwl_mld_store_ap_early_key(struct iwl_mld *mld,
 
 	for (int i = 0; i < ARRAY_SIZE(link->ap_early_keys); i++) {
 		if (!link->ap_early_keys[i]) {
-			key->hw_key_idx = STA_KEY_IDX_INVALID;
 			link->ap_early_keys[i] = key;
 			return 0;
 		}

@@ -5,7 +5,6 @@
 #include "key.h"
 #include "iface.h"
 #include "sta.h"
-#include "fw/api/sta.h"
 #include "fw/api/datapath.h"
 
 static u32 iwl_mld_get_key_flags(struct iwl_mld *mld,
@@ -182,6 +181,7 @@ int iwl_mld_remove_key(struct iwl_mld *mld,
 	u32 sta_mask = iwl_mld_get_key_sta_mask(mld, vif, sta, key);
 	u32 key_flags = iwl_mld_get_key_flags(mld, vif, sta, key);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -197,16 +197,20 @@ int iwl_mld_remove_key(struct iwl_mld *mld,
 		if (WARN_ON(!mld_link))
 			return -EINVAL;
 
-		if (mld_link->igtk == key) {
-			/* no longer in HW - mark for later */
-			mld_link->igtk->hw_key_idx = STA_KEY_IDX_INVALID;
+		if (mld_link->igtk == key)
 			mld_link->igtk = NULL;
-		}
+
 		mld->num_igtks--;
 	}
 
-	return iwl_mld_remove_key_from_fw(mld, sta_mask, key_flags,
-					  key->keyidx);
+	ret = iwl_mld_remove_key_from_fw(mld, sta_mask, key_flags,
+					 key->keyidx);
+
+	/* no longer in HW */
+	if (!ret)
+		key->hw_key_idx = STA_KEY_IDX_INVALID;
+
+	return ret;
 }
 
 int iwl_mld_add_key(struct iwl_mld *mld,
@@ -251,9 +255,6 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 		WARN_ON(mld_link->igtk);
 	}
 
-	/* Will be set to 0 if added successfully */
-	key->hw_key_idx = STA_KEY_IDX_INVALID;
-
 	ret = iwl_mld_add_key_to_fw(mld, sta_mask, key_flags, key);
 	if (ret)
 		return ret;
@@ -296,7 +297,6 @@ static void iwl_mld_remove_ap_keys_iter(struct ieee80211_hw *hw,
 		return;
 
 	iwl_mld_remove_key(mld, vif, data->sta, key);
-	key->hw_key_idx = STA_KEY_IDX_INVALID;
 }
 
 void iwl_mld_remove_ap_keys(struct iwl_mld *mld, struct ieee80211_vif *vif,

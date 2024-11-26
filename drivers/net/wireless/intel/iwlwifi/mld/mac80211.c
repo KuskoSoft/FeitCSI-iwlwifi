@@ -1733,20 +1733,19 @@ static int iwl_mld_set_key_add(struct iwl_mld *mld,
 	int keyidx = key->keyidx;
 	int ret;
 
+	/* Will be set to 0 if added successfully */
+	key->hw_key_idx = STA_KEY_IDX_INVALID;
+
 	switch (key->cipher) {
 	case WLAN_CIPHER_SUITE_WEP40:
 	case WLAN_CIPHER_SUITE_WEP104:
 		IWL_DEBUG_MAC80211(mld, "Use SW encryption for WEP\n");
-		/* Remember not to remove it from FW in iwl_mld_remove_ap_keys */
-		key->hw_key_idx = STA_KEY_IDX_INVALID;
 		return -EOPNOTSUPP;
 	case WLAN_CIPHER_SUITE_TKIP:
 		if (vif->type == NL80211_IFTYPE_STATION) {
 			key->flags |= IEEE80211_KEY_FLAG_PUT_MIC_SPACE;
 			break;
 		}
-		/* Remember not to remove it from FW in iwl_mld_remove_ap_keys */
-		key->hw_key_idx = STA_KEY_IDX_INVALID;
 		IWL_DEBUG_MAC80211(mld, "Use SW encryption for TKIP\n");
 		return -EOPNOTSUPP;
 	case WLAN_CIPHER_SUITE_CCMP:
@@ -1792,7 +1791,6 @@ static int iwl_mld_set_key_add(struct iwl_mld *mld,
 	ret = iwl_mld_add_key(mld, vif, sta, key);
 	if (ret) {
 		IWL_WARN(mld, "set key failed (%d)\n", ret);
-		key->hw_key_idx = STA_KEY_IDX_INVALID;
 		if (ptk_pn) {
 			RCU_INIT_POINTER(mld_sta->ptk_pn[keyidx], NULL);
 			kfree(ptk_pn);
