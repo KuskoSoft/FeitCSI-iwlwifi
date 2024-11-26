@@ -34,4 +34,10 @@
 #define IWL_MLD_PS_HEAVY_TX_THLD_PACKETS	20
 #define IWL_MLD_PS_HEAVY_RX_THLD_PACKETS	8
 
+#ifndef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#define IWL_MLD_DIS_RANDOM_FW_ID                false
+#else
+#define IWL_MLD_DIS_RANDOM_FW_ID	        (mld->trans->dbg_cfg.MLD_DIS_RANDOM_FW_ID)
+#endif
+
 #endif /* __iwl_mld_constants_h__ */

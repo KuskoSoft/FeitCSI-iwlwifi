@@ -30,6 +30,7 @@
 #include "scan.h"
 #include "rx.h"
 #include "thermal.h"
+#include "constants.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
 
@@ -358,7 +359,7 @@ iwl_mld_allocate_##_type##_fw_id(struct iwl_mld *mld,					\
 				 u8 *fw_id,				\
 				 struct ieee80211_##_mac80211_type *mac80211_ptr)	\
 {											\
-	u8 rand = get_random_u8();							\
+	u8 rand = IWL_MLD_DIS_RANDOM_FW_ID ? 0 : get_random_u8();			\
 	u8 arr_sz = ARRAY_SIZE(mld->fw_id_to_##_mac80211_type);				\
 	if (__builtin_types_compatible_p(typeof(*mac80211_ptr),				\
 					 struct ieee80211_link_sta))			\
