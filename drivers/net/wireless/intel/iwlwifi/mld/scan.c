@@ -723,12 +723,10 @@ iwl_mld_scan_cmd_set_probe_params(struct iwl_mld_scan_params *params,
 }
 
 static inline bool
-iwl_mld_scan_use_ebs(struct iwl_mld *mld, struct ieee80211_vif *vif)
+iwl_mld_scan_use_ebs(struct iwl_mld *mld, struct ieee80211_vif *vif,
+		     bool low_latency)
 {
 	const struct iwl_ucode_capabilities *capa = &mld->fw->ucode_capa;
-	bool low_latency = false;
-
-	/* TODO: get low_latency mode (task=low_latency) */
 
 	/* We can only use EBS if:
 	 *	1. the feature is supported.
@@ -748,13 +746,14 @@ iwl_mld_scan_use_ebs(struct iwl_mld *mld, struct ieee80211_vif *vif)
 static u8
 iwl_mld_scan_cmd_set_chan_flags(struct iwl_mld *mld,
 				struct iwl_mld_scan_params *params,
-				struct ieee80211_vif *vif)
+				struct ieee80211_vif *vif,
+				bool low_latency)
 {
 	u8 flags = 0;
 
 	flags |= IWL_SCAN_CHANNEL_FLAG_ENABLE_CHAN_ORDER;
 
-	if (iwl_mld_scan_use_ebs(mld, vif))
+	if (iwl_mld_scan_use_ebs(mld, vif, low_latency))
 		flags |= IWL_SCAN_CHANNEL_FLAG_EBS |
 			 IWL_SCAN_CHANNEL_FLAG_EBS_ACCURATE |
 			 IWL_SCAN_CHANNEL_FLAG_CACHE_ADD;
@@ -1063,6 +1062,7 @@ iwl_mld_scan_cmd_set_chan_params(struct iwl_mld *mld,
 				 struct iwl_mld_scan_params *params,
 				 struct ieee80211_vif *vif,
 				 struct iwl_scan_req_params_v17 *scan_p,
+				 bool low_latency,
 				 enum iwl_mld_scan_status scan_status,
 				 u32 channel_cfg_flags)
 {
@@ -1079,7 +1079,8 @@ iwl_mld_scan_cmd_set_chan_params(struct iwl_mld *mld,
 							     scan_status);
 
 	/* relevant only for 2.4 GHz/5 GHz scan */
-	cp->flags = iwl_mld_scan_cmd_set_chan_flags(mld, params, vif);
+	cp->flags = iwl_mld_scan_cmd_set_chan_flags(mld, params, vif,
+						    low_latency);
 	cp->count = params->n_channels;
 
 	iwl_mld_scan_cmd_set_channels(mld, params->channels, cp,
@@ -1115,7 +1116,8 @@ iwl_mld_scan_cmd_set_chan_params(struct iwl_mld *mld,
 static int
 iwl_mld_scan_build_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		       struct iwl_mld_scan_params *params,
-		       enum iwl_mld_scan_status scan_status)
+		       enum iwl_mld_scan_status scan_status,
+		       bool low_latency)
 {
 	struct iwl_scan_req_umac_v17 *cmd = mld->scan.cmd;
 	struct iwl_scan_req_params_v17 *scan_p = &cmd->scan_params;
@@ -1147,7 +1149,8 @@ iwl_mld_scan_build_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 					  &bitmap_ssid);
 
 	ret = iwl_mld_scan_cmd_set_chan_params(mld, params, vif, scan_p,
-					       scan_status, bitmap_ssid);
+					       low_latency, scan_status,
+					       bitmap_ssid);
 	if (ret)
 		return ret;
 
@@ -1458,7 +1461,8 @@ _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	iwl_mld_scan_6ghz_passive_scan(mld, &params, vif);
 
-	uid = iwl_mld_scan_build_cmd(mld, vif, &params, scan_status);
+	uid = iwl_mld_scan_build_cmd(mld, vif, &params, scan_status,
+				     scan_iter_data.global_low_latency);
 	if (uid < 0)
 		return uid;
 
@@ -1658,7 +1662,8 @@ int iwl_mld_sched_scan_start(struct iwl_mld *mld,
 		goto out;
 	}
 
-	uid = iwl_mld_scan_build_cmd(mld, vif, &params, type);
+	uid = iwl_mld_scan_build_cmd(mld, vif, &params, type,
+				     scan_iter_data.global_low_latency);
 	if (uid < 0) {
 		ret = uid;
 		goto out;
