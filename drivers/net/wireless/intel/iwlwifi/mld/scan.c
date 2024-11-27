@@ -156,6 +156,92 @@ static bool iwl_mld_get_respect_p2p_go(struct iwl_mld *mld,
 	return data.p2p_go;
 }
 
+struct iwl_mld_scan_iter_data {
+	struct ieee80211_vif *current_vif;
+	bool active_vif;
+	bool is_scm_with_p2p_go;
+	bool global_low_latency;
+};
+
+static void iwl_mld_scan_iterator(void *_data, u8 *mac,
+				  struct ieee80211_vif *vif)
+{
+	struct iwl_mld_scan_iter_data *data = _data;
+	struct ieee80211_vif *curr_vif = data->current_vif;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_vif *curr_mld_vif;
+	unsigned long curr_vif_active_links;
+	u16 link_id;
+
+	data->global_low_latency |= iwl_mld_vif_low_latency(mld_vif);
+
+	if ((ieee80211_vif_is_mld(vif) && vif->active_links) ||
+	    (vif->type != NL80211_IFTYPE_P2P_DEVICE &&
+	     mld_vif->deflink.active))
+		data->active_vif = true;
+
+	if (vif == curr_vif)
+		return;
+
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_P2P_GO)
+		return;
+
+	curr_vif_active_links =
+		ieee80211_vif_is_mld(curr_vif) ? curr_vif->active_links : 1;
+
+	curr_mld_vif = iwl_mld_vif_from_mac80211(curr_vif);
+
+	for_each_set_bit(link_id, &curr_vif_active_links,
+			 IEEE80211_MLD_MAX_NUM_LINKS) {
+		struct iwl_mld_link *curr_mld_link =
+			iwl_mld_link_dereference_check(curr_mld_vif, link_id);
+
+		if (WARN_ON(!curr_mld_link))
+			return;
+
+		if (rcu_access_pointer(curr_mld_link->chan_ctx) &&
+		    rcu_access_pointer(mld_vif->deflink.chan_ctx) ==
+		    rcu_access_pointer(curr_mld_link->chan_ctx)) {
+			data->is_scm_with_p2p_go = true;
+			return;
+		}
+	}
+}
+
+static enum
+iwl_mld_scan_type iwl_mld_get_scan_type(struct iwl_mld *mld,
+					struct ieee80211_vif *vif,
+					struct iwl_mld_scan_iter_data *data)
+{
+	enum iwl_mld_traffic_load load = mld->scan.traffic_load.status;
+
+	/* A scanning AP interface probably wants to generate a survey to do
+	 * ACS (automatic channel selection).
+	 * Force a non-fragmented scan in that case.
+	 */
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
+		return IWL_SCAN_TYPE_WILD;
+
+	if (!data->active_vif)
+		return IWL_SCAN_TYPE_UNASSOC;
+
+	if ((load == IWL_MLD_TRAFFIC_HIGH || data->global_low_latency) &&
+	    vif->type != NL80211_IFTYPE_P2P_DEVICE)
+		return IWL_SCAN_TYPE_FRAGMENTED;
+
+	/* In case of SCM with P2P GO set all scan requests as
+	 * fast-balance scan
+	 */
+	if (vif->type == NL80211_IFTYPE_STATION &&
+	    data->is_scm_with_p2p_go)
+		return IWL_SCAN_TYPE_FAST_BALANCE;
+
+	if (load >= IWL_MLD_TRAFFIC_MEDIUM || data->global_low_latency)
+		return IWL_SCAN_TYPE_MILD;
+
+	return IWL_SCAN_TYPE_WILD;
+}
+
 static u8 *
 iwl_mld_scan_add_2ghz_elems(struct iwl_mld *mld, const u8 *ies,
 			    size_t len, u8 *const pos)
@@ -1319,6 +1405,9 @@ _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		.data = { mld->scan.cmd, },
 		.dataflags = { IWL_HCMD_DFL_NOCOPY, },
 	};
+	struct iwl_mld_scan_iter_data scan_iter_data = {
+		.current_vif = vif,
+	};
 	struct cfg80211_sched_scan_plan scan_plan = {.iterations = 1};
 	struct iwl_mld_scan_params params = {};
 	int ret, uid;
@@ -1330,10 +1419,12 @@ _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	if (!iwl_mld_scan_fits(mld, req->n_ssids, ies, req->n_channels))
 		return -ENOBUFS;
 
-	/* TODO: fill scan type based on vif type/low latency/traffic load
-	 * for now we can just assume TYPE_UNASSOC (task=low_latency)
-	 */
-	params.type = IWL_SCAN_TYPE_UNASSOC;
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_scan_iterator,
+						&scan_iter_data);
+
+	params.type = iwl_mld_get_scan_type(mld, vif, &scan_iter_data);
 	params.n_ssids = req->n_ssids;
 	params.flags = req->flags;
 	params.n_channels = req->n_channels;
@@ -1513,6 +1604,9 @@ int iwl_mld_sched_scan_start(struct iwl_mld *mld,
 		.dataflags = { IWL_HCMD_DFL_NOCOPY, },
 	};
 	struct iwl_mld_scan_params params = {};
+	struct iwl_mld_scan_iter_data scan_iter_data = {
+		.current_vif = vif,
+	};
 	bool non_psc_included = false;
 	int ret, uid;
 
@@ -1524,10 +1618,12 @@ int iwl_mld_sched_scan_start(struct iwl_mld *mld,
 	if (mld->scan.status & (IWL_MLD_SCAN_SCHED | IWL_MLD_SCAN_NETDETECT))
 		return -EBUSY;
 
-	/* TODO: fill scan type based on vif type/low latency/traffic load
-	 * for now we can just assume TYPE_UNASSOC (task=low_latency)
-	 */
-	params.type = IWL_SCAN_TYPE_UNASSOC;
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_scan_iterator,
+						&scan_iter_data);
+
+	params.type = iwl_mld_get_scan_type(mld, vif, &scan_iter_data);
 	params.flags = req->flags;
 	params.n_ssids = req->n_ssids;
 	params.ssids = req->ssids;
