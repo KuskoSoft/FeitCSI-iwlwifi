@@ -105,6 +105,16 @@ struct iwl_notif_struct_size {
 	  .val_fn = iwl_mld_validate_##_name,				\
 	},
 
+#define DEFINE_SIMPLE_CANCELLATION(name, notif_struct, id_member, id_size)	\
+static bool iwl_mld_cancel_##name##_notif(struct iwl_mld *mld,			\
+					  struct iwl_rx_packet *pkt,		\
+					  u32 obj_id)				\
+{										\
+	const struct notif_struct *notif = (const void *)pkt->data;		\
+										\
+	return le##id_size##_to_cpu((notif)->id_member) == obj_id;		\
+}
+
 /* Currently only defined for the RX_HANDLER_SIZES options. Use this for
  * notifications that belong to a specific object, and that should be
  * canceled when the object is removed
@@ -333,6 +343,8 @@ CMD_VERSIONS(probe_resp_data_notif,
 CMD_VERSIONS(datapath_monitor_notif,
 	     CMD_VER_ENTRY(1, iwl_datapath_monitor_notif))
 
+DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id, 32)
+
 /*
  * Handlers for fw notifications
  * Convention: RX_HANDLER(grp, cmd, name, context),
@@ -359,8 +371,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 
 	RX_HANDLER_NO_OBJECT(PHY_OPS_GROUP, DTS_MEASUREMENT_NOTIF_WIDE,
 			     temp_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, SESSION_PROTECTION_NOTIF,
-			     session_prot_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_OF_LINK(MAC_CONF_GROUP, SESSION_PROTECTION_NOTIF,
+			   session_prot_notif)
 	RX_HANDLER_OF_LINK(MAC_CONF_GROUP, MISSED_BEACONS_NOTIF,
 			   missed_beacon_notif)
 	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF,
