@@ -50,6 +50,10 @@ enum iwl_rx_handler_context {
  * @cmd_id: command id
  * @n_sizes: number of elements in &sizes.
  * @context: see &iwl_rx_handler_context
+ * @obj_type: the type of the object that this handler is related to.
+ *	See &iwl_mld_object_type. Use IWL_MLD_OBJECT_TYPE_NONE if not related.
+ * @cancel: function to cancel the notification. valid only if obj_type is not
+ *	IWL_MLD_OBJECT_TYPE_NONE.
  */
 struct iwl_rx_handler {
 	union {
@@ -60,6 +64,9 @@ struct iwl_rx_handler {
 	u16 cmd_id;
 	u8 n_sizes;
 	u8 context;
+	enum iwl_mld_object_type obj_type;
+	bool (*cancel)(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
+		       u32 obj_id);
 };
 
 /**
@@ -76,7 +83,7 @@ struct iwl_notif_struct_size {
 #define CMD_VER_ENTRY(_ver, _struct) { .size = sizeof(struct _struct), .ver = _ver },
 #define CMD_VERSIONS(name, ...) static const struct iwl_notif_struct_size iwl_notif_struct_sizes_##name[] = { __VA_ARGS__ };
 
-#define RX_HANDLER_SIZES(_grp, _cmd, _name, _context)			\
+#define RX_HANDLER_NO_OBJECT(_grp, _cmd, _name, _context)		\
 	{.cmd_id = WIDE_ID(_grp, _cmd),					\
 	 .context = _context,						\
 	 .fn = iwl_mld_handle_##_name,					\
@@ -97,6 +104,30 @@ struct iwl_notif_struct_size {
 	  .fn = iwl_mld_handle_##_name,					\
 	  .val_fn = iwl_mld_validate_##_name,				\
 	},
+
+/* Currently only defined for the RX_HANDLER_SIZES options. Use this for
+ * notifications that belong to a specific object, and that should be
+ * canceled when the object is removed
+ */
+#define RX_HANDLER_OF_OBJ(_grp, _cmd, _name, _obj_type)			\
+	{.cmd_id = WIDE_ID(_grp, _cmd),					\
+	/* Only async handlers can be canceled */			\
+	 .context = RX_HANDLER_ASYNC,					\
+	 .fn = iwl_mld_handle_##_name,					\
+	 .sizes = iwl_notif_struct_sizes_##_name,			\
+	 .n_sizes = ARRAY_SIZE(iwl_notif_struct_sizes_##_name),		\
+	 .obj_type = IWL_MLD_OBJECT_TYPE_##_obj_type,			\
+	 .cancel = iwl_mld_cancel_##_name,				\
+	 },
+
+#define RX_HANDLER_OF_LINK(_grp, _cmd, _name)				\
+	RX_HANDLER_OF_OBJ(_grp, _cmd, _name, LINK)			\
+
+#define RX_HANDLER_OF_VIF(_grp, _cmd, _name)				\
+	RX_HANDLER_OF_OBJ(_grp, _cmd, _name, VIF)			\
+
+#define RX_HANDLER_OF_STA(_grp, _cmd, _name)				\
+	RX_HANDLER_OF_OBJ(_grp, _cmd, _name, STA)			\
 
 static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt)
@@ -310,46 +341,46 @@ CMD_VERSIONS(datapath_monitor_notif,
  * The handler can be one from three contexts, see &iwl_rx_handler_context
  */
 static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
-	RX_HANDLER_SIZES(LEGACY_GROUP, TX_CMD, tx_resp_notif,
-			 RX_HANDLER_SYNC)
-	RX_HANDLER_SIZES(LEGACY_GROUP, BA_NOTIF, compressed_ba_notif,
-			 RX_HANDLER_SYNC)
-	RX_HANDLER_SIZES(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
-			 RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(LEGACY_GROUP, SCAN_COMPLETE_UMAC, scan_complete_notif,
-			 RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(LEGACY_GROUP, SCAN_ITERATION_COMPLETE_UMAC,
-			 scan_iter_complete_notif,
-			 RX_HANDLER_SYNC)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, TX_CMD, tx_resp_notif,
+			     RX_HANDLER_SYNC)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, BA_NOTIF, compressed_ba_notif,
+			     RX_HANDLER_SYNC)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
+			     RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, SCAN_COMPLETE_UMAC,
+			     scan_complete_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, SCAN_ITERATION_COMPLETE_UMAC,
+			     scan_iter_complete_notif,
+			     RX_HANDLER_SYNC)
 	RX_HANDLER_NO_VAL(LEGACY_GROUP, MATCH_FOUND_NOTIFICATION,
 			  match_found_notif, RX_HANDLER_SYNC)
-	RX_HANDLER_SIZES(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION, mfuart_notif,
-			 RX_HANDLER_SYNC)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, MFUART_LOAD_NOTIFICATION,
+			     mfuart_notif, RX_HANDLER_SYNC)
 
-	RX_HANDLER_SIZES(PHY_OPS_GROUP, DTS_MEASUREMENT_NOTIF_WIDE,
-			 temp_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(MAC_CONF_GROUP, SESSION_PROTECTION_NOTIF,
-			 session_prot_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(MAC_CONF_GROUP, MISSED_BEACONS_NOTIF,
-			 missed_beacon_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF,
-			 tlc_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(MAC_CONF_GROUP, CHANNEL_SWITCH_START_NOTIF,
-			 channel_switch_start_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(MAC_CONF_GROUP, CHANNEL_SWITCH_ERROR_NOTIF,
-			 channel_switch_error_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(MAC_CONF_GROUP, ROC_NOTIF,
-			 roc_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
-			 mu_mimo_grp_notif, RX_HANDLER_SYNC)
-	RX_HANDLER_SIZES(PROT_OFFLOAD_GROUP, STORED_BEACON_NTF,
-			 stored_beacon_notif, RX_HANDLER_SYNC)
-	RX_HANDLER_SIZES(MAC_CONF_GROUP, PROBE_RESPONSE_DATA_NOTIF,
-			 probe_resp_data_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
-			 ct_kill_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_SIZES(DATA_PATH_GROUP, MONITOR_NOTIF,
-			 datapath_monitor_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(PHY_OPS_GROUP, DTS_MEASUREMENT_NOTIF_WIDE,
+			     temp_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, SESSION_PROTECTION_NOTIF,
+			     session_prot_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, MISSED_BEACONS_NOTIF,
+			     missed_beacon_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF,
+			     tlc_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, CHANNEL_SWITCH_START_NOTIF,
+			     channel_switch_start_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, CHANNEL_SWITCH_ERROR_NOTIF,
+			     channel_switch_error_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, ROC_NOTIF,
+			     roc_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
+			     mu_mimo_grp_notif, RX_HANDLER_SYNC)
+	RX_HANDLER_NO_OBJECT(PROT_OFFLOAD_GROUP, STORED_BEACON_NTF,
+			     stored_beacon_notif, RX_HANDLER_SYNC)
+	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, PROBE_RESPONSE_DATA_NOTIF,
+			     probe_resp_data_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
+			     ct_kill_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, MONITOR_NOTIF,
+			     datapath_monitor_notif, RX_HANDLER_ASYNC)
 };
 
 static bool
@@ -524,4 +555,38 @@ void iwl_mld_purge_async_handlers_list(struct iwl_mld *mld)
 		kfree(entry);
 	}
 	spin_unlock_bh(&mld->async_handlers_lock);
+}
+
+void iwl_mld_cancel_notifications_of_object(struct iwl_mld *mld,
+					    enum iwl_mld_object_type obj_type,
+					    u32 obj_id)
+{
+	struct iwl_async_handler_entry *entry, *tmp;
+	LIST_HEAD(cancel_list);
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (WARN_ON(obj_type == IWL_MLD_OBJECT_TYPE_NONE))
+		return;
+
+	/* Sync with RX path and remove matching entries from the async list */
+	spin_lock_bh(&mld->async_handlers_lock);
+	list_for_each_entry_safe(entry, tmp, &mld->async_handlers_list, list) {
+		const struct iwl_rx_handler *rx_h = entry->rx_h;
+
+		if (rx_h->obj_type == obj_type && !WARN_ON(!rx_h->cancel) &&
+		    rx_h->cancel(mld, rxb_addr(&entry->rxb), obj_id)) {
+			list_del(&entry->list);
+			list_add_tail(&entry->list, &cancel_list);
+		}
+	}
+
+	spin_unlock_bh(&mld->async_handlers_lock);
+
+	/* Free the matching entries outside of the spinlock */
+	list_for_each_entry_safe(entry, tmp, &cancel_list, list) {
+		iwl_free_rxb(&entry->rxb);
+		list_del(&entry->list);
+		kfree(entry);
+	}
 }
