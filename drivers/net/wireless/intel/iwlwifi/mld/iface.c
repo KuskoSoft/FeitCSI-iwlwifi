@@ -150,6 +150,10 @@ static void iwl_mld_fill_mac_cmd_sta(struct iwl_mld *mld,
 				     struct ieee80211_vif *vif, u32 action,
 				     struct iwl_mac_config_cmd *cmd)
 {
+	struct ieee80211_bss_conf *link;
+	u32 twt_policy = 0;
+	int link_id;
+
 	lockdep_assert_wiphy(mld->wiphy);
 
 	WARN_ON(vif->type != NL80211_IFTYPE_STATION);
@@ -189,7 +193,21 @@ static void iwl_mld_fill_mac_cmd_sta(struct iwl_mld *mld,
 			cpu_to_le16(vif->cfg.eml_med_sync_delay);
 	}
 
-	/* TODO: set TWT flags. (task=TWT) */
+	for_each_vif_active_link(vif, link, link_id) {
+		if (!link->he_support)
+			continue;
+
+		if (link->twt_requester)
+			twt_policy |= TWT_SUPPORTED;
+		if (link->twt_protected)
+			twt_policy |= PROTECTED_TWT_SUPPORTED;
+		if (link->twt_broadcast)
+			twt_policy |= BROADCAST_TWT_SUPPORTED;
+	}
+
+	if (!iwlwifi_mod_params.disable_11ax)
+		cmd->client.data_policy |= cpu_to_le16(twt_policy);
+
 	if (vif->probe_req_reg && vif->cfg.assoc && vif->p2p)
 		cmd->filter_flags |=
 			cpu_to_le32(MAC_CFG_FILTER_ACCEPT_PROBE_REQ);
