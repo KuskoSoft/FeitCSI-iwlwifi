@@ -397,6 +397,12 @@ void iwl_mld_deactivate_link(struct iwl_mld *mld,
 	mld_link->active = false;
 
 	iwl_mld_change_link_in_fw(mld, link, LINK_CONTEXT_MODIFY_ACTIVE);
+
+	/* Now that the link is not active in FW, we don't expect any new
+	 * notifications for it. Cancel the ones that are already pending
+	 */
+	iwl_mld_cancel_notifications_of_object(mld, IWL_MLD_OBJECT_TYPE_LINK,
+					       mld_link->fw_id);
 }
 
 static int
@@ -552,6 +558,23 @@ void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
 	}
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_handle_missed_beacon_notif);
+
+bool iwl_mld_cancel_missed_beacon_notif(struct iwl_mld *mld,
+					struct iwl_rx_packet *pkt,
+					u32 removed_link_id)
+{
+	struct iwl_missed_beacons_notif *notif = (void *)pkt->data;
+
+	if (le32_to_cpu(notif->other_link_id) == removed_link_id) {
+		/* Second link is being removed. Don't cancel the notification,
+		 * but mark second link as invalid.
+		 */
+		notif->other_link_id = cpu_to_le32(FW_CTXT_ID_INVALID);
+	}
+
+	/* If the primary link is removed, cancel the notification */
+	return le32_to_cpu(notif->link_id) == removed_link_id;
+}
 
 int iwl_mld_link_set_associated(struct iwl_mld *mld, struct ieee80211_vif *vif,
 				struct ieee80211_bss_conf *link)
