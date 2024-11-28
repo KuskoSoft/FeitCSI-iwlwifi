@@ -348,6 +348,12 @@ CMD_VERSIONS(datapath_monitor_notif,
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
+DEFINE_SIMPLE_CANCELLATION(channel_switch_start,
+			   iwl_channel_switch_start_notif, link_id)
+DEFINE_SIMPLE_CANCELLATION(channel_switch_error,
+			   iwl_channel_switch_error_notif, link_id)
+DEFINE_SIMPLE_CANCELLATION(datapath_monitor, iwl_datapath_monitor_notif,
+			   link_id)
 
 /*
  * Handlers for fw notifications
@@ -380,10 +386,10 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_OF_LINK(MAC_CONF_GROUP, MISSED_BEACONS_NOTIF,
 			   missed_beacon_notif)
 	RX_HANDLER_OF_STA(DATA_PATH_GROUP, TLC_MNG_UPDATE_NOTIF, tlc_notif)
-	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, CHANNEL_SWITCH_START_NOTIF,
-			     channel_switch_start_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, CHANNEL_SWITCH_ERROR_NOTIF,
-			     channel_switch_error_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_OF_LINK(MAC_CONF_GROUP, CHANNEL_SWITCH_START_NOTIF,
+			   channel_switch_start_notif)
+	RX_HANDLER_OF_LINK(MAC_CONF_GROUP, CHANNEL_SWITCH_ERROR_NOTIF,
+			   channel_switch_error_notif)
 	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, ROC_NOTIF,
 			     roc_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, MU_GROUP_MGMT_NOTIF,
@@ -394,8 +400,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     probe_resp_data_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
 			     ct_kill_notif, RX_HANDLER_ASYNC)
-	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, MONITOR_NOTIF,
-			     datapath_monitor_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_OF_LINK(DATA_PATH_GROUP, MONITOR_NOTIF,
+			   datapath_monitor_notif)
 };
 
 static bool
