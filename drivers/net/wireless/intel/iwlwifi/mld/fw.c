@@ -500,9 +500,7 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 
 	/* TODO:
 	 * - ptp
-	 * - testmode
 	 * - vendor cmds
-	 * - thermal
 	 * - system_features_control
 	 * - recovery cmd
 	 */

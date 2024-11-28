@@ -1024,7 +1024,7 @@ u32 iwl_mld_link_changed_mapping(struct ieee80211_vif *vif,
 	if (changes & (BSS_CHANGED_HT | BSS_CHANGED_ERP_CTS_PROT))
 		link_changes |= LINK_CONTEXT_MODIFY_PROTECT_FLAGS;
 
-	/* todo: check mac80211's HE flags and if command is needed every time
+	/* TODO: check mac80211's HE flags and if command is needed every time
 	 * there's a link change. Currently used flags are
 	 * BSS_CHANGED_HE_OBSS_PD and BSS_CHANGED_HE_BSS_COLOR.
 	 */
@@ -1062,7 +1062,7 @@ iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
 	if (changes & (BSS_CHANGED_CQM | BSS_CHANGED_BEACON_INFO))
 		iwl_mld_enable_beacon_filter(mld, link_conf, false);
 
-	// todo: BSS_CHANGED_BANDWIDTH (task=EMLSR)
+	// TODO: BSS_CHANGED_BANDWIDTH (task=EMLSR)
 }
 
 static int iwl_mld_update_mu_groups(struct iwl_mld *mld,
@@ -1139,14 +1139,14 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 
 		if (vif->cfg.assoc)
 			iwl_mld_set_vif_associated(mld, vif);
-			/* todo: if assoc request statistics (task=statistics)
+			/* TODO: if assoc request statistics (task=statistics)
 			 */
 	}
 
 	if (changes & BSS_CHANGED_PS)
 		iwl_mld_update_mac_power(mld, vif, false);
 
-	//todo: BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM - mlo_int_scan_wk
+	//TODO: BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM - mlo_int_scan_wk
 }
 
 static int
@@ -1815,8 +1815,6 @@ static void iwl_mld_set_key_remove(struct iwl_mld *mld,
 	if (vif->type == NL80211_IFTYPE_STATION &&
 	    (keyidx == 6 || keyidx == 7))
 		RCU_INIT_POINTER(mld_vif->bigtks[keyidx - 6], NULL);
-
-	/* TODO: ignore AP early key (task=softAP) */
 
 	if (mld_sta && key->flags & IEEE80211_KEY_FLAG_PAIRWISE &&
 	    (key->cipher == WLAN_CIPHER_SUITE_CCMP ||

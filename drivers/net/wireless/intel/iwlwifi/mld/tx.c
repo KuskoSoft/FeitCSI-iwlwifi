@@ -403,8 +403,6 @@ static u32 iwl_mld_get_tx_ant(struct iwl_mld *mld,
 			      struct ieee80211_tx_info *info,
 			      struct ieee80211_sta *sta, __le16 fc)
 {
-	/* TODO: non_shart_ant (task=coex) */
-
 	if (sta && ieee80211_is_data(fc)) {
 		struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 
