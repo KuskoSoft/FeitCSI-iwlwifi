@@ -347,7 +347,6 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 	cmd.frame_time_rts_th = cpu_to_le16(link->frame_time_rts_th);
 
 	/* Block 26-tone RU OFDMA transmissions */
-	/* TODO: calculate he_ru_2mhz_block upon assoc (task=assoc) */
 	if (mld_link->he_ru_2mhz_block)
 		flags |= LINK_FLG_RU_2MHZ_BLOCK;
 

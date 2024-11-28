@@ -1481,6 +1481,73 @@ int iwl_mld_tdls_sta_count(struct iwl_mld *mld)
 	return count;
 }
 
+static void iwl_mld_check_he_obss_narrow_bw_ru_iter(struct wiphy *wiphy,
+						    struct cfg80211_bss *bss,
+						    void *_data)
+{
+	bool *tolerated = _data;
+	const struct cfg80211_bss_ies *ies;
+	const struct element *elem;
+
+	rcu_read_lock();
+	ies = rcu_dereference(bss->ies);
+	elem = cfg80211_find_elem(WLAN_EID_EXT_CAPABILITY, ies->data,
+				  ies->len);
+
+	if (!elem || elem->datalen < 10 ||
+	    !(elem->data[10] &
+	      WLAN_EXT_CAPA10_OBSS_NARROW_BW_RU_TOLERANCE_SUPPORT)) {
+		*tolerated = false;
+	}
+	rcu_read_unlock();
+}
+
+static void
+iwl_mld_check_he_obss_narrow_bw_ru(struct iwl_mld *mld,
+				   struct iwl_mld_link *mld_link,
+				   struct ieee80211_bss_conf *link_conf)
+{
+	bool tolerated = true;
+
+	if (WARN_ON_ONCE(!link_conf->chanreq.oper.chan))
+		return;
+
+	if (!(link_conf->chanreq.oper.chan->flags & IEEE80211_CHAN_RADAR)) {
+		mld_link->he_ru_2mhz_block = false;
+		return;
+	}
+
+	cfg80211_bss_iter(mld->wiphy, &link_conf->chanreq.oper,
+			  iwl_mld_check_he_obss_narrow_bw_ru_iter, &tolerated);
+
+	/* If there is at least one AP on radar channel that cannot
+	 * tolerate 26-tone RU UL OFDMA transmissions using HE TB PPDU.
+	 */
+	mld_link->he_ru_2mhz_block = !tolerated;
+}
+
+static void iwl_mld_link_set_2mhz_block(struct iwl_mld *mld,
+					struct ieee80211_vif *vif,
+					struct ieee80211_sta *sta)
+{
+	struct ieee80211_link_sta *link_sta;
+	unsigned int link_id;
+
+	for_each_sta_active_link(vif, sta, link_sta, link_id) {
+		struct ieee80211_bss_conf *link_conf =
+			link_conf_dereference_protected(vif, link_id);
+		struct iwl_mld_link *mld_link =
+			iwl_mld_link_from_mac80211(link_conf);
+
+		if (WARN_ON(!link_conf || !mld_link))
+			continue;
+
+		if (link_sta->he_cap.has_he)
+			iwl_mld_check_he_obss_narrow_bw_ru(mld, mld_link,
+							   link_conf);
+	}
+}
+
 static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 				     struct ieee80211_vif *vif,
 				     struct ieee80211_sta *sta,
@@ -1534,6 +1601,8 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		   new_state == IEEE80211_STA_ASSOC) {
 		ret = iwl_mld_update_all_link_stations(mld, sta);
 
+		if (vif->type == NL80211_IFTYPE_STATION)
+			iwl_mld_link_set_2mhz_block(mld, vif, sta);
 		/* Now the link_sta's capabilities are set, update the FW */
 		iwl_mld_config_tlc(mld, vif, sta);
 
