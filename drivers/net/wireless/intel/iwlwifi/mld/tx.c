@@ -177,8 +177,10 @@ void iwl_mld_remove_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* Have all pending allocations done */
-	wiphy_work_flush(mld->wiphy, &mld->add_txqs_wk);
+	spin_lock_bh(&mld->add_txqs_lock);
+	if (!list_empty(&mld_txq->list))
+		list_del_init(&mld_txq->list);
+	spin_unlock_bh(&mld->add_txqs_lock);
 
 	if (!mld_txq->status.allocated ||
 	    WARN_ON(mld_txq->fw_id >= ARRAY_SIZE(mld->fw_id_to_txq)))
