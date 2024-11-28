@@ -401,6 +401,7 @@ iwl_mld_notif_is_valid(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
 struct iwl_async_handler_entry {
 	struct list_head list;
 	struct iwl_rx_cmd_buffer rxb;
+	const struct iwl_rx_handler *rx_h;
 };
 
 static void iwl_mld_rx_notif(struct iwl_mld *mld,
@@ -437,6 +438,8 @@ static void iwl_mld_rx_notif(struct iwl_mld *mld,
 		entry->rxb._page = rxb_steal_page(rxb);
 		entry->rxb._offset = rxb->_offset;
 		entry->rxb._rx_page_order = rxb->_rx_page_order;
+
+		entry->rx_h = rx_h;
 
 		/* Add it to the list and queue the work */
 		spin_lock(&mld->async_handlers_lock);
@@ -488,19 +491,6 @@ void iwl_mld_rx_rss(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 		iwl_mld_handle_frame_release_notif(mld, napi, pkt, queue);
 }
 
-static void
-iwl_mld_run_notif_handler(struct iwl_mld *mld, struct iwl_rx_packet *pkt)
-{
-	for (int i = 0; i < ARRAY_SIZE(iwl_mld_rx_handlers); i++) {
-		const struct iwl_rx_handler *rx_h = &iwl_mld_rx_handlers[i];
-
-		if (rx_h->cmd_id != WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd))
-			continue;
-
-		rx_h->fn(mld, pkt);
-	}
-}
-
 void iwl_mld_async_handlers_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 {
 	struct iwl_mld *mld =
@@ -516,7 +506,7 @@ void iwl_mld_async_handlers_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 	spin_unlock_bh(&mld->async_handlers_lock);
 
 	list_for_each_entry_safe(entry, tmp, &local_list, list) {
-		iwl_mld_run_notif_handler(mld, rxb_addr(&entry->rxb));
+		entry->rx_h->fn(mld, rxb_addr(&entry->rxb));
 		iwl_free_rxb(&entry->rxb);
 		list_del(&entry->list);
 		kfree(entry);
