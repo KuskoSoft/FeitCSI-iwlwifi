@@ -323,6 +323,12 @@ iwl_mld_remove_link_sta(struct iwl_mld *mld,
 
 	iwl_mld_rm_sta_from_fw(mld, mld_link_sta->fw_id);
 
+	/* Now that the STA doesn't exist in FW, we don't expect any new
+	 * notifications for it. Cancel the ones that are already pending
+	 */
+	iwl_mld_cancel_notifications_of_object(mld, IWL_MLD_OBJECT_TYPE_STA,
+					       mld_link_sta->fw_id);
+
 	/* This will not be done upon reconfig, so do it also when
 	 * failed to remove from fw
 	 */

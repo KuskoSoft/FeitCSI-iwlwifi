@@ -688,15 +688,9 @@ void iwl_mld_handle_tlc_notif(struct iwl_mld *mld,
 	link_sta = wiphy_dereference(mld->wiphy,
 				     mld->fw_id_to_link_sta[notif->sta_id]);
 
-	if (IS_ERR_OR_NULL(link_sta)) {
-		/* This can happen if the command was sent but the notif only
-		 * got to run (was waiting for the wiphy mutex) after the
-		 * link_sta was removed
-		 */
-		IWL_DEBUG_RATE(mld, "link_sta of sta id (%d) doesn't exist\n",
-			       notif->sta_id);
+	if (WARN(IS_ERR_OR_NULL(link_sta),
+		 "link_sta of sta id (%d) doesn't exist\n", notif->sta_id))
 		return;
-	}
 
 	if (flags & IWL_TLC_NOTIF_FLAG_RATE) {
 		struct iwl_mld_link_sta *mld_link_sta =
