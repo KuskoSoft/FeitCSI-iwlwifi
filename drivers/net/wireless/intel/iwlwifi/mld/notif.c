@@ -480,6 +480,20 @@ struct iwl_async_handler_entry {
 	const struct iwl_rx_handler *rx_h;
 };
 
+static void
+iwl_mld_log_async_handler_op(struct iwl_mld *mld, const char *op,
+			     struct iwl_rx_cmd_buffer *rxb)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+
+	IWL_DEBUG_HC(mld,
+		     "%s async handler for notif %s (%.2x.%2x, seq 0x%x)\n",
+		     op, iwl_get_cmd_string(mld->trans,
+		     WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd)),
+		     pkt->hdr.group_id, pkt->hdr.cmd,
+		     le16_to_cpu(pkt->hdr.sequence));
+}
+
 static void iwl_mld_rx_notif(struct iwl_mld *mld,
 			     struct iwl_rx_cmd_buffer *rxb,
 			     struct iwl_rx_packet *pkt)
@@ -518,6 +532,8 @@ static void iwl_mld_rx_notif(struct iwl_mld *mld,
 
 		wiphy_work_queue(mld->hw->wiphy,
 				 &mld->async_handlers_wk);
+
+		iwl_mld_log_async_handler_op(mld, "Queued", rxb);
 		break;
 	}
 
@@ -578,6 +594,7 @@ void iwl_mld_async_handlers_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 	spin_unlock_bh(&mld->async_handlers_lock);
 
 	list_for_each_entry_safe(entry, tmp, &local_list, list) {
+		iwl_mld_log_async_handler_op(mld, "Handle", &entry->rxb);
 		entry->rx_h->fn(mld, rxb_addr(&entry->rxb));
 		iwl_free_rxb(&entry->rxb);
 		list_del(&entry->list);
@@ -591,6 +608,7 @@ void iwl_mld_purge_async_handlers_list(struct iwl_mld *mld)
 
 	spin_lock_bh(&mld->async_handlers_lock);
 	list_for_each_entry_safe(entry, tmp, &mld->async_handlers_list, list) {
+		iwl_mld_log_async_handler_op(mld, "Purged", &entry->rxb);
 		iwl_free_rxb(&entry->rxb);
 		list_del(&entry->list);
 		kfree(entry);
@@ -615,8 +633,11 @@ void iwl_mld_cancel_notifications_of_object(struct iwl_mld *mld,
 	list_for_each_entry_safe(entry, tmp, &mld->async_handlers_list, list) {
 		const struct iwl_rx_handler *rx_h = entry->rx_h;
 
-		if (rx_h->obj_type == obj_type && !WARN_ON(!rx_h->cancel) &&
-		    rx_h->cancel(mld, rxb_addr(&entry->rxb), obj_id)) {
+		if (rx_h->obj_type != obj_type || WARN_ON(!rx_h->cancel))
+			continue;
+
+		if (rx_h->cancel(mld, rxb_addr(&entry->rxb), obj_id)) {
+			iwl_mld_log_async_handler_op(mld, "Cancel", &entry->rxb);
 			list_del(&entry->list);
 			list_add_tail(&entry->list, &cancel_list);
 		}
