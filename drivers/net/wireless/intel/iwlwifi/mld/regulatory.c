@@ -142,7 +142,7 @@ int iwl_mld_config_sar_profile(struct iwl_mld *mld, int prof_a, int prof_b)
 		return -EOPNOTSUPP;
 	}
 
-	/* TODO: should we send IWL_NUM_CHAIN_TABLES_V2 in case of CDB */
+	/* TODO: CDB - support IWL_NUM_CHAIN_TABLES_V2 */
 	ret = iwl_sar_fill_profile(&mld->fwrt, per_chain,
 				   IWL_NUM_CHAIN_TABLES,
 				   n_subbands, prof_a, prof_b);

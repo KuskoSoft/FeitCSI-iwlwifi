@@ -499,10 +499,7 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	iwl_mld_init_uats(mld);
 
 	/* TODO:
-	 * - ptp
-	 * - vendor cmds
 	 * - system_features_control
-	 * - recovery cmd
 	 */
 
 	return 0;

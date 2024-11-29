@@ -90,10 +90,7 @@ static const u8 if_types_ext_capa_sta[] = {
 			IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP, \
 			IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP_SAME)
 
-/* TODO:
- * 1. AX_SOFTAP_TESTMODE
- * 2. tm (time measurement)
- */
+/* TODO: task=AX_SOFTAP_TESTMODE */
 static const struct wiphy_iftype_ext_capab iftypes_ext_capa[] = {
 	{
 		.iftype = NL80211_IFTYPE_STATION,
@@ -360,16 +357,7 @@ static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
 	else
 		wiphy->flags &= ~WIPHY_FLAG_PS_ON_BY_DEFAULT;
 
-	/* TODO:
-	 * 2. tm (time measurement) ext capab
-	 * 3. eml_capabilities debug override
-	 *
-	 * location:
-	 * 1. NL80211_EXT_FEATURE_PROT_RANGE_NEGO_AND_MEASURE
-	 * 2. NL80211_EXT_FEATURE_SECURE_LTF
-	 * 3. NL80211_EXT_FEATURE_ENABLE_FTM_RESPONDER
-	 * 4. wiphy->pmsr_capa
-	 */
+	/* TODO task=MLO dbg_cfg.eml_capa_override */
 }
 
 static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
@@ -538,10 +526,6 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
 
 	wiphy_work_cancel(mld->wiphy, &mld->add_txqs_wk);
-
-	/* TODO:
-	 * ftm_initiator_smooth_stop
-	 */
 
 	/* if the suspend flow fails the fw is in error. Stop it here, and it
 	 * will be started upon wakeup
@@ -772,8 +756,6 @@ void iwl_mld_mac80211_configure_filter(struct ieee80211_hw *hw,
 
 	if (cmd->pass_all)
 		cmd->count = 0;
-
-	/* TODO: vendor command active_rx_filter (task=vendor_cmds) */
 
 	iwl_mld_recalc_multicast_filter(mld);
 out:
@@ -1050,8 +1032,8 @@ u32 iwl_mld_link_changed_mapping(struct ieee80211_vif *vif,
 	if (changes & (BSS_CHANGED_HT | BSS_CHANGED_ERP_CTS_PROT))
 		link_changes |= LINK_CONTEXT_MODIFY_PROTECT_FLAGS;
 
-	/* TODO: check mac80211's HE flags and if command is needed every time
-	 * there's a link change. Currently used flags are
+	/* TODO: task=MLO check mac80211's HE flags and if command is needed
+	 * every time there's a link change. Currently used flags are
 	 * BSS_CHANGED_HE_OBSS_PD and BSS_CHANGED_HE_BSS_COLOR.
 	 */
 	has_he = link_conf->he_support && !iwlwifi_mod_params.disable_11ax;
@@ -1088,7 +1070,7 @@ iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
 	if (changes & (BSS_CHANGED_CQM | BSS_CHANGED_BEACON_INFO))
 		iwl_mld_enable_beacon_filter(mld, link_conf, false);
 
-	// TODO: BSS_CHANGED_BANDWIDTH (task=EMLSR)
+	/* TODO: BSS_CHANGED_BANDWIDTH (task=EMLSR) */
 }
 
 static int iwl_mld_update_mu_groups(struct iwl_mld *mld,
@@ -1172,7 +1154,7 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 	if (changes & BSS_CHANGED_PS)
 		iwl_mld_update_mac_power(mld, vif, false);
 
-	//TODO: BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM - mlo_int_scan_wk
+	/* TODO: task=MLO BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM */
 }
 
 static int
@@ -1594,7 +1576,6 @@ iwl_mld_mac80211_ampdu_action(struct ieee80211_hw *hw,
 
 	switch (action) {
 	case IEEE80211_AMPDU_RX_START:
-		/* TODO: BT coex amsdu disallowed (task=coex) */
 		ret = iwl_mld_ampdu_rx_start(mld, sta, tid, ssn, buf_size,
 					     timeout);
 		break;

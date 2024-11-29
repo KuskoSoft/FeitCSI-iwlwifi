@@ -1235,8 +1235,6 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 		break;
 	}
 
-	/* TODO: RX_FLAG_MACTIME_IS_RTAP_TS64 (task=ptp)*/
-
 	/* must be before L-SIG data */
 	if (format == RATE_MCS_HE_MSK)
 		iwl_mld_rx_he(mld, skb, phy_data, queue);
@@ -1244,8 +1242,6 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	iwl_mld_decode_lsig(skb, phy_data);
 
 	rx_status->device_timestamp = phy_data->gp2_on_air_rise;
-
-	/* TODO: adj time (task=ptp) */
 
 	/* using TLV format and must be after all fixed len fields */
 	if (format == RATE_MCS_EHT_MSK)
@@ -1345,8 +1341,6 @@ static int iwl_mld_build_rx_skb(struct iwl_mld *mld, struct sk_buff *skb,
 	 * to do so) we should revisit this and ieee80211_data_to_8023().
 	 */
 	headlen = (len <= skb_tailroom(skb)) ? len : hdrlen + crypt_len + 8;
-
-	/* TODO: CONFIG_HSR */
 
 	/* The firmware may align the packet to DWORD.
 	 * The padding is inserted after the IV.
@@ -1820,9 +1814,8 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 	}
 
 	/* TODO: verify the following before passing frames to mac80211:
-	 * 1. time sync frame
-	 * 2. FPGA valid packet channel
-	 * 3. mei_scan_filter
+	 * 1. FPGA valid packet channel
+	 * 2. mei_scan_filter
 	 */
 
 	iwl_mld_pass_packet_to_mac80211(mld, napi, skb, queue, sta);
