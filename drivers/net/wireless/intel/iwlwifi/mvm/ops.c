@@ -547,7 +547,8 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 		       struct iwl_thermal_dual_chain_request),
 
 	RX_HANDLER_GRP(SYSTEM_GROUP, RFI_SUPPORT_NOTIF,
-		       iwl_rfi_support_notif_handler, RX_HANDLER_ASYNC_UNLOCKED,
+		       iwl_mvm_rfi_support_notif_handler,
+		       RX_HANDLER_ASYNC_UNLOCKED,
 		       struct iwl_rfi_support_notif),
 
 	RX_HANDLER_GRP(LEGACY_GROUP,

@@ -256,7 +256,7 @@ static int iwl_vendor_rfim_get_capa(struct wiphy *wiphy,
 		return -ENOMEM;
 
 	if (mvm->trans->trans_cfg->integrated) {
-		if (iwl_rfi_supported(mvm, mvm->force_enable_rfi, true)) {
+		if (iwl_mvm_rfi_supported(mvm, mvm->force_enable_rfi, true)) {
 			capa |= IWL_MVM_RFI_DDR_CAPA_ALL;
 			if (iwl_mvm_rfi_desense_supported(mvm))
 				capa |= IWL_MVM_RFI_DDR_DESENSE_CAPA;
@@ -265,7 +265,7 @@ static int iwl_vendor_rfim_get_capa(struct wiphy *wiphy,
 		}
 	}
 
-	if (iwl_rfi_supported(mvm, mvm->force_enable_rfi, false))
+	if (iwl_mvm_rfi_supported(mvm, mvm->force_enable_rfi, false))
 		capa |= IWL_MVM_RFI_DLVR_CAPA;
 
 	IWL_DEBUG_FW(mvm, "RFIm capabilities:%04x\n", capa);
@@ -303,7 +303,7 @@ static int iwl_vendor_rfi_ddr_get_table(struct wiphy *wiphy,
 	u8 notif_ver = iwl_fw_lookup_notif_ver(mvm->fw, SYSTEM_GROUP,
 					       RFI_GET_FREQ_TABLE_CMD, 0);
 
-	resp = iwl_rfi_get_freq_table(mvm);
+	resp = iwl_mvm_rfi_get_freq_table(mvm);
 
 	if (IS_ERR(resp))
 		return PTR_ERR(resp);
@@ -477,7 +477,7 @@ static int iwl_vendor_rfi_ddr_set_table(struct wiphy *wiphy,
 	}
 
 	mutex_lock(&mvm->mutex);
-	err = iwl_rfi_send_config_cmd(mvm, rfi_config_info, false, false);
+	err = iwl_mvm_rfi_send_config_cmd(mvm, rfi_config_info, false, false);
 	mutex_unlock(&mvm->mutex);
 	if (err)
 		IWL_ERR(mvm, "Failed to send rfi table to FW, error %d\n", err);
@@ -546,7 +546,8 @@ static int iwl_vendor_rfi_set_cnvi_master(struct wiphy *wiphy,
 		 * takes control when "fw_rfi_state" is not PMC_SUPPORTED.
 		 */
 		if (mvm->rfi_wlan_master || iwl_mvm_fw_rfi_state_supported(mvm))
-			err = iwl_rfi_send_config_cmd(mvm, NULL, true, false);
+			err = iwl_mvm_rfi_send_config_cmd(mvm, NULL, true,
+							  false);
 	} else {
 		IWL_ERR(mvm,
 			"Wlan RFI master configuration is same as old:%d\n",

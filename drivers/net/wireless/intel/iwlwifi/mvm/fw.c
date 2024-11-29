@@ -1756,7 +1756,7 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_SET_LTR_GEN2))
 		WARN_ON(iwl_mvm_config_ltr(mvm));
 
-	iwl_rfi_send_config_cmd(mvm, NULL, false, true);
+	iwl_mvm_rfi_send_config_cmd(mvm, NULL, false, true);
 
 	ret = iwl_mvm_power_update_device(mvm);
 	if (ret)

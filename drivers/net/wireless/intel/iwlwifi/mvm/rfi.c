@@ -11,7 +11,7 @@
  * frequency values in the adjusted format.
  */
 static const
-struct iwl_rfi_ddr_lut_entry iwl_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
+struct iwl_rfi_ddr_lut_entry iwl_mvm_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 	/* frequency 2600MHz */
 	{cpu_to_le16(156), {34, 36, 38, 40, 42, 50},
 	      {PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5, PHY_BAND_5,
@@ -180,8 +180,8 @@ struct iwl_rfi_ddr_lut_entry iwl_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,}},
 };
 
-static inline bool iwl_rfi_enabled_by_mac_type(struct iwl_mvm *mvm,
-					       bool so_rfi_mode)
+static inline bool iwl_mvm_rfi_enabled_by_mac_type(struct iwl_mvm *mvm,
+						   bool so_rfi_mode)
 {
 	u32 mac_type = CSR_HW_REV_TYPE(mvm->trans->hw_rev);
 	bool enable_rfi = false;
@@ -193,10 +193,10 @@ static inline bool iwl_rfi_enabled_by_mac_type(struct iwl_mvm *mvm,
 	return enable_rfi;
 }
 
-bool iwl_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr)
+bool iwl_mvm_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr)
 {
-	bool rfi_enable_mac_type = iwl_rfi_enabled_by_mac_type(mvm,
-							       so_rfi_mode);
+	bool rfi_enable_mac_type = iwl_mvm_rfi_enabled_by_mac_type(mvm,
+								   so_rfi_mode);
 	bool ddr_capa = fw_has_capa(&mvm->fw->ucode_capa,
 				    IWL_UCODE_TLV_CAPA_RFI_DDR_SUPPORT);
 	bool dlvr_capa = fw_has_capa(&mvm->fw->ucode_capa,
@@ -238,9 +238,9 @@ iwl_mvm_ddr_changed(struct iwl_mvm *mvm,
 	return false;
 }
 
-int iwl_rfi_send_config_cmd(struct iwl_mvm *mvm,
-			    struct iwl_rfi_config_info *rfi_config_info,
-			    bool is_set_master_cmd, bool force_send_table)
+int iwl_mvm_rfi_send_config_cmd(struct iwl_mvm *mvm,
+				struct iwl_rfi_config_info *rfi_config_info,
+				bool is_set_master_cmd, bool force_send_table)
 {
 	struct iwl_rfi_config_cmd *cmd = NULL;
 	bool rfi_ddr_support;
@@ -274,8 +274,8 @@ int iwl_rfi_send_config_cmd(struct iwl_mvm *mvm,
 		so_rfi_mode = mvm->force_enable_rfi;
 	}
 
-	rfi_ddr_support = iwl_rfi_supported(mvm, so_rfi_mode, true);
-	rfi_dlvr_support = iwl_rfi_supported(mvm, so_rfi_mode, false);
+	rfi_ddr_support = iwl_mvm_rfi_supported(mvm, so_rfi_mode, true);
+	rfi_dlvr_support = iwl_mvm_rfi_supported(mvm, so_rfi_mode, false);
 
 	if (!rfi_ddr_support && !rfi_dlvr_support)
 		return -EOPNOTSUPP;
@@ -321,7 +321,7 @@ int iwl_rfi_send_config_cmd(struct iwl_mvm *mvm,
 
 	if (rfi_ddr_support) {
 		/* Fill in the defaults, it'll be overridden if needed */
-		memcpy(cmd->ddr_table, iwl_rfi_ddr_table,
+		memcpy(cmd->ddr_table, iwl_mvm_rfi_ddr_table,
 		       sizeof(cmd->ddr_table));
 		memset(&cmd->desense_table, IWL_RFI_DDR_DESENSE_VALUE,
 		       sizeof(cmd->desense_table));
@@ -391,7 +391,7 @@ out:
 	return ret;
 }
 
-void *iwl_rfi_get_freq_table(struct iwl_mvm *mvm)
+void *iwl_mvm_rfi_get_freq_table(struct iwl_mvm *mvm)
 {
 	void *resp;
 	int resp_size;
@@ -413,7 +413,7 @@ void *iwl_rfi_get_freq_table(struct iwl_mvm *mvm)
 	else
 		return ERR_PTR(-EOPNOTSUPP);
 
-	if (!iwl_rfi_supported(mvm, mvm->force_enable_rfi, true))
+	if (!iwl_mvm_rfi_supported(mvm, mvm->force_enable_rfi, true))
 		return ERR_PTR(-EOPNOTSUPP);
 
 	mutex_lock(&mvm->mutex);
@@ -441,8 +441,8 @@ VISIBLE_IF_IWLWIFI_KUNIT
 bool iwl_mvm_rfi_ddr_esr_accept_link_pair(struct iwl_mvm *mvm, u8 channel_a,
 					  u8 band_a, u8 channel_b, u8 band_b)
 {
-	bool rfi_ddr_support = iwl_rfi_supported(mvm, mvm->force_enable_rfi,
-						 true);
+	bool rfi_ddr_support = iwl_mvm_rfi_supported(mvm, mvm->force_enable_rfi,
+						     true);
 	struct iwl_rfi_freq_table_resp_cmd_v1 *iwl_rfi_subset_table;
 	bool channel_a_has_interference = false;
 	bool channel_b_has_interference = false;
@@ -505,8 +505,9 @@ VISIBLE_IF_IWLWIFI_KUNIT
 bool iwl_mvm_rfi_dlvr_esr_accept_link_pair(struct iwl_mvm *mvm, u8 channel_a,
 					   u8 band_a, u8 channel_b, u8 band_b)
 {
-	bool rfi_dlvr_support = iwl_rfi_supported(mvm, mvm->force_enable_rfi,
-						  false);
+	bool rfi_dlvr_support = iwl_mvm_rfi_supported(mvm,
+						      mvm->force_enable_rfi,
+						      false);
 	u8 notif_ver = iwl_fw_lookup_notif_ver(mvm->fw, SYSTEM_GROUP,
 					       RFI_GET_FREQ_TABLE_CMD, 0);
 	struct iwl_rfi_freq_table_resp_cmd *iwl_rfi_subset_table;
@@ -586,11 +587,11 @@ iwl_mvm_rfi_esr_state_link_pair(struct ieee80211_vif *vif,
 	return IWL_MVM_ESR_EXIT_RFI;
 }
 
-static void iwl_rfi_update_mvm_rfi_tables(struct iwl_mvm *mvm)
+static void iwl_mvm_rfi_update_tables(struct iwl_mvm *mvm)
 {
 	void *iwl_rfi_subset_table;
 
-	iwl_rfi_subset_table = iwl_rfi_get_freq_table(mvm);
+	iwl_rfi_subset_table = iwl_mvm_rfi_get_freq_table(mvm);
 	mutex_lock(&mvm->mutex);
 	kfree(mvm->iwl_rfi_subset_table);
 	if (IS_ERR(iwl_rfi_subset_table)) {
@@ -602,8 +603,8 @@ static void iwl_rfi_update_mvm_rfi_tables(struct iwl_mvm *mvm)
 	mutex_unlock(&mvm->mutex);
 }
 
-void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
-				   struct iwl_rx_cmd_buffer *rxb)
+void iwl_mvm_rfi_support_notif_handler(struct iwl_mvm *mvm,
+				       struct iwl_rx_cmd_buffer *rxb)
 {
 	struct iwl_rx_packet *pkt = rxb_addr(rxb);
 	struct iwl_rfi_support_notif *notif = (void *)pkt->data;
@@ -612,7 +613,7 @@ void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
 	switch (mvm->fw_rfi_state) {
 	case IWL_RFI_DDR_SUBSET_TABLE_READY:
 		IWL_DEBUG_FW(mvm, "RFIm, DDR subset table ready\n");
-		iwl_rfi_update_mvm_rfi_tables(mvm);
+		iwl_mvm_rfi_update_tables(mvm);
 		break;
 	case IWL_RFI_PMC_SUPPORTED:
 		IWL_DEBUG_FW(mvm, "RFIm, PMC supported\n");

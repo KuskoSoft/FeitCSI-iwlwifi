@@ -2291,7 +2291,7 @@ static ssize_t iwl_dbgfs_rfi_freq_table_write(struct iwl_mvm *mvm, char *buf,
 	/* value zero triggers re-sending the default table to the device */
 	if (!op_id) {
 		mutex_lock(&mvm->mutex);
-		ret = iwl_rfi_send_config_cmd(mvm, NULL, false, false);
+		ret = iwl_mvm_rfi_send_config_cmd(mvm, NULL, false, false);
 		mutex_unlock(&mvm->mutex);
 	} else {
 		ret = -EOPNOTSUPP; /* in the future a new table will be added */
@@ -2330,7 +2330,7 @@ static ssize_t iwl_dbgfs_rfi_freq_table_read(struct file *file,
 	u8 notif_ver = iwl_fw_lookup_notif_ver(mvm->fw, SYSTEM_GROUP,
 					       RFI_GET_FREQ_TABLE_CMD, 0);
 
-	resp = iwl_rfi_get_freq_table(mvm);
+	resp = iwl_mvm_rfi_get_freq_table(mvm);
 	if (IS_ERR(resp))
 		return PTR_ERR(resp);
 

@@ -2746,17 +2746,17 @@ u32 iwl_mvm_get_sec_flags(struct iwl_mvm *mvm,
 
 void iwl_vendor_send_link_info_changed_event(struct iwl_mvm *mvm,
 					     struct ieee80211_vif *vif);
-bool iwl_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr);
-int iwl_rfi_send_config_cmd(struct iwl_mvm *mvm,
-			    struct iwl_rfi_config_info *rfi_config_info,
-			    bool is_set_master_cmd, bool force_send_table);
-void *iwl_rfi_get_freq_table(struct iwl_mvm *mvm);
+bool iwl_mvm_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr);
+int iwl_mvm_rfi_send_config_cmd(struct iwl_mvm *mvm,
+				struct iwl_rfi_config_info *rfi_config_info,
+				bool is_set_master_cmd, bool force_send_table);
+void *iwl_mvm_rfi_get_freq_table(struct iwl_mvm *mvm);
 u32
 iwl_mvm_rfi_esr_state_link_pair(struct ieee80211_vif *vif,
 				const struct iwl_mvm_link_sel_data *a,
 				const struct iwl_mvm_link_sel_data *b);
-void iwl_rfi_support_notif_handler(struct iwl_mvm *mvm,
-				   struct iwl_rx_cmd_buffer *rxb);
+void iwl_mvm_rfi_support_notif_handler(struct iwl_mvm *mvm,
+				       struct iwl_rx_cmd_buffer *rxb);
 
 static inline bool iwl_mvm_rfi_desense_supported(struct iwl_mvm *mvm)
 {
