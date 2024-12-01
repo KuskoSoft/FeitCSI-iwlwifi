@@ -443,7 +443,18 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	kfree(mld->error_recovery_buf);
 	kfree(mld->mcast_filter_cmd);
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	void *iftype_free = NULL;
+
+	if (mld->trans->dbg_cfg.eml_capa_override >= 0 ||
+	    mld->trans->dbg_cfg.disable_eml)
+		iftype_free = (void *)(uintptr_t)mld->wiphy->iftype_ext_capab;
+#endif
 	ieee80211_free_hw(mld->hw);
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	kfree(iftype_free);
+#endif
 }
 
 static void iwl_mld_queue_state_change(struct iwl_op_mode *op_mode,

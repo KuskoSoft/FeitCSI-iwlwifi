@@ -356,8 +356,6 @@ static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
 		wiphy->flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
 	else
 		wiphy->flags &= ~WIPHY_FLAG_PS_ON_BY_DEFAULT;
-
-	/* TODO task=MLO dbg_cfg.eml_capa_override */
 }
 
 static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
@@ -433,6 +431,39 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 
 #ifdef CPTCFG_IWL_VENDOR_CMDS
 	iwl_mld_vendor_cmds_register(mld);
+#endif
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/* do this late so we don't need to worry about many error paths */
+	if (mld->wiphy->iftype_ext_capab &&
+	    (mld->trans->dbg_cfg.eml_capa_override >= 0 ||
+	     mld->trans->dbg_cfg.disable_eml)) {
+		struct wiphy_iftype_ext_capab *capa;
+		int ret;
+
+		capa = kmemdup(mld->wiphy->iftype_ext_capab,
+			       sizeof(*capa) * mld->wiphy->num_iftype_ext_capab,
+			       GFP_KERNEL);
+		if (!capa)
+			return -ENOMEM;
+
+		for (int i = 0; i < mld->wiphy->num_iftype_ext_capab; i++) {
+			if (mld->trans->dbg_cfg.eml_capa_override)
+				capa[i].eml_capabilities =
+					mld->trans->dbg_cfg.eml_capa_override;
+			if (mld->trans->dbg_cfg.disable_eml)
+				capa[i].eml_capabilities = 0;
+		}
+
+		mld->wiphy->iftype_ext_capab = capa;
+
+		ret = ieee80211_register_hw(mld->hw);
+		if (ret) {
+			kfree(mld->wiphy->iftype_ext_capab);
+			mld->wiphy->num_iftype_ext_capab = 0;
+			mld->wiphy->iftype_ext_capab = NULL;
+		}
+		return ret;
+	}
 #endif
 
 	return ieee80211_register_hw(mld->hw);

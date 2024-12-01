@@ -186,7 +186,6 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG(bool, MVM_MEI_REPORT_RFKILL)
 	IWL_DBG_CFG(u8, MVM_MIN_BEACON_INTERVAL_TU)
 	IWL_DBG_CFG_RANGE(u8, MVM_ADAPTIVE_DWELL_NUM_APS_OVERRIDE, 0, 10)
-	IWL_DBG_CFG_DEF(int, eml_capa_override, -1)
 	IWL_DBG_CFG(bool, MVM_AUTO_EML_ENABLE)
 
 	IWL_DBG_CFG(int, MVM_HIGH_RSSI_THRESH_20MHZ)
@@ -306,13 +305,14 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(bool, he_smps_disabled)
 	IWL_DBG_CFG_NODEF(bool, ht_dynamic_smps)
 	IWL_DBG_CFG_NODEF(bool, amsdu_in_ampdu_disabled)
-	IWL_DBG_CFG_NODEF(bool, disable_eml)
 	IWL_DBG_CFG_NODEF(u32, step_analog_params)
 	IWL_DBG_CFG_NODEF(bool, DISABLE_SPP_AMSDU_ADV)
 	IWL_DBG_CFG_DEF(int, SPP_AMSDU_ACTIVATE, -1)
 	IWL_DBG_CFG_NODEF(bool, HW_CSUM_DISABLE)
 	IWL_DBG_CFG_STR(ppag_allowed)
 	IWL_DBG_CFG_STR(tas_allowed)
+	IWL_DBG_CFG_NODEF(bool, disable_eml)
+	IWL_DBG_CFG_DEF(int, eml_capa_override, -1)
 #ifdef CPTCFG_IWLWIFI_DEBUG
 	IWL_MOD_PARAM(u32, debug_level)
 #endif /* CPTCFG_IWLWIFI_DEBUG */
