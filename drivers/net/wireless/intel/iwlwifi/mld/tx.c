@@ -1110,8 +1110,6 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 			   "TXQ %d status 0x%08x ssn=%d\n",
 			   txq_id, status, ssn);
 
-	/* TODO: print more info here */
-
 	if (tx_failure && mgmt)
 		iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
 
@@ -1308,8 +1306,6 @@ void iwl_mld_handle_compressed_ba_notif(struct iwl_mld *mld,
 		return;
 
 	rcu_read_lock();
-
-	/* TODO: iwl_mvm_tx_airtime (task=tcm) */
 
 	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
 	if (IWL_FW_CHECK(mld, IS_ERR_OR_NULL(link_sta),

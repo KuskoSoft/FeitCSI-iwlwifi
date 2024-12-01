@@ -31,7 +31,6 @@ struct iwl_mld_rx_phy_data {
 	u16 phy_info;
 	u8 energy_a, energy_b;
 	u8 channel;
-	/* TODO: add more fields */
 };
 
 static void
