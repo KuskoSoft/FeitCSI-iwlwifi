@@ -1279,16 +1279,7 @@ static inline bool iwl_trans_is_hw_error_value(u32 val)
  *****************************************************/
 int __must_check iwl_pci_register_driver(void);
 void iwl_pci_unregister_driver(void);
-
-/* Note: order matters */
-enum iwl_reset_mode {
-	IWL_RESET_MODE_REMOVE_ONLY,
-	IWL_RESET_MODE_RESCAN,
-	IWL_RESET_MODE_FUNC_RESET,
-	IWL_RESET_MODE_PROD_RESET,
-};
-
-void iwl_trans_pcie_reset(struct iwl_trans *trans, enum iwl_reset_mode mode);
+void iwl_trans_pcie_remove(struct iwl_trans *trans, bool rescan);
 
 int iwl_trans_pcie_send_hcmd(struct iwl_trans *trans,
 			     struct iwl_host_cmd *cmd);

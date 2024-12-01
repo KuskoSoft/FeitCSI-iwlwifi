@@ -2297,9 +2297,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void *dev_id)
 	if (inta_hw & MSIX_HW_INT_CAUSES_REG_TOP_FATAL_ERR) {
 		IWL_ERR(trans, "TOP Fatal error detected, inta_hw=0x%x.\n",
 			inta_hw);
-		if (trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ)
-			iwl_trans_pcie_reset(trans,
-					     IWL_RESET_MODE_PROD_RESET);
+		/* TODO: PLDR flow required here for >= Bz */
 	}
 
 	/* Error detected by uCode */
