@@ -881,6 +881,28 @@ update:
 	iwl_mld_phy_fw_action(mld, ctx, FW_CTXT_ACTION_MODIFY);
 }
 
+static u8
+iwl_mld_chandef_get_primary_80(struct cfg80211_chan_def *chandef)
+{
+	int data_start;
+	int control_start;
+	int bw;
+
+	if (chandef->width == NL80211_CHAN_WIDTH_320)
+		bw = 320;
+	else if (chandef->width == NL80211_CHAN_WIDTH_160)
+		bw = 160;
+	else
+		return 0;
+
+	/* data is bw wide so the start is half the width */
+	data_start = chandef->center_freq1 - bw / 2;
+	/* control is 20Mhz width */
+	control_start = chandef->chan->center_freq - 10;
+
+	return (control_start - data_start) / 80;
+}
+
 static
 int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 			       struct ieee80211_vif *vif,
@@ -933,7 +955,11 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 	if (vif->type == NL80211_IFTYPE_STATION)
 		iwl_mld_send_ap_tx_power_constraint_cmd(mld, vif, link);
 
-	/* TODO: task=sniffer add sniffer station */
+	if (vif->type == NL80211_IFTYPE_MONITOR) {
+		/* TODO: task=sniffer add sniffer station */
+		mld->monitor.p80 =
+			iwl_mld_chandef_get_primary_80(&vif->bss_conf.chanreq.oper);
+	}
 
 	return 0;
 err:

@@ -52,6 +52,8 @@
  * @monitor.ampdu_toggle: the state of the previous packet to track A-MPDU
  * @monitor.cur_aid: current association id tracked by the sniffer
  * @monitor.cur_bssid: current bssid tracked by the sniffer
+ * @monitor.p80: primary channel position relative to he whole bandwidth, in
+ * steps of 80 MHz
  * @fw_id_to_link_sta: maps a fw id of a sta to the corresponding
  *	ieee80211_link_sta. This is not cleaned up on restart since we want to
  *	preserve the fw sta ids during a restart (for SN/PN restoring).
@@ -119,6 +121,7 @@ struct iwl_mld {
 			bool on;
 			u32 ampdu_ref;
 			bool ampdu_toggle;
+			u8 p80;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 			__le16 cur_aid;
 			u8 cur_bssid[ETH_ALEN];
