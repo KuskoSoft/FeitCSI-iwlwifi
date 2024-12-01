@@ -173,11 +173,11 @@ static void iwl_trans_restart_wk(struct work_struct *wk)
 
 	switch (mode) {
 	case IWL_RESET_MODE_SW_RESET:
+		IWL_ERR(trans, "Device error - SW reset\n");
 		iwl_trans_opmode_sw_reset(trans, trans->restart.mode.type);
 		break;
 	case IWL_RESET_MODE_REPROBE:
-		IWL_ERR(trans,
-			"Device error during reconfiguration - reprobe!\n");
+		IWL_ERR(trans, "Device error - reprobe!\n");
 
 		/*
 		 * get a module reference to avoid doing this while unloading
