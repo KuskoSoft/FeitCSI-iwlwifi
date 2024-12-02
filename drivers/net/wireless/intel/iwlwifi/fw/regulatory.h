@@ -166,6 +166,8 @@ enum iwl_dsm_values_rfi {
 #define DSM_VALUE_RFI_DISABLE	(DSM_VALUE_RFI_DLVR_DISABLE |\
 				 DSM_VALUE_RFI_DDR_DISABLE)
 
+bool iwl_rfi_is_enabled_in_bios(struct iwl_fw_runtime *fwrt);
+
 enum iwl_dsm_values_regulatory_config {
 	DSM_MASK_CHINA_22_REG		= BIT(2),
 	DSM_MASK_ADJUST_TX_POWER	= BIT(3),

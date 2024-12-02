@@ -3099,7 +3099,6 @@ int iwl_mvm_set_hw_timestamp(struct ieee80211_hw *hw,
 			     struct cfg80211_set_hw_timestamp *hwts);
 int iwl_mvm_update_mu_groups(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
 void iwl_mvm_set_twt_testmode(struct iwl_mvm *mvm);
-bool iwl_mvm_eval_dsm_rfi(struct iwl_mvm *mvm);
 bool iwl_mvm_enable_fils(struct iwl_mvm *mvm,
 			 struct ieee80211_vif *vif,
 			 struct ieee80211_chanctx_conf *ctx);

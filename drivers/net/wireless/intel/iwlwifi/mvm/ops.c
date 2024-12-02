@@ -1466,7 +1466,7 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	}
 
 	mvm->rfi_wlan_master = true;
-	mvm->bios_enable_rfi = iwl_mvm_eval_dsm_rfi(mvm);
+	mvm->bios_enable_rfi = iwl_rfi_is_enabled_in_bios(&mvm->fwrt);
 	mvm->bios_enable_puncturing = iwl_uefi_get_puncturing(&mvm->fwrt);
 
 	if (iwl_mvm_has_new_tx_api(mvm)) {
