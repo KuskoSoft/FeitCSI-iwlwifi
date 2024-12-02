@@ -343,23 +343,6 @@ void iwl_mld_init_uats(struct iwl_mld *mld)
 			ret);
 }
 
-static bool iwl_mld_add_to_tas_block_list(u16 *list, u8 *size, u16 mcc)
-{
-	for (int i = 0; i < *size; i++) {
-		if (list[i] == mcc)
-			return true;
-	}
-
-	/* Verify that there is room for another country
-	 * If *size == IWL_WTAS_BLACK_LIST_MAX, then the table is full.
-	 */
-	if (*size >= IWL_WTAS_BLACK_LIST_MAX)
-		return false;
-
-	list[*size++] = mcc;
-	return true;
-}
-
 void iwl_mld_init_tas(struct iwl_mld *mld)
 {
 	int ret;
@@ -402,10 +385,10 @@ void iwl_mld_init_tas(struct iwl_mld *mld)
 		IWL_DEBUG_RADIO(mld,
 				"System vendor '%s' is not in the approved list, disabling TAS in US and Canada.\n",
 				dmi_get_system_info(DMI_SYS_VENDOR) ?: "<unknown>");
-		if ((!iwl_mld_add_to_tas_block_list(data.block_list_array,
+		if ((!iwl_add_mcc_to_tas_block_list(data.block_list_array,
 						    &data.block_list_size,
 						    IWL_MCC_US)) ||
-		    (!iwl_mld_add_to_tas_block_list(data.block_list_array,
+		    (!iwl_add_mcc_to_tas_block_list(data.block_list_array,
 						    &data.block_list_size,
 						    IWL_MCC_CANADA))) {
 			IWL_DEBUG_RADIO(mld,
