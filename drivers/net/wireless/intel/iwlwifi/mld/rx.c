@@ -1170,7 +1170,6 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	u32 rate_n_flags = phy_data->rate_n_flags;
 	u8 stbc = u32_get_bits(rate_n_flags, RATE_MCS_STBC_MSK);
 	bool is_sgi = rate_n_flags & RATE_MCS_SGI_MSK;
-	u8 band;
 
 	/* Keep packets with CRC errors (and with overrun) for monitor mode
 	 * (otherwise the firmware discards them) but mark them as bad.
@@ -1211,10 +1210,6 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	    phy_data->phy_info & IWL_RX_MPDU_PHY_SHORT_PREAMBLE)
 		rx_status->enc_flags |= RX_ENC_FLAG_SHORTPRE;
 
-	band = BAND_IN_RX_STATUS(mpdu_desc->mac_phy_idx);
-	rx_status->band = iwl_mld_phy_band_to_nl80211(band);
-	rx_status->freq = ieee80211_channel_to_frequency(phy_data->channel,
-							 rx_status->band);
 	iwl_mld_fill_signal(mld, rx_status, phy_data);
 
 	/* This may be overridden by iwl_mld_rx_he() to HE_RU */
@@ -1727,6 +1722,19 @@ static void iwl_mld_rx_update_ampdu_ref(struct iwl_mld *mld,
 	rx_status->ampdu_reference = mld->monitor.ampdu_ref;
 }
 
+static void
+iwl_mld_fill_rx_status_band_freq(struct iwl_mld_rx_phy_data *phy_data,
+				 struct iwl_rx_mpdu_desc *mpdu_desc,
+				 struct ieee80211_rx_status *rx_status)
+{
+	enum nl80211_band band;
+
+	band = BAND_IN_RX_STATUS(mpdu_desc->mac_phy_idx);
+	rx_status->band = iwl_mld_phy_band_to_nl80211(band);
+	rx_status->freq = ieee80211_channel_to_frequency(phy_data->channel,
+							 rx_status->band);
+}
+
 void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		     struct iwl_rx_cmd_buffer *rxb, int queue)
 {
@@ -1779,13 +1787,16 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		skb_reserve(skb, 2);
 	}
 
+	rx_status = IEEE80211_SKB_RXCB(skb);
+
+	/* this is needed early */
+	iwl_mld_fill_rx_status_band_freq(&phy_data, mpdu_desc, rx_status);
+
 	rcu_read_lock();
 
 	sta = iwl_mld_rx_with_sta(mld, hdr, skb, mpdu_desc, pkt, queue, &drop);
 	if (drop)
 		goto drop;
-
-	rx_status = IEEE80211_SKB_RXCB(skb);
 
 	/* update aggregation data for monitor sake on default queue */
 	if (!queue && (phy_data.phy_info & IWL_RX_MPDU_PHY_AMPDU))
@@ -1813,10 +1824,7 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		goto drop;
 	}
 
-	/* TODO: verify the following before passing frames to mac80211:
-	 * 1. FPGA valid packet channel
-	 * 2. mei_scan_filter
-	 */
+	/* TODO: mei_scan_filter (task=mei)*/
 
 	iwl_mld_pass_packet_to_mac80211(mld, napi, skb, queue, sta);
 
