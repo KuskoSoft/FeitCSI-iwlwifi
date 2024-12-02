@@ -443,6 +443,7 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 {
 	struct dentry *mld_vif_dbgfs =
 		debugfs_create_dir("iwlmld", vif->debugfs_dir);
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	char target[3 * 3 + 11 + (NL80211_WIPHY_NAME_MAXLEN + 1) +
 		    (7 + IFNAMSIZ + 1) + 6 + 1];
@@ -457,10 +458,12 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 	snprintf(name, sizeof(name), "%pd", vif->debugfs_dir);
 	snprintf(target, sizeof(target), "../../../%pd3/iwlmld",
 		 vif->debugfs_dir);
-	debugfs_create_symlink(name, mld->debugfs_dir, target);
+	mld_vif->dbgfs_slink =
+		debugfs_create_symlink(name, mld->debugfs_dir, target);
 
 #ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
-	debugfs_create_symlink("iwlmvm", vif->debugfs_dir, "iwlmld");
+	mld_vif->dbgfs_slink_mvm =
+		debugfs_create_symlink("iwlmvm", vif->debugfs_dir, "iwlmld");
 #endif
 
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM &&

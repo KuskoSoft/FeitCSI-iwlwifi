@@ -40,6 +40,8 @@ enum iwl_mld_cca_40mhz_wa_status {
  * @wowlan_data: data used by the wowlan suspend flow
  * @use_ps_poll: use ps_poll frames
  * @disable_bf: disable beacon filter
+ * @dbgfs_slink: debugfs symlink for this interface
+ * @dbgfs_slink_mvm: debugfs symlink for legacy tests support
  */
 struct iwl_mld_vif {
 	/* Add here fields that need clean up on restart */
@@ -68,6 +70,10 @@ struct iwl_mld_vif {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	bool use_ps_poll;
 	bool disable_bf;
+	struct dentry *dbgfs_slink;
+#ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
+	struct dentry *dbgfs_slink_mvm;
+#endif
 #endif
 };
 
