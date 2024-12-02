@@ -1175,10 +1175,18 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 		if (ret)
 			IWL_ERR(mld, "failed to update context\n");
 
-		if (vif->cfg.assoc)
-			iwl_mld_set_vif_associated(mld, vif);
-			/* TODO: if assoc request statistics (task=statistics)
+		if (vif->cfg.assoc) {
+			/* Clear statistics to get clean beacon counter, and
+			 * ask for periodic statistics, as they are needed for
+			 * link selection and RX OMI decisions.
 			 */
+			iwl_mld_request_fw_stats(mld, true);
+			iwl_mld_request_periodic_fw_stats(mld, true);
+
+			iwl_mld_set_vif_associated(mld, vif);
+		} else {
+			iwl_mld_request_periodic_fw_stats(mld, false);
+		}
 	}
 
 	if (changes & BSS_CHANGED_PS)

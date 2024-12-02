@@ -214,6 +214,15 @@ static void iwl_mld_sta_stats_fill_txrate(struct iwl_mld_sta *mld_sta,
 	}
 }
 
+static void iwl_mld_sta_stats_fill_signal_avg(struct iwl_mld_sta *mld_sta,
+					      struct station_info *sinfo)
+{
+	if (mld_sta->deflink.avg_energy) {
+		sinfo->signal_avg = -(s8)mld_sta->deflink.avg_energy;
+		sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL_AVG);
+	}
+}
+
 void iwl_mld_mac80211_sta_statistics(struct ieee80211_hw *hw,
 				     struct ieee80211_vif *vif,
 				     struct ieee80211_sta *sta,
@@ -227,19 +236,56 @@ void iwl_mld_mac80211_sta_statistics(struct ieee80211_hw *hw,
 	if (hweight16(vif->active_links) > 1)
 		return;
 
-	iwl_mld_sta_stats_fill_txrate(mld_sta, sinfo);
+	if (iwl_mld_request_fw_stats(mld_sta->mld, false))
+		return;
 
-	/* TODO: NL80211_STA_INFO_SIGNAL_AVG */
+	iwl_mld_sta_stats_fill_signal_avg(mld_sta, sinfo);
+
+	iwl_mld_sta_stats_fill_txrate(mld_sta, sinfo);
 
 	/* TODO: NL80211_STA_INFO_BEACON_RX */
 
 	/* TODO: NL80211_STA_INFO_BEACON_SIGNAL_AVG */
 }
 
+static void
+iwl_mld_proccess_per_sta_stats(struct iwl_mld *mld,
+			       const struct iwl_stats_ntfy_per_sta *per_sta)
+{
+	u32 num_stations = mld->fw->ucode_capa.num_stations;
+
+	for (u32 fw_id = 0; fw_id < num_stations; fw_id++) {
+		struct iwl_mld_link_sta *mld_link_sta;
+		struct ieee80211_link_sta *link_sta;
+
+		if (!per_sta[fw_id].average_energy)
+			continue;
+
+		link_sta = wiphy_dereference(mld->wiphy,
+					     mld->fw_id_to_link_sta[fw_id]);
+		if (!link_sta)
+			continue;
+
+		mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+		if (WARN_ON(!mld_link_sta))
+			continue;
+
+		mld_link_sta->avg_energy =
+			le32_to_cpu(per_sta[fw_id].average_energy);
+	}
+}
+
 void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 				     struct iwl_rx_packet *pkt)
 {
-	/* TODO */
+	const struct iwl_system_statistics_notif_oper *stats =
+		(void *)&pkt->data;
+
+	BUILD_BUG_ON(ARRAY_SIZE(stats->per_sta) < IWL_STATION_COUNT_MAX);
+
+	iwl_mld_proccess_per_sta_stats(mld, stats->per_sta);
+
+	/* TODO: per_link, per_phy stats (task=statistics) */
 }
 
 void iwl_mld_handle_stats_oper_part1_notif(struct iwl_mld *mld,
