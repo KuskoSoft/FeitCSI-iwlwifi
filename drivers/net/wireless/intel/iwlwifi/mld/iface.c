@@ -512,8 +512,7 @@ void iwl_mld_handle_datapath_monitor_notif(struct iwl_mld *mld,
 	if (notif->type != cpu_to_le32(IWL_DP_MON_NOTIF_TYPE_EXT_CCA))
 		return;
 
-	/* Although the name says otherwise, it is actually the link id */
-	link = iwl_mld_fw_id_to_link_conf(mld, notif->mac_id);
+	link = iwl_mld_fw_id_to_link_conf(mld, notif->link_id);
 	if (WARN_ON(!link))
 		return;
 
