@@ -105,14 +105,17 @@ struct iwl_notif_struct_size {
 	  .val_fn = iwl_mld_validate_##_name,				\
 	},
 
-#define DEFINE_SIMPLE_CANCELLATION(name, notif_struct, id_member, id_size)	\
+#define DEFINE_SIMPLE_CANCELLATION(name, notif_struct, id_member)		\
 static bool iwl_mld_cancel_##name##_notif(struct iwl_mld *mld,			\
 					  struct iwl_rx_packet *pkt,		\
 					  u32 obj_id)				\
 {										\
 	const struct notif_struct *notif = (const void *)pkt->data;		\
 										\
-	return le##id_size##_to_cpu((notif)->id_member) == obj_id;		\
+	return obj_id == _Generic((notif)->id_member,				\
+				  __le32: le32_to_cpu((notif)->id_member),	\
+				  __le16: le16_to_cpu((notif)->id_member),	\
+				  u8: (notif)->id_member);			\
 }
 
 /* Currently only defined for the RX_HANDLER_SIZES options. Use this for
@@ -343,7 +346,7 @@ CMD_VERSIONS(probe_resp_data_notif,
 CMD_VERSIONS(datapath_monitor_notif,
 	     CMD_VER_ENTRY(1, iwl_datapath_monitor_notif))
 
-DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id, 32)
+DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 
 /*
  * Handlers for fw notifications
