@@ -348,7 +348,7 @@ __iwl_mvm_mld_assign_vif_chanctx(struct iwl_mvm *mvm,
 			goto deactivate;
 	}
 
-	iwl_vendor_send_link_info_changed_event(mvm, vif);
+	iwl_mvm_vendor_send_link_info_changed_event(mvm, vif);
 	return 0;
 
 deactivate:
@@ -475,7 +475,7 @@ __iwl_mvm_mld_unassign_vif_chanctx(struct iwl_mvm *mvm,
 	if (vif->type == NL80211_IFTYPE_MONITOR)
 		iwl_mvm_mld_rm_snif_sta(mvm, vif);
 
-	iwl_vendor_send_link_info_changed_event(mvm, vif);
+	iwl_mvm_vendor_send_link_info_changed_event(mvm, vif);
 	if (switching_chanctx)
 		return;
 	mvmvif->link[link_id]->phy_ctxt = NULL;

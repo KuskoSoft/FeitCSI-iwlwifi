@@ -616,13 +616,13 @@ struct iwl_mvm_vif {
 		if ((mvm_vif)->link[link_id])
 
 /**
- * struct iwl_rfi_config_info - RFI DDR configuration information
+ * struct iwl_mvm_rfi_config_info - RFI DDR configuration information
  *
  * @ddr_table: a table of channels that are used by DDR
  * @desense_table: desense values per chain. see &iwl_rfi_desense_lut_entry
  * @snr_threshold: SNR threshold to be used for RSSI based RFIM.
  */
-struct iwl_rfi_config_info {
+struct iwl_mvm_rfi_config_info {
 	struct iwl_rfi_ddr_lut_entry ddr_table[IWL_RFI_DDR_LUT_SIZE];
 	struct iwl_rfi_desense_lut_entry desense_table[IWL_RFI_DDR_LUT_SIZE];
 	__le32 snr_threshold;
@@ -2744,11 +2744,11 @@ u32 iwl_mvm_get_sec_flags(struct iwl_mvm *mvm,
 
 /* 11ax Softap Test Mode */
 
-void iwl_vendor_send_link_info_changed_event(struct iwl_mvm *mvm,
-					     struct ieee80211_vif *vif);
+void iwl_mvm_vendor_send_link_info_changed_event(struct iwl_mvm *mvm,
+						 struct ieee80211_vif *vif);
 bool iwl_mvm_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr);
 int iwl_mvm_rfi_send_config_cmd(struct iwl_mvm *mvm,
-				struct iwl_rfi_config_info *rfi_config_info,
+				struct iwl_mvm_rfi_config_info *rfi_config_info,
 				bool is_set_master_cmd, bool force_send_table);
 void *iwl_mvm_rfi_get_freq_table(struct iwl_mvm *mvm);
 u32

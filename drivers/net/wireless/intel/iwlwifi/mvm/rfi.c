@@ -217,7 +217,7 @@ bool iwl_mvm_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr)
 
 static bool
 iwl_mvm_ddr_changed(struct iwl_mvm *mvm,
-		    struct iwl_rfi_config_info *rfi_config_info)
+		    struct iwl_mvm_rfi_config_info *rfi_config_info)
 {
 	if (memcmp(rfi_config_info->ddr_table,
 		   mvm->iwl_prev_rfi_config_cmd->ddr_table,
@@ -239,7 +239,7 @@ iwl_mvm_ddr_changed(struct iwl_mvm *mvm,
 }
 
 int iwl_mvm_rfi_send_config_cmd(struct iwl_mvm *mvm,
-				struct iwl_rfi_config_info *rfi_config_info,
+				struct iwl_mvm_rfi_config_info *rfi_config_info,
 				bool is_set_master_cmd, bool force_send_table)
 {
 	struct iwl_rfi_config_cmd *cmd = NULL;
