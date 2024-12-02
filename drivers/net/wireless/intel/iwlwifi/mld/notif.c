@@ -386,8 +386,6 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     RX_HANDLER_SYNC)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, BA_NOTIF, compressed_ba_notif,
 			     RX_HANDLER_SYNC)
-	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
-			     RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, SCAN_COMPLETE_UMAC,
 			     scan_complete_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, SCAN_ITERATION_COMPLETE_UMAC,
@@ -421,6 +419,8 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     ct_kill_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_OF_LINK(DATA_PATH_GROUP, MONITOR_NOTIF,
 			   datapath_monitor_notif)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
+			     RX_HANDLER_ASYNC)
 };
 
 static bool
