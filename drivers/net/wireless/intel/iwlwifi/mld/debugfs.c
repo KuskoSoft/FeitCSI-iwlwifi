@@ -14,9 +14,11 @@
 #include "notif.h"
 #include "ap.h"
 #include "iwl-utils.h"
+#include "rfi.h"
 
 #include "fw/api/rs.h"
 #include "fw/api/dhc.h"
+#include "fw/api/rfi.h"
 
 #define MLD_DEBUGFS_READ_FILE_OPS(name, bufsz)				\
 	_MLD_DEBUGFS_READ_FILE_OPS(name, bufsz, struct iwl_mld)
@@ -186,9 +188,97 @@ iwl_dbgfs_he_sniffer_params_read(struct iwl_mld *mld, size_t count,
 			 mld->monitor.cur_bssid[4], mld->monitor.cur_bssid[5]);
 }
 
+static ssize_t
+iwl_dbgfs_rfi_freq_table_write(struct iwl_mld *mld, char *buf, size_t count)
+{
+	/* TODO: Add support for setting rfi frequency table (task=RFI) */
+
+	return -EOPNOTSUPP;
+}
+
+/* The size computation is as follows:
+ * each number needs at most 3 characters, number of rows is the size of
+ * the table; So, need 5 chars for the "freq: " part and each tuple afterwards
+ * needs 6 characters for numbers and 5 for the punctuation around.
+ */
+#define IWL_RFI_DDR_BUF_SIZE (IWL_RFI_DDR_LUT_INSTALLED_SIZE *\
+				(5 + IWL_RFI_DDR_LUT_ENTRY_CHANNELS_NUM *\
+					(6 + 5)))
+#define IWL_RFI_DLVR_BUF_SIZE (IWL_RFI_DLVR_LUT_INSTALLED_SIZE *\
+				(5 + IWL_RFI_DLVR_LUT_ENTRY_CHANNELS_NUM *\
+					(6 + 5)))
+#define IWL_RFI_DESENSE_BUF_SIZE IWL_RFI_DDR_BUF_SIZE
+
+/* Extra 32 for "DDR and DLVR table" message */
+#define IWL_RFI_BUF_SIZE (IWL_RFI_DDR_BUF_SIZE + IWL_RFI_DLVR_BUF_SIZE +\
+				IWL_RFI_DESENSE_BUF_SIZE + 32)
+
+static ssize_t
+iwl_dbgfs_rfi_freq_table_read(struct iwl_mld *mld, size_t count, char *buf)
+{
+	const struct iwl_rfi_freq_table_resp_cmd *resp;
+	ssize_t pos = 0;
+
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	resp = iwl_mld_rfi_get_freq_table(mld);
+	if (IS_ERR(resp))
+		return PTR_ERR(resp);
+
+	if (le32_to_cpu(resp->status) != RFI_FREQ_TABLE_OK) {
+		pos += scnprintf(buf + pos, count - pos, "status = %d\n",
+				le32_to_cpu(resp->status));
+		goto out;
+	}
+
+	BUILD_BUG_ON(ARRAY_SIZE(resp->ddr_table) !=
+		     ARRAY_SIZE(resp->desense_table));
+	pos += scnprintf(buf + pos, count - pos, "DDR table:\n");
+	for (int i = 0; i < ARRAY_SIZE(resp->ddr_table); i++) {
+		pos += scnprintf(buf + pos, count - pos, "%u: ",
+				 le16_to_cpu(resp->ddr_table[i].freq));
+
+		for (int j = 0; j < ARRAY_SIZE(resp->ddr_table[0].channels);
+		     j++)
+			pos += scnprintf(buf + pos, count - pos,
+					 "(%u, %u) ",
+					 resp->ddr_table[i].channels[j],
+					 resp->ddr_table[i].bands[j]);
+		pos += scnprintf(buf + pos, count - pos, "\n");
+
+		for (int j = 0; j < ARRAY_SIZE(resp->desense_table[0].chain_a);
+		     j++)
+			pos += scnprintf(buf + pos, count - pos,
+					 "(%u, %u) ",
+					 resp->desense_table[i].chain_a[j],
+					 resp->desense_table[i].chain_b[j]);
+		pos += scnprintf(buf + pos, count - pos, "\n");
+	}
+
+	pos += scnprintf(buf + pos, count - pos, "DLVR table:\n");
+	for (int i = 0; i < ARRAY_SIZE(resp->dlvr_table); i++) {
+		pos += scnprintf(buf + pos, count - pos, "%u: ",
+				 le16_to_cpu(resp->dlvr_table[i].freq));
+
+		for (int j = 0; j < ARRAY_SIZE(resp->dlvr_table[0].channels);
+		     j++)
+			pos += scnprintf(buf + pos, count - pos,
+					 "(%u, %u) ",
+					 resp->dlvr_table[i].channels[j],
+					 resp->dlvr_table[i].bands[j]);
+		pos += scnprintf(buf + pos, count - pos, "\n");
+	}
+
+out:
+	kfree(resp);
+	return pos;
+}
+
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_nmi, 10);
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_restart, 10);
 WIPHY_DEBUGFS_READ_WRITE_FILE_OPS_MLD(he_sniffer_params, 32);
+WIPHY_DEBUGFS_READ_WRITE_FILE_OPS_MLD(rfi_freq_table, IWL_RFI_BUF_SIZE);
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_dbg_clear, 10);
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(send_echo_cmd, 8);
 
@@ -257,6 +347,7 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	MLD_DEBUGFS_ADD_FILE(fw_restart, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(wifi_6e_enable, debugfs_dir, 0400);
 	MLD_DEBUGFS_ADD_FILE(he_sniffer_params, debugfs_dir, 0600);
+	MLD_DEBUGFS_ADD_FILE(rfi_freq_table, debugfs_dir, 0600);
 	MLD_DEBUGFS_ADD_FILE(fw_dbg_clear, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(send_echo_cmd, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(inject_packet, debugfs_dir, 0200);

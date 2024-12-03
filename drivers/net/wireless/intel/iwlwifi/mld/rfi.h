@@ -5,6 +5,9 @@
 #ifndef __iwl_mld_rfi_h__
 #define __iwl_mld_rfi_h__
 
+struct iwl_rfi_freq_table_resp_cmd *
+iwl_mld_rfi_get_freq_table(struct iwl_mld *mld);
+
 void iwl_mld_handle_rfi_support_notif(struct iwl_mld *mld,
 				      struct iwl_rx_packet *pkt);
 
