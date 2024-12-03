@@ -74,7 +74,6 @@ iwl_mld_iface_combinations[] = {
 	},
 };
 
-/* Each capability added here should also be add to tm_if_types_ext_capa_sta */
 static const u8 if_types_ext_capa_sta[] = {
 	 [0] = WLAN_EXT_CAPA1_EXT_CHANNEL_SWITCHING,
 	 [2] = WLAN_EXT_CAPA3_MULTI_BSSID_SUPPORT,
@@ -92,7 +91,6 @@ static const u8 if_types_ext_capa_sta[] = {
 			IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP, \
 			IEEE80211_MLD_CAP_OP_TID_TO_LINK_MAP_NEG_SUPP_SAME)
 
-/* TODO: task=AX_SOFTAP_TESTMODE */
 static const struct wiphy_iftype_ext_capab iftypes_ext_capa[] = {
 	{
 		.iftype = NL80211_IFTYPE_STATION,
