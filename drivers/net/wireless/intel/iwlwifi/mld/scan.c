@@ -1513,8 +1513,6 @@ int iwl_mld_scan_stop(struct iwl_mld *mld, int type, bool notify)
 	if (!(mld->scan.status & type))
 		return 0;
 
-	/* TODO: consider to return here in rfkill (task=rfkill) */
-
 	ret = iwl_mld_scan_stop_wait(mld, type);
 	if (!ret)
 		mld->scan.status |= type << IWL_MLD_SCAN_STOPPING_SHIFT;
