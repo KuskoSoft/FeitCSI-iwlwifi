@@ -657,17 +657,11 @@ static void iwl_mld_probe_resp_set_noa(struct iwl_mld *mld,
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct iwl_mld_link *mld_link =
 		&iwl_mld_vif_from_mac80211(info->control.vif)->deflink;
-	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *)skb->data;
-	int base_len = (u8 *)mgmt->u.probe_resp.variable - (u8 *)mgmt;
 	struct iwl_probe_resp_data *resp_data;
-	const u8 *ie;
 	u8 *pos;
-	u8 match[] = {
-		(WLAN_OUI_WFA >> 16) & 0xff,
-		(WLAN_OUI_WFA >> 8) & 0xff,
-		WLAN_OUI_WFA & 0xff,
-		WLAN_OUI_TYPE_WFA_P2P,
-	};
+
+	if (!info->control.vif->p2p)
+		return;
 
 	rcu_read_lock();
 
@@ -677,15 +671,6 @@ static void iwl_mld_probe_resp_set_noa(struct iwl_mld *mld,
 
 	if (!resp_data->notif.noa_active)
 		goto out;
-
-	ie = cfg80211_find_ie_match(WLAN_EID_VENDOR_SPECIFIC,
-				    mgmt->u.probe_resp.variable,
-				    skb->len - base_len,
-				    match, 4, 2);
-	if (!ie) {
-		IWL_DEBUG_TX(mld, "probe resp doesn't have P2P IE\n");
-		goto out;
-	}
 
 	if (skb_tailroom(skb) < resp_data->noa_len) {
 		if (pskb_expand_head(skb, 0, resp_data->noa_len, GFP_ATOMIC)) {
