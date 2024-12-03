@@ -8,6 +8,7 @@
 #include "fw/api/rx.h"
 #include "fw/api/datapath.h"
 #include "fw/api/commands.h"
+#include "fw/api/offload.h"
 #include "fw/dbg.h"
 #include "fw/uefi.h"
 
@@ -142,33 +143,32 @@ iwl_mld_construct_fw_runtime(struct iwl_mld *mld, struct iwl_trans *trans,
 static const struct iwl_hcmd_names iwl_mld_legacy_names[] = {
 	HCMD_NAME(UCODE_ALIVE_NTFY),
 	HCMD_NAME(INIT_COMPLETE_NOTIF),
-	HCMD_NAME(TX_CMD),
-	HCMD_NAME(LEDS_CMD),
-	HCMD_NAME(SCAN_OFFLOAD_UPDATE_PROFILES_CMD),
-	HCMD_NAME(BEACON_TEMPLATE_CMD),
-	HCMD_NAME(MAC_PM_POWER_TABLE),
-	HCMD_NAME(MFUART_LOAD_NOTIFICATION),
-	HCMD_NAME(REPLY_RX_MPDU_CMD),
-	HCMD_NAME(MCC_UPDATE_CMD),
-};
-
-/* Please keep this array *SORTED* by hex value.
- * Access is done through binary search
- */
-static const struct iwl_hcmd_names iwl_mld_long_names[] = {
 	HCMD_NAME(PHY_CONTEXT_CMD),
 	HCMD_NAME(SCAN_CFG_CMD),
 	HCMD_NAME(SCAN_REQ_UMAC),
 	HCMD_NAME(SCAN_ABORT_UMAC),
+	HCMD_NAME(SCAN_COMPLETE_UMAC),
+	HCMD_NAME(TX_CMD),
 	HCMD_NAME(TXPATH_FLUSH),
+	HCMD_NAME(LEDS_CMD),
+	HCMD_NAME(SCAN_OFFLOAD_UPDATE_PROFILES_CMD),
 	HCMD_NAME(POWER_TABLE_CMD),
+	HCMD_NAME(BEACON_TEMPLATE_CMD),
 	HCMD_NAME(TX_ANT_CONFIGURATION_CMD),
 	HCMD_NAME(REDUCE_TX_POWER_CMD),
 	HCMD_NAME(MISSED_BEACONS_NOTIFICATION),
+	HCMD_NAME(MAC_PM_POWER_TABLE),
+	HCMD_NAME(MFUART_LOAD_NOTIFICATION),
 	HCMD_NAME(RSS_CONFIG_CMD),
+	HCMD_NAME(SCAN_ITERATION_COMPLETE_UMAC),
+	HCMD_NAME(REPLY_RX_MPDU_CMD),
+	HCMD_NAME(BA_NOTIF),
+	HCMD_NAME(MCC_UPDATE_CMD),
+	HCMD_NAME(MCC_CHUB_UPDATE_CMD),
 	HCMD_NAME(MCAST_FILTER_CMD),
 	HCMD_NAME(REPLY_BEACON_FILTERING_CMD),
 	HCMD_NAME(PROT_OFFLOAD_CONFIG_CMD),
+	HCMD_NAME(MATCH_FOUND_NOTIFICATION),
 	HCMD_NAME(WOWLAN_PATTERNS),
 	HCMD_NAME(WOWLAN_CONFIGURATION),
 	HCMD_NAME(WOWLAN_TSC_RSC_PARAM),
@@ -221,8 +221,10 @@ static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
 	HCMD_NAME(ROC_CMD),
 	HCMD_NAME(MISSED_BEACONS_NOTIF),
 	HCMD_NAME(ROC_NOTIF),
+	HCMD_NAME(CHANNEL_SWITCH_ERROR_NOTIF),
 	HCMD_NAME(SESSION_PROTECTION_NOTIF),
 	HCMD_NAME(PROBE_RESPONSE_DATA_NOTIF),
+	HCMD_NAME(CHANNEL_SWITCH_START_NOTIF),
 };
 
 /* Please keep this array *SORTED* by hex value.
@@ -235,6 +237,8 @@ static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
 	HCMD_NAME(RX_BAID_ALLOCATION_CONFIG_CMD),
 	HCMD_NAME(SCD_QUEUE_CONFIG_CMD),
 	HCMD_NAME(MONITOR_NOTIF),
+	HCMD_NAME(TLC_MNG_UPDATE_NOTIF),
+	HCMD_NAME(MU_GROUP_MGMT_NOTIF),
 };
 
 /* Please keep this array *SORTED* by hex value.
@@ -257,10 +261,17 @@ static const struct iwl_hcmd_names iwl_mld_statistics_names[] = {
 	HCMD_NAME(STATISTICS_OPER_PART1_NOTIF),
 };
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_prot_offload_names[] = {
+	HCMD_NAME(STORED_BEACON_NTF),
+};
+
 VISIBLE_IF_IWLWIFI_KUNIT
 const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
-	[LONG_GROUP] = HCMD_ARR(iwl_mld_long_names),
+	[LONG_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
 	[SYSTEM_GROUP] = HCMD_ARR(iwl_mld_system_names),
 	[MAC_CONF_GROUP] = HCMD_ARR(iwl_mld_mac_conf_names),
 	[DATA_PATH_GROUP] = HCMD_ARR(iwl_mld_data_path_names),
@@ -268,6 +279,7 @@ const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[DEBUG_GROUP] = HCMD_ARR(iwl_mld_debug_names),
 	[PHY_OPS_GROUP] = HCMD_ARR(iwl_mld_phy_names),
 	[STATISTICS_GROUP] = HCMD_ARR(iwl_mld_statistics_names),
+	[PROT_OFFLOAD_GROUP] = HCMD_ARR(iwl_mld_prot_offload_names),
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_groups);
 
