@@ -10,12 +10,15 @@ struct dbgfs_##name##_data {						\
 	argtype *arg;							\
 	bool read_done;							\
 	ssize_t rlen;							\
-	char rbuf[buflen];						\
+	char buf[buflen];						\
 };									\
 static int _iwl_dbgfs_##name##_open(struct inode *inode,		\
 				    struct file *file)			\
 {									\
 	struct dbgfs_##name##_data *data;				\
+									\
+	if ((file->f_flags & O_ACCMODE) == O_RDWR)			\
+		return -EOPNOTSUPP;					\
 									\
 	data = kzalloc(sizeof(*data), GFP_KERNEL);			\
 	if (!data)							\
@@ -38,14 +41,14 @@ static ssize_t _iwl_dbgfs_##name##_read(struct file *file,		\
 	if (!data->read_done) {						\
 		data->read_done = true;					\
 		data->rlen = iwl_dbgfs_##name##_read(data->arg,		\
-						     sizeof(data->rbuf),\
-						     data->rbuf);	\
+						     sizeof(data->buf),\
+						     data->buf);	\
 	}								\
 									\
 	if (data->rlen < 0)						\
 		return data->rlen;					\
 	return simple_read_from_buffer(user_buf, count, ppos,		\
-				       data->rbuf, data->rlen);		\
+				       data->buf, data->rlen);		\
 }
 
 static int _iwl_dbgfs_release(struct inode *inode, struct file *file)
@@ -128,7 +131,7 @@ static ssize_t iwl_dbgfs_##name##_write_handler(struct wiphy *wiphy,	\
 	return iwl_dbgfs_##name##_write(mld, buf, count);		\
 }
 
-#define WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name, bufsz)			\
+#define WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name)				\
 WIPHY_DEBUGFS_HANDLER_WRAPPER_MLD(name)					\
 static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 					  const char __user *user_buf,	\
@@ -136,10 +139,9 @@ static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 {									\
 	struct dbgfs_##name##_data *data = file->private_data;		\
 	struct iwl_mld *mld = data->arg;				\
-	char buf[bufsz] = {};						\
 									\
 	return wiphy_locked_debugfs_write(mld->wiphy, file,		\
-				buf, sizeof(buf),			\
+				data->buf, sizeof(data->buf),		\
 				user_buf, count,			\
 				iwl_dbgfs_##name##_write_handler,	\
 				NULL);					\
@@ -147,7 +149,7 @@ static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 
 #define WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(name, bufsz)			\
 	MLD_DEBUGFS_OPEN_WRAPPER(name, bufsz, struct iwl_mld)		\
-	WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name, bufsz)			\
+	WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name)				\
 	static const struct file_operations iwl_dbgfs_##name##_ops = {	\
 		.write = __iwl_dbgfs_##name##_write,			\
 		.open = _iwl_dbgfs_##name##_open,			\
@@ -157,7 +159,7 @@ static ssize_t __iwl_dbgfs_##name##_write(struct file *file,		\
 
 #define WIPHY_DEBUGFS_READ_WRITE_FILE_OPS_MLD(name, bufsz)		\
 	MLD_DEBUGFS_OPEN_WRAPPER(name, bufsz, struct iwl_mld)		\
-	WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name, bufsz)			\
+	WIPHY_DEBUGFS_WRITE_WRAPPER_MLD(name)				\
 	MLD_DEBUGFS_READ_WRAPPER(name)					\
 	static const struct file_operations iwl_dbgfs_##name##_ops = {	\
 		.write = __iwl_dbgfs_##name##_write,			\
