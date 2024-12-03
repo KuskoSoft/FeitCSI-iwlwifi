@@ -169,7 +169,7 @@ static ssize_t
 iwl_dbgfs_he_sniffer_params_read(struct iwl_mld *mld, size_t count,
 				 char *buf)
 {
-	return scnprintf(buf, sizeof(buf),
+	return scnprintf(buf, count,
 			 "%d %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
 			 le16_to_cpu(mld->monitor.cur_aid),
 			 mld->monitor.cur_bssid[0], mld->monitor.cur_bssid[1],
