@@ -487,7 +487,7 @@ int iwl_mld_remove_link(struct iwl_mld *mld,
 	bool is_deflink = link == &mld_vif->deflink;
 	int ret;
 
-	if (WARN_ON(link->active))
+	if (WARN_ON(!link || link->active))
 		return -EINVAL;
 
 	ret = iwl_mld_rm_link_from_fw(mld, bss_conf);
