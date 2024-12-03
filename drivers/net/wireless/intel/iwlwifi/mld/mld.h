@@ -339,9 +339,61 @@ iwl_mld_legacy_hw_idx_to_mac80211_idx(u32 rate_n_flags,
 
 extern const struct ieee80211_ops iwl_mld_hw_ops;
 
+/**
+ * enum iwl_rx_handler_context: context for Rx handler
+ * @RX_HANDLER_SYNC: this means that it will be called in the Rx path
+ *	which can't acquire the wiphy->mutex.
+ * @RX_HANDLER_ASYNC: If the handler needs to hold wiphy->mutex
+ *	(and only in this case!), it should be set as ASYNC. In that case,
+ *	it will be called from a worker with wiphy->mutex held.
+ */
+enum iwl_rx_handler_context {
+	RX_HANDLER_SYNC,
+	RX_HANDLER_ASYNC,
+};
+
+/**
+ * struct iwl_rx_handler: handler for FW notification
+ * @val_fn: input validation function.
+ * @sizes: an array that mapps a version to the expected size.
+ * @fn: the function is called when notification is handled
+ * @cmd_id: command id
+ * @n_sizes: number of elements in &sizes.
+ * @context: see &iwl_rx_handler_context
+ * @obj_type: the type of the object that this handler is related to.
+ *	See &iwl_mld_object_type. Use IWL_MLD_OBJECT_TYPE_NONE if not related.
+ * @cancel: function to cancel the notification. valid only if obj_type is not
+ *	IWL_MLD_OBJECT_TYPE_NONE.
+ */
+struct iwl_rx_handler {
+	union {
+		bool (*val_fn)(struct iwl_mld *mld, struct iwl_rx_packet *pkt);
+		const struct iwl_notif_struct_size *sizes;
+	};
+	void (*fn)(struct iwl_mld *mld, struct iwl_rx_packet *pkt);
+	u16 cmd_id;
+	u8 n_sizes;
+	u8 context;
+	enum iwl_mld_object_type obj_type;
+	bool (*cancel)(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
+		       u32 obj_id);
+};
+
+/**
+ * struct iwl_notif_struct_size: map a notif ver to the expected size
+ *
+ * @size: the size to expect
+ * @ver: the version of the notification
+ */
+struct iwl_notif_struct_size {
+	u32 size:24, ver:8;
+};
+
 #if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)
 extern const struct iwl_hcmd_arr iwl_mld_groups[];
 extern const unsigned int global_iwl_mld_goups_size;
+extern const struct iwl_rx_handler iwl_mld_rx_handlers[];
+extern const unsigned int iwl_mld_rx_handlers_num;
 
 bool
 iwl_mld_is_dup(struct iwl_mld *mld, struct ieee80211_sta *sta,

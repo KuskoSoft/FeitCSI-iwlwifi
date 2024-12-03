@@ -31,56 +31,6 @@
 #include "iface.h"
 #include "stats.h"
 
-/**
- * enum iwl_rx_handler_context: context for Rx handler
- * @RX_HANDLER_SYNC: this means that it will be called in the Rx path
- *	which can't acquire the wiphy->mutex.
- * @RX_HANDLER_ASYNC: If the handler needs to hold wiphy->mutex
- *	(and only in this case!), it should be set as ASYNC. In that case,
- *	it will be called from a worker with wiphy->mutex held.
- */
-enum iwl_rx_handler_context {
-	RX_HANDLER_SYNC,
-	RX_HANDLER_ASYNC,
-};
-
-/**
- * struct iwl_rx_handler: handler for FW notification
- * @val_fn: input validation function.
- * @sizes: an array that mapps a version to the expected size.
- * @fn: the function is called when notification is handled
- * @cmd_id: command id
- * @n_sizes: number of elements in &sizes.
- * @context: see &iwl_rx_handler_context
- * @obj_type: the type of the object that this handler is related to.
- *	See &iwl_mld_object_type. Use IWL_MLD_OBJECT_TYPE_NONE if not related.
- * @cancel: function to cancel the notification. valid only if obj_type is not
- *	IWL_MLD_OBJECT_TYPE_NONE.
- */
-struct iwl_rx_handler {
-	union {
-		bool (*val_fn)(struct iwl_mld *mld, struct iwl_rx_packet *pkt);
-		const struct iwl_notif_struct_size *sizes;
-	};
-	void (*fn)(struct iwl_mld *mld, struct iwl_rx_packet *pkt);
-	u16 cmd_id;
-	u8 n_sizes;
-	u8 context;
-	enum iwl_mld_object_type obj_type;
-	bool (*cancel)(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
-		       u32 obj_id);
-};
-
-/**
- * struct iwl_notif_struct_size: map a notif ver to the expected size
- *
- * @size: the size to expect
- * @ver: the version of the notification
- */
-struct iwl_notif_struct_size {
-	u32 size:24, ver:8;
-};
-
 /* Please use this in an increasing order of the versions */
 #define CMD_VER_ENTRY(_ver, _struct) { .size = sizeof(struct _struct), .ver = _ver },
 #define CMD_VERSIONS(name, ...) static const struct iwl_notif_struct_size iwl_notif_struct_sizes_##name[] = { __VA_ARGS__ };
@@ -387,7 +337,8 @@ DEFINE_SIMPLE_CANCELLATION(datapath_monitor, iwl_datapath_monitor_notif,
  *
  * The handler can be one from three contexts, see &iwl_rx_handler_context
  */
-static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
+VISIBLE_IF_IWLWIFI_KUNIT
+const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, TX_CMD, tx_resp_notif,
 			     RX_HANDLER_SYNC)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, BA_NOTIF, compressed_ba_notif,
@@ -434,6 +385,12 @@ static const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
 			     RX_HANDLER_ASYNC)
 };
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
+
+#if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)
+const unsigned int iwl_mld_rx_handlers_num = ARRAY_SIZE(iwl_mld_rx_handlers);
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers_num);
+#endif
 
 static bool
 iwl_mld_notif_is_valid(struct iwl_mld *mld, struct iwl_rx_packet *pkt,
