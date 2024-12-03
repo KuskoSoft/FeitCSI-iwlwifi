@@ -18,7 +18,9 @@
 #include "fw/api/rs.h"
 #include "fw/api/offload.h"
 #include "fw/api/stats.h"
+#include "fw/api/rfi.h"
 
+#include "rfi.h"
 #include "mcc.h"
 #include "link.h"
 #include "tx.h"
@@ -320,6 +322,8 @@ CMD_VERSIONS(stats_oper_notif,
 	     CMD_VER_ENTRY(3, iwl_system_statistics_notif_oper))
 CMD_VERSIONS(stats_oper_part1_notif,
 	     CMD_VER_ENTRY(4, iwl_system_statistics_part1_notif_oper))
+CMD_VERSIONS(rfi_support_notif,
+	     CMD_VER_ENTRY(1, iwl_rfi_support_notif))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -384,6 +388,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			   datapath_monitor_notif)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, MCC_CHUB_UPDATE_CMD, update_mcc,
 			     RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(SYSTEM_GROUP, RFI_SUPPORT_NOTIF,
+			     rfi_support_notif, RX_HANDLER_ASYNC)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 

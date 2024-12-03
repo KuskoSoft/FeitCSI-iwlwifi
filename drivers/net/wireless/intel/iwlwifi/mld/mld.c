@@ -187,6 +187,7 @@ static const struct iwl_hcmd_names iwl_mld_system_names[] = {
 	HCMD_NAME(FW_ERROR_RECOVERY_CMD),
 	HCMD_NAME(SYSTEM_STATISTICS_CMD),
 	HCMD_NAME(SYSTEM_STATISTICS_END_NOTIF),
+	HCMD_NAME(RFI_SUPPORT_NOTIF),
 };
 
 /* Please keep this array *SORTED* by hex value.
