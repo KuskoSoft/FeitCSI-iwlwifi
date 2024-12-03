@@ -110,6 +110,10 @@
  * @low_latency: low-latency manager.
  * @tzone: thermal zone device's data
  * @cooling_dev: cooling device's related data
+ * @ibss_manager: in IBSS mode (only one vif can be active), indicates what
+ *	firmware indicated about having transmitted the last beacon, i.e.
+ *	being IBSS manager for that time and needing to respond to probe
+ *	requests
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -192,6 +196,8 @@ struct iwl_mld {
 	u8 mgmt_tx_ant;
 
 	struct iwl_mld_low_latency low_latency;
+
+	bool ibss_manager;
 #ifdef CONFIG_THERMAL
 	struct thermal_zone_device *tzone;
 	struct iwl_mld_cooling_device cooling_dev;

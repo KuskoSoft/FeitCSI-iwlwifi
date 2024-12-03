@@ -971,8 +971,7 @@ int iwl_mld_add_bcast_sta(struct iwl_mld *mld,
 		    vif->type != NL80211_IFTYPE_ADHOC))
 		return -EINVAL;
 
-	addr = vif->type == NL80211_IFTYPE_ADHOC ?
-		link->bssid : bcast_addr;
+	addr = vif->type == NL80211_IFTYPE_ADHOC ? link->bssid : bcast_addr;
 
 	return iwl_mld_add_internal_sta(mld, &mld_link->bcast_sta,
 					STATION_TYPE_BCAST_MGMT,

@@ -611,6 +611,7 @@ iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq,
 
 	switch (info->control.vif->type) {
 	case NL80211_IFTYPE_AP:
+	case NL80211_IFTYPE_ADHOC:
 		link = iwl_mld_get_link_from_tx_info(info);
 
 		if (WARN_ON(!link))
@@ -629,7 +630,8 @@ iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq,
 		    !ieee80211_has_order(fc))
 			return link->mcast_sta.queue_id;
 
-		WARN_ONCE(1, "Couldn't find a TXQ. fc=0x%02x", le16_to_cpu(fc));
+		WARN_ONCE(info->control.vif->type != NL80211_IFTYPE_ADHOC,
+			  "Couldn't find a TXQ. fc=0x%02x", le16_to_cpu(fc));
 		return link->bcast_sta.queue_id;
 	case NL80211_IFTYPE_P2P_DEVICE:
 		mld_vif = iwl_mld_vif_from_mac80211(info->control.vif);
@@ -643,12 +645,12 @@ iwl_mld_get_tx_queue_id(struct iwl_mld *mld, struct ieee80211_txq *txq,
 
 		return mld_vif->deflink.aux_sta.queue_id;
 	default:
+		/* TODO: consider monitor (task=monitor) */
 		WARN_ONCE(1, "Unsupported vif type\n");
 		break;
 	}
 
 	return IWL_MLD_INVALID_QUEUE;
-	/* TODO: consider IBSS, monitor (task=IBSS, monitor) */
 }
 
 static void iwl_mld_probe_resp_set_noa(struct iwl_mld *mld,

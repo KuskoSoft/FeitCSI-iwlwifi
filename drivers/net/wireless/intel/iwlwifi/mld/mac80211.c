@@ -599,14 +599,6 @@ int iwl_mld_mac80211_add_interface(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (vif->type != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_AP &&
-	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
-	    vif->type != NL80211_IFTYPE_MONITOR) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return 0;
-	}
-
 	/* Construct mld_vif, add it to fw, and map its ID to ieee80211_vif */
 	ret = iwl_mld_add_vif(mld, vif);
 	if (ret)
@@ -661,14 +653,6 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 
 	lockdep_assert_wiphy(mld->wiphy);
-
-	if (vif->type != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_AP &&
-	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
-	    vif->type != NL80211_IFTYPE_MONITOR) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return;
-	}
 
 	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
 		vif->driver_flags &= ~(IEEE80211_VIF_BEACON_FILTER |
@@ -1186,6 +1170,7 @@ iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 						       changes);
 		break;
 	case NL80211_IFTYPE_AP:
+	case NL80211_IFTYPE_ADHOC:
 		iwl_mld_link_info_changed_ap_ibss(mld, vif, link_conf,
 						  changes);
 		break;
@@ -1398,13 +1383,6 @@ iwl_mld_mac80211_conf_tx(struct ieee80211_hw *hw,
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *link;
 
-	if (vif->type != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_AP &&
-	    vif->type != NL80211_IFTYPE_P2P_DEVICE) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return 0;
-	}
-
 	lockdep_assert_wiphy(mld->wiphy);
 
 	link = iwl_mld_link_dereference_check(mld_vif, link_id);
@@ -1615,12 +1593,6 @@ static int iwl_mld_mac80211_sta_state(struct ieee80211_hw *hw,
 
 	IWL_DEBUG_MAC80211(mld, "station %pM state change %d->%d\n",
 			   sta->addr, old_state, new_state);
-
-	if (vif->type != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_AP) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET %s\n", __func__);
-		return -EINVAL;
-	}
 
 	mld_sta->sta_state = new_state;
 
@@ -2329,6 +2301,25 @@ static int iwl_mld_change_sta_links(struct ieee80211_hw *hw,
 	return iwl_mld_update_link_stas(mld, vif, sta, old_links, new_links);
 }
 
+static int iwl_mld_mac80211_join_ibss(struct ieee80211_hw *hw,
+				      struct ieee80211_vif *vif)
+{
+	return iwl_mld_start_ap_ibss(hw, vif, &vif->bss_conf);
+}
+
+static void iwl_mld_mac80211_leave_ibss(struct ieee80211_hw *hw,
+					struct ieee80211_vif *vif)
+{
+	return iwl_mld_stop_ap_ibss(hw, vif, &vif->bss_conf);
+}
+
+static int iwl_mld_mac80211_tx_last_beacon(struct ieee80211_hw *hw)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	return mld->ibss_manager;
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2392,4 +2383,7 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.link_sta_add_debugfs = iwl_mld_add_link_sta_debugfs,
 #endif
 	.mgd_protect_tdls_discover = iwl_mld_mac80211_mgd_protect_tdls_discover,
+	.join_ibss = iwl_mld_mac80211_join_ibss,
+	.leave_ibss = iwl_mld_mac80211_leave_ibss,
+	.tx_last_beacon = iwl_mld_mac80211_tx_last_beacon,
 };

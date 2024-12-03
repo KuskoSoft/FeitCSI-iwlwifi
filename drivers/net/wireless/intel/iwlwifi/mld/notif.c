@@ -282,6 +282,14 @@ iwl_mld_handle_channel_switch_error_notif(struct iwl_mld *mld,
 		ieee80211_channel_switch_disconnect(vif);
 }
 
+static void iwl_mld_handle_beacon_notification(struct iwl_mld *mld,
+					       struct iwl_rx_packet *pkt)
+{
+	struct iwl_extended_beacon_notif *beacon = (void *)pkt->data;
+
+	mld->ibss_manager = !!beacon->ibss_mgr_status;
+}
+
 CMD_VERSIONS(scan_complete_notif,
 	     CMD_VER_ENTRY(1, iwl_umac_scan_complete))
 CMD_VERSIONS(scan_iter_complete_notif,
@@ -324,6 +332,8 @@ CMD_VERSIONS(stats_oper_part1_notif,
 	     CMD_VER_ENTRY(4, iwl_system_statistics_part1_notif_oper))
 CMD_VERSIONS(rfi_support_notif,
 	     CMD_VER_ENTRY(1, iwl_rfi_support_notif))
+CMD_VERSIONS(beacon_notification,
+	     CMD_VER_ENTRY(6, iwl_extended_beacon_notif))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -390,6 +400,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(SYSTEM_GROUP, RFI_SUPPORT_NOTIF,
 			     rfi_support_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, BEACON_NOTIFICATION,
+			     beacon_notification, RX_HANDLER_ASYNC)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 

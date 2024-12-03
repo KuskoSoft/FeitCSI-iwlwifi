@@ -20,11 +20,6 @@ void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 	struct iwl_mld *mld = mld_vif->mld;
 	struct iwl_mld_link *link;
 
-	if (vif->type != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_AP &&
-	    vif->type != NL80211_IFTYPE_P2P_DEVICE)
-		return;
-
 	mld_vif->roc_activity = ROC_NUM_ACTIVITIES;
 
 	for_each_mld_vif_valid_link(mld_vif, link) {
@@ -299,6 +294,19 @@ static void iwl_mld_fill_mac_cmd_p2p_dev(struct iwl_mld *mld,
 		cmd->p2p_dev.is_disc_extended = cpu_to_le32(1);
 }
 
+static void iwl_mld_fill_mac_cmd_ibss(struct iwl_mld *mld,
+				      struct ieee80211_vif *vif,
+				      struct iwl_mac_config_cmd *cmd)
+{
+	lockdep_assert_wiphy(mld->wiphy);
+
+	WARN_ON(vif->type != NL80211_IFTYPE_ADHOC);
+
+	cmd->filter_flags |= cpu_to_le32(MAC_CFG_FILTER_ACCEPT_BEACON |
+					 MAC_CFG_FILTER_ACCEPT_PROBE_REQ |
+					 MAC_CFG_FILTER_ACCEPT_GRP);
+}
+
 static int
 iwl_mld_rm_mac_from_fw(struct iwl_mld *mld, struct ieee80211_vif *vif)
 {
@@ -342,6 +350,8 @@ int iwl_mld_mac_fw_action(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		iwl_mld_fill_mac_cmd_p2p_dev(mld, vif, &cmd);
 		break;
 	case NL80211_IFTYPE_ADHOC:
+		iwl_mld_fill_mac_cmd_ibss(mld, vif, &cmd);
+		break;
 	default:
 		WARN(1, "not supported yet\n");
 		return -EOPNOTSUPP;
@@ -378,14 +388,6 @@ int iwl_mld_add_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (vif->type != NL80211_IFTYPE_STATION &&
-	    vif->type != NL80211_IFTYPE_AP &&
-	    vif->type != NL80211_IFTYPE_P2P_DEVICE &&
-	    vif->type != NL80211_IFTYPE_MONITOR) {
-		IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n", __func__);
-		return 0;
-	}
-
 	ret = iwl_mld_init_vif(mld, vif);
 	if (ret)
 		return ret;
@@ -403,11 +405,6 @@ int iwl_mld_rm_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
-
-	WARN_ON(vif->type != NL80211_IFTYPE_STATION &&
-		vif->type != NL80211_IFTYPE_AP &&
-		vif->type != NL80211_IFTYPE_P2P_DEVICE &&
-		vif->type != NL80211_IFTYPE_MONITOR);
 
 	ret = iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_REMOVE);
 
