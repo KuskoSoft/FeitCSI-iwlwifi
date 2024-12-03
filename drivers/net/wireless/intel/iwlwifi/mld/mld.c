@@ -48,13 +48,6 @@ static void __exit iwl_mld_exit(void)
 }
 module_exit(iwl_mld_exit);
 
-static bool
-iwl_is_mld_op_mode_supported(struct iwl_trans *trans)
-{
-	/* TODO: Verify also by FW version */
-	return trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ;
-}
-
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 static void iwl_mld_debug_setup_random_nmi(struct iwl_mld *mld)
 {
@@ -362,9 +355,6 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	struct iwl_op_mode *op_mode;
 	struct iwl_mld *mld;
 	int ret;
-
-	if (WARN_ON(!iwl_is_mld_op_mode_supported(trans)))
-		return ERR_PTR(-EINVAL);
 
 	/* Allocate and initialize a new hardware device */
 	hw = ieee80211_alloc_hw(sizeof(struct iwl_op_mode) +

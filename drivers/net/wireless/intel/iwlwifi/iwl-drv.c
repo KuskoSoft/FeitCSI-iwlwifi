@@ -558,6 +558,7 @@ struct iwl_firmware_pieces {
 	size_t dbg_trigger_tlv_len[FW_DBG_TRIGGER_MAX];
 	struct iwl_fw_dbg_mem_seg_tlv *dbg_mem_tlv;
 	size_t n_mem_tlv;
+	u32 major;
 };
 
 static void alloc_sec_data(struct iwl_firmware_pieces *pieces,
@@ -1235,19 +1236,19 @@ fw_dbg_conf:
 			break;
 		case IWL_UCODE_TLV_FW_VERSION: {
 			const __le32 *ptr = (const void *)tlv_data;
-			u32 major, minor;
+			u32 minor;
 			u8 local_comp;
 
 			if (tlv_len != sizeof(u32) * 3)
 				goto invalid_tlv_len;
 
-			major = le32_to_cpup(ptr++);
+			pieces->major = le32_to_cpup(ptr++);
 			minor = le32_to_cpup(ptr++);
 			local_comp = le32_to_cpup(ptr);
 
 			snprintf(drv->fw.fw_version,
 				 sizeof(drv->fw.fw_version),
-				 "%u.%08x.%u %s", major, minor,
+				 "%u.%08x.%u %s", pieces->major, minor,
 				 local_comp, iwl_reduced_fw_name(drv));
 			break;
 			}
@@ -1761,6 +1762,8 @@ static void _iwl_op_mode_stop(struct iwl_drv *drv)
 	}
 }
 
+#define IWL_MLD_SUPPORTED_FW_VERSION 97
+
 /*
  * iwl_req_fw_callback - callback when firmware was loaded
  *
@@ -2038,9 +2041,18 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 		op = &iwlwifi_opmode_table[MVM_OP_MODE];
 		break;
 	}
+
 #if IS_ENABLED(CPTCFG_IWLMLD)
-	if (iwlwifi_mod_params.mld_op_mode && drv->fw.type == IWL_FW_MVM)
+	if (pieces->major >= IWL_MLD_SUPPORTED_FW_VERSION)
 		op = &iwlwifi_opmode_table[MLD_OP_MODE];
+	else
+#else
+	if (pieces->major >= IWL_MLD_SUPPORTED_FW_VERSION) {
+		IWL_ERR(drv,
+			"IWLMLD needs to be compiled to support this firmware\n");
+		mutex_unlock(&iwlwifi_opmode_table_mtx);
+		goto out_unbind;
+	}
 #endif
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
@@ -2433,10 +2445,3 @@ MODULE_PARM_DESC(disable_msix, "Disable MSI-X and use MSI instead (default: fals
 module_param_named(disable_11be, iwlwifi_mod_params.disable_11be, bool, 0444);
 MODULE_PARM_DESC(disable_11be, "Disable EHT capabilities (default: false)");
 
-#if IS_ENABLED(CPTCFG_IWLMLD)
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-module_param_named(mld_op_mode, iwlwifi_mod_params.mld_op_mode,
-		   bool, 0444);
-MODULE_PARM_DESC(mld_op_mode, "Load iwlwifi using the MLD operation mode (default: false)");
-#endif
-#endif
