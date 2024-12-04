@@ -1193,7 +1193,7 @@ static inline void iwl_trans_schedule_reset(struct iwl_trans *trans,
 	 */
 	trans->restart.during_reset = test_bit(STATUS_IN_SW_RESET,
 					       &trans->status);
-	schedule_work(&trans->restart.wk);
+	queue_work(system_unbound_wq, &trans->restart.wk);
 }
 
 static inline void iwl_trans_fw_error(struct iwl_trans *trans,
