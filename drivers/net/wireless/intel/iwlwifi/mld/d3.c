@@ -1837,7 +1837,7 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 	/* We can't have several links upon wowlan entry,
 	 * this is enforced in the suspend flow.
 	 */
-	WARN_ON(__ffs(bss_vif->active_links) > 1);
+	WARN_ON(hweight16(bss_vif->active_links) > 1);
 	link_id = bss_vif->active_links ? __ffs(bss_vif->active_links) : 0;
 	link_conf = link_conf_dereference_protected(bss_vif, link_id);
 
