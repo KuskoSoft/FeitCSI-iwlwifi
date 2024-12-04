@@ -506,7 +506,7 @@ iwl_mld_set_wake_packet(struct iwl_mld *mld,
 			struct ieee80211_vif *vif,
 			const struct iwl_mld_wowlan_status *wowlan_status,
 			struct cfg80211_wowlan_wakeup *wakeup,
-			struct sk_buff *pkt)
+			struct sk_buff **_pkt)
 {
 	int pkt_bufsize = wowlan_status->wake_packet_bufsize;
 	int expected_pktlen = wowlan_status->wake_packet_length;
@@ -518,7 +518,8 @@ iwl_mld_set_wake_packet(struct iwl_mld *mld,
 		int hdrlen = ieee80211_hdrlen(hdr->frame_control);
 		int ivlen = 0, icvlen = 4; /* also FCS */
 
-		pkt = alloc_skb(pkt_bufsize, GFP_KERNEL);
+		struct sk_buff *pkt = alloc_skb(pkt_bufsize, GFP_KERNEL);
+		*_pkt = pkt;
 		if (!pkt)
 			return;
 
@@ -631,7 +632,7 @@ iwl_mld_report_wowlan_wakeup(struct iwl_mld *mld,
 		wakeup.unprot_deauth_disassoc = true;
 
 	if (wowlan_status->wake_packet)
-		iwl_mld_set_wake_packet(mld, vif, wowlan_status, &wakeup, pkt);
+		iwl_mld_set_wake_packet(mld, vif, wowlan_status, &wakeup, &pkt);
 
 	ieee80211_report_wowlan_wakeup(vif, &wakeup, GFP_KERNEL);
 	kfree_skb(pkt);
