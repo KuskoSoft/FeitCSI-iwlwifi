@@ -1632,7 +1632,7 @@ iwl_mld_send_proto_offload(struct iwl_mld *mld,
 			   struct ieee80211_vif *vif,
 			   u8 ap_sta_id)
 {
-	struct iwl_proto_offload_cmd_v4 *cmd;
+	struct iwl_proto_offload_cmd_v4 *cmd __free(kfree);
 	struct iwl_host_cmd hcmd = {
 		.id = PROT_OFFLOAD_CONFIG_CMD,
 		.dataflags[0] = IWL_HCMD_DFL_NOCOPY,
@@ -1892,7 +1892,7 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 	if (!mld->netdetect && !keep_connection)
 		ieee80211_resume_disconnect(bss_vif);
 
-	return ret;
+	goto out;
 
  err:
 	if (fw_err) {
@@ -1900,11 +1900,13 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 		set_bit(STATUS_FW_ERROR, &mld->trans->status);
 	}
 
+	mld->fw_status.in_hw_restart = true;
+	ret = 1;
+ out:
 	if (resume_data.wowlan_status) {
 		kfree(resume_data.wowlan_status->wake_packet);
 		kfree(resume_data.wowlan_status);
 	}
 
-	mld->fw_status.in_hw_restart = true;
-	return 1;
+	return ret;
 }
