@@ -154,8 +154,27 @@ iwl_mld_cleanup_sta(void *data, struct ieee80211_sta *sta)
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		CLEANUP_STRUCT(iwl_mld_txq_from_mac80211(sta->txq[i]));
 
-	for_each_mld_link_sta(mld_sta, mld_link_sta)
+	for_each_mld_link_sta(mld_sta, mld_link_sta) {
 		CLEANUP_STRUCT(mld_link_sta);
+
+		if (!ieee80211_vif_is_mld(mld_sta->vif)) {
+			/* not an MLD STA; only has the deflink with ID zero */
+			WARN_ON(link_id);
+			continue;
+		}
+
+		if (mld_sta->vif->active_links & BIT(link_id))
+			continue;
+
+		/* Should not happen as link removal should always succeed */
+		WARN_ON(1);
+		RCU_INIT_POINTER(mld_sta->link[link_id], NULL);
+		RCU_INIT_POINTER(
+			mld_sta->mld->fw_id_to_link_sta[mld_link_sta->fw_id],
+			NULL);
+		if (mld_link_sta != &mld_sta->deflink)
+			kfree_rcu(mld_link_sta, rcu_head);
+	}
 
 	CLEANUP_STRUCT(mld_sta);
 }
