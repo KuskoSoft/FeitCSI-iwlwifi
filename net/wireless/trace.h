@@ -4179,7 +4179,7 @@ TRACE_EVENT(rdev_assoc_ml_reconf,
 		  __entry->add_links, __entry->rem_links)
 );
 
-TRACE_EVENT(cfg80211_epcs_change,
+TRACE_EVENT(cfg80211_epcs_changed,
 	TP_PROTO(struct wireless_dev *wdev, bool enabled),
 	TP_ARGS(wdev, enabled),
 	TP_STRUCT__entry(

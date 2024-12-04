@@ -9718,11 +9718,11 @@ void cfg80211_mlo_reconf_add_done(struct net_device *dev,
 void cfg80211_schedule_channels_check(struct wireless_dev *wdev);
 
 /**
- * cfg80211_epcs_change - Notify about a change in EPCS state
+ * cfg80211_epcs_changed - Notify about a change in EPCS state
  * @wdev: the wireless device whose EPCS state changed
  * @enabled: set to true if EPCS was enabled, otherwise set to false.
  */
-void cfg80211_epcs_change(struct net_device *netdev, bool enabled);
+void cfg80211_epcs_changed(struct net_device *netdev, bool enabled);
 
 #ifdef CPTCFG_CFG80211_DEBUGFS
 /**

@@ -20604,7 +20604,7 @@ void cfg80211_schedule_channels_check(struct wireless_dev *wdev)
 }
 EXPORT_SYMBOL(cfg80211_schedule_channels_check);
 
-void cfg80211_epcs_change(struct net_device *netdev, bool enabled)
+void cfg80211_epcs_changed(struct net_device *netdev, bool enabled)
 {
 	struct wireless_dev *wdev = netdev->ieee80211_ptr;
 	struct wiphy *wiphy = wdev->wiphy;
@@ -20612,7 +20612,7 @@ void cfg80211_epcs_change(struct net_device *netdev, bool enabled)
 	struct sk_buff *msg;
 	void *hdr;
 
-	trace_cfg80211_epcs_change(wdev, enabled);
+	trace_cfg80211_epcs_changed(wdev, enabled);
 
 	msg = nlmsg_new(NLMSG_DEFAULT_SIZE, GFP_KERNEL);
 	if (!msg)
@@ -20635,7 +20635,7 @@ void cfg80211_epcs_change(struct net_device *netdev, bool enabled)
  nla_put_failure:
 	nlmsg_free(msg);
 }
-EXPORT_SYMBOL(cfg80211_epcs_change);
+EXPORT_SYMBOL(cfg80211_epcs_changed);
 
 /* initialisation/exit functions */
 
