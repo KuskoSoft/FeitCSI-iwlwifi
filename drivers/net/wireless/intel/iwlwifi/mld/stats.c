@@ -263,7 +263,7 @@ iwl_mld_proccess_per_sta_stats(struct iwl_mld *mld,
 
 		link_sta = wiphy_dereference(mld->wiphy,
 					     mld->fw_id_to_link_sta[fw_id]);
-		if (!link_sta)
+		if (IS_ERR_OR_NULL(link_sta))
 			continue;
 
 		mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
