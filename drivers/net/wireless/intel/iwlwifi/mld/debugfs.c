@@ -91,6 +91,15 @@ static ssize_t iwl_dbgfs_fw_restart_write(struct iwl_mld *mld, char *buf,
 	return count;
 }
 
+static ssize_t iwl_dbgfs_send_echo_cmd_write(struct iwl_mld *mld, char *buf,
+					     size_t count)
+{
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	return iwl_mld_send_cmd_empty(mld, ECHO_CMD) ?: count;
+}
+
 struct iwl_mld_sniffer_apply {
 	struct iwl_mld *mld;
 	const u8 *bssid;
@@ -181,6 +190,7 @@ WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_nmi, 10);
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_restart, 10);
 WIPHY_DEBUGFS_READ_WRITE_FILE_OPS_MLD(he_sniffer_params, 32);
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(fw_dbg_clear, 10);
+WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(send_echo_cmd, 8);
 
 static ssize_t iwl_dbgfs_wifi_6e_enable_read(struct iwl_mld *mld,
 					     size_t count, u8 *buf)
@@ -248,6 +258,7 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	MLD_DEBUGFS_ADD_FILE(wifi_6e_enable, debugfs_dir, 0400);
 	MLD_DEBUGFS_ADD_FILE(he_sniffer_params, debugfs_dir, 0600);
 	MLD_DEBUGFS_ADD_FILE(fw_dbg_clear, debugfs_dir, 0200);
+	MLD_DEBUGFS_ADD_FILE(send_echo_cmd, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(inject_packet, debugfs_dir, 0200);
 
 	/* Create a symlink with mac80211. It will be removed when mac80211
