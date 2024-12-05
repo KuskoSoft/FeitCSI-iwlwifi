@@ -1052,7 +1052,8 @@ iwl_mld_link_info_changed_ap_ibss(struct iwl_mld *mld,
 }
 
 static
-u32 iwl_mld_link_changed_mapping(struct ieee80211_vif *vif,
+u32 iwl_mld_link_changed_mapping(struct iwl_mld *mld,
+				 struct ieee80211_vif *vif,
 				 struct ieee80211_bss_conf *link_conf,
 				 u64 changes)
 {
@@ -1076,8 +1077,10 @@ u32 iwl_mld_link_changed_mapping(struct ieee80211_vif *vif,
 	has_he = link_conf->he_support && !iwlwifi_mod_params.disable_11ax;
 	has_eht = link_conf->eht_support && !iwlwifi_mod_params.disable_11be;
 
-	if (vif->cfg.assoc && (has_he || has_eht))
+	if (vif->cfg.assoc && (has_he || has_eht)) {
+		IWL_DEBUG_MAC80211(mld, "Associated in HE mode\n");
 		link_changes |= LINK_CONTEXT_MODIFY_HE_PARAMS;
+	}
 
 	return link_changes;
 }
@@ -1088,7 +1091,7 @@ iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
 				       struct ieee80211_bss_conf *link_conf,
 				       u64 changes)
 {
-	u32 link_changes = iwl_mld_link_changed_mapping(vif, link_conf,
+	u32 link_changes = iwl_mld_link_changed_mapping(mld, vif, link_conf,
 							changes);
 
 	if (link_changes)
