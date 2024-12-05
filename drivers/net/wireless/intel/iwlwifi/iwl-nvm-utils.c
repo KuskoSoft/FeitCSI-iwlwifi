@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2005-2014, 2018-2021, 2023 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2021, 2023-2024 Intel Corporation
  * Copyright (C) 2015 Intel Mobile Communications GmbH
  */
 #include <linux/types.h>
@@ -98,7 +98,7 @@ void iwl_init_ht_hw_capab(struct iwl_trans *trans,
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	if (cfg->ht_params->ht40_bands & BIT(band) &&
-	    !trans->dbg_cfg.disable_ht40) {
+	    !(trans->dbg_cfg.disable_ht40 & BIT(band))) {
 #else
 	if (cfg->ht_params->ht40_bands & BIT(band)) {
 #endif

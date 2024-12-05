@@ -290,7 +290,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG_NODEF(u8, he_chan_width_dis)
 	IWL_DBG_CFG_NODEF(u32, vht_cap_flip)
 	IWL_DBG_CFG_NODEF(u32, mu_edca)
-	IWL_DBG_CFG_NODEF(bool, disable_ht40)
+	IWL_DBG_CFG_NODEF(u32, disable_ht40)
 	IWL_DBG_CFG_BIN(he_mac_cap)
 	IWL_DBG_CFG_BIN(he_phy_cap)
 	IWL_DBG_CFG_BIN(eht_ppe_thres)
