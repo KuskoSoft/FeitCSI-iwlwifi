@@ -7,6 +7,8 @@
 #include "stats.h"
 #include "sta.h"
 #include "hcmd.h"
+#include "iface.h"
+#include "scan.h"
 #include "fw/api/stats.h"
 
 static int iwl_mld_send_fw_stats_cmd(struct iwl_mld *mld, u32 cfg_mask,
@@ -275,17 +277,91 @@ iwl_mld_proccess_per_sta_stats(struct iwl_mld *mld,
 	}
 }
 
+#define IWL_MLD_TRAFFIC_LOAD_MEDIUM_THRESH	10 /* percentage */
+#define IWL_MLD_TRAFFIC_LOAD_HIGH_THRESH	50 /* percentage */
+#define IWL_MLD_TRAFFIC_LOAD_MIN_WINDOW_USEC	(500 * 1000)
+
+static u8 iwl_mld_stats_load_percentage(u32 last_ts_usec, u32 curr_ts_usec,
+					u32 total_airtime_usec)
+{
+	u32 elapsed_usec = curr_ts_usec - last_ts_usec;
+
+	if (elapsed_usec < IWL_MLD_TRAFFIC_LOAD_MIN_WINDOW_USEC)
+		return 0;
+
+	return (100 * total_airtime_usec / elapsed_usec);
+}
+
+static void iwl_mld_stats_recalc_traffic_load(struct iwl_mld *mld,
+					      u32 total_airtime_usec,
+					      u32 curr_ts_usec)
+{
+	u32 last_ts_usec = mld->scan.traffic_load.last_stats_ts_usec;
+	u8 load_prec;
+
+	/* Skip the calculation as this is the first notification received */
+	if (!last_ts_usec)
+		goto out;
+
+	load_prec = iwl_mld_stats_load_percentage(last_ts_usec, curr_ts_usec,
+						  total_airtime_usec);
+
+	if (load_prec > IWL_MLD_TRAFFIC_LOAD_HIGH_THRESH)
+		mld->scan.traffic_load.status = IWL_MLD_TRAFFIC_HIGH;
+	else if (load_prec > IWL_MLD_TRAFFIC_LOAD_MEDIUM_THRESH)
+		mld->scan.traffic_load.status = IWL_MLD_TRAFFIC_MEDIUM;
+	else
+		mld->scan.traffic_load.status = IWL_MLD_TRAFFIC_LOW;
+
+out:
+	mld->scan.traffic_load.last_stats_ts_usec = curr_ts_usec;
+}
+
+static void
+iwl_mld_process_per_link_stats(struct iwl_mld *mld,
+			       const struct iwl_stats_ntfy_per_link *per_link,
+			       u32 curr_ts_usec)
+{
+	u32 total_airtime_usec = 0;
+
+	for (u32 fw_id = 0;
+	     fw_id < ARRAY_SIZE(mld->fw_id_to_bss_conf);
+	     fw_id++) {
+		const struct iwl_stats_ntfy_per_link *link_stats;
+		struct ieee80211_bss_conf *bss_conf;
+
+		bss_conf = wiphy_dereference(mld->wiphy,
+					     mld->fw_id_to_bss_conf[fw_id]);
+		if (!bss_conf || bss_conf->vif->type != NL80211_IFTYPE_STATION)
+			continue;
+
+		link_stats = &per_link[fw_id];
+
+		total_airtime_usec += le32_to_cpu(link_stats->air_time);
+
+		/* TODO: parse more fields here (task=statistics)*/
+	}
+
+	iwl_mld_stats_recalc_traffic_load(mld, total_airtime_usec,
+					  curr_ts_usec);
+}
+
 void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 				     struct iwl_rx_packet *pkt)
 {
 	const struct iwl_system_statistics_notif_oper *stats =
 		(void *)&pkt->data;
+	u32 curr_ts_usec = le32_to_cpu(stats->time_stamp);
 
 	BUILD_BUG_ON(ARRAY_SIZE(stats->per_sta) < IWL_STATION_COUNT_MAX);
+	BUILD_BUG_ON(ARRAY_SIZE(stats->per_link) <
+		     ARRAY_SIZE(mld->fw_id_to_bss_conf));
 
 	iwl_mld_proccess_per_sta_stats(mld, stats->per_sta);
 
-	/* TODO: per_link, per_phy stats (task=statistics) */
+	iwl_mld_process_per_link_stats(mld, stats->per_link, curr_ts_usec);
+
+	/* TODO: per_phy stats (task=statistics) */
 }
 
 void iwl_mld_handle_stats_oper_part1_notif(struct iwl_mld *mld,

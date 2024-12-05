@@ -89,6 +89,19 @@ enum iwl_mld_pass_all_sched_results_states {
 };
 
 /**
+ * enum iwl_mld_traffic_load - Levels of traffic load
+ *
+ * @IWL_MLD_TRAFFIC_LOW: low traffic load
+ * @IWL_MLD_TRAFFIC_MEDIUM: medium traffic load
+ * @IWL_MLD_TRAFFIC_HIGH: high traffic load
+ */
+enum iwl_mld_traffic_load {
+	IWL_MLD_TRAFFIC_LOW,
+	IWL_MLD_TRAFFIC_MEDIUM,
+	IWL_MLD_TRAFFIC_HIGH,
+};
+
+/**
  * struct iwl_mld_scan - Scan data
  * @status: scan status, a combination of %enum iwl_mld_scan_status,
  *	reflects the %scan.uid_status array.
@@ -99,6 +112,12 @@ enum iwl_mld_pass_all_sched_results_states {
  * @pass_all_sched_res: see %enum iwl_mld_pass_all_sched_results_states.
  * @fw_link_id: the current (regular) scan fw link id, used by scan
  *	complete notif.
+ * @traffic_load: traffic load related data
+ * @traffic_load.last_stats_ts_usec: The timestamp of the last statistics
+ *	notification, used to calculate the elapsed time between two
+ *	notifications and determine the traffic load
+ * @traffic_load.status: The current traffic load status, see
+ *	&enum iwl_mld_traffic_load
  * @cmd_size: size of %cmd.
  * @cmd: pointer to scan cmd buffer (allocated once in op mode start).
  * @last_6ghz_passive_jiffies: stores the last 6GHz passive scan time
@@ -115,6 +134,10 @@ struct iwl_mld_scan {
 		bool last_ebs_failed;
 		enum iwl_mld_pass_all_sched_results_states pass_all_sched_res;
 		u8 fw_link_id;
+		struct {
+			u32 last_stats_ts_usec;
+			enum iwl_mld_traffic_load status;
+		} traffic_load;
 	);
 	/* And here fields that survive a fw restart */
 	size_t cmd_size;
