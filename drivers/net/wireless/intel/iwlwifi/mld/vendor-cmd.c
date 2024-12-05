@@ -10,6 +10,8 @@
 #include "regulatory.h"
 #include "vendor-cmd.h"
 #include "iwl-vendor-cmd.h"
+#include "fw/api/rfi.h"
+#include "rfi.h"
 
 static const struct nla_policy
 iwl_mld_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
@@ -178,6 +180,76 @@ err:
 	return ret;
 }
 
+/* RFIM_INFO requires 4 bytes for nlattr.
+ * DDR table will have 4 entries and each entry contains, frequency which
+ * requires 2 bytes for it and 4 bytes for nlattr. channel, bands, chain_a and
+ * chain_b requires 15 bytes each of it and 4 bytes each nlattr, extra 18 bytes
+ * for future. So, response size is 4 + 4 * (2 + 4 + 4 * (15 + 4)) + 18 = 350
+ */
+
+#define RFI_GET_TABLE_RESP_SIZE		350
+static int iwl_mld_vendor_rfi_get_table(struct wiphy *wiphy,
+					struct wireless_dev *wdev,
+					const void *data, int data_len)
+{
+	const struct iwl_rfi_freq_table_resp_cmd *resp __free(kfree) = NULL;
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct sk_buff *skb = NULL;
+	struct nlattr *rfim_info;
+	int ret;
+
+	resp = iwl_mld_rfi_get_freq_table(mld);
+	if (IS_ERR(resp))
+		return PTR_ERR(resp);
+
+	if (resp->status != RFI_FREQ_TABLE_OK)
+		return -EINVAL;
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy,
+						  RFI_GET_TABLE_RESP_SIZE);
+	if (!skb)
+		return -ENOMEM;
+
+	rfim_info = nla_nest_start(skb, IWL_MVM_VENDOR_ATTR_RFIM_INFO |
+					NLA_F_NESTED);
+	if (!rfim_info) {
+		ret = -ENOBUFS;
+		goto err;
+	}
+
+	BUILD_BUG_ON(ARRAY_SIZE(resp->ddr_table) !=
+		     ARRAY_SIZE(resp->desense_table));
+
+	for (int i = 0; i < ARRAY_SIZE(resp->ddr_table); i++) {
+		if (nla_put_u16(skb, IWL_MVM_VENDOR_ATTR_RFIM_FREQ,
+				le16_to_cpu(resp->ddr_table[i].freq)) ||
+		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHANNELS,
+			    sizeof(resp->ddr_table[i].channels),
+			    resp->ddr_table[i].channels) ||
+		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_BANDS,
+			    sizeof(resp->ddr_table[i].bands),
+			    resp->ddr_table[i].bands) ||
+		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE,
+			    sizeof(resp->desense_table[i].chain_a),
+			    resp->desense_table[i].chain_a) ||
+		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE,
+			    sizeof(resp->desense_table[i].chain_b),
+			    resp->desense_table[i].chain_b)) {
+			ret = -ENOBUFS;
+			goto err;
+		}
+	}
+
+	nla_nest_end(skb, rfim_info);
+
+	return cfg80211_vendor_cmd_reply(skb);
+
+err:
+	kfree_skb(skb);
+	return ret;
+}
+
 static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 	{
 		.info = {
@@ -207,6 +279,17 @@ static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
 		.doit = iwl_mld_vendor_ppag_get_table,
+		.policy = iwl_mld_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_RFIM_GET_TABLE,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mld_vendor_rfi_get_table,
 		.policy = iwl_mld_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},
