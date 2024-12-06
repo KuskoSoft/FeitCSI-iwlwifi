@@ -586,6 +586,81 @@ iwl_dbgfs_vif_inject_beacon_ie_restore_write(struct iwl_mld *mld,
 
 VIF_DEBUGFS_WRITE_FILE_OPS(inject_beacon_ie_restore, 512);
 
+static ssize_t
+iwl_dbgfs_vif_twt_setup_write(struct iwl_mld *mld, char *buf, size_t count,
+			      void *data)
+{
+	struct iwl_host_cmd hcmd = {
+		.id = WIDE_ID(IWL_ALWAYS_LONG_GROUP, DEBUG_HOST_COMMAND),
+	};
+	struct ieee80211_vif *vif = data;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_dhc_twt_operation *dhc_twt_cmd;
+	struct iwl_dhc_cmd *cmd __free(kfree);
+	u64 target_wake_time;
+	u32 twt_operation, interval_exp, interval_mantissa, min_wake_duration;
+	u8 trigger, flow_type, flow_id, protection, tenth_param;
+	u8 twt_request = 1, broadcast = 0;
+	int ret;
+
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	ret = sscanf(buf, "%u %llu %u %u %u %hhu %hhu %hhu %hhu %hhu",
+		     &twt_operation, &target_wake_time, &interval_exp,
+		     &interval_mantissa, &min_wake_duration, &trigger,
+		     &flow_type, &flow_id, &protection, &tenth_param);
+
+	/* the new twt_request parameter is optional for station */
+	if ((ret != 9 && ret != 10) ||
+	    (ret == 10 && vif->type != NL80211_IFTYPE_STATION &&
+	     tenth_param == 1))
+		return -EINVAL;
+
+	/* The 10th parameter:
+	 * In STA mode - the TWT type (broadcast or individual)
+	 * In AP mode - the role (0 responder, 2 unsolicited)
+	 */
+	if (ret == 10) {
+		if (vif->type == NL80211_IFTYPE_STATION)
+			broadcast = tenth_param;
+		else
+			twt_request = tenth_param;
+	}
+
+	cmd = kzalloc(sizeof(*cmd) + sizeof(*dhc_twt_cmd), GFP_KERNEL);
+	if (!cmd)
+		return -ENOMEM;
+
+	dhc_twt_cmd = (void *)cmd->data;
+	dhc_twt_cmd->mac_id = cpu_to_le32(mld_vif->fw_id);
+	dhc_twt_cmd->twt_operation = cpu_to_le32(twt_operation);
+	dhc_twt_cmd->target_wake_time = cpu_to_le64(target_wake_time);
+	dhc_twt_cmd->interval_exp = cpu_to_le32(interval_exp);
+	dhc_twt_cmd->interval_mantissa = cpu_to_le32(interval_mantissa);
+	dhc_twt_cmd->min_wake_duration = cpu_to_le32(min_wake_duration);
+	dhc_twt_cmd->trigger = trigger;
+	dhc_twt_cmd->flow_type = flow_type;
+	dhc_twt_cmd->flow_id = flow_id;
+	dhc_twt_cmd->protection = protection;
+	dhc_twt_cmd->twt_request = twt_request;
+	dhc_twt_cmd->negotiation_type = broadcast ? 3 : 0;
+
+	cmd->length = cpu_to_le32(sizeof(*dhc_twt_cmd) >> 2);
+	cmd->index_and_mask =
+		cpu_to_le32(DHC_TABLE_INTEGRATION | DHC_TARGET_UMAC |
+			    DHC_INT_UMAC_TWT_OPERATION);
+
+	hcmd.len[0] = sizeof(*cmd) + sizeof(*dhc_twt_cmd);
+	hcmd.data[0] = cmd;
+
+	ret = iwl_mld_send_cmd(mld, &hcmd);
+
+	return ret ?: count;
+}
+
+VIF_DEBUGFS_WRITE_FILE_OPS(twt_setup, 256);
+
 void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 			     struct ieee80211_vif *vif)
 {
@@ -628,6 +703,7 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 
 	VIF_DEBUGFS_ADD_FILE(low_latency, mld_vif_dbgfs, 0600);
 
+	VIF_DEBUGFS_ADD_FILE(twt_setup, mld_vif_dbgfs, 0200);
 }
 
 #define LINK_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\
