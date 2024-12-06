@@ -10044,7 +10044,7 @@ ieee80211_build_ml_reconf_req(struct ieee80211_sub_if_data *sdata,
 
 	for (link_id = 0; link_id < IEEE80211_MLD_MAX_NUM_LINKS; link_id++) {
 		struct cfg80211_bss *cbss;
-		size_t elems_len = add_links_data->link[link_id].elems_len;
+		size_t elems_len;
 
 		if (removed_links & BIT(link_id)) {
 			size += sizeof(struct ieee80211_mle_per_sta_profile) +
@@ -10055,6 +10055,7 @@ ieee80211_build_ml_reconf_req(struct ieee80211_sub_if_data *sdata,
 		if (!add_links_data || !add_links_data->link[link_id].bss)
 			continue;
 
+		elems_len = add_links_data->link[link_id].elems_len;
 		cbss = add_links_data->link[link_id].bss;
 
 		/* should be the same across all BSSes */
