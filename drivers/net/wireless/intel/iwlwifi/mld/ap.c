@@ -165,6 +165,9 @@ int iwl_mld_update_beacon_template(struct iwl_mld *mld,
 	WARN_ON(vif->type != NL80211_IFTYPE_AP &&
 		vif->type != NL80211_IFTYPE_ADHOC);
 
+	if (IWL_MLD_NON_TRANSMITTING_AP)
+		return 0;
+
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	if (mld_vif->beacon_inject_active) {
 		IWL_DEBUG_INFO(mld,

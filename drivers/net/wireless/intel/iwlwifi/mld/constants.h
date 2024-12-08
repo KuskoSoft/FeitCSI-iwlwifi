@@ -37,9 +37,11 @@
 #ifndef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 #define IWL_MLD_DIS_RANDOM_FW_ID                false
 #define IWL_MLD_D3_DEBUG                        false
+#define IWL_MLD_NON_TRANSMITTING_AP	        false
 #else
 #define IWL_MLD_DIS_RANDOM_FW_ID	        (mld->trans->dbg_cfg.MLD_DIS_RANDOM_FW_ID)
 #define IWL_MLD_D3_DEBUG		        (((struct iwl_mld *)ctx)->trans->dbg_cfg.MLD_D3_DEBUG)
+#define IWL_MLD_NON_TRANSMITTING_AP	        (mld->trans->dbg_cfg.MLD_NON_TRANSMITTING_AP)
 #endif
 
 #endif /* __iwl_mld_constants_h__ */
