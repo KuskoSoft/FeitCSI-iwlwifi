@@ -136,14 +136,13 @@ static void iwl_mld_scan_respect_p2p_go_iter(void *_data, u8 *mac,
 }
 
 static bool iwl_mld_get_respect_p2p_go(struct iwl_mld *mld,
-				       struct ieee80211_vif *vif)
+				       struct ieee80211_vif *vif,
+				       bool low_latency)
 {
 	struct iwl_mld_scan_respect_p2p_go_iter_data data = {
 		.current_vif = vif,
 		.p2p_go = false,
 	};
-	/* TODO task=low_latency iwl_mld_low_latency */
-	bool low_latency = false;
 
 	if (!low_latency)
 		return false;
@@ -1449,7 +1448,9 @@ _iwl_mld_single_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	ether_addr_copy(params.bssid, req->bssid);
 	/* TODO: CDB - per-band flag */
-	params.respect_p2p_go = iwl_mld_get_respect_p2p_go(mld, vif);
+	params.respect_p2p_go =
+		iwl_mld_get_respect_p2p_go(mld, vif,
+					   scan_iter_data.global_low_latency);
 
 	if (req->duration)
 		params.iter_notif = true;
@@ -1642,7 +1643,9 @@ int iwl_mld_sched_scan_start(struct iwl_mld *mld,
 	params.n_scan_plans = req->n_scan_plans;
 	params.scan_plans = req->scan_plans;
 	/* TODO: CDB - per-band flag */
-	params.respect_p2p_go = iwl_mld_get_respect_p2p_go(mld, vif);
+	params.respect_p2p_go =
+		iwl_mld_get_respect_p2p_go(mld, vif,
+					   scan_iter_data.global_low_latency);
 
 	/* UMAC scan supports up to 16-bit delays, trim it down to 16-bits */
 	params.delay = req->delay > U16_MAX ? U16_MAX : req->delay;
