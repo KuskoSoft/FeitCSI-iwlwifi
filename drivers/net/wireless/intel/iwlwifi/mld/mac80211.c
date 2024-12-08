@@ -1697,8 +1697,6 @@ static bool iwl_mld_mac80211_can_aggregate(struct ieee80211_hw *hw,
 					   struct sk_buff *head,
 					   struct sk_buff *skb)
 {
-	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
-
 	if (!IS_ENABLED(CONFIG_INET))
 		return false;
 
@@ -1706,6 +1704,8 @@ static bool iwl_mld_mac80211_can_aggregate(struct ieee80211_hw *hw,
 	if (skb->protocol != htons(ETH_P_IP))
 		return false;
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
 	if (mld->trans->dbg_cfg.HW_CSUM_DISABLE)
 		return false;
 #endif
