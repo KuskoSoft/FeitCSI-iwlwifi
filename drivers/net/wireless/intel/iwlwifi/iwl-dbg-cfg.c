@@ -20,6 +20,9 @@
 #if IS_ENABLED(CPTCFG_IWLMVM)
 #include "mvm/constants.h"
 #endif
+#if IS_ENABLED(CPTCFG_IWLMLD)
+#include "mld/constants.h"
+#endif
 
 const struct iwl_dbg_cfg default_dbg_config = {
 #define DBG_CFG_REINCLUDE

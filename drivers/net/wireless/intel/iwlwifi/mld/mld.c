@@ -122,9 +122,15 @@ iwl_mld_fwrt_dump_end(void *ctx)
 	wiphy_unlock(mld->wiphy);
 }
 
+static bool iwl_mld_d3_debug_enable(void *ctx)
+{
+	return IWL_MLD_D3_DEBUG;
+}
+
 static const struct iwl_fw_runtime_ops iwl_mld_fwrt_ops = {
 	.dump_start = iwl_mld_fwrt_dump_start,
 	.dump_end = iwl_mld_fwrt_dump_end,
+	.d3_debug_enable = iwl_mld_d3_debug_enable,
 };
 
 static void
