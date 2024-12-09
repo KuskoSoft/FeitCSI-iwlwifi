@@ -108,10 +108,250 @@ static u8 iwl_mld_get_uapsd_acs(struct ieee80211_sta *sta)
 	return uapsd_acs | uapsd_acs << 4;
 }
 
-static void iwl_mld_fill_pkt_ext(struct ieee80211_link_sta *link_sta,
+static u8 iwl_mld_he_get_ppe_val(u8 *ppe, u8 ppe_pos_bit)
+{
+	u8 byte_num = ppe_pos_bit / 8;
+	u8 bit_num = ppe_pos_bit % 8;
+	u8 residue_bits;
+	u8 res;
+
+	if (bit_num <= 5)
+		return (ppe[byte_num] >> bit_num) &
+		       (BIT(IEEE80211_PPE_THRES_INFO_PPET_SIZE) - 1);
+
+	/* If bit_num > 5, we have to combine bits with next byte.
+	 * Calculate how many bits we need to take from current byte (called
+	 * here "residue_bits"), and add them to bits from next byte.
+	 */
+
+	residue_bits = 8 - bit_num;
+
+	res = (ppe[byte_num + 1] &
+	       (BIT(IEEE80211_PPE_THRES_INFO_PPET_SIZE - residue_bits) - 1)) <<
+	      residue_bits;
+	res += (ppe[byte_num] >> bit_num) & (BIT(residue_bits) - 1);
+
+	return res;
+}
+
+static void iwl_mld_parse_ppe(struct iwl_mld *mld,
+			      struct iwl_he_pkt_ext_v2 *pkt_ext, u8 nss,
+			      u8 ru_index_bitmap, u8 *ppe, u8 ppe_pos_bit,
+			      bool inheritance)
+{
+	/* FW currently supports only nss == MAX_HE_SUPP_NSS
+	 *
+	 * If nss > MAX: we can ignore values we don't support
+	 * If nss < MAX: we can set zeros in other streams
+	 */
+	if (nss > MAX_HE_SUPP_NSS) {
+		IWL_DEBUG_INFO(mld, "Got NSS = %d - trimming to %d\n", nss,
+			       MAX_HE_SUPP_NSS);
+		nss = MAX_HE_SUPP_NSS;
+	}
+
+	for (int i = 0; i < nss; i++) {
+		u8 ru_index_tmp = ru_index_bitmap << 1;
+		u8 low_th = IWL_HE_PKT_EXT_NONE, high_th = IWL_HE_PKT_EXT_NONE;
+
+		for (u8 bw = 0;
+		     bw < ARRAY_SIZE(pkt_ext->pkt_ext_qam_th[i]);
+		     bw++) {
+			ru_index_tmp >>= 1;
+
+			/* According to the 11be spec, if for a specific BW the PPE Thresholds
+			 * isn't present - it should inherit the thresholds from the last
+			 * BW for which we had PPE Thresholds. In 11ax though, we don't have
+			 * this inheritance - continue in this case
+			 */
+			if (!(ru_index_tmp & 1)) {
+				if (inheritance)
+					goto set_thresholds;
+				else
+					continue;
+			}
+
+			high_th = iwl_mld_he_get_ppe_val(ppe, ppe_pos_bit);
+			ppe_pos_bit += IEEE80211_PPE_THRES_INFO_PPET_SIZE;
+			low_th = iwl_mld_he_get_ppe_val(ppe, ppe_pos_bit);
+			ppe_pos_bit += IEEE80211_PPE_THRES_INFO_PPET_SIZE;
+
+set_thresholds:
+			pkt_ext->pkt_ext_qam_th[i][bw][0] = low_th;
+			pkt_ext->pkt_ext_qam_th[i][bw][1] = high_th;
+		}
+	}
+}
+
+static void iwl_mld_set_pkt_ext_from_he_ppe(struct iwl_mld *mld,
+					    struct ieee80211_link_sta *link_sta,
+					    struct iwl_he_pkt_ext_v2 *pkt_ext,
+					    bool inheritance)
+{
+	u8 nss = (link_sta->he_cap.ppe_thres[0] &
+		  IEEE80211_PPE_THRES_NSS_MASK) + 1;
+	u8 *ppe = &link_sta->he_cap.ppe_thres[0];
+	u8 ru_index_bitmap =
+		u8_get_bits(*ppe,
+			    IEEE80211_PPE_THRES_RU_INDEX_BITMASK_MASK);
+	/* Starting after PPE header */
+	u8 ppe_pos_bit = IEEE80211_HE_PPE_THRES_INFO_HEADER_SIZE;
+
+	iwl_mld_parse_ppe(mld, pkt_ext, nss, ru_index_bitmap, ppe, ppe_pos_bit,
+			  inheritance);
+}
+
+static int
+iwl_mld_set_pkt_ext_from_nominal_padding(struct iwl_he_pkt_ext_v2 *pkt_ext,
+					 u8 nominal_padding)
+{
+	int low_th = -1;
+	int high_th = -1;
+
+	/* all the macros are the same for EHT and HE */
+	switch (nominal_padding) {
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_0US:
+		low_th = IWL_HE_PKT_EXT_NONE;
+		high_th = IWL_HE_PKT_EXT_NONE;
+		break;
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_8US:
+		low_th = IWL_HE_PKT_EXT_BPSK;
+		high_th = IWL_HE_PKT_EXT_NONE;
+		break;
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_16US:
+	case IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_20US:
+		low_th = IWL_HE_PKT_EXT_NONE;
+		high_th = IWL_HE_PKT_EXT_BPSK;
+		break;
+	}
+
+	if (low_th < 0 || high_th < 0)
+		return -EINVAL;
+
+	/* Set the PPE thresholds accordingly */
+	for (int i = 0; i < MAX_HE_SUPP_NSS; i++) {
+		for (u8 bw = 0;
+			bw < ARRAY_SIZE(pkt_ext->pkt_ext_qam_th[i]);
+			bw++) {
+			pkt_ext->pkt_ext_qam_th[i][bw][0] = low_th;
+			pkt_ext->pkt_ext_qam_th[i][bw][1] = high_th;
+		}
+	}
+
+	return 0;
+}
+
+static void iwl_mld_get_optimal_ppe_info(struct iwl_he_pkt_ext_v2 *pkt_ext,
+					 u8 nominal_padding)
+{
+	for (int i = 0; i < MAX_HE_SUPP_NSS; i++) {
+		for (u8 bw = 0; bw < ARRAY_SIZE(pkt_ext->pkt_ext_qam_th[i]);
+		     bw++) {
+			u8 *qam_th = &pkt_ext->pkt_ext_qam_th[i][bw][0];
+
+			if (nominal_padding >
+			    IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_8US &&
+			    qam_th[1] == IWL_HE_PKT_EXT_NONE)
+				qam_th[1] = IWL_HE_PKT_EXT_4096QAM;
+			else if (nominal_padding ==
+				 IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_8US &&
+				 qam_th[0] == IWL_HE_PKT_EXT_NONE &&
+				 qam_th[1] == IWL_HE_PKT_EXT_NONE)
+				qam_th[0] = IWL_HE_PKT_EXT_4096QAM;
+		}
+	}
+}
+
+static void iwl_mld_fill_pkt_ext(struct iwl_mld *mld,
+				 struct ieee80211_link_sta *link_sta,
 				 struct iwl_he_pkt_ext_v2 *pkt_ext)
 {
-	/* TODO (task=EHT connection)*/
+	if (WARN_ON(!link_sta))
+		return;
+
+	/* Initialize the PPE thresholds to "None" (7), as described in Table
+	 * 9-262ac of 80211.ax/D3.0.
+	 */
+	memset(pkt_ext, IWL_HE_PKT_EXT_NONE, sizeof(pkt_ext));
+
+	if (link_sta->eht_cap.has_eht) {
+		u8 nominal_padding =
+			u8_get_bits(link_sta->eht_cap.eht_cap_elem.phy_cap_info[5],
+				    IEEE80211_EHT_PHY_CAP5_COMMON_NOMINAL_PKT_PAD_MASK);
+
+		/* If PPE Thresholds exists, parse them into a FW-familiar
+		 * format.
+		 */
+		if (link_sta->eht_cap.eht_cap_elem.phy_cap_info[5] &
+		    IEEE80211_EHT_PHY_CAP5_PPE_THRESHOLD_PRESENT) {
+			u8 nss = (link_sta->eht_cap.eht_ppe_thres[0] &
+				IEEE80211_EHT_PPE_THRES_NSS_MASK) + 1;
+			u8 *ppe = &link_sta->eht_cap.eht_ppe_thres[0];
+			u8 ru_index_bitmap =
+				u16_get_bits(*ppe,
+					     IEEE80211_EHT_PPE_THRES_RU_INDEX_BITMASK_MASK);
+			 /* Starting after PPE header */
+			u8 ppe_pos_bit = IEEE80211_EHT_PPE_THRES_INFO_HEADER_SIZE;
+
+			iwl_mld_parse_ppe(mld, pkt_ext, nss, ru_index_bitmap,
+					  ppe, ppe_pos_bit, true);
+		/* EHT PPE Thresholds doesn't exist - set the API according to
+		 * HE PPE Tresholds
+		 */
+		} else if (link_sta->he_cap.he_cap_elem.phy_cap_info[6] &
+			   IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) {
+			/* Even though HE Capabilities IE doesn't contain PPE
+			 * Thresholds for BW 320Mhz, thresholds for this BW will
+			 * be filled in with the same values as 160Mhz, due to
+			 * the inheritance, as required.
+			 */
+			iwl_mld_set_pkt_ext_from_he_ppe(mld, link_sta, pkt_ext,
+							true);
+
+			/* According to the requirements, for MCSs 12-13 the
+			 * maximum value between HE PPE Threshold and Common
+			 * Nominal Packet Padding needs to be taken
+			 */
+			iwl_mld_get_optimal_ppe_info(pkt_ext, nominal_padding);
+
+		/* if PPE Thresholds doesn't present in both EHT IE and HE IE -
+		 * take the Thresholds from Common Nominal Packet Padding field
+		 */
+		} else {
+			iwl_mld_set_pkt_ext_from_nominal_padding(pkt_ext,
+								 nominal_padding);
+		}
+	} else if (link_sta->he_cap.has_he) {
+		/* If PPE Thresholds exist, parse them into a FW-familiar format. */
+		if (link_sta->he_cap.he_cap_elem.phy_cap_info[6] &
+			IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) {
+			iwl_mld_set_pkt_ext_from_he_ppe(mld, link_sta, pkt_ext,
+							false);
+		/* PPE Thresholds doesn't exist - set the API PPE values
+		 * according to Common Nominal Packet Padding field.
+		 */
+		} else {
+			u8 nominal_padding =
+				u8_get_bits(link_sta->he_cap.he_cap_elem.phy_cap_info[9],
+					    IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_MASK);
+			if (nominal_padding != IEEE80211_HE_PHY_CAP9_NOMINAL_PKT_PADDING_RESERVED)
+				iwl_mld_set_pkt_ext_from_nominal_padding(pkt_ext,
+									 nominal_padding);
+		}
+	}
+
+	for (int i = 0; i < MAX_HE_SUPP_NSS; i++) {
+		for (int bw = 0;
+		     bw < ARRAY_SIZE(*pkt_ext->pkt_ext_qam_th[i]);
+		     bw++) {
+			u8 *qam_th =
+				&pkt_ext->pkt_ext_qam_th[i][bw][0];
+
+			IWL_DEBUG_HT(mld,
+				     "PPE table: nss[%d] bw[%d] PPET8 = %d, PPET16 = %d\n",
+				     i, bw, qam_th[0], qam_th[1]);
+		}
+	}
 }
 
 static u32 iwl_mld_get_htc_flags(struct ieee80211_link_sta *link_sta)
@@ -232,7 +472,7 @@ iwl_mld_add_modify_sta_cmd(struct iwl_mld *mld,
 			cpu_to_le32(link->uora_exists ? 1 : 0);
 
 		/* PPE Thresholds */
-		iwl_mld_fill_pkt_ext(link_sta, &cmd.pkt_ext);
+		iwl_mld_fill_pkt_ext(mld, link_sta, &cmd.pkt_ext);
 
 		/* HTC flags */
 		cmd.htc_flags =
