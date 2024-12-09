@@ -758,13 +758,14 @@ static ssize_t iwl_dbgfs_twt_setup_write(struct ieee80211_vif *vif, char *buf,
 
 	// the new twt_request parameter is optional for station
 	if ((ret != 9 && ret != 10) ||
-	    (vif->type != NL80211_IFTYPE_STATION && tenth_param == 1))
+	    (ret == 10 && vif->type != NL80211_IFTYPE_STATION &&
+	     tenth_param == 1))
 		return -EINVAL;
 
 	/*
 	 * The 10th parameter:
 	 * In STA mode - the TWT type (broadcast or individual)
-	 * In AP mode - the role (0 responder, 1 requester, 2 unsolicited)
+	 * In AP mode - the role (0 responder, 2 unsolicited)
 	 */
 	if (ret == 10) {
 		if (vif->type == NL80211_IFTYPE_STATION)
