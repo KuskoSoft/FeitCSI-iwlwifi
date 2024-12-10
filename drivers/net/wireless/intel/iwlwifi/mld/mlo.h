@@ -65,6 +65,45 @@ iwl_mld_count_active_links(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	return n_active;
 }
 
+static inline u8 iwl_mld_get_primary_link(struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	lockdep_assert_wiphy(mld_vif->mld->wiphy);
+
+	if (!ieee80211_vif_is_mld(vif) || WARN_ON(!vif->active_links))
+		return 0;
+
+	/* In AP mode, there is no primary link */
+	if (vif->type == NL80211_IFTYPE_AP)
+		return __ffs(vif->active_links);
+
+	if (iwl_mld_emlsr_active(vif) &&
+	    !WARN_ON(!(BIT(mld_vif->emlsr.primary) & vif->active_links)))
+		return mld_vif->emlsr.primary;
+
+	return __ffs(vif->active_links);
+}
+
+/*
+ * For non-MLO/single link, this will return the deflink/single active link,
+ * respectively
+ */
+static inline u8 iwl_mld_get_other_link(struct ieee80211_vif *vif, u8 link_id)
+{
+	switch (hweight16(vif->active_links)) {
+	case 0:
+		return 0;
+	default:
+		WARN_ON(1);
+		fallthrough;
+	case 1:
+		return __ffs(vif->active_links);
+	case 2:
+		return __ffs(vif->active_links & ~BIT(link_id));
+	}
+}
+
 /* EMLSR block/unblock and exit */
 void iwl_mld_block_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			 enum iwl_mld_emlsr_blocked reason, u8 link_to_keep);
