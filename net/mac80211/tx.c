@@ -4005,7 +4005,7 @@ begin:
 encap_out:
 	info->control.vif = vif;
 
-	if (vif && tx.sta &&
+	if (tx.sta &&
 	    wiphy_ext_feature_isset(local->hw.wiphy, NL80211_EXT_FEATURE_AQL)) {
 		bool ampdu = txq->ac != IEEE80211_AC_VO;
 		u32 airtime;
