@@ -23,9 +23,11 @@ enum iwl_mld_cca_40mhz_wa_status {
  * These blocks are applied/stored per-VIF.
  *
  * @IWL_MLD_EMLSR_BLOCKED_PREVENTION: Prevent repeated EMLSR enter/exit
+ * @IWL_MLD_EMLSR_BLOCKED_WOWLAN: WOWLAN is preventing EMLSR
  */
 enum iwl_mld_emlsr_blocked {
 	IWL_MLD_EMLSR_BLOCKED_PREVENTION	= 0x1,
+	IWL_MLD_EMLSR_BLOCKED_WOWLAN		= 0x2,
 };
 
 /**

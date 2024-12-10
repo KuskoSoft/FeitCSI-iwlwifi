@@ -6,7 +6,8 @@
 
 /* Block reasons helper */
 #define HANDLE_EMLSR_BLOCKED_REASONS(HOW)	\
-	HOW(PREVENTION)
+	HOW(PREVENTION)			\
+	HOW(WOWLAN)
 
 static const char *
 iwl_mld_get_emlsr_blocked_string(enum iwl_mld_emlsr_blocked blocked)

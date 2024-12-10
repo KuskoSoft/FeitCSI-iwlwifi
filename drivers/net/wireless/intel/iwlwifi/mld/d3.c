@@ -10,6 +10,7 @@
 #include "iface.h"
 #include "mcc.h"
 #include "sta.h"
+#include "mlo.h"
 
 #include "fw/api/d3.h"
 #include "fw/api/offload.h"
@@ -1801,11 +1802,15 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 	};
 	u32 sta_id_mask;
 	int ap_sta_id, ret;
+	int link_id = iwl_mld_get_primary_link(bss_vif);
+	struct ieee80211_bss_conf *link_conf;
 
-	/* TODO: exit ESR (task=EMLSR - stay with one link which will be link_conf) */
-	int link_id = bss_vif->active_links ? __ffs(bss_vif->active_links) : 0;
-	struct ieee80211_bss_conf *link_conf =
-		link_conf_dereference_protected(bss_vif, link_id);
+	ret = iwl_mld_block_emlsr_sync(mld, bss_vif,
+				       IWL_MLD_EMLSR_BLOCKED_WOWLAN, link_id);
+	if (ret)
+		return ret;
+
+	link_conf = link_conf_dereference_protected(bss_vif, link_id);
 
 	if (WARN_ON(!ap_sta || !link_conf))
 		return -EINVAL;
@@ -1968,6 +1973,11 @@ int iwl_mld_wowlan_resume(struct iwl_mld *mld)
 		keep_connection =
 			iwl_mld_process_wowlan_status(mld, bss_vif,
 						      resume_data.wowlan_status);
+
+		/* EMLSR state will be cleared if the connection is not kept */
+		if (keep_connection)
+			iwl_mld_unblock_emlsr(mld, bss_vif,
+					      IWL_MLD_EMLSR_BLOCKED_WOWLAN);
 	}
 
 	if (!mld->netdetect && !keep_connection)
