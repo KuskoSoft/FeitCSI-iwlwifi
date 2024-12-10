@@ -11,6 +11,8 @@ int iwl_mld_regular_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			       struct cfg80211_scan_request *req,
 			       struct ieee80211_scan_ies *ies);
 
+void iwl_mld_int_mlo_scan(struct iwl_mld *mld, struct ieee80211_vif *vif);
+
 void iwl_mld_handle_scan_iter_complete_notif(struct iwl_mld *mld,
 					     struct iwl_rx_packet *pkt);
 

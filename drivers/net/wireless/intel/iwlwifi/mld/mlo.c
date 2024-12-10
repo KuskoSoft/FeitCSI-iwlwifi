@@ -259,7 +259,7 @@ static void iwl_mld_unblocked_emlsr(struct iwl_mld *mld,
 	}
 
 	IWL_DEBUG_INFO(mld, "Doing link selection after MLO scan\n");
-	/* TODO: Trigger MLO scan */
+	iwl_mld_int_mlo_scan(mld, vif);
 }
 
 void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
@@ -284,4 +284,30 @@ void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	if (!mld_vif->emlsr.blocked_reasons)
 		iwl_mld_unblocked_emlsr(mld, vif);
+}
+
+static void _iwl_mld_select_links(struct iwl_mld *mld,
+				  struct ieee80211_vif *vif)
+{
+	if (!iwl_mld_vif_has_emlsr(vif))
+		return;
+
+	/* TODO: Select links */
+}
+
+static void iwl_mld_vif_iter_select_links(void *_data, u8 *mac,
+					   struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld *mld = mld_vif->mld;
+
+	_iwl_mld_select_links(mld, vif);
+}
+
+void iwl_mld_select_links(struct iwl_mld *mld)
+{
+	ieee80211_iterate_active_interfaces(mld->hw,
+					    IEEE80211_IFACE_ITER_NORMAL,
+					    iwl_mld_vif_iter_select_links,
+					    NULL);
 }

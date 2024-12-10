@@ -9,6 +9,7 @@
 #include "hcmd.h"
 #include "iface.h"
 #include "phy.h"
+#include "mlo.h"
 
 #include "fw/api/scan.h"
 #include "fw/dbg.h"
@@ -1742,6 +1743,81 @@ int iwl_mld_regular_scan_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 					  IWL_MLD_SCAN_REGULAR);
 }
 
+static void iwl_mld_int_mlo_scan_start(struct iwl_mld *mld,
+				       struct ieee80211_vif *vif,
+				       struct ieee80211_channel **channels,
+				       size_t n_channels)
+{
+	struct cfg80211_scan_request *req __free(kfree) = NULL;
+	struct ieee80211_scan_ies ies = {};
+	size_t size;
+	int ret;
+
+	IWL_DEBUG_SCAN(mld, "Starting Internal MLO scan: n_channels=%zu\n",
+		       n_channels);
+
+	if (!vif->cfg.assoc || !ieee80211_vif_is_mld(vif) ||
+	    hweight16(vif->valid_links) == 1)
+		return;
+
+	size = struct_size(req, channels, n_channels);
+	req = kzalloc(size, GFP_KERNEL);
+	if (!req)
+		return;
+
+	/* set the requested channels */
+	for (int i = 0; i < n_channels; i++)
+		req->channels[i] = channels[i];
+
+	req->n_channels = n_channels;
+
+	/* set the rates */
+	for (int i = 0; i < NUM_NL80211_BANDS; i++)
+		if (mld->wiphy->bands[i])
+			req->rates[i] =
+				(1 << mld->wiphy->bands[i]->n_bitrates) - 1;
+
+	req->wdev = ieee80211_vif_to_wdev(vif);
+	req->wiphy = mld->wiphy;
+	req->scan_start = jiffies;
+	req->tsf_report_link_id = -1;
+
+	ret = _iwl_mld_single_scan_start(mld, vif, req, &ies,
+					 IWL_MLD_SCAN_INT_MLO);
+
+	IWL_DEBUG_SCAN(mld, "Internal MLO scan: ret=%d\n", ret);
+}
+
+void iwl_mld_int_mlo_scan(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	struct ieee80211_channel *channels[IEEE80211_MLD_MAX_NUM_LINKS];
+	unsigned long usable_links = ieee80211_vif_usable_links(vif);
+	size_t n_channels = 0;
+	u8 link_id;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (mld->scan.status & IWL_MLD_SCAN_INT_MLO) {
+		IWL_DEBUG_SCAN(mld, "Internal MLO scan is already running\n");
+		return;
+	}
+
+	for_each_set_bit(link_id, &usable_links, IEEE80211_MLD_MAX_NUM_LINKS) {
+		struct ieee80211_bss_conf *link_conf =
+			link_conf_dereference_check(vif, link_id);
+
+		if (WARN_ON_ONCE(!link_conf))
+			continue;
+
+		channels[n_channels++] = link_conf->chanreq.oper.chan;
+	}
+
+	if (!n_channels)
+		return;
+
+	iwl_mld_int_mlo_scan_start(mld, vif, channels, n_channels);
+}
+
 void iwl_mld_handle_scan_iter_complete_notif(struct iwl_mld *mld,
 					     struct iwl_rx_packet *pkt)
 {
@@ -1824,9 +1900,15 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 	} else if (mld->scan.uid_status[uid] == IWL_MLD_SCAN_SCHED) {
 		ieee80211_sched_scan_stopped(mld->hw);
 		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
-	}
+	} else if (mld->scan.uid_status[uid] == IWL_MLD_SCAN_INT_MLO) {
+		IWL_DEBUG_SCAN(mld, "Internal MLO scan completed\n");
 
-	/* TODO: mld->scan.uid_status[uid] == IWL_MLD_SCAN_INT_MLO (task=mlo)*/
+		/*
+		 * We limit link selection to internal MLO scans as otherwise
+		 * we do not know whether all channels were covered.
+		 */
+		iwl_mld_select_links(mld);
+	}
 
 	mld->scan.status &= ~mld->scan.uid_status[uid];
 
@@ -1838,8 +1920,6 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 	if (notif->ebs_status != IWL_SCAN_EBS_SUCCESS &&
 	    notif->ebs_status != IWL_SCAN_EBS_INACTIVE)
 		mld->scan.last_ebs_failed = true;
-
-	/* TODO: trig_link_selection_work (task=mlo)*/
 }
 
 /* This function is used in nic restart flow, to inform mac80211 about scans

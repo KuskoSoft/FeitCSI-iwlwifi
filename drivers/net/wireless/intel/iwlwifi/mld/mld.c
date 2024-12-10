@@ -13,6 +13,7 @@
 #include "fw/uefi.h"
 
 #include "mld.h"
+#include "mlo.h"
 #include "mac80211.h"
 #include "led.h"
 #include "scan.h"
