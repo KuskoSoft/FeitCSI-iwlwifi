@@ -21,6 +21,7 @@
 #include "regulatory.h"
 #include "thermal.h"
 #include "low_latency.h"
+#include "hcmd.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -127,9 +128,22 @@ static bool iwl_mld_d3_debug_enable(void *ctx)
 	return IWL_MLD_D3_DEBUG;
 }
 
+static int iwl_mld_fwrt_send_hcmd(void *ctx, struct iwl_host_cmd *host_cmd)
+{
+	struct iwl_mld *mld = (struct iwl_mld *)ctx;
+	int ret;
+
+	wiphy_lock(mld->wiphy);
+	ret = iwl_mld_send_cmd(mld, host_cmd);
+	wiphy_unlock(mld->wiphy);
+
+	return ret;
+}
+
 static const struct iwl_fw_runtime_ops iwl_mld_fwrt_ops = {
 	.dump_start = iwl_mld_fwrt_dump_start,
 	.dump_end = iwl_mld_fwrt_dump_end,
+	.send_hcmd = iwl_mld_fwrt_send_hcmd,
 	.d3_debug_enable = iwl_mld_d3_debug_enable,
 };
 
