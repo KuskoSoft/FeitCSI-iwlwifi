@@ -337,6 +337,8 @@ CMD_VERSIONS(beacon_notification,
 	     CMD_VER_ENTRY(6, iwl_extended_beacon_notif))
 CMD_VERSIONS(emlsr_mode_notif,
 	     CMD_VER_ENTRY(1, iwl_mvm_esr_mode_notif))
+CMD_VERSIONS(emlsr_trans_fail_notif,
+	     CMD_VER_ENTRY(1, iwl_esr_trans_fail_notif))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -407,6 +409,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     beacon_notification, RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, ESR_MODE_NOTIF,
 			     emlsr_mode_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, EMLSR_TRANS_FAIL_NOTIF,
+			     emlsr_trans_fail_notif, RX_HANDLER_ASYNC)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 

@@ -116,6 +116,8 @@ void iwl_mld_exit_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 void iwl_mld_handle_emlsr_mode_notif(struct iwl_mld *mld,
 				     struct iwl_rx_packet *pkt);
+void iwl_mld_handle_emlsr_trans_fail_notif(struct iwl_mld *mld,
+					   struct iwl_rx_packet *pkt);
 
 void iwl_mld_select_links(struct iwl_mld *mld);
 

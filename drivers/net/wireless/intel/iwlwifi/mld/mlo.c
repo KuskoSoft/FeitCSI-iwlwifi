@@ -39,7 +39,8 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 /* Exit reasons helper */
 #define HANDLE_EMLSR_EXIT_REASONS(HOW)	\
 	HOW(BLOCK)			\
-	HOW(MISSED_BEACON)
+	HOW(MISSED_BEACON)		\
+	HOW(FAIL_ENTRY)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -324,6 +325,54 @@ void iwl_mld_handle_emlsr_mode_notif(struct iwl_mld *mld,
 						IEEE80211_IFACE_ITER_NORMAL,
 						iwl_mld_vif_iter_emlsr_mode_notif,
 						pkt->data);
+}
+
+static void
+iwl_mld_vif_iter_disconnect_emlsr(void *data, u8 *mac,
+				  struct ieee80211_vif *vif)
+{
+	if (!iwl_mld_vif_has_emlsr(vif))
+		return;
+
+	ieee80211_connection_loss(vif);
+}
+
+void iwl_mld_handle_emlsr_trans_fail_notif(struct iwl_mld *mld,
+					   struct iwl_rx_packet *pkt)
+{
+	const struct iwl_esr_trans_fail_notif *notif = (const void *)pkt->data;
+	u32 fw_link_id = le32_to_cpu(notif->link_id);
+	struct ieee80211_bss_conf *bss_conf =
+		iwl_mld_fw_id_to_link_conf(mld, fw_link_id);
+
+	IWL_DEBUG_INFO(mld, "Failed to %s EMLSR on link %d (FW: %d), reason %d\n",
+		       le32_to_cpu(notif->activation) ? "enter" : "exit",
+		       bss_conf ? bss_conf->link_id : -1,
+		       le32_to_cpu(notif->link_id),
+		       le32_to_cpu(notif->err_code));
+
+	if (IWL_FW_CHECK(mld, !bss_conf,
+			 "FW reported failure to %sactivate EMLSR on a non-existing link: %d\n",
+			 le32_to_cpu(notif->activation) ? "" : "de",
+			 fw_link_id)) {
+		ieee80211_iterate_active_interfaces_mtx(
+			mld->hw, IEEE80211_IFACE_ITER_NORMAL,
+			iwl_mld_vif_iter_disconnect_emlsr, NULL);
+		return;
+	}
+
+	/* Disconnect if we failed to deactivate a link */
+	if (!le32_to_cpu(notif->activation)) {
+		ieee80211_connection_loss(bss_conf->vif);
+		return;
+	}
+
+	/*
+	 * We failed to activate the second link, go back to the link specified
+	 * by the firmware as that is the one that is still valid now.
+	 */
+	iwl_mld_exit_emlsr(mld, bss_conf->vif, IWL_MLD_EMLSR_EXIT_FAIL_ENTRY,
+			   bss_conf->link_id);
 }
 
 static void _iwl_mld_select_links(struct iwl_mld *mld,
