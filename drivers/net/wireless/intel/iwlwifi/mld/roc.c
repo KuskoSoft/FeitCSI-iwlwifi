@@ -186,8 +186,6 @@ void iwl_mld_handle_roc_notif(struct iwl_mld *mld,
 {
 	const struct iwl_roc_notif *notif = (void *)pkt->data;
 	u32 activity = le32_to_cpu(notif->activity);
-	bool started = le32_to_cpu(notif->success) &&
-		le32_to_cpu(notif->started);
 	/* TODO: task=Hotspot 2.0 - roc can run on BSS */
 	struct ieee80211_vif *vif = mld->p2p_device_vif;
 	struct iwl_mld_vif *mld_vif;
@@ -202,10 +200,19 @@ void iwl_mld_handle_roc_notif(struct iwl_mld *mld,
 	if (mld_vif->roc_activity != activity)
 		return;
 
-	if (started) {
+	if (le32_to_cpu(notif->success) &&
+	    le32_to_cpu(notif->started)) {
+		/* We had a successful start */
 		ieee80211_ready_on_channel(mld->hw);
 	} else {
-		iwl_mld_destroy_roc(mld, vif, mld_vif);
+		/* ROC was not successful, tell the firmware to remove it */
+		if (le32_to_cpu(notif->started))
+			iwl_mld_cancel_roc(mld->hw, vif);
+		else
+			iwl_mld_destroy_roc(mld, vif, mld_vif);
+		/* we need to let know mac80211 about end OR
+		 * an unsuccessful start
+		 */
 		ieee80211_remain_on_channel_expired(mld->hw);
 	}
 }
