@@ -156,7 +156,7 @@ static bool iwl_mld_get_respect_p2p_go(struct iwl_mld *mld,
 struct iwl_mld_scan_iter_data {
 	struct ieee80211_vif *current_vif;
 	bool active_vif;
-	bool is_scm_with_p2p_go;
+	bool is_dcm_with_p2p_go;
 	bool global_low_latency;
 };
 
@@ -183,6 +183,9 @@ static void iwl_mld_scan_iterator(void *_data, u8 *mac,
 	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_P2P_GO)
 		return;
 
+	/* Currently P2P GO can't be AP MLD so the logic below assumes that */
+	WARN_ON_ONCE(ieee80211_vif_is_mld(vif));
+
 	curr_vif_active_links =
 		ieee80211_vif_is_mld(curr_vif) ? curr_vif->active_links : 1;
 
@@ -197,9 +200,9 @@ static void iwl_mld_scan_iterator(void *_data, u8 *mac,
 			return;
 
 		if (rcu_access_pointer(curr_mld_link->chan_ctx) &&
-		    rcu_access_pointer(mld_vif->deflink.chan_ctx) ==
+		    rcu_access_pointer(mld_vif->deflink.chan_ctx) !=
 		    rcu_access_pointer(curr_mld_link->chan_ctx)) {
-			data->is_scm_with_p2p_go = true;
+			data->is_dcm_with_p2p_go = true;
 			return;
 		}
 	}
@@ -226,11 +229,11 @@ iwl_mld_scan_type iwl_mld_get_scan_type(struct iwl_mld *mld,
 	    vif->type != NL80211_IFTYPE_P2P_DEVICE)
 		return IWL_SCAN_TYPE_FRAGMENTED;
 
-	/* In case of SCM with P2P GO set all scan requests as
+	/* In case of DCM with P2P GO set all scan requests as
 	 * fast-balance scan
 	 */
 	if (vif->type == NL80211_IFTYPE_STATION &&
-	    data->is_scm_with_p2p_go)
+	    data->is_dcm_with_p2p_go)
 		return IWL_SCAN_TYPE_FAST_BALANCE;
 
 	if (load >= IWL_MLD_TRAFFIC_MEDIUM || data->global_low_latency)
