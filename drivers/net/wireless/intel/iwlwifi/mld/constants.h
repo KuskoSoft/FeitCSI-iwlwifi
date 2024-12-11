@@ -45,6 +45,15 @@
 #define IWL_MLD_CONN_LISTEN_INTERVAL		10
 #define IWL_MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE 0
 #define IWL_MLD_AUTO_EML_ENABLE			true
+
+#define IWL_MLD_HIGH_RSSI_THRESH_20MHZ		-67
+#define IWL_MLD_LOW_RSSI_THRESH_20MHZ		-71
+#define IWL_MLD_HIGH_RSSI_THRESH_40MHZ		-64
+#define IWL_MLD_LOW_RSSI_THRESH_40MHZ		-67
+#define IWL_MLD_HIGH_RSSI_THRESH_80MHZ		-61
+#define IWL_MLD_LOW_RSSI_THRESH_80MHZ		-74
+#define IWL_MLD_HIGH_RSSI_THRESH_160MHZ		-58
+#define IWL_MLD_LOW_RSSI_THRESH_160MHZ		-61
 #else
 #define IWL_MLD_DIS_RANDOM_FW_ID	        (mld->trans->dbg_cfg.MLD_DIS_RANDOM_FW_ID)
 #define IWL_MLD_D3_DEBUG		        (((struct iwl_mld *)ctx)->trans->dbg_cfg.MLD_D3_DEBUG)
@@ -54,6 +63,14 @@
 #define IWL_MLD_CONN_LISTEN_INTERVAL		(mld->trans->dbg_cfg.MLD_CONN_LISTEN_INTERVAL)
 #define IWL_MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE (mld->trans->dbg_cfg.MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE)
 #define IWL_MLD_AUTO_EML_ENABLE                 (mld->trans->dbg_cfg.MLD_AUTO_EML_ENABLE)
+#define IWL_MLD_HIGH_RSSI_THRESH_20MHZ		(mld->trans->dbg_cfg.MLD_HIGH_RSSI_THRESH_20MHZ)
+#define IWL_MLD_LOW_RSSI_THRESH_20MHZ		(mld->trans->dbg_cfg.MLD_LOW_RSSI_THRESH_20MHZ)
+#define IWL_MLD_HIGH_RSSI_THRESH_40MHZ		(mld->trans->dbg_cfg.MLD_HIGH_RSSI_THRESH_40MHZ)
+#define IWL_MLD_LOW_RSSI_THRESH_40MHZ		(mld->trans->dbg_cfg.MLD_LOW_RSSI_THRESH_40MHZ)
+#define IWL_MLD_HIGH_RSSI_THRESH_80MHZ		(mld->trans->dbg_cfg.MLD_HIGH_RSSI_THRESH_80MHZ)
+#define IWL_MLD_LOW_RSSI_THRESH_80MHZ		(mld->trans->dbg_cfg.MLD_LOW_RSSI_THRESH_80MHZ)
+#define IWL_MLD_HIGH_RSSI_THRESH_160MHZ		(mld->trans->dbg_cfg.MLD_HIGH_RSSI_THRESH_160MHZ)
+#define IWL_MLD_LOW_RSSI_THRESH_160MHZ		(mld->trans->dbg_cfg.MLD_LOW_RSSI_THRESH_160MHZ)
 #endif
 
 #endif /* __iwl_mld_constants_h__ */

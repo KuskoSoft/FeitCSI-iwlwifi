@@ -43,7 +43,8 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 	HOW(FAIL_ENTRY)			\
 	HOW(CSA)			\
 	HOW(EQUAL_BAND)			\
-	HOW(BANDWIDTH)
+	HOW(BANDWIDTH)			\
+	HOW(LOW_RSSI)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -387,6 +388,38 @@ struct iwl_mld_link_sel_data {
 	u16 grade;
 };
 
+static s8 iwl_mld_get_emlsr_rssi_thresh(struct iwl_mld *mld,
+					const struct cfg80211_chan_def *chandef,
+					bool low)
+{
+	if (WARN_ON(chandef->chan->band != NL80211_BAND_2GHZ &&
+		    chandef->chan->band != NL80211_BAND_5GHZ &&
+		    chandef->chan->band != NL80211_BAND_6GHZ))
+		return S8_MAX;
+
+#define RSSI_THRESHOLD(_low, _bw)			\
+	(_low) ? IWL_MLD_LOW_RSSI_THRESH_##_bw##MHZ	\
+	       : IWL_MLD_HIGH_RSSI_THRESH_##_bw##MHZ
+
+	switch (chandef->width) {
+	case NL80211_CHAN_WIDTH_20_NOHT:
+	case NL80211_CHAN_WIDTH_20:
+	/* 320 MHz has the same thresholds as 20 MHz */
+	case NL80211_CHAN_WIDTH_320:
+		return RSSI_THRESHOLD(low, 20);
+	case NL80211_CHAN_WIDTH_40:
+		return RSSI_THRESHOLD(low, 40);
+	case NL80211_CHAN_WIDTH_80:
+		return RSSI_THRESHOLD(low, 80);
+	case NL80211_CHAN_WIDTH_160:
+		return RSSI_THRESHOLD(low, 160);
+	default:
+		WARN_ON(1);
+		return S8_MAX;
+	}
+#undef RSSI_THRESHOLD
+}
+
 static u32
 iwl_mld_emlsr_disallowed_with_link(struct iwl_mld *mld,
 				   struct ieee80211_vif *vif,
@@ -403,7 +436,9 @@ iwl_mld_emlsr_disallowed_with_link(struct iwl_mld *mld,
 
 	/* TODO: handle BT Coex (task=EMLSR, task=coex) */
 
-	/* TODO: handle RSSI threshold (task=EMLSR) */
+	if (link->signal <
+	    iwl_mld_get_emlsr_rssi_thresh(mld, link->chandef, false))
+		ret |= IWL_MLD_EMLSR_EXIT_LOW_RSSI;
 
 	if (conf->csa_active)
 		ret |= IWL_MLD_EMLSR_EXIT_CSA;

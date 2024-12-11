@@ -45,6 +45,7 @@ enum iwl_mld_emlsr_blocked {
  * @IWL_MLD_EMLSR_EXIT_EQUAL_BAND: EMLSR prevented as both links share the band
  * @IWL_MLD_EMLSR_EXIT_BANDWIDTH: Bandwidths of primary and secondary links are
  *      not equal
+ * @IWL_MLD_EMLSR_EXIT_LOW_RSSI: Link RSSI is unsuitable for EMLSR
  */
 enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_BLOCK		= 0x1,
@@ -53,6 +54,7 @@ enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_CSA			= 0x8,
 	IWL_MLD_EMLSR_EXIT_EQUAL_BAND		= 0x10,
 	IWL_MLD_EMLSR_EXIT_BANDWIDTH		= 0x20,
+	IWL_MLD_EMLSR_EXIT_LOW_RSSI		= 0x40,
 };
 
 /**
