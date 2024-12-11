@@ -274,7 +274,7 @@ static void iwl_mld_fill_pkt_ext(struct iwl_mld *mld,
 	/* Initialize the PPE thresholds to "None" (7), as described in Table
 	 * 9-262ac of 80211.ax/D3.0.
 	 */
-	memset(pkt_ext, IWL_HE_PKT_EXT_NONE, sizeof(pkt_ext));
+	memset(pkt_ext, IWL_HE_PKT_EXT_NONE, sizeof(*pkt_ext));
 
 	if (link_sta->eht_cap.has_eht) {
 		u8 nominal_padding =
