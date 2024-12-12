@@ -213,6 +213,10 @@ static void iwl_mld_fill_mac_cmd_sta(struct iwl_mld *mld,
 			twt_policy |= PROTECTED_TWT_SUPPORTED;
 		if (link->twt_broadcast)
 			twt_policy |= BROADCAST_TWT_SUPPORTED;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+		if (!mld->trans->dbg_cfg.MLD_USE_TWT)
+			twt_policy &= ~TWT_SUPPORTED;
+#endif
 	}
 
 	if (!iwlwifi_mod_params.disable_11ax)
