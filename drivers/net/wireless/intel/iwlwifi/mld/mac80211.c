@@ -384,6 +384,15 @@ static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
 	hw->vif_data_size = sizeof(struct iwl_mld_vif);
 	hw->sta_data_size = sizeof(struct iwl_mld_sta);
 	hw->txq_data_size = sizeof(struct iwl_mld_txq);
+
+	hw->max_rx_aggregation_subframes = IEEE80211_MAX_AMPDU_BUF_EHT;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.rx_agg_subframes)
+		hw->max_rx_aggregation_subframes =
+			mld->trans->dbg_cfg.rx_agg_subframes;
+#endif
+
 }
 
 static int iwl_mld_hw_verify_preconditions(struct iwl_mld *mld)
