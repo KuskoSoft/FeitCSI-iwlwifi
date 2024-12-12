@@ -217,7 +217,8 @@ static void iwl_mld_fill_qos_params(struct ieee80211_bss_conf *link,
 		*qos_flags |= cpu_to_le32(MAC_QOS_FLG_TGN);
 }
 
-static bool iwl_mld_fill_mu_edca(const struct iwl_mld_link *mld_link,
+static bool iwl_mld_fill_mu_edca(struct iwl_mld *mld,
+				 const struct iwl_mld_link *mld_link,
 				 struct iwl_he_backoff_conf *trig_based_txf)
 {
 	for (int mac_ac = 0; mac_ac < IEEE80211_NUM_ACS; mac_ac++) {
@@ -237,6 +238,24 @@ static bool iwl_mld_fill_mu_edca(const struct iwl_mld_link *mld_link,
 		trig_based_txf[fw_ac].mu_time =
 			cpu_to_le16(mu_edca->mu_edca_timer);
 	}
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	/* MU EDCA override */
+	if (mld->trans->dbg_cfg.mu_edca) {
+		u32 mu_edca = mld->trans->dbg_cfg.mu_edca;
+
+		for (int mac_ac = 0; mac_ac < IEEE80211_NUM_ACS; mac_ac++) {
+			trig_based_txf[mac_ac].aifsn =
+				cpu_to_le16(mu_edca & 0xf);
+			trig_based_txf[mac_ac].cwmin =
+				cpu_to_le16((mu_edca >> 4) & 0xf);
+			trig_based_txf[mac_ac].cwmax =
+				cpu_to_le16((mu_edca >> 8) & 0xf);
+			trig_based_txf[mac_ac].mu_time =
+				cpu_to_le16((mu_edca >> 12) & 0xff);
+		}
+	}
+#endif
 
 	return true;
 }
@@ -317,7 +336,7 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 		cmd.rand_alloc_ecwmax = (link->uora_ocw_range >> 3) & 0x7;
 	}
 
-	if (iwl_mld_fill_mu_edca(mld_link, cmd.trig_based_txf))
+	if (iwl_mld_fill_mu_edca(mld, mld_link, cmd.trig_based_txf))
 		flags |= LINK_FLG_MU_EDCA_CW;
 
 	cmd.bss_color = link->he_bss_color.color;
