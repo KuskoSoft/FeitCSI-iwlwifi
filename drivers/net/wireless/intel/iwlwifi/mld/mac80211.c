@@ -27,6 +27,9 @@
 #include "fw/api/filter.h"
 #include "fw/api/sta.h"
 #include "fw/api/tdls.h"
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+#include "fw/api/dhc.h"
+#endif
 #ifdef CONFIG_PM_SLEEP
 #include "fw/api/d3.h"
 #endif /* CONFIG_PM_SLEEP */
@@ -1200,6 +1203,30 @@ iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 		iwl_mld_set_tx_power(mld, link_conf, link_conf->txpower);
 }
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+static void iwl_mld_set_twt_testmode(struct iwl_mld *mld)
+{
+	struct iwl_dhc_twt_control *dhc_twt_control;
+	struct iwl_dhc_cmd *dhc_cmd __free(kfree);
+	size_t cmd_size = sizeof(*dhc_cmd) + sizeof(*dhc_twt_control);
+
+	dhc_cmd = kzalloc(cmd_size, GFP_KERNEL);
+	if (!dhc_cmd)
+		return;
+
+	dhc_twt_control = (void *)dhc_cmd->data;
+	dhc_twt_control->twt_test_mode = 1;
+	dhc_cmd->length = cpu_to_le32(sizeof(*dhc_twt_control) >> 2);
+	dhc_cmd->index_and_mask = cpu_to_le32(DHC_TABLE_INTEGRATION |
+					      DHC_TARGET_UMAC |
+					      DHC_INT_UMAC_TWT_CONTROL);
+	if (iwl_mld_send_cmd_pdu(mld, WIDE_ID(IWL_ALWAYS_LONG_GROUP,
+					      DEBUG_HOST_COMMAND),
+				 dhc_cmd, cmd_size))
+		IWL_ERR(mld, "Failed to set TWT testmode!\n");
+}
+#endif
+
 static
 void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 				      struct ieee80211_vif *vif,
@@ -1227,6 +1254,10 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 			iwl_mld_request_periodic_fw_stats(mld, true);
 
 			iwl_mld_set_vif_associated(mld, vif);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+			if (mld->trans->dbg_cfg.MLD_TWT_TESTMODE)
+				iwl_mld_set_twt_testmode(mld);
+#endif
 		} else {
 			iwl_mld_request_periodic_fw_stats(mld, false);
 		}
