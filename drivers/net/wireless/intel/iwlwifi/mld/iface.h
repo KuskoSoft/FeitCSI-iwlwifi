@@ -5,6 +5,8 @@
 #ifndef __iwl_mld_iface_h__
 #define __iwl_mld_iface_h__
 
+#include <net/mac80211.h>
+
 #include "mld.h"
 #include "link.h"
 #include "session-protect.h"

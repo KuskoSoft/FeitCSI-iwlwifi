@@ -20,6 +20,7 @@
 #include "ap.h"
 #include "tx.h"
 #include "roc.h"
+#include "iface.h"
 #include "stats.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"

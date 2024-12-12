@@ -611,3 +611,4 @@ void iwl_mld_reset_cca_40mhz_workaround(struct iwl_mld *mld,
 
 	mld_vif->cca_40mhz_workaround = CCA_40_MHZ_WA_NONE;
 }
+
