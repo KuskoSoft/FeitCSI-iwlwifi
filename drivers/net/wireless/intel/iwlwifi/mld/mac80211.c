@@ -373,7 +373,7 @@ static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
 #endif
 
 	hw->max_tx_fragments = mld->trans->max_skb_frags;
-	hw->max_listen_interval = 10;
+	hw->max_listen_interval = IWL_MLD_CONN_LISTEN_INTERVAL;
 
 	hw->uapsd_max_sp_len = IEEE80211_WMM_IE_STA_QOSINFO_SP_ALL;
 	hw->uapsd_queues = IEEE80211_WMM_IE_STA_QOSINFO_AC_VO |
