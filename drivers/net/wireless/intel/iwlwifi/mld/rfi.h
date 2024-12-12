@@ -5,6 +5,13 @@
 #ifndef __iwl_mld_rfi_h__
 #define __iwl_mld_rfi_h__
 
+enum iwl_mld_rfi_feature {
+	IWL_MLD_RFI_DDR_FEATURE,
+	IWL_MLD_RFI_DLVR_FEATURE,
+	IWL_MLD_RFI_DESENSE_FEATURE,
+};
+
+int iwl_mld_rfi_send_config_cmd(struct iwl_mld *mld);
 struct iwl_rfi_freq_table_resp_cmd *
 iwl_mld_rfi_get_freq_table(struct iwl_mld *mld);
 

@@ -18,6 +18,7 @@
 #include "coex.h"
 #include "regulatory.h"
 #include "thermal.h"
+#include "rfi.h"
 
 static int iwl_mld_send_tx_ant_cfg(struct iwl_mld *mld)
 {
@@ -498,6 +499,7 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 
 	iwl_mld_init_tas(mld);
 	iwl_mld_init_uats(mld);
+	iwl_mld_rfi_send_config_cmd(mld);
 
 	return 0;
 }
