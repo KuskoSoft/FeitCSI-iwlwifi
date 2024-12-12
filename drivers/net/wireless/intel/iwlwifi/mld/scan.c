@@ -816,6 +816,9 @@ iwl_mld_scan_cmd_set_channels(struct iwl_mld *mld,
 			iwl_mld_scan_ch_n_aps_flag(vif_type,
 						   channels[i]->hw_value);
 
+		if (IWL_MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE)
+			n_aps_flag = IWL_SCAN_ADWELL_N_APS_GO_FRIENDLY_BIT;
+
 		cfg->flags = cpu_to_le32(flags | n_aps_flag);
 		cfg->channel_num = channels[i]->hw_value;
 		if (cfg80211_channel_is_psc(channels[i]))
@@ -1040,9 +1043,6 @@ iwl_mld_scan_cmd_set_6ghz_chan_params(struct iwl_mld *mld,
 
 	chan_p->flags = iwl_mld_scan_get_cmd_gen_flags(mld, params, vif,
 						       scan_status);
-	chan_p->n_aps_override[0] = IWL_SCAN_ADWELL_N_APS_GO_FRIENDLY;
-	chan_p->n_aps_override[1] = IWL_SCAN_ADWELL_N_APS_SOCIAL_CHS;
-
 	chan_p->count = iwl_mld_scan_cfg_channels_6g(mld, params,
 						     params->n_channels,
 						     probe_p, chan_p,
@@ -1072,6 +1072,9 @@ iwl_mld_scan_cmd_set_chan_params(struct iwl_mld *mld,
 
 	cp->n_aps_override[0] = IWL_SCAN_ADWELL_N_APS_GO_FRIENDLY;
 	cp->n_aps_override[1] = IWL_SCAN_ADWELL_N_APS_SOCIAL_CHS;
+
+	if (IWL_MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE)
+		cp->n_aps_override[0] = IWL_MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE;
 
 	if (params->scan_6ghz)
 		return iwl_mld_scan_cmd_set_6ghz_chan_params(mld, params,

@@ -41,6 +41,7 @@
 #define IWL_MLD_6GHZ_PASSIVE_SCAN_TIMEOUT       3000 /* in seconds */
 #define IWL_MLD_6GHZ_PASSIVE_SCAN_ASSOC_TIMEOUT 60   /* in seconds */
 #define IWL_MLD_CONN_LISTEN_INTERVAL		10
+#define IWL_MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE 0
 #else
 #define IWL_MLD_DIS_RANDOM_FW_ID	        (mld->trans->dbg_cfg.MLD_DIS_RANDOM_FW_ID)
 #define IWL_MLD_D3_DEBUG		        (((struct iwl_mld *)ctx)->trans->dbg_cfg.MLD_D3_DEBUG)
@@ -48,6 +49,7 @@
 #define IWL_MLD_6GHZ_PASSIVE_SCAN_TIMEOUT	(mld->trans->dbg_cfg.MLD_6GHZ_PASSIVE_SCAN_TIMEOUT)
 #define IWL_MLD_6GHZ_PASSIVE_SCAN_ASSOC_TIMEOUT	(mld->trans->dbg_cfg.MLD_6GHZ_PASSIVE_SCAN_ASSOC_TIMEOUT)
 #define IWL_MLD_CONN_LISTEN_INTERVAL		(mld->trans->dbg_cfg.MLD_CONN_LISTEN_INTERVAL)
+#define IWL_MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE (mld->trans->dbg_cfg.MLD_ADAPTIVE_DWELL_NUM_APS_OVERRIDE)
 #endif
 
 #endif /* __iwl_mld_constants_h__ */
