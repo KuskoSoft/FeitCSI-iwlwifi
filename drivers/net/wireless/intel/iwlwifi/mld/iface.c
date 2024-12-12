@@ -389,6 +389,8 @@ iwl_mld_init_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	wiphy_delayed_work_init(&mld_vif->emlsr.prevent_done_wk,
 				iwl_mld_emlsr_prevent_done_wk);
+	wiphy_delayed_work_init(&mld_vif->emlsr.tmp_non_bss_done_wk,
+				iwl_mld_emlsr_tmp_non_bss_done_wk);
 
 	return 0;
 }

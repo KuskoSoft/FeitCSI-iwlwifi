@@ -1744,6 +1744,8 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 
 			wiphy_delayed_work_cancel(mld->wiphy,
 						  &mld_vif->emlsr.prevent_done_wk);
+			wiphy_delayed_work_cancel(mld->wiphy,
+						  &mld_vif->emlsr.tmp_non_bss_done_wk);
 
 			iwl_mld_reset_cca_40mhz_workaround(mld, vif);
 		}
@@ -2524,6 +2526,46 @@ static int iwl_mld_mac80211_tx_last_beacon(struct ieee80211_hw *hw)
 	return mld->ibss_manager;
 }
 
+#define IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS_TIMEOUT (5 * HZ)
+
+static void iwl_mld_vif_iter_emlsr_block_tmp_non_bss(void *_data, u8 *mac,
+						     struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	if (!iwl_mld_vif_has_emlsr(vif))
+		return;
+
+	ret = iwl_mld_block_emlsr_sync(mld_vif->mld, vif,
+				       IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS,
+				       iwl_mld_get_primary_link(vif));
+	if (ret)
+		return;
+
+	wiphy_delayed_work_queue(mld_vif->mld->wiphy,
+				 &mld_vif->emlsr.tmp_non_bss_done_wk,
+				 IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS_TIMEOUT);
+}
+
+static void iwl_mld_prep_add_interface(struct ieee80211_hw *hw,
+				       enum nl80211_iftype type)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	IWL_DEBUG_MAC80211(mld, "prep_add_interface: type=%u\n", type);
+
+	if (!(type == NL80211_IFTYPE_AP ||
+	      type == NL80211_IFTYPE_P2P_GO ||
+	      type == NL80211_IFTYPE_P2P_CLIENT))
+		return;
+
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_vif_iter_emlsr_block_tmp_non_bss,
+						NULL);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2590,4 +2632,5 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.join_ibss = iwl_mld_mac80211_join_ibss,
 	.leave_ibss = iwl_mld_mac80211_leave_ibss,
 	.tx_last_beacon = iwl_mld_mac80211_tx_last_beacon,
+	.prep_add_interface = iwl_mld_prep_add_interface,
 };

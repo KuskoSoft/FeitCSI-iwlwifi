@@ -15,6 +15,8 @@
 struct iwl_mld;
 
 void iwl_mld_emlsr_prevent_done_wk(struct wiphy *wiphy, struct wiphy_work *wk);
+void iwl_mld_emlsr_tmp_non_bss_done_wk(struct wiphy *wiphy,
+				       struct wiphy_work *wk);
 
 static inline bool iwl_mld_emlsr_active(struct ieee80211_vif *vif)
 {

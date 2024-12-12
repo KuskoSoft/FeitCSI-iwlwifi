@@ -10,7 +10,8 @@
 	HOW(WOWLAN)			\
 	HOW(FW)				\
 	HOW(ROC)			\
-	HOW(NON_BSS)
+	HOW(NON_BSS)			\
+	HOW(TMP_NON_BSS)
 
 static const char *
 iwl_mld_get_emlsr_blocked_string(enum iwl_mld_emlsr_blocked blocked)
@@ -87,6 +88,22 @@ void iwl_mld_emlsr_prevent_done_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 
 	iwl_mld_unblock_emlsr(mld_vif->mld, vif,
 			      IWL_MLD_EMLSR_BLOCKED_PREVENTION);
+}
+
+void iwl_mld_emlsr_tmp_non_bss_done_wk(struct wiphy *wiphy,
+				       struct wiphy_work *wk)
+{
+	struct iwl_mld_vif *mld_vif = container_of(wk, struct iwl_mld_vif,
+						   emlsr.prevent_done_wk.work);
+	struct ieee80211_vif *vif =
+		container_of((void *)mld_vif, struct ieee80211_vif, drv_priv);
+
+	if (WARN_ON(!(mld_vif->emlsr.blocked_reasons &
+		      IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS)))
+		return;
+
+	iwl_mld_unblock_emlsr(mld_vif->mld, vif,
+			      IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS);
 }
 
 #define IWL_MLD_TRIGGER_LINK_SEL_TIME	(HZ * IWL_MLD_TRIGGER_LINK_SEL_TIME_SEC)

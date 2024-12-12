@@ -28,6 +28,9 @@ enum iwl_mld_cca_40mhz_wa_status {
  * @IWL_MLD_EMLSR_BLOCKED_ROC: remain-on-channel is preventing EMLSR
  * @IWL_MLD_EMLSR_BLOCKED_NON_BSS: An active non-BSS interface's link is
  *      preventing EMLSR
+ * @IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS: An expected active non-BSS interface's
+ *      link is preventing EMLSR. This is a temporary blocking that is set when
+ *      there is an indication that a non-BSS interface is to be added.
  */
 enum iwl_mld_emlsr_blocked {
 	IWL_MLD_EMLSR_BLOCKED_PREVENTION	= 0x1,
@@ -35,6 +38,7 @@ enum iwl_mld_emlsr_blocked {
 	IWL_MLD_EMLSR_BLOCKED_FW		= 0x4,
 	IWL_MLD_EMLSR_BLOCKED_ROC		= 0x8,
 	IWL_MLD_EMLSR_BLOCKED_NON_BSS		= 0x10,
+	IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS	= 0x20,
 };
 
 /**
@@ -73,6 +77,7 @@ enum iwl_mld_emlsr_exit {
  * @last_exit_ts: Time of the last EMLSR exit (if @last_exit_reason is non-zero)
  * @exit_repeat_count: Number of times EMLSR was exited for the same reason
  * @prevent_done_wk: Worker to remove %IWL_MLD_EMLSR_BLOCKED_PREVENTION
+ * @tmp_non_bss_done_wk: Worker to remove %IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS
  */
 struct iwl_mld_emlsr {
 	struct_group(zeroed_on_not_authorized,
@@ -89,6 +94,7 @@ struct iwl_mld_emlsr {
 	);
 
 	struct wiphy_delayed_work prevent_done_wk;
+	struct wiphy_delayed_work tmp_non_bss_done_wk;
 };
 
 /**
