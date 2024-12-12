@@ -118,6 +118,9 @@ void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 void iwl_mld_exit_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			enum iwl_mld_emlsr_exit exit, u8 link_to_keep);
 
+int iwl_mld_emlsr_check_non_bss_block(struct iwl_mld *mld,
+				      int pending_link_changes);
+
 void iwl_mld_handle_emlsr_mode_notif(struct iwl_mld *mld,
 				     struct iwl_rx_packet *pkt);
 void iwl_mld_handle_emlsr_trans_fail_notif(struct iwl_mld *mld,

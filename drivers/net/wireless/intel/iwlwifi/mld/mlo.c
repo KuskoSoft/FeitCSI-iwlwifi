@@ -9,7 +9,8 @@
 	HOW(PREVENTION)			\
 	HOW(WOWLAN)			\
 	HOW(FW)				\
-	HOW(ROC)
+	HOW(ROC)			\
+	HOW(NON_BSS)
 
 static const char *
 iwl_mld_get_emlsr_blocked_string(enum iwl_mld_emlsr_blocked blocked)
@@ -377,6 +378,74 @@ void iwl_mld_handle_emlsr_trans_fail_notif(struct iwl_mld *mld,
 	 */
 	iwl_mld_exit_emlsr(mld, bss_conf->vif, IWL_MLD_EMLSR_EXIT_FAIL_ENTRY,
 			   bss_conf->link_id);
+}
+
+/* Active non-station link tracking */
+static void iwl_mld_count_non_bss_links(void *_data, u8 *mac,
+					struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int *count = _data;
+
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_STATION)
+		return;
+
+	*count += iwl_mld_count_active_links(mld_vif->mld, vif);
+}
+
+struct iwl_mld_update_emlsr_block_data {
+	bool block;
+	int result;
+};
+
+static void iwl_mld_vif_iter_update_emlsr_non_bss_block(void *_data, u8 *mac,
+						       struct ieee80211_vif *vif)
+{
+	struct iwl_mld_update_emlsr_block_data *data = _data;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int ret;
+
+	if (data->block) {
+		ret = iwl_mld_block_emlsr_sync(mld_vif->mld, vif,
+					       IWL_MLD_EMLSR_BLOCKED_NON_BSS,
+					       iwl_mld_get_primary_link(vif));
+		if (ret)
+			data->result = ret;
+	} else {
+		iwl_mld_unblock_emlsr(mld_vif->mld, vif,
+				      IWL_MLD_EMLSR_BLOCKED_NON_BSS);
+	}
+}
+
+int iwl_mld_emlsr_check_non_bss_block(struct iwl_mld *mld,
+				      int pending_link_changes)
+{
+	/* An active link of a non-station vif blocks EMLSR. Upon activation
+	 * block EMLSR on the bss vif. Upon deactivation, check if this link
+	 * was the last non-station link active, and if so unblock the bss vif
+	 */
+	struct iwl_mld_update_emlsr_block_data block_data = {};
+	int count = pending_link_changes;
+
+	/* No need to count if we are activating a non-BSS link */
+	if (count <= 0)
+		ieee80211_iterate_active_interfaces_mtx(mld->hw,
+							IEEE80211_IFACE_ITER_NORMAL,
+							iwl_mld_count_non_bss_links,
+							&count);
+
+	/*
+	 * We could skip updating it if the block change did not change (and
+	 * pending_link_changes is non-zero).
+	 */
+	block_data.block = !!count;
+
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_vif_iter_update_emlsr_non_bss_block,
+						&block_data);
+
+	return block_data.result;
 }
 
 /*

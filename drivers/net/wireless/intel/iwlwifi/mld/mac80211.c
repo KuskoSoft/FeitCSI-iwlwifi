@@ -1005,8 +1005,16 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 		return -EINVAL;
 
 	/* if the assigned one was not counted yet, count it now */
-	if (!rcu_access_pointer(mld_link->chan_ctx))
+	if (!rcu_access_pointer(mld_link->chan_ctx)) {
 		n_active++;
+
+		/* Track addition of non-BSS link */
+		if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION) {
+			ret = iwl_mld_emlsr_check_non_bss_block(mld, 1);
+			if (ret)
+				return ret;
+		}
+	}
 
 	/* for AP, mac parameters such as HE support are updated at this stage. */
 	if (vif->type == NL80211_IFTYPE_AP) {
@@ -1083,6 +1091,10 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 
 	if (WARN_ON(!mld_link))
 		return;
+
+	/* Track removal of non-BSS link */
+	if (ieee80211_vif_type_p2p(vif) != NL80211_IFTYPE_STATION)
+		iwl_mld_emlsr_check_non_bss_block(mld, -1);
 
 	iwl_mld_deactivate_link(mld, link);
 
@@ -1683,6 +1695,9 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		   new_state == IEEE80211_STA_AUTHORIZED) {
 		if (!sta->tdls) {
 			mld_vif->authorized = true;
+
+			/* Ensure any block due to a non-BSS link is synced */
+			iwl_mld_emlsr_check_non_bss_block(mld, 0);
 
 			/* Wait for the FW to send a recommendation */
 			iwl_mld_block_emlsr(mld, vif,
