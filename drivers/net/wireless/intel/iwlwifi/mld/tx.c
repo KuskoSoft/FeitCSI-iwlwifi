@@ -1110,13 +1110,16 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 
 	rcu_read_lock();
 
-	/* sta can't be NULL otherwise it'd mean that the sta has been freed in
-	 * the firmware while we still have packets for it in the Tx queues.
-	 */
 	link_sta = rcu_dereference(mld->fw_id_to_link_sta[sta_id]);
-	if (IWL_FW_CHECK(mld, !link_sta,
-			 "Got valid sta_id (%d) but sta is NULL\n", sta_id))
+	if (!link_sta) {
+		/* This can happen if the TX cmd was sent before pre_rcu_remove
+		 * but the TX response was received after
+		 */
+		IWL_DEBUG_TX_REPLY(mld,
+				   "Got valid sta_id (%d) but sta is NULL\n",
+				   sta_id);
 		goto out;
+	}
 
 	if (IS_ERR(link_sta))
 		goto out;
