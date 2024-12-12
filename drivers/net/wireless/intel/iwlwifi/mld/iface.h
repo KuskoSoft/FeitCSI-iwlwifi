@@ -25,11 +25,13 @@ enum iwl_mld_cca_40mhz_wa_status {
  * @IWL_MLD_EMLSR_BLOCKED_PREVENTION: Prevent repeated EMLSR enter/exit
  * @IWL_MLD_EMLSR_BLOCKED_WOWLAN: WOWLAN is preventing EMLSR
  * @IWL_MLD_EMLSR_BLOCKED_FW: FW did not recommend MLO
+ * @IWL_MLD_EMLSR_BLOCKED_ROC: remain-on-channel is preventing EMLSR
  */
 enum iwl_mld_emlsr_blocked {
 	IWL_MLD_EMLSR_BLOCKED_PREVENTION	= 0x1,
 	IWL_MLD_EMLSR_BLOCKED_WOWLAN		= 0x2,
 	IWL_MLD_EMLSR_BLOCKED_FW		= 0x4,
+	IWL_MLD_EMLSR_BLOCKED_ROC		= 0x8,
 };
 
 /**

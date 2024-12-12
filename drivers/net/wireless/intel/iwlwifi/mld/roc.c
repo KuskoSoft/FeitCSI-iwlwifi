@@ -10,11 +10,26 @@
 #include "hcmd.h"
 #include "iface.h"
 #include "sta.h"
+#include "mlo.h"
 
 #include "fw/api/context.h"
 #include "fw/api/time-event.h"
 
 #define AUX_ROC_MAX_DELAY MSEC_TO_TU(200)
+
+static void
+iwl_mld_vif_iter_emlsr_block_roc(void *data, u8 *mac, struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int *result = data;
+	int ret;
+
+	ret = iwl_mld_block_emlsr_sync(mld_vif->mld, vif,
+				       IWL_MLD_EMLSR_BLOCKED_ROC,
+				       iwl_mld_get_primary_link(vif));
+	if (ret)
+		*result = ret;
+}
 
 int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		      struct ieee80211_channel *channel, int duration,
@@ -39,6 +54,14 @@ int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	 * Avoid this by waiting for all the handlers to complete.
 	 */
 	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
+
+	ret = 0;
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_vif_iter_emlsr_block_roc,
+						&ret);
+	if (ret)
+		return ret;
 
 	/* TODO: task=Hotspot 2.0 */
 	if (vif->type != NL80211_IFTYPE_P2P_DEVICE) {
@@ -94,11 +117,25 @@ int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	return 0;
 }
 
+static void
+iwl_mld_vif_iter_emlsr_unblock_roc(void *data, u8 *mac,
+				   struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	iwl_mld_unblock_emlsr(mld_vif->mld, vif, IWL_MLD_EMLSR_BLOCKED_ROC);
+}
+
 static void iwl_mld_destroy_roc(struct iwl_mld *mld,
 				struct ieee80211_vif *vif,
 				struct iwl_mld_vif *mld_vif)
 {
 	mld_vif->roc_activity = ROC_NUM_ACTIVITIES;
+
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_vif_iter_emlsr_unblock_roc,
+						NULL);
 
 	/* wait until every tx has seen that roc_activity has been reset */
 	synchronize_net();
