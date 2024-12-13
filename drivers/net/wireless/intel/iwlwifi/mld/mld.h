@@ -32,6 +32,7 @@
 #include "thermal.h"
 #include "low_latency.h"
 #include "constants.h"
+#include "rfi.h"
 
 #define IWL_MLD_MAX_ADDRESSES		5
 
@@ -114,6 +115,7 @@
  *	firmware indicated about having transmitted the last beacon, i.e.
  *	being IBSS manager for that time and needing to respond to probe
  *	requests
+ * @rfi: RFI data.
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -208,6 +210,8 @@ struct iwl_mld {
 	/* counts the number of hcmd sent */
 	u32 hcmd_counter;
 #endif
+
+	struct iwl_mld_rfi rfi;
 };
 
 /* memset the part of the struct that requires cleanup on restart */
@@ -221,6 +225,7 @@ iwl_cleanup_mld(struct iwl_mld *mld)
 {
 	CLEANUP_STRUCT(mld);
 	CLEANUP_STRUCT(&mld->scan);
+	CLEANUP_STRUCT(&mld->rfi);
 
 	mld->fw_status.in_d3 = false;
 

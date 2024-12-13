@@ -11,6 +11,18 @@ enum iwl_mld_rfi_feature {
 	IWL_MLD_RFI_DESENSE_FEATURE,
 };
 
+/**
+ * struct iwl_mld_rfi - RFI data
+ * @fw_state: Firmware RFI state &enum iwl_rfi_support_reason.
+ */
+struct iwl_mld_rfi {
+	/* Add here fields that need clean up on restart */
+	struct_group(zeroed_on_hw_restart,
+		u32 fw_state;
+	);
+	/* And here fields that survive a fw restart */
+};
+
 int iwl_mld_rfi_send_config_cmd(struct iwl_mld *mld);
 struct iwl_rfi_freq_table_resp_cmd *
 iwl_mld_rfi_get_freq_table(struct iwl_mld *mld);

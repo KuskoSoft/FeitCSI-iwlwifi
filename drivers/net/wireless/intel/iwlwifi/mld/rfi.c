@@ -178,6 +178,12 @@ struct iwl_rfi_ddr_lut_entry iwl_mld_rfi_ddr_table[IWL_RFI_DDR_LUT_SIZE] = {
 		PHY_BAND_6, PHY_BAND_6, PHY_BAND_6,}},
 };
 
+static bool iwl_mld_rfi_fw_state_supported(struct iwl_mld *mld)
+{
+	return mld->rfi.fw_state == IWL_RFI_PMC_SUPPORTED ||
+	       mld->rfi.fw_state == IWL_RFI_DDR_SUBSET_TABLE_READY;
+}
+
 static bool
 iwl_mld_rfi_supported(struct iwl_mld *mld,
 		      enum iwl_mld_rfi_feature rfi_feature)
@@ -185,9 +191,9 @@ iwl_mld_rfi_supported(struct iwl_mld *mld,
 	u32 mac_type = CSR_HW_REV_TYPE(mld->trans->hw_rev);
 
 	/* TODO: Check feature enabled in BIOS task=RFI */
-	/* TODO: Check rfi firmware state is good task=RFI */
 
-	if (!mld->trans->trans_cfg->integrated)
+	if (!(mld->trans->trans_cfg->integrated &&
+	      iwl_mld_rfi_fw_state_supported(mld)))
 		return false;
 
 	if (rfi_feature == IWL_MLD_RFI_DDR_FEATURE)
@@ -297,7 +303,8 @@ void iwl_mld_handle_rfi_support_notif(struct iwl_mld *mld,
 {
 	const struct iwl_rfi_support_notif *notif = (void *)pkt->data;
 
-	switch (le32_to_cpu(notif->reason)) {
+	mld->rfi.fw_state = le32_to_cpu(notif->reason);
+	switch (mld->rfi.fw_state) {
 	case IWL_RFI_DDR_SUBSET_TABLE_READY:
 		IWL_DEBUG_FW(mld, "RFIm, DDR subset table ready\n");
 		break;
@@ -309,6 +316,6 @@ void iwl_mld_handle_rfi_support_notif(struct iwl_mld *mld,
 		break;
 	default:
 		IWL_DEBUG_FW(mld, "RFIm is deactivated, reason = %d\n",
-			     le32_to_cpu(notif->reason));
+			     mld->rfi.fw_state);
 	}
 }
