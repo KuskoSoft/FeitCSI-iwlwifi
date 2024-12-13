@@ -114,6 +114,9 @@ void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 void iwl_mld_exit_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			enum iwl_mld_emlsr_exit exit, u8 link_to_keep);
 
+void iwl_mld_handle_emlsr_mode_notif(struct iwl_mld *mld,
+				     struct iwl_rx_packet *pkt);
+
 void iwl_mld_select_links(struct iwl_mld *mld);
 
 #endif /* __iwl_mld_mlo_h__ */

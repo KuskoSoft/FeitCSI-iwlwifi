@@ -7,7 +7,8 @@
 /* Block reasons helper */
 #define HANDLE_EMLSR_BLOCKED_REASONS(HOW)	\
 	HOW(PREVENTION)			\
-	HOW(WOWLAN)
+	HOW(WOWLAN)			\
+	HOW(FW)
 
 static const char *
 iwl_mld_get_emlsr_blocked_string(enum iwl_mld_emlsr_blocked blocked)
@@ -286,6 +287,43 @@ void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	if (!mld_vif->emlsr.blocked_reasons)
 		iwl_mld_unblocked_emlsr(mld, vif);
+}
+
+static void
+iwl_mld_vif_iter_emlsr_mode_notif(void *data, u8 *mac,
+				  struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mvm_esr_mode_notif *notif = (void *)data;
+
+	if (!iwl_mld_vif_has_emlsr(vif))
+		return;
+
+	switch (le32_to_cpu(notif->action)) {
+	case ESR_RECOMMEND_ENTER:
+		iwl_mld_unblock_emlsr(mld_vif->mld, vif,
+				      IWL_MLD_EMLSR_BLOCKED_FW);
+		break;
+	case ESR_RECOMMEND_LEAVE:
+		/* FIXME: This should probably be handled in some way */
+		IWL_DEBUG_INFO(mld_vif->mld,
+			       "Received recommendation to leave EMLSR.\n");
+		break;
+	case ESR_FORCE_LEAVE:
+	default:
+		/* ESR_FORCE_LEAVE should not happen at this point */
+		IWL_WARN(mld_vif->mld, "Unexpected EMLSR notification: %d\n",
+			 le32_to_cpu(notif->action));
+	}
+}
+
+void iwl_mld_handle_emlsr_mode_notif(struct iwl_mld *mld,
+				     struct iwl_rx_packet *pkt)
+{
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_vif_iter_emlsr_mode_notif,
+						pkt->data);
 }
 
 static void _iwl_mld_select_links(struct iwl_mld *mld,

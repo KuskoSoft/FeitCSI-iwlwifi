@@ -1684,6 +1684,10 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		if (!sta->tdls) {
 			mld_vif->authorized = true;
 
+			/* Wait for the FW to send a recommendation */
+			iwl_mld_block_emlsr(mld, vif,
+					    IWL_MLD_EMLSR_BLOCKED_FW, 0);
+
 			/* clear COEX_HIGH_PRIORITY_ENABLE */
 			ret = iwl_mld_mac_fw_action(mld, vif,
 						    FW_CTXT_ACTION_MODIFY);
