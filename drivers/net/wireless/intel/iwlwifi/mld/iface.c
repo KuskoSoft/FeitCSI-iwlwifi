@@ -21,6 +21,9 @@ void iwl_mld_cleanup_vif(void *data, u8 *mac, struct ieee80211_vif *vif)
 	struct iwl_mld *mld = mld_vif->mld;
 	struct iwl_mld_link *link;
 
+	/* EMLSR is turned back on during recovery */
+	vif->driver_flags &= ~IEEE80211_VIF_EML_ACTIVE;
+
 	mld_vif->roc_activity = ROC_NUM_ACTIVITIES;
 
 	for_each_mld_vif_valid_link(mld_vif, link) {

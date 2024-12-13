@@ -7,7 +7,6 @@
 
 #include <net/mac80211.h>
 
-#include "mld.h"
 #include "link.h"
 #include "session-protect.h"
 #include "d3.h"
@@ -16,6 +15,22 @@ enum iwl_mld_cca_40mhz_wa_status {
 	CCA_40_MHZ_WA_NONE,
 	CCA_40_MHZ_WA_RESET,
 	CCA_40_MHZ_WA_RECONNECT,
+};
+
+/**
+ * struct iwl_mld_emlsr - per-VIF data about EMLSR operation
+ *
+ * @primary: The current primary link
+ * @selected_primary: Primary link as selected during the last link selection
+ * @selected_links: Links as selected during the last link selection
+ */
+struct iwl_mld_emlsr {
+	struct_group(zeroed_on_not_authorized,
+		u8 primary;
+
+		u8 selected_primary;
+		u16 selected_links;
+	);
 };
 
 /**
@@ -41,6 +56,7 @@ enum iwl_mld_cca_40mhz_wa_status {
  * @mld: pointer to the mld structure.
  * @deflink: default link data, for use in non-MLO,
  * @link: reference to link data for each valid link, for use in MLO.
+ * @emlsr: information related to EMLSR
  * @wowlan_data: data used by the wowlan suspend flow
  * @use_ps_poll: use ps_poll frames
  * @disable_bf: disable beacon filter
@@ -68,6 +84,8 @@ struct iwl_mld_vif {
 	struct iwl_mld *mld;
 	struct iwl_mld_link deflink;
 	struct iwl_mld_link __rcu *link[IEEE80211_MLD_MAX_NUM_LINKS];
+
+	struct iwl_mld_emlsr emlsr;
 
 #if CONFIG_PM_SLEEP
 	struct iwl_mld_wowlan_data wowlan_data;

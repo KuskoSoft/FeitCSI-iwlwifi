@@ -21,6 +21,7 @@
 #include "tx.h"
 #include "roc.h"
 #include "iface.h"
+#include "mlo.h"
 #include "stats.h"
 #include "low_latency.h"
 #include "fw/api/scan.h"
@@ -995,12 +996,17 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	unsigned int n_active = iwl_mld_count_active_links(mld, vif);
 	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
 	if (WARN_ON(!mld_link))
 		return -EINVAL;
+
+	/* if the assigned one was not counted yet, count it now */
+	if (!rcu_access_pointer(mld_link->chan_ctx))
+		n_active++;
 
 	/* for AP, mac parameters such as HE support are updated at this stage. */
 	if (vif->type == NL80211_IFTYPE_AP) {
@@ -1014,7 +1020,20 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 
 	rcu_assign_pointer(mld_link->chan_ctx, ctx);
 
-	/* TODO: detect entering EMLSR (task=EMLSR) */
+	if (n_active > 1) {
+		struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+		/* Indicate to mac80211 that EML is enabled */
+		vif->driver_flags |= IEEE80211_VIF_EML_ACTIVE;
+
+		if (vif->active_links & BIT(mld_vif->emlsr.selected_links))
+			mld_vif->emlsr.primary = mld_vif->emlsr.selected_primary;
+		else
+			mld_vif->emlsr.primary = __ffs(vif->active_links);
+
+		iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_ESR_LINK_UP,
+				       NULL);
+	}
 
 	/* First send the link command with the phy context ID.
 	 * Now that we have the phy, we know the band so also the rates
@@ -1060,6 +1079,7 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link);
+	unsigned int n_active = iwl_mld_count_active_links(mld, vif);
 
 	if (WARN_ON(!mld_link))
 		return;
@@ -1068,7 +1088,14 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 
 	/* TODO: task=sniffer remove sniffer station */
 
-	/* TODO: detect exiting EMLSR (task=EMLSR)*/
+	if (n_active > 1) {
+		/* Indicate to mac80211 that EML is disabled */
+		vif->driver_flags &= ~IEEE80211_VIF_EML_ACTIVE;
+
+		iwl_dbg_tlv_time_point(&mld->fwrt,
+				       IWL_FW_INI_TIME_ESR_LINK_DOWN,
+				       NULL);
+	}
 
 	RCU_INIT_POINTER(mld_link->chan_ctx, NULL);
 
@@ -1692,6 +1719,10 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 	    new_state == IEEE80211_STA_ASSOC) {
 		if (!sta->tdls) {
 			mld_vif->authorized = false;
+
+			memset(&mld_vif->emlsr.zeroed_on_not_authorized, 0,
+			       sizeof(mld_vif->emlsr.zeroed_on_not_authorized));
+
 			iwl_mld_reset_cca_40mhz_workaround(mld, vif);
 		}
 
@@ -2355,12 +2386,11 @@ static bool iwl_mld_can_activate_links(struct ieee80211_hw *hw,
 				       struct ieee80211_vif *vif,
 				       u16 desired_links)
 {
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	int n_links = hweight16(desired_links);
 
-	if (n_links <= 1)
-		return true;
-
-	return false;
+	/* Check if HW supports the wanted number of links */
+	return n_links <= iwl_mld_max_active_links(mld, vif);
 }
 
 static int
@@ -2369,6 +2399,7 @@ iwl_mld_change_vif_links(struct ieee80211_hw *hw,
 			 u16 old_links, u16 new_links,
 			 struct ieee80211_bss_conf *old[IEEE80211_MLD_MAX_NUM_LINKS])
 {
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct ieee80211_bss_conf *link_conf;
 	u16 removed = old_links & ~new_links;
@@ -2412,7 +2443,11 @@ iwl_mld_change_vif_links(struct ieee80211_hw *hw,
 		}
 	}
 
-	/* TODO: select a primary link task=EMLSR */
+	/*
+	 * Ensure we always have a valid primary_link. When using multiple
+	 * links the proper value is set in assign_vif_chanctx.
+	 */
+	mld_vif->emlsr.primary = new_links ? __ffs(new_links) : 0;
 
 	/*
 	 * Special MLO restart case. We did not have a link when the interface
