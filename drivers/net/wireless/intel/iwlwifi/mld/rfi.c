@@ -272,7 +272,11 @@ iwl_mld_rfi_get_freq_table(struct iwl_mld *mld)
 	struct iwl_rfi_freq_table_resp_cmd *resp = NULL;
 	int ret;
 
-	/* TODO: Check if DDR is supported before proceeding (task=RFI) */
+	if (!iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DDR_FEATURE) &&
+	    !iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DLVR_FEATURE) &&
+	    !iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DESENSE_FEATURE))
+		return ERR_PTR(-EOPNOTSUPP);
+
 	ret = iwl_mld_send_cmd(mld, &cmd);
 	if (ret)
 		return ERR_PTR(ret);
