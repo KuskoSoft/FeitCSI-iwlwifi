@@ -14,6 +14,7 @@ enum iwl_mld_rfi_feature {
 /**
  * struct iwl_mld_rfi - RFI data
  * @fw_state: Firmware RFI state &enum iwl_rfi_support_reason.
+ * @bios_enabled: indicates RFI is enabled in BIOS.
  */
 struct iwl_mld_rfi {
 	/* Add here fields that need clean up on restart */
@@ -21,6 +22,7 @@ struct iwl_mld_rfi {
 		u32 fw_state;
 	);
 	/* And here fields that survive a fw restart */
+	bool bios_enabled;
 };
 
 int iwl_mld_rfi_send_config_cmd(struct iwl_mld *mld);

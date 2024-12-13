@@ -190,9 +190,7 @@ iwl_mld_rfi_supported(struct iwl_mld *mld,
 {
 	u32 mac_type = CSR_HW_REV_TYPE(mld->trans->hw_rev);
 
-	/* TODO: Check feature enabled in BIOS task=RFI */
-
-	if (!(mld->trans->trans_cfg->integrated &&
+	if (!(mld->trans->trans_cfg->integrated && mld->rfi.bios_enabled &&
 	      iwl_mld_rfi_fw_state_supported(mld)))
 		return false;
 
