@@ -7,6 +7,7 @@
 #include "iface.h"
 #include "hcmd.h"
 #include "key.h"
+#include "mac80211.h"
 
 #include "fw/api/context.h"
 #include "fw/api/mac.h"
@@ -430,9 +431,8 @@ void iwl_mld_set_vif_associated(struct iwl_mld *mld,
 		if (iwl_mld_link_set_associated(mld, vif, link))
 			IWL_ERR(mld, "failed to update link %d\n", link_id);
 	}
-	/*
-	 * TODO: recalc_multicast
-	 */
+
+	iwl_mld_recalc_multicast_filter(mld);
 }
 
 static void iwl_mld_get_fw_id_bss_bitmap_iter(void *_data, u8 *mac,

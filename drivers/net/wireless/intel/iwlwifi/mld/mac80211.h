@@ -8,5 +8,6 @@
 #include "mld.h"
 
 int iwl_mld_register_hw(struct iwl_mld *mld);
+void iwl_mld_recalc_multicast_filter(struct iwl_mld *mld);
 
 #endif /* __iwl_mld_mac80211_h__ */

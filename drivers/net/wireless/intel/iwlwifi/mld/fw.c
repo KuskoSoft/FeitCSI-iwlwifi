@@ -498,10 +498,6 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	iwl_mld_init_tas(mld);
 	iwl_mld_init_uats(mld);
 
-	/* TODO:
-	 * - system_features_control
-	 */
-
 	return 0;
 }
 

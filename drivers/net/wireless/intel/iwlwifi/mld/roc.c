@@ -40,7 +40,7 @@ int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	 */
 	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
 
-	/* TODO: Hotspot 2.0 */
+	/* TODO: task=Hotspot 2.0 */
 	if (vif->type != NL80211_IFTYPE_P2P_DEVICE) {
 		IWL_ERR(mld, "NOT SUPPORTED: ROC on vif->type %d\n",
 			vif->type);
@@ -75,7 +75,7 @@ int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	cmd.channel_info.channel = cpu_to_le32(channel->hw_value);
 	cmd.channel_info.band = iwl_mld_nl80211_band_to_fw(channel->band);
 	cmd.channel_info.width = IWL_PHY_CHANNEL_MODE20;
-	/* TODO: Hotspot 2.0, revisit those parameters when we add an ROC
+	/* TODO: task=Hotspot 2.0, revisit those parameters when we add an ROC
 	 * on the BSS vif
 	 */
 	cmd.max_delay = cpu_to_le32(AUX_ROC_MAX_DELAY);

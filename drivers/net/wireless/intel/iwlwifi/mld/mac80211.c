@@ -756,7 +756,7 @@ static void iwl_mld_mc_iface_iterator(void *data, u8 *mac,
 		IWL_ERR(mld, "mcast filter cmd error. ret=%d\n", ret);
 }
 
-static void iwl_mld_recalc_multicast_filter(struct iwl_mld *mld)
+void iwl_mld_recalc_multicast_filter(struct iwl_mld *mld)
 {
 	struct iwl_mld_mc_iter_data iter_data = {
 		.mld = mld,
@@ -2147,7 +2147,6 @@ iwl_mld_pre_channel_switch(struct ieee80211_hw *hw,
 	mld_link->csa_blocks_tx = chsw->block_tx;
 
 	/* TODO: choose primary link for esr (task=esr) */
-	/* TODO: teardown tdls peers (task=tdls) */
 
 	return 0;
 }
@@ -2222,7 +2221,6 @@ iwl_mld_switch_vif_chanctx_swap(struct ieee80211_hw *hw,
 		goto out_remove;
 	}
 
-	/* TODO: teardown tdls peers (task=TDLS) */
 	return 0;
 
  out_remove:
