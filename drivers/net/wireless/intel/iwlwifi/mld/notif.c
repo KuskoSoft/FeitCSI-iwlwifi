@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include "mld.h"
@@ -298,6 +298,26 @@ static void iwl_mld_handle_beacon_notification(struct iwl_mld *mld,
 	mld->ibss_manager = !!beacon->ibss_mgr_status;
 }
 
+/**
+ * DOC: Notification versioning
+ *
+ * The firmware's notifications change from time to time. In order to
+ * differentiate between different versions of the same notification, the
+ * firmware advertises the version of each notification.
+ * Here are listed all the notifications that are supported. Several versions
+ * of the same notification can be allowed at the same time:
+ *
+ * CMD_VERSION(my_multi_version_notif,
+ *	       CMD_VER_ENTRY(1, iwl_my_multi_version_notif_ver1)
+ *	       CMD_VER_ENTRY(2, iwl_my_multi_version_notif_ver2)
+ *
+ * etc...
+ *
+ * The driver will enforce that the notification coming from the firmware
+ * has its version listed here and it'll also enforce that the firmware sent
+ * at least enough bytes to cover the structure listed in the CMD_VER_ENTRY.
+ */
+
 CMD_VERSIONS(scan_complete_notif,
 	     CMD_VER_ENTRY(1, iwl_umac_scan_complete))
 CMD_VERSIONS(scan_iter_complete_notif,
@@ -366,13 +386,35 @@ DEFINE_SIMPLE_CANCELLATION(probe_resp_data, iwl_probe_resp_data_notif,
 DEFINE_SIMPLE_CANCELLATION(uapsd_misbehaving_ap, iwl_uapsd_misbehaving_ap_notif,
 			   mac_id)
 
-/*
- * Handlers for fw notifications
- * Convention: RX_HANDLER(grp, cmd, name, context),
- * This list should be in order of frequency for performance purposes.
+/**
+ * DOC: Handlers for fw notifications
  *
- * The handler can be one from three contexts, see &iwl_rx_handler_context
+ * Here are listed the notifications IDs (including the group ID), the handler
+ * of the notification and how it should be called:
+ *
+ *  - RX_HANDLER_SYNC: will be called as part of the Rx path
+ *  - RX_HANDLER_ASYNC: will be handled in a working with the wiphy_lock held
+ *
+ * This means that if the firmware sends two notifications A and B in that
+ * order and notification A is RX_HANDLER_ASYNC and notification is
+ * RX_HANDLER_SYNC, the handler of B will likely be called before the handler
+ * of A.
+ *
+ * This list should be in order of frequency for performance purposes.
+ * The handler can be one from two contexts, see &iwl_rx_handler_context
+ *
+ * A handler can declare that it relies on a specific object in which case it
+ * can be cancelled in case the object is deleted. In order to use this
+ * mechanism, a cancellation function is needed. The cancellation function must
+ * receive an object id (the index of that object in the firmware) and a
+ * notification payload. It'll return true if that specific notification should
+ * be cancelled upon the obliteration of the specific instance of the object.
+ *
+ * DEFINE_SIMPLE_CANCELLATION allows to easily create a cancellation function
+ * that wills simply return true if a given object id matches the object id in
+ * the firmware notification.
  */
+
 VISIBLE_IF_IWLWIFI_KUNIT
 const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, TX_CMD, tx_resp_notif,

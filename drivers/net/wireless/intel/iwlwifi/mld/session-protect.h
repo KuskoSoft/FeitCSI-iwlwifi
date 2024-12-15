@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #ifndef __session_protect_h__
@@ -10,6 +10,20 @@
 #include "hcmd.h"
 #include <net/mac80211.h>
 #include "fw/api/mac-cfg.h"
+
+/**
+ * DOC: session protection
+ *
+ * Session protection is an API from the firmware that allows the driver to
+ * request time on medium. This is needed before the association when we need
+ * to be on medium for the association frame exchange. Once we configure the
+ * firmware as 'associated', the firmware will allocate time on medium without
+ * needed a session protection.
+ *
+ * TDLS discover uses this API as well even after association to ensure that
+ * other activities internal to the firmware will not interrupt our presence
+ * on medium.
+ */
 
 /**
  * struct iwl_mld_session_protect - session protection parameters
