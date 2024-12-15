@@ -487,8 +487,35 @@ iwl_mld_mac80211_tx(struct ieee80211_hw *hw,
 		    struct ieee80211_tx_control *control, struct sk_buff *skb)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct ieee80211_sta *sta = control->sta;
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	struct ieee80211_hdr *hdr = (void *)skb->data;
+	u32 link_id = u32_get_bits(info->control.flags,
+				   IEEE80211_TX_CTRL_MLO_LINK);
 
-	/* TODO: translate MLD to link address in MLD AP (task=MLO) */
+	/* In AP mode, mgmt frames are sent on the bcast station,
+	 * so the FW can't translate the MLD addr to the link addr. Do it here
+	 */
+	if (ieee80211_is_mgmt(hdr->frame_control) && sta &&
+	    link_id != IEEE80211_LINK_UNSPECIFIED &&
+	    !ieee80211_is_probe_resp(hdr->frame_control)) {
+		/* translate MLD addresses to LINK addresses */
+		struct ieee80211_link_sta *link_sta =
+			rcu_dereference(sta->link[link_id]);
+		struct ieee80211_bss_conf *link_conf =
+			rcu_dereference(info->control.vif->link_conf[link_id]);
+		struct ieee80211_mgmt *mgmt;
+
+		if (WARN_ON(!link_sta || !link_conf)) {
+			ieee80211_free_txskb(hw, skb);
+			return;
+		}
+
+		mgmt = (void *)hdr;
+		memcpy(mgmt->da, link_sta->addr, ETH_ALEN);
+		memcpy(mgmt->sa, link_conf->addr, ETH_ALEN);
+		memcpy(mgmt->bssid, link_conf->bssid, ETH_ALEN);
+	}
 
 	iwl_mld_tx_skb(mld, skb, NULL);
 }
