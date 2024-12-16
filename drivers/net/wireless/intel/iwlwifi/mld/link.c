@@ -584,10 +584,8 @@ void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
 	if (hweight16(vif->active_links) <= 1)
 		return;
 
-	if (IWL_FW_CHECK(mld,
-			 le32_to_cpu(notif->other_link_id) == FW_CTXT_ID_INVALID,
-			 "No data for other link id but we are in EMLSR. active_links: 0x%x\n",
-			 vif->active_links))
+	/* We are processing a notification before before link activation */
+	if (le32_to_cpu(notif->other_link_id) == FW_CTXT_ID_INVALID)
 		return;
 
 	/* Exit EMLSR if we lost more than
