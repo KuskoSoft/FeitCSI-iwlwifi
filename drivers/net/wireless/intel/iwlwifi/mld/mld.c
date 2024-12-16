@@ -489,13 +489,27 @@ static void iwl_mld_queue_state_change(struct iwl_op_mode *op_mode,
 	rcu_read_lock();
 
 	txq = rcu_dereference(mld->fw_id_to_txq[hw_queue]);
-	if (!txq)
-		goto out;
+	if (!txq) {
+		rcu_read_unlock();
+
+		if (queue_full) {
+			/* An internal queue is not expected to become full */
+			IWL_WARN(mld,
+				 "Internal hw_queue %d is full! stopping all queues\n",
+				 hw_queue);
+			/* Stop all queues, as an internal queue is not
+			 * mapped to a mac80211 one
+			 */
+			ieee80211_stop_queues(mld->hw);
+		} else {
+			ieee80211_wake_queues(mld->hw);
+		}
+
+		return;
+	}
 
 	mld_txq = iwl_mld_txq_from_mac80211(txq);
 	mld_sta = txq->sta ? iwl_mld_sta_from_mac80211(txq->sta) : NULL;
-
-	/* TODO: static queues (task=DP_TX) */
 
 	mld_txq->status.stop_full = queue_full;
 
@@ -506,7 +520,6 @@ static void iwl_mld_queue_state_change(struct iwl_op_mode *op_mode,
 		local_bh_enable();
 	}
 
-out:
 	rcu_read_unlock();
 }
 
