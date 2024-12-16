@@ -28,7 +28,7 @@ int iwl_tx_tso_segment(struct sk_buff *skb, unsigned int num_subframes,
 		       netdev_features_t netdev_flags,
 		       struct sk_buff_head *mpdus_skbs)
 {
-	WARN_ON(1)
+	WARN_ON(1);
 
 	return -1;
 }
