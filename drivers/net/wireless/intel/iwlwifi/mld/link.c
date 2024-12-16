@@ -573,8 +573,12 @@ void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
 		return;
 	}
 
-	if (missed_bcon_since_rx > IWL_MLD_MISSED_BEACONS_THRESHOLD)
+	if (missed_bcon_since_rx > IWL_MLD_MISSED_BEACONS_THRESHOLD) {
 		ieee80211_cqm_beacon_loss_notify(vif, GFP_ATOMIC);
+
+		/* try to switch links, no-op if we don't have MLO */
+		iwl_mld_int_mlo_scan(mld, vif);
+	}
 
 	/* no more logic if we're not in EMLSR */
 	if (hweight16(vif->active_links) <= 1)
