@@ -18,11 +18,37 @@ enum iwl_mld_cca_40mhz_wa_status {
 };
 
 /**
+ * enum iwl_mld_emlsr_blocked - defines reasons for which EMLSR is blocked
+ *
+ * These blocks are applied/stored per-VIF.
+ *
+ * @IWL_MLD_EMLSR_BLOCKED_PREVENTION: Prevent repeated EMLSR enter/exit
+ */
+enum iwl_mld_emlsr_blocked {
+	IWL_MLD_EMLSR_BLOCKED_PREVENTION	= 0x1,
+};
+
+/**
+ * enum iwl_mld_emlsr_exit - defines reasons for exiting EMLSR
+ *
+ * Reasons to exit EMLSR may be either link specific or even specific to a
+ * combination of links.
+ *
+ * @IWL_MLD_EMLSR_EXIT_BLOCK: Exit due to a block reason being set
+ */
+enum iwl_mld_emlsr_exit {
+	IWL_MLD_EMLSR_EXIT_BLOCK		= 0x1,
+};
+
+/**
  * struct iwl_mld_emlsr - per-VIF data about EMLSR operation
  *
  * @primary: The current primary link
  * @selected_primary: Primary link as selected during the last link selection
  * @selected_links: Links as selected during the last link selection
+ * @blocked_reasons: Reasons preventing EMLSR from being enabled
+ * @last_exit_reason: Reason for the last EMLSR exit
+ * @last_exit_ts: Time of the last EMLSR exit (if &last_exit_reason is non-zero)
  */
 struct iwl_mld_emlsr {
 	struct_group(zeroed_on_not_authorized,
@@ -30,6 +56,11 @@ struct iwl_mld_emlsr {
 
 		u8 selected_primary;
 		u16 selected_links;
+
+		enum iwl_mld_emlsr_blocked blocked_reasons;
+
+		enum iwl_mld_emlsr_exit last_exit_reason;
+		unsigned long last_exit_ts;
 	);
 };
 

@@ -7,6 +7,7 @@
 
 #include <linux/ieee80211.h>
 #include <linux/types.h>
+#include <net/mac80211.h>
 #include "iwl-config.h"
 #include "iwl-trans.h"
 #include "iface.h"
@@ -61,5 +62,15 @@ iwl_mld_count_active_links(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	return n_active;
 }
+
+/* EMLSR block/unblock and exit */
+void iwl_mld_block_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			 enum iwl_mld_emlsr_blocked reason, u8 link_to_keep);
+int iwl_mld_block_emlsr_sync(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     enum iwl_mld_emlsr_blocked reason, u8 link_to_keep);
+void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			   enum iwl_mld_emlsr_blocked reason);
+void iwl_mld_exit_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			enum iwl_mld_emlsr_exit exit, u8 link_to_keep);
 
 #endif /* __iwl_mld_mlo_h__ */
