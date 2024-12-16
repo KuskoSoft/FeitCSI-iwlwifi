@@ -48,7 +48,9 @@ enum iwl_mld_emlsr_exit {
  * @selected_links: Links as selected during the last link selection
  * @blocked_reasons: Reasons preventing EMLSR from being enabled
  * @last_exit_reason: Reason for the last EMLSR exit
- * @last_exit_ts: Time of the last EMLSR exit (if &last_exit_reason is non-zero)
+ * @last_exit_ts: Time of the last EMLSR exit (if @last_exit_reason is non-zero)
+ * @exit_repeat_count: Number of times EMLSR was exited for the same reason
+ * @prevent_done_wk: Worker to remove %IWL_MLD_EMLSR_BLOCKED_PREVENTION
  */
 struct iwl_mld_emlsr {
 	struct_group(zeroed_on_not_authorized,
@@ -61,7 +63,10 @@ struct iwl_mld_emlsr {
 
 		enum iwl_mld_emlsr_exit last_exit_reason;
 		unsigned long last_exit_ts;
+		u8 exit_repeat_count;
 	);
+
+	struct wiphy_delayed_work prevent_done_wk;
 };
 
 /**

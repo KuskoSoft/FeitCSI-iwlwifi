@@ -65,7 +65,84 @@ static void iwl_mld_print_emlsr_exit(struct iwl_mld *mld, u32 mask)
 #undef NAME_PR
 }
 
+void iwl_mld_emlsr_prevent_done_wk(struct wiphy *wiphy, struct wiphy_work *wk)
+{
+	struct iwl_mld_vif *mld_vif = container_of(wk, struct iwl_mld_vif,
+						   emlsr.prevent_done_wk.work);
+	struct ieee80211_vif *vif =
+		container_of((void *)mld_vif, struct ieee80211_vif, drv_priv);
+
+	if (WARN_ON(!(mld_vif->emlsr.blocked_reasons &
+		      IWL_MLD_EMLSR_BLOCKED_PREVENTION)))
+		return;
+
+	iwl_mld_unblock_emlsr(mld_vif->mld, vif,
+			      IWL_MLD_EMLSR_BLOCKED_PREVENTION);
+}
+
 #define IWL_MLD_TRIGGER_LINK_SEL_TIME	(HZ * IWL_MLD_TRIGGER_LINK_SEL_TIME_SEC)
+
+/* Exit reasons that can cause longer EMLSR prevention */
+#define IWL_MLD_PREVENT_EMLSR_REASONS	0
+#define IWL_MLD_PREVENT_EMLSR_TIMEOUT	(HZ * 400)
+
+#define IWL_MLD_EMLSR_PREVENT_SHORT	(HZ * 300)
+#define IWL_MLD_EMLSR_PREVENT_LONG	(HZ * 600)
+
+static void iwl_mld_check_emlsr_prevention(struct iwl_mld *mld,
+					   struct iwl_mld_vif *mld_vif,
+					   enum iwl_mld_emlsr_exit reason)
+{
+	unsigned long delay;
+
+	/*
+	 * Reset the counter if more than 400 seconds have passed between one
+	 * exit and the other, or if we exited due to a different reason.
+	 * Will also reset the counter after the long prevention is done.
+	 */
+	if (time_after(jiffies, mld_vif->emlsr.last_exit_ts +
+				IWL_MLD_PREVENT_EMLSR_TIMEOUT) ||
+	    mld_vif->emlsr.last_exit_reason != reason)
+		mld_vif->emlsr.exit_repeat_count = 0;
+
+	mld_vif->emlsr.last_exit_reason = reason;
+	mld_vif->emlsr.last_exit_ts = jiffies;
+	mld_vif->emlsr.exit_repeat_count++;
+
+	/*
+	 * Do not add a prevention when the reason was a block. For a block,
+	 * EMLSR will be enabled again on unblock.
+	 */
+	if (reason == IWL_MLD_EMLSR_EXIT_BLOCK)
+		return;
+
+	/* Set prevention for a minimum of 30 seconds */
+	mld_vif->emlsr.blocked_reasons |= IWL_MLD_EMLSR_BLOCKED_PREVENTION;
+	delay = IWL_MLD_TRIGGER_LINK_SEL_TIME;
+
+	/* Handle repeats for reasons that can cause long prevention */
+	if (mld_vif->emlsr.exit_repeat_count > 1 &&
+	    reason & IWL_MLD_PREVENT_EMLSR_REASONS) {
+		if (mld_vif->emlsr.exit_repeat_count == 2)
+			delay = IWL_MLD_EMLSR_PREVENT_SHORT;
+		else
+			delay = IWL_MLD_EMLSR_PREVENT_LONG;
+
+		/*
+		 * The timeouts are chosen so that this will not happen, i.e.
+		 * IWL_MLD_EMLSR_PREVENT_LONG > IWL_MLD_PREVENT_EMLSR_TIMEOUT
+		 */
+		WARN_ON(mld_vif->emlsr.exit_repeat_count > 3);
+	}
+
+	IWL_DEBUG_INFO(mld,
+		       "Preventing EMLSR for %ld seconds due to %u exits with the reason = %s (0x%x)\n",
+		       delay / HZ, mld_vif->emlsr.exit_repeat_count,
+		       iwl_mld_get_emlsr_exit_string(reason), reason);
+
+	wiphy_delayed_work_queue(mld->wiphy,
+				 &mld_vif->emlsr.prevent_done_wk, delay);
+}
 
 static int _iwl_mld_exit_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			       enum iwl_mld_emlsr_exit exit, u8 link_to_keep,
@@ -101,9 +178,8 @@ static int _iwl_mld_exit_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	else
 		ieee80211_set_active_links_async(vif, new_active_links);
 
-	/* TODO: Implement EMLSR prevention */
-	mld_vif->emlsr.last_exit_reason = exit;
-	mld_vif->emlsr.last_exit_ts = jiffies;
+	/* Update latest exit reason and check EMLSR prevention */
+	iwl_mld_check_emlsr_prevention(mld, mld_vif, exit);
 
 	return ret;
 }

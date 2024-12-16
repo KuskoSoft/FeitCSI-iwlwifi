@@ -7,6 +7,7 @@
 #include "iface.h"
 #include "hcmd.h"
 #include "key.h"
+#include "mlo.h"
 #include "mac80211.h"
 
 #include "fw/api/context.h"
@@ -385,6 +386,9 @@ iwl_mld_init_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	ret = iwl_mld_allocate_vif_fw_id(mld, &mld_vif->fw_id, vif);
 	if (ret)
 		return ret;
+
+	wiphy_delayed_work_init(&mld_vif->emlsr.prevent_done_wk,
+				iwl_mld_emlsr_prevent_done_wk);
 
 	return 0;
 }

@@ -1723,6 +1723,9 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 			memset(&mld_vif->emlsr.zeroed_on_not_authorized, 0,
 			       sizeof(mld_vif->emlsr.zeroed_on_not_authorized));
 
+			wiphy_delayed_work_cancel(mld->wiphy,
+						  &mld_vif->emlsr.prevent_done_wk);
+
 			iwl_mld_reset_cca_40mhz_workaround(mld, vif);
 		}
 
