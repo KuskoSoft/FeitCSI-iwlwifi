@@ -593,9 +593,6 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* execute all pending notifications (async handlers)*/
-	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
-
 	wiphy_work_cancel(mld->wiphy, &mld->add_txqs_wk);
 
 	/* if the suspend flow fails the fw is in error. Stop it here, and it
