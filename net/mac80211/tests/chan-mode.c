@@ -20,7 +20,12 @@ static const struct determine_chan_mode_case {
 	struct ieee80211_ht_cap ht_capa_mask;
 	struct ieee80211_vht_cap vht_capa;
 	struct ieee80211_vht_cap vht_capa_mask;
-	u8 he_basic_mcs_low;
+	u8 vht_basic_mcs_1_4_set:1,
+	   vht_basic_mcs_5_8_set:1,
+	   he_basic_mcs_1_4_set:1,
+	   he_basic_mcs_5_8_set:1;
+	u8 vht_basic_mcs_1_4, vht_basic_mcs_5_8;
+	u8 he_basic_mcs_1_4, he_basic_mcs_5_8;
 	u8 eht_mcs7_min_nss;
 	int error;
 } determine_chan_mode_cases[] = {
@@ -80,10 +85,29 @@ static const struct determine_chan_mode_case {
 			.supp_mcs.tx_mcs_map = cpu_to_le16(0xffff),
 		},
 	}, {
+		.desc = "AP has higher VHT requirement than client",
+		.conn_mode = IEEE80211_CONN_MODE_VHT,
+		.expected_mode = IEEE80211_CONN_MODE_HT,
+		.vht_basic_mcs_5_8_set = 1,
+		.vht_basic_mcs_5_8 = 0xFE, /* require 5th stream */
+	}, {
+		.desc = "all zero VHT basic rates are ignored (many APs broken)",
+		.conn_mode = IEEE80211_CONN_MODE_VHT,
+		.expected_mode = IEEE80211_CONN_MODE_VHT,
+		.vht_basic_mcs_1_4_set = 1,
+		.vht_basic_mcs_5_8_set = 1,
+	}, {
 		.desc = "AP requires 3 HE streams but client only has two",
 		.conn_mode = IEEE80211_CONN_MODE_EHT,
 		.expected_mode = IEEE80211_CONN_MODE_VHT,
-		.he_basic_mcs_low = 0b11001010,
+		.he_basic_mcs_1_4 = 0b11001010,
+		.he_basic_mcs_1_4_set = 1,
+	}, {
+		.desc = "all zero HE basic rates are ignored (iPhone workaround)",
+		.conn_mode = IEEE80211_CONN_MODE_HE,
+		.expected_mode = IEEE80211_CONN_MODE_HE,
+		.he_basic_mcs_1_4_set = 1,
+		.he_basic_mcs_5_8_set = 1,
 	}, {
 		.desc = "AP requires too many RX streams with EHT MCS 7",
 		.conn_mode = IEEE80211_CONN_MODE_EHT,
@@ -141,17 +165,22 @@ static void test_determine_chan_mode(struct kunit *test)
 		/* VHT Operation */
 		WLAN_EID_VHT_OPERATION, 0x05,
 		0x00, 0x00, 0x00,
-		le16_get_bits(t_sdata->band_5ghz.vht_cap.vht_mcs.rx_mcs_map, 0xff),
-		le16_get_bits(t_sdata->band_5ghz.vht_cap.vht_mcs.rx_mcs_map, 0xff00),
+		params->vht_basic_mcs_1_4_set ?
+			params->vht_basic_mcs_1_4 :
+			le16_get_bits(t_sdata->band_5ghz.vht_cap.vht_mcs.rx_mcs_map, 0xff),
+		params->vht_basic_mcs_5_8_set ?
+			params->vht_basic_mcs_5_8 :
+			le16_get_bits(t_sdata->band_5ghz.vht_cap.vht_mcs.rx_mcs_map, 0xff00),
 		/* HE Capabilities */
 		WLAN_EID_EXTENSION, 0x16, WLAN_EID_EXT_HE_CAPABILITY,
 		0x01, 0x78, 0xc8, 0x1a, 0x40, 0x00, 0x00, 0xbf,
 		0xce, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0xfa, 0xff, 0xfa, 0xff,
-		/* HE Operation (permit overriding value for 1-4 streams) */
+		/* HE Operation (permit overriding values) */
 		WLAN_EID_EXTENSION, 0x07, WLAN_EID_EXT_HE_OPERATION,
 		0xf0, 0x3f, 0x00, 0xb0,
-		params->he_basic_mcs_low ? params->he_basic_mcs_low : 0xfc, 0xff,
+		params->he_basic_mcs_1_4_set ? params->he_basic_mcs_1_4 : 0xfc,
+		params->he_basic_mcs_5_8_set ? params->he_basic_mcs_5_8 : 0xff,
 		/* EHT Capabilities */
 		WLAN_EID_EXTENSION, 0x12, WLAN_EID_EXT_EHT_CAPABILITY,
 		0x07, 0x00, 0x1c, 0x00, 0x00, 0xfe, 0xff, 0xff,

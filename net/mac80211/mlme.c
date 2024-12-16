@@ -404,6 +404,14 @@ ieee80211_verify_sta_vht_mcs_support(struct ieee80211_sub_if_data *sdata,
 	sta_tx_mcs_map = le16_to_cpu(sta_vht_cap.vht_mcs.tx_mcs_map);
 
 	/*
+	 * Many APs are incorrectly advertising an all-zero value here,
+	 * which really means MCS 0-7 are required for 1-8 streams, but
+	 * they don't really mean it that way. Ignore that.
+	 */
+	if (!ap_min_req_set)
+		return true;
+
+	/*
 	 * P802.11REVme/D7.0 - 6.5.4.2.4
 	 * ...
 	 * If the MLME of a VHT STA receives an MLME-JOIN.request primitive
