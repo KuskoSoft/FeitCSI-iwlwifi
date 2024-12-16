@@ -37,9 +37,11 @@ enum iwl_mld_emlsr_blocked {
  * combination of links.
  *
  * @IWL_MLD_EMLSR_EXIT_BLOCK: Exit due to a block reason being set
+ * @IWL_MLD_EMLSR_EXIT_MISSED_BEACON: Exit due to missed beacons
  */
 enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_BLOCK		= 0x1,
+	IWL_MLD_EMLSR_EXIT_MISSED_BEACON	= 0x2,
 };
 
 /**

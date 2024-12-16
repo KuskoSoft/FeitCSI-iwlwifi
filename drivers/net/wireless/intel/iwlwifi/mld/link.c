@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "link.h"
 #include "iface.h"
+#include "mlo.h"
 #include "hcmd.h"
 #include "phy.h"
 #include "fw/api/rs.h"
@@ -598,8 +599,8 @@ void iwl_mld_handle_missed_beacon_notif(struct iwl_mld *mld,
 	    (bss_param_ch_cnt_link_id != link_id &&
 	     missed_bcon >=
 	     IWL_MLD_BCN_LOSS_EXIT_ESR_THRESH_BSS_PARAM_CHANGED)) {
-		/* TODO EMLSR: exit esr */
-		IWL_ERR(mld, "Not implemented, exist EMLSR\n");
+		iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_MISSED_BEACON,
+				   iwl_mld_get_primary_link(vif));
 	}
 }
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_handle_missed_beacon_notif);

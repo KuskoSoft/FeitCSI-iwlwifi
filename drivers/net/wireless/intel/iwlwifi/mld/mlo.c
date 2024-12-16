@@ -37,7 +37,8 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 
 /* Exit reasons helper */
 #define HANDLE_EMLSR_EXIT_REASONS(HOW)	\
-	HOW(BLOCK)
+	HOW(BLOCK)			\
+	HOW(MISSED_BEACON)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -84,7 +85,7 @@ void iwl_mld_emlsr_prevent_done_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 #define IWL_MLD_TRIGGER_LINK_SEL_TIME	(HZ * IWL_MLD_TRIGGER_LINK_SEL_TIME_SEC)
 
 /* Exit reasons that can cause longer EMLSR prevention */
-#define IWL_MLD_PREVENT_EMLSR_REASONS	0
+#define IWL_MLD_PREVENT_EMLSR_REASONS	IWL_MLD_EMLSR_EXIT_MISSED_BEACON
 #define IWL_MLD_PREVENT_EMLSR_TIMEOUT	(HZ * 400)
 
 #define IWL_MLD_EMLSR_PREVENT_SHORT	(HZ * 300)
