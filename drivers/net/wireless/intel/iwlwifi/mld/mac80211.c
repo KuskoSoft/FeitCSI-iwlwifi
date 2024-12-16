@@ -1699,6 +1699,13 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 			/* Ensure any block due to a non-BSS link is synced */
 			iwl_mld_emlsr_check_non_bss_block(mld, 0);
 
+			/* Block EMLSR until a certain throughput it reached */
+			if (!mld->fw_status.in_hw_restart &&
+			    IWL_MLD_ENTER_EMLSR_TPT_THRESH > 0)
+				iwl_mld_block_emlsr(mld_vif->mld, vif,
+						    IWL_MLD_EMLSR_BLOCKED_TPT,
+						    0);
+
 			/* Wait for the FW to send a recommendation */
 			iwl_mld_block_emlsr(mld, vif,
 					    IWL_MLD_EMLSR_BLOCKED_FW, 0);
@@ -1746,6 +1753,7 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 						  &mld_vif->emlsr.prevent_done_wk);
 			wiphy_delayed_work_cancel(mld->wiphy,
 						  &mld_vif->emlsr.tmp_non_bss_done_wk);
+			wiphy_work_cancel(mld->wiphy, &mld_vif->emlsr.unblock_tpt_wk);
 
 			iwl_mld_reset_cca_40mhz_workaround(mld, vif);
 		}

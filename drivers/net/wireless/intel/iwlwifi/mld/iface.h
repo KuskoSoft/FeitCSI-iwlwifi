@@ -31,6 +31,7 @@ enum iwl_mld_cca_40mhz_wa_status {
  * @IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS: An expected active non-BSS interface's
  *      link is preventing EMLSR. This is a temporary blocking that is set when
  *      there is an indication that a non-BSS interface is to be added.
+ * @IWL_MLD_EMLSR_BLOCKED_TPT: throughput is too low to make EMLSR worthwhile
  */
 enum iwl_mld_emlsr_blocked {
 	IWL_MLD_EMLSR_BLOCKED_PREVENTION	= 0x1,
@@ -39,6 +40,7 @@ enum iwl_mld_emlsr_blocked {
 	IWL_MLD_EMLSR_BLOCKED_ROC		= 0x8,
 	IWL_MLD_EMLSR_BLOCKED_NON_BSS		= 0x10,
 	IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS	= 0x20,
+	IWL_MLD_EMLSR_BLOCKED_TPT		= 0x40,
 };
 
 /**
@@ -55,6 +57,7 @@ enum iwl_mld_emlsr_blocked {
  * @IWL_MLD_EMLSR_EXIT_BANDWIDTH: Bandwidths of primary and secondary links are
  *      not equal
  * @IWL_MLD_EMLSR_EXIT_LOW_RSSI: Link RSSI is unsuitable for EMLSR
+ * @IWL_MLD_EMLSR_EXIT_LINK_USAGE: Exit EMLSR due to low TPT on secondary link
  */
 enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_BLOCK		= 0x1,
@@ -64,6 +67,7 @@ enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_EQUAL_BAND		= 0x10,
 	IWL_MLD_EMLSR_EXIT_BANDWIDTH		= 0x20,
 	IWL_MLD_EMLSR_EXIT_LOW_RSSI		= 0x40,
+	IWL_MLD_EMLSR_EXIT_LINK_USAGE		= 0x80,
 };
 
 /**
@@ -76,6 +80,7 @@ enum iwl_mld_emlsr_exit {
  * @last_exit_reason: Reason for the last EMLSR exit
  * @last_exit_ts: Time of the last EMLSR exit (if @last_exit_reason is non-zero)
  * @exit_repeat_count: Number of times EMLSR was exited for the same reason
+ * @unblock_tpt_wk: Unblock EMLSR because the throughput limit was reached
  * @prevent_done_wk: Worker to remove %IWL_MLD_EMLSR_BLOCKED_PREVENTION
  * @tmp_non_bss_done_wk: Worker to remove %IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS
  */
@@ -92,6 +97,8 @@ struct iwl_mld_emlsr {
 		unsigned long last_exit_ts;
 		u8 exit_repeat_count;
 	);
+
+	struct wiphy_work unblock_tpt_wk;
 
 	struct wiphy_delayed_work prevent_done_wk;
 	struct wiphy_delayed_work tmp_non_bss_done_wk;

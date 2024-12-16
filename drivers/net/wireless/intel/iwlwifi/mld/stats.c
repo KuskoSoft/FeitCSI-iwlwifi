@@ -6,6 +6,7 @@
 #include "mld.h"
 #include "stats.h"
 #include "sta.h"
+#include "mlo.h"
 #include "hcmd.h"
 #include "iface.h"
 #include "mlo.h"
@@ -404,6 +405,8 @@ void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 	iwl_mld_process_per_link_stats(mld, stats->per_link, curr_ts_usec);
 
 	/* TODO: per_phy stats (task=statistics) */
+
+	iwl_mld_emlsr_update_tpt(mld);
 }
 
 void iwl_mld_handle_stats_oper_part1_notif(struct iwl_mld *mld,

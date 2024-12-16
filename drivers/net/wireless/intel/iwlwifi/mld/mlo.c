@@ -11,7 +11,8 @@
 	HOW(FW)				\
 	HOW(ROC)			\
 	HOW(NON_BSS)			\
-	HOW(TMP_NON_BSS)
+	HOW(TMP_NON_BSS)		\
+	HOW(TPT)
 
 static const char *
 iwl_mld_get_emlsr_blocked_string(enum iwl_mld_emlsr_blocked blocked)
@@ -47,7 +48,8 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 	HOW(CSA)			\
 	HOW(EQUAL_BAND)			\
 	HOW(BANDWIDTH)			\
-	HOW(LOW_RSSI)
+	HOW(LOW_RSSI)			\
+	HOW(LINK_USAGE)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -463,6 +465,150 @@ int iwl_mld_emlsr_check_non_bss_block(struct iwl_mld *mld,
 						&block_data);
 
 	return block_data.result;
+}
+
+#define EMLSR_SEC_LINK_MIN_PERC 10
+#define EMLSR_MIN_TX 3000
+#define EMLSR_MIN_RX 400
+
+static void
+_iwl_mld_emlsr_update_tpt(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_sta *mld_sta =
+		iwl_mld_sta_from_mac80211(mld_vif->ap_sta);
+	struct iwl_mld_link *sec_link;
+	unsigned long total_tx = 0, total_rx = 0;
+	unsigned long sec_link_tx = 0, sec_link_rx = 0;
+	u8 sec_link_tx_perc, sec_link_rx_perc;
+	s8 sec_link_id;
+
+	/* We only count for the AP sta in a MLO connection */
+	if (!mld_sta->mpdu_counters)
+		return;
+
+	/* We are waiting for TPT in order to unblock, just zero counters */
+	if (mld_vif->emlsr.blocked_reasons & IWL_MLD_EMLSR_BLOCKED_TPT) {
+		for (int q = 0; q < mld->trans->num_rx_queues; q++) {
+			struct iwl_mld_per_q_mpdu_counter *queue_counter =
+				&mld_sta->mpdu_counters[q];
+
+			spin_lock_bh(&queue_counter->lock);
+
+			memset(queue_counter->per_link, 0,
+			       sizeof(queue_counter->per_link));
+
+			spin_unlock_bh(&queue_counter->lock);
+		}
+
+		return;
+	}
+
+	/*
+	 * TPT is unblocked, need to check if the TPT criteria is still met.
+	 *
+	 * If EMLSR is active, then we also need to check the secondar link
+	 * requirements.
+	 */
+	if (iwl_mld_emlsr_active(vif)) {
+		sec_link_id = iwl_mld_get_other_link(vif, iwl_mld_get_primary_link(vif));
+		sec_link = iwl_mld_link_dereference_check(mld_vif, sec_link_id);
+		if (WARN_ON_ONCE(!sec_link))
+			return;
+		/* We need the FW ID here */
+		sec_link_id = sec_link->fw_id;
+	} else {
+		sec_link_id = -1;
+	}
+
+	/* Sum up RX and TX MPDUs from the different queues/links */
+	for (int q = 0; q < mld->trans->num_rx_queues; q++) {
+		struct iwl_mld_per_q_mpdu_counter *queue_counter =
+			&mld_sta->mpdu_counters[q];
+
+		spin_lock_bh(&queue_counter->lock);
+
+		/* The link IDs that doesn't exist will contain 0 */
+		for (int link = 0;
+		     link < ARRAY_SIZE(queue_counter->per_link);
+		     link++) {
+			total_tx += queue_counter->per_link[link].tx;
+			total_rx += queue_counter->per_link[link].rx;
+		}
+
+		if (sec_link_id != -1) {
+			sec_link_tx += queue_counter->per_link[sec_link_id].tx;
+			sec_link_rx += queue_counter->per_link[sec_link_id].rx;
+		}
+
+		memset(queue_counter->per_link, 0,
+		       sizeof(queue_counter->per_link));
+
+		spin_unlock_bh(&queue_counter->lock);
+	}
+
+	IWL_DEBUG_INFO(mld, "total Tx MPDUs: %ld. total Rx MPDUs: %ld\n",
+		       total_tx, total_rx);
+
+	/* If we don't have enough MPDUs - exit EMLSR */
+	if (total_tx < IWL_MLD_ENTER_EMLSR_TPT_THRESH &&
+	    total_rx < IWL_MLD_ENTER_EMLSR_TPT_THRESH) {
+		iwl_mld_block_emlsr(mld, vif, IWL_MLD_EMLSR_BLOCKED_TPT,
+				    iwl_mld_get_primary_link(vif));
+		return;
+	}
+
+	/* EMLSR is not active */
+	if (sec_link_id == -1)
+		return;
+
+	IWL_DEBUG_INFO(mld, "Secondary Link %d: Tx MPDUs: %ld. Rx MPDUs: %ld\n",
+		       sec_link_id, sec_link_tx, sec_link_rx);
+
+	/* Calculate the percentage of the secondary link TX/RX */
+	sec_link_tx_perc = total_tx ? sec_link_tx * 100 / total_tx : 0;
+	sec_link_rx_perc = total_rx ? sec_link_rx * 100 / total_rx : 0;
+
+	/*
+	 * The TX/RX percentage is checked only if it exceeds the required
+	 * minimum. In addition, RX is checked only if the TX check failed.
+	 */
+	if ((total_tx > EMLSR_MIN_TX &&
+	     sec_link_tx_perc < EMLSR_SEC_LINK_MIN_PERC) ||
+	    (total_rx > EMLSR_MIN_RX &&
+	     sec_link_rx_perc < EMLSR_SEC_LINK_MIN_PERC))
+		iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_LINK_USAGE,
+				   iwl_mld_get_primary_link(vif));
+}
+
+static void iwl_mld_vif_iter_emlsr_update_tpt(void *_data, u8 *mac,
+					      struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld *mld = mld_vif->mld;
+
+	if (!iwl_mld_vif_has_emlsr(vif) || !mld_vif->ap_sta)
+		return;
+
+	_iwl_mld_emlsr_update_tpt(mld, vif);
+}
+
+void iwl_mld_emlsr_update_tpt(struct iwl_mld *mld)
+{
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_vif_iter_emlsr_update_tpt,
+						NULL);
+}
+
+void iwl_mld_emlsr_unblock_tpt_wk(struct wiphy *wiphy, struct wiphy_work *wk)
+{
+	struct iwl_mld_vif *mld_vif = container_of(wk, struct iwl_mld_vif,
+						   emlsr.unblock_tpt_wk);
+	struct ieee80211_vif *vif =
+		container_of((void *)mld_vif, struct ieee80211_vif, drv_priv);
+
+	iwl_mld_unblock_emlsr(mld_vif->mld, vif, IWL_MLD_EMLSR_BLOCKED_TPT);
 }
 
 /*

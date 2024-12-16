@@ -9,6 +9,7 @@
 #include "sta.h"
 #include "hcmd.h"
 #include "iface.h"
+#include "mlo.h"
 #include "key.h"
 #include "agg.h"
 #include "tlc.h"
@@ -809,6 +810,8 @@ static void iwl_mld_count_mpdu(struct ieee80211_link_sta *link_sta, int queue,
 	struct iwl_mld_vif *mld_vif;
 	struct iwl_mld_sta *mld_sta;
 	struct iwl_mld_link *mld_link;
+	struct iwl_mld *mld;
+	int total_mpdus = 0;
 
 	if (WARN_ON(!link_sta))
 		return;
@@ -828,18 +831,33 @@ static void iwl_mld_count_mpdu(struct ieee80211_link_sta *link_sta, int queue,
 
 	spin_lock_bh(&queue_counter->lock);
 
+	/* Update the statistics for this TPT measurement window */
 	if (tx)
 		link_counter->tx += count;
 	else
 		link_counter->rx += count;
 
-	/* TODO (task=EMLSR)
-	 * 1. Return early if esr_active is set.
-	 * 2. Sum total_mpdus in the queue_counter.
-	 * 3. Clear counters when the defined window time has passed.
-	 * 4. Compare total_mpdus to the threshold to unblock EMLSR.
+	/*
+	 * Next, evaluate whether we should queue an unblock,
+	 * skip this if we are not blocked due to low throughput.
 	 */
+	if (!(mld_vif->emlsr.blocked_reasons & IWL_MLD_EMLSR_BLOCKED_TPT))
+		goto unlock;
 
+	for (int i = 0; i <= IWL_FW_MAX_LINK_ID; i++)
+		total_mpdus += tx ? queue_counter->per_link[i].tx :
+				    queue_counter->per_link[i].rx;
+
+	mld = mld_vif->mld;
+
+	/* Unblock is already queued if the threshold was reached before */
+	if (total_mpdus - count >= IWL_MLD_ENTER_EMLSR_TPT_THRESH)
+		goto unlock;
+
+	if (total_mpdus >= IWL_MLD_ENTER_EMLSR_TPT_THRESH)
+		wiphy_work_queue(mld->wiphy, &mld_vif->emlsr.unblock_tpt_wk);
+
+unlock:
 	spin_unlock_bh(&queue_counter->lock);
 }
 

@@ -128,6 +128,9 @@ void iwl_mld_handle_emlsr_mode_notif(struct iwl_mld *mld,
 void iwl_mld_handle_emlsr_trans_fail_notif(struct iwl_mld *mld,
 					   struct iwl_rx_packet *pkt);
 
+void iwl_mld_emlsr_update_tpt(struct iwl_mld *mld);
+void iwl_mld_emlsr_unblock_tpt_wk(struct wiphy *wiphy, struct wiphy_work *wk);
+
 void iwl_mld_select_links(struct iwl_mld *mld);
 
 #endif /* __iwl_mld_mlo_h__ */
