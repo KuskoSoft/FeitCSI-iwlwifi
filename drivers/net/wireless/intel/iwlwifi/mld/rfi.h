@@ -31,5 +31,7 @@ iwl_mld_rfi_get_freq_table(struct iwl_mld *mld);
 
 void iwl_mld_handle_rfi_support_notif(struct iwl_mld *mld,
 				      struct iwl_rx_packet *pkt);
+bool iwl_mld_rfi_supported(struct iwl_mld *mld,
+			   enum iwl_mld_rfi_feature rfi_feature);
 
 #endif /* __iwl_mld_rfi_h__ */

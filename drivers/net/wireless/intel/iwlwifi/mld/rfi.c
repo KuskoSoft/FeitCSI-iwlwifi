@@ -184,9 +184,8 @@ static bool iwl_mld_rfi_fw_state_supported(struct iwl_mld *mld)
 	       mld->rfi.fw_state == IWL_RFI_DDR_SUBSET_TABLE_READY;
 }
 
-static bool
-iwl_mld_rfi_supported(struct iwl_mld *mld,
-		      enum iwl_mld_rfi_feature rfi_feature)
+bool iwl_mld_rfi_supported(struct iwl_mld *mld,
+			   enum iwl_mld_rfi_feature rfi_feature)
 {
 	u32 mac_type = CSR_HW_REV_TYPE(mld->trans->hw_rev);
 

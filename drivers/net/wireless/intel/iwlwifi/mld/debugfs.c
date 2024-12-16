@@ -202,14 +202,15 @@ iwl_dbgfs_rfi_freq_table_write(struct iwl_mld *mld, char *buf, size_t count)
 /* The size computation is as follows:
  * each number needs at most 3 characters, number of rows is the size of
  * the table; So, need 5 chars for the "freq: " part and each tuple afterwards
- * needs 6 characters for numbers and 5 for the punctuation around.
+ * needs 6 characters for numbers and 5 for the punctuation around. 32 bytes
+ * for feature support message.
  */
 #define IWL_RFI_DDR_BUF_SIZE (IWL_RFI_DDR_LUT_INSTALLED_SIZE *\
 				(5 + IWL_RFI_DDR_LUT_ENTRY_CHANNELS_NUM *\
-					(6 + 5)))
+					(6 + 5)) + 32)
 #define IWL_RFI_DLVR_BUF_SIZE (IWL_RFI_DLVR_LUT_INSTALLED_SIZE *\
 				(5 + IWL_RFI_DLVR_LUT_ENTRY_CHANNELS_NUM *\
-					(6 + 5)))
+					(6 + 5)) + 32)
 #define IWL_RFI_DESENSE_BUF_SIZE IWL_RFI_DDR_BUF_SIZE
 
 /* Extra 32 for "DDR and DLVR table" message */
@@ -225,9 +226,27 @@ iwl_dbgfs_rfi_freq_table_read(struct iwl_mld *mld, size_t count, char *buf)
 	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
 		return -EIO;
 
+	pos += scnprintf(buf + pos, count - pos,
+			 "DDR is supported: %s\n",
+			 iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DDR_FEATURE) ?
+							"yes" : "No");
+	pos += scnprintf(buf + pos, count - pos,
+			 "DLVR is supported: %s\n",
+			 iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DLVR_FEATURE) ?
+							"Yes" : "No");
+	pos += scnprintf(buf + pos, count - pos,
+			 "DESENSE is supported: %s\n",
+			 iwl_mld_rfi_supported(mld,
+					       IWL_MLD_RFI_DESENSE_FEATURE) ?
+							"Yes" : "No");
+
 	resp = iwl_mld_rfi_get_freq_table(mld);
-	if (IS_ERR(resp))
-		return PTR_ERR(resp);
+	if (IS_ERR(resp)) {
+		pos += scnprintf(buf + pos, count - pos,
+				 "Failed to get RFI table = %ld\n",
+				 PTR_ERR(resp));
+		return pos;
+	}
 
 	if (le32_to_cpu(resp->status) != RFI_FREQ_TABLE_OK) {
 		pos += scnprintf(buf + pos, count - pos, "status = %d\n",
