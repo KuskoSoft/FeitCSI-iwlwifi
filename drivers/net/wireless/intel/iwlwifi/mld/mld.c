@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include <net/mac80211.h>
@@ -472,6 +472,9 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	kfree(mld->scan.cmd);
 	kfree(mld->error_recovery_buf);
 	kfree(mld->mcast_filter_cmd);
+#ifdef CPTCFG_IWL_VENDOR_CMDS
+	kfree(mld->rfi.external_config_info);
+#endif
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	void *iftype_free = NULL;

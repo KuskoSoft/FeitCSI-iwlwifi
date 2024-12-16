@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2020-2021, 2023-2024 Intel Corporation
+ * Copyright (C) 2020-2021, 2023-2025 Intel Corporation
  */
 #ifndef __iwl_fw_api_rfi_h__
 #define __iwl_fw_api_rfi_h__
@@ -10,6 +10,11 @@
 #define IWL_RFI_DDR_LUT_INSTALLED_SIZE 4
 #define IWL_RFI_DLVR_LUT_ENTRY_CHANNELS_NUM 36
 #define IWL_RFI_DLVR_LUT_INSTALLED_SIZE 4
+
+#define IWL_RFI_MAX_FREQ_VAL 961
+#define IWL_RFI_MAX_ALLOWED_CHAN 237
+#define IWL_RFI_MAX_SNR_THRESHOLD 100
+#define IWL_RFI_MAX_DESENSE 80
 
 /**
  * struct iwl_rfi_ddr_lut_entry - an entry in the RFI DDR frequency LUT.

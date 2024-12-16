@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include "mld.h"
@@ -253,6 +253,27 @@ int iwl_mld_rfi_send_config_cmd(struct iwl_mld *mld)
 	if (iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DESENSE_FEATURE))
 		cmd->rfi_memory_support |=
 			cpu_to_le32(RFI_DESENSE_SUPPORTED_MSK);
+
+#ifdef CPTCFG_IWL_VENDOR_CMDS
+	BUILD_BUG_ON(sizeof(cmd->ddr_table) !=
+		sizeof(mld->rfi.external_config_info->ddr_table));
+	BUILD_BUG_ON(sizeof(cmd->desense_table) !=
+		sizeof(mld->rfi.external_config_info->desense_table));
+
+	if (mld->rfi.external_config_info) {
+		IWL_DEBUG_INFO(mld, "Sending oem RFI table\n");
+		memcpy(cmd->ddr_table, mld->rfi.external_config_info->ddr_table,
+		       sizeof(cmd->ddr_table));
+		memcpy(cmd->desense_table,
+		       mld->rfi.external_config_info->desense_table,
+		       sizeof(cmd->desense_table));
+		cmd->snr_threshold =
+			mld->rfi.external_config_info->snr_threshold;
+		cmd->oem = 1;
+	} else {
+		IWL_DEBUG_INFO(mld, "Sending default RFI table\n");
+	}
+#endif
 
 	ret = iwl_mld_send_cmd(mld, &hcmd);
 	if (ret)
