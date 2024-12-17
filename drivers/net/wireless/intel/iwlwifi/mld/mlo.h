@@ -104,6 +104,10 @@ static inline u8 iwl_mld_get_other_link(struct ieee80211_vif *vif, u8 link_id)
 	}
 }
 
+s8 iwl_mld_get_emlsr_rssi_thresh(struct iwl_mld *mld,
+				 const struct cfg80211_chan_def *chandef,
+				 bool low);
+
 /* EMLSR block/unblock and exit */
 void iwl_mld_block_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			 enum iwl_mld_emlsr_blocked reason, u8 link_to_keep);

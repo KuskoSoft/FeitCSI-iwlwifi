@@ -388,9 +388,9 @@ struct iwl_mld_link_sel_data {
 	u16 grade;
 };
 
-static s8 iwl_mld_get_emlsr_rssi_thresh(struct iwl_mld *mld,
-					const struct cfg80211_chan_def *chandef,
-					bool low)
+s8 iwl_mld_get_emlsr_rssi_thresh(struct iwl_mld *mld,
+				 const struct cfg80211_chan_def *chandef,
+				 bool low)
 {
 	if (WARN_ON(chandef->chan->band != NL80211_BAND_2GHZ &&
 		    chandef->chan->band != NL80211_BAND_5GHZ &&

@@ -8,6 +8,7 @@
 #include "sta.h"
 #include "hcmd.h"
 #include "iface.h"
+#include "mlo.h"
 #include "scan.h"
 #include "fw/api/stats.h"
 
@@ -317,6 +318,43 @@ out:
 	mld->scan.traffic_load.last_stats_ts_usec = curr_ts_usec;
 }
 
+static void iwl_mld_update_link_sig(struct ieee80211_vif *vif, int sig,
+				    struct ieee80211_bss_conf *bss_conf)
+{
+	struct iwl_mld *mld = iwl_mld_vif_from_mac80211(vif)->mld;
+	int exit_emlsr_thresh;
+
+	if (sig == 0) {
+		IWL_DEBUG_RX(mld, "RSSI is 0 - skip signal based decision\n");
+		return;
+	}
+
+	/* TODO: task=coex */
+
+	/* TODO: task=statistics handle CQM notifications */
+
+	if (!iwl_mld_vif_has_emlsr(vif))
+		return;
+
+	/* Handle inactive EMLSR, check whether to trigger an MLO scan */
+	if (!iwl_mld_emlsr_active(vif)) {
+		/* FIXME: Throttle the amount of scans we do */
+		if (sig < IWL_MLD_LOW_RSSI_MLO_SCAN_THRESH)
+			iwl_mld_int_mlo_scan(mld, vif);
+		return;
+	}
+
+	/* We are in EMLSR, check if we need to exit */
+	exit_emlsr_thresh =
+		iwl_mld_get_emlsr_rssi_thresh(mld, &bss_conf->chanreq.oper,
+					      true);
+
+	if (sig < exit_emlsr_thresh)
+		iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_LOW_RSSI,
+				   iwl_mld_get_other_link(vif,
+							  bss_conf->link_id));
+}
+
 static void
 iwl_mld_process_per_link_stats(struct iwl_mld *mld,
 			       const struct iwl_stats_ntfy_per_link *per_link,
@@ -329,6 +367,7 @@ iwl_mld_process_per_link_stats(struct iwl_mld *mld,
 	     fw_id++) {
 		const struct iwl_stats_ntfy_per_link *link_stats;
 		struct ieee80211_bss_conf *bss_conf;
+		int sig;
 
 		bss_conf = wiphy_dereference(mld->wiphy,
 					     mld->fw_id_to_bss_conf[fw_id]);
@@ -338,6 +377,9 @@ iwl_mld_process_per_link_stats(struct iwl_mld *mld,
 		link_stats = &per_link[fw_id];
 
 		total_airtime_usec += le32_to_cpu(link_stats->air_time);
+
+		sig = -le32_to_cpu(link_stats->beacon_filter_average_energy);
+		iwl_mld_update_link_sig(bss_conf->vif, sig, bss_conf);
 
 		/* TODO: parse more fields here (task=statistics)*/
 	}
