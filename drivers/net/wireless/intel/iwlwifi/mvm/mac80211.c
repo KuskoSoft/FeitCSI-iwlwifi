@@ -393,6 +393,8 @@ int iwl_mvm_mac_setup_register(struct iwl_mvm *mvm)
 	ieee80211_hw_set(hw, BUFF_MMPDU_TXQ);
 	ieee80211_hw_set(hw, STA_MMPDU_TXQ);
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mvm->trans->dbg_cfg.mac80211_strict)
+		ieee80211_hw_set(hw, STRICT);
 	if (!mvm->trans->dbg_cfg.amsdu_in_ampdu_disabled)
 		ieee80211_hw_set(hw, SUPPORTS_AMSDU_IN_AMPDU);
 #else

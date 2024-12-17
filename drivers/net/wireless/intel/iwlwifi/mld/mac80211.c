@@ -238,6 +238,10 @@ static void iwl_mac_hw_set_flags(struct iwl_mld *mld)
 {
 	struct ieee80211_hw *hw = mld->hw;
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.mac80211_strict)
+		ieee80211_hw_set(hw, STRICT);
+#endif
 	ieee80211_hw_set(hw, USES_RSS);
 	ieee80211_hw_set(hw, HANDLES_QUIET_CSA);
 	ieee80211_hw_set(hw, AP_LINK_PS);
