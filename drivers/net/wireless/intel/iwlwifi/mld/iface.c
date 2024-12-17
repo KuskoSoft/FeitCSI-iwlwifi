@@ -478,7 +478,19 @@ void iwl_mld_handle_probe_resp_data_notif(struct iwl_mld *mld,
 
 	vif = wiphy_dereference(mld->wiphy,
 				mld->fw_id_to_vif[le32_to_cpu(notif->mac_id)]);
-	if (WARN_ON(!vif))
+
+	/* the firmware gives us the mac_id (and not the link_id), mac80211
+	 * gets a vif and not a link, bottom line, this flow is not MLD ready
+	 * yet.
+	 */
+	if (WARN_ON(!vif) || ieee80211_vif_is_mld(vif))
+		return;
+
+	if (notif->csa_counter != IWL_PROBE_RESP_DATA_NO_CSA &&
+	    notif->csa_counter >= 1)
+		ieee80211_beacon_set_cntdwn(vif, notif->csa_counter);
+
+	if (!vif->p2p)
 		return;
 
 	mld_link = &iwl_mld_vif_from_mac80211(vif)->deflink;
@@ -506,10 +518,6 @@ void iwl_mld_handle_probe_resp_data_notif(struct iwl_mld *mld,
 
 	if (old_data)
 		kfree_rcu(old_data, rcu_head);
-
-	if (notif->csa_counter != IWL_PROBE_RESP_DATA_NO_CSA &&
-	    notif->csa_counter >= 1)
-		ieee80211_beacon_set_cntdwn(vif, notif->csa_counter);
 }
 
 void iwl_mld_handle_datapath_monitor_notif(struct iwl_mld *mld,
