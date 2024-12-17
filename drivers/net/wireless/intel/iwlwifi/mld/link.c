@@ -671,9 +671,6 @@ static const struct iwl_mld_rssi_to_grade rssi_to_grade_map[] = {
 #define DEFAULT_CHAN_LOAD_HB	15
 #define DEFAULT_CHAN_LOAD_UHB	0
 
-/* Calculation is done with fixed-point with a scaling factor of 1/256 */
-#define SCALE_FACTOR 256
-
 static unsigned int
 iwl_mld_get_n_subchannels(const struct ieee80211_bss_conf *link_conf)
 {

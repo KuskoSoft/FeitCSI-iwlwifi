@@ -41,11 +41,18 @@ enum iwl_mld_emlsr_blocked {
  * @IWL_MLD_EMLSR_EXIT_BLOCK: Exit due to a block reason being set
  * @IWL_MLD_EMLSR_EXIT_MISSED_BEACON: Exit due to missed beacons
  * @IWL_MLD_EMLSR_EXIT_FAIL_ENTRY: FW failed to enter EMLSR
+ * @IWL_MLD_EMLSR_EXIT_CSA: EMLSR prevented due to channel switch on link
+ * @IWL_MLD_EMLSR_EXIT_EQUAL_BAND: EMLSR prevented as both links share the band
+ * @IWL_MLD_EMLSR_EXIT_BANDWIDTH: Bandwidths of primary and secondary links are
+ *      not equal
  */
 enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_BLOCK		= 0x1,
 	IWL_MLD_EMLSR_EXIT_MISSED_BEACON	= 0x2,
 	IWL_MLD_EMLSR_EXIT_FAIL_ENTRY		= 0x4,
+	IWL_MLD_EMLSR_EXIT_CSA			= 0x8,
+	IWL_MLD_EMLSR_EXIT_EQUAL_BAND		= 0x10,
+	IWL_MLD_EMLSR_EXIT_BANDWIDTH		= 0x20,
 };
 
 /**

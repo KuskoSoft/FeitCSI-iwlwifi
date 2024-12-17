@@ -40,7 +40,10 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 #define HANDLE_EMLSR_EXIT_REASONS(HOW)	\
 	HOW(BLOCK)			\
 	HOW(MISSED_BEACON)		\
-	HOW(FAIL_ENTRY)
+	HOW(FAIL_ENTRY)			\
+	HOW(CSA)			\
+	HOW(EQUAL_BAND)			\
+	HOW(BANDWIDTH)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -55,7 +58,6 @@ iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
 	return "ERROR";
 }
 
-__always_unused
 static void iwl_mld_print_emlsr_exit(struct iwl_mld *mld, u32 mask)
 {
 #define NAME_FMT(x) "%s"
@@ -375,13 +377,242 @@ void iwl_mld_handle_emlsr_trans_fail_notif(struct iwl_mld *mld,
 			   bss_conf->link_id);
 }
 
+/*
+ * Link selection
+ */
+struct iwl_mld_link_sel_data {
+	u8 link_id;
+	const struct cfg80211_chan_def *chandef;
+	s32 signal;
+	u16 grade;
+};
+
+static u32
+iwl_mld_emlsr_disallowed_with_link(struct iwl_mld *mld,
+				   struct ieee80211_vif *vif,
+				   struct iwl_mld_link_sel_data *link,
+				   bool primary)
+{
+	struct wiphy *wiphy = mld->wiphy;
+	struct ieee80211_bss_conf *conf;
+	enum iwl_mld_emlsr_exit ret = 0;
+
+	conf = wiphy_dereference(wiphy, vif->link_conf[link->link_id]);
+	if (WARN_ON_ONCE(!conf))
+		return false;
+
+	/* TODO: handle BT Coex (task=EMLSR, task=coex) */
+
+	/* TODO: handle RSSI threshold (task=EMLSR) */
+
+	if (conf->csa_active)
+		ret |= IWL_MLD_EMLSR_EXIT_CSA;
+
+	if (ret) {
+		IWL_DEBUG_INFO(mld,
+			       "Link %d is not allowed for EMLSR as %s\n",
+			       link->link_id,
+			       primary ? "primary" : "secondary");
+		iwl_mld_print_emlsr_exit(mld, ret);
+	}
+
+	return ret;
+}
+
+static u8
+iwl_mld_set_link_sel_data(struct ieee80211_vif *vif,
+			  struct iwl_mld_link_sel_data *data,
+			  unsigned long usable_links,
+			  u8 *best_link_idx)
+{
+	u8 n_data = 0;
+	u16 max_grade = 0;
+	unsigned long link_id;
+
+	/*
+	 * TODO: don't select links that weren't discovered in the last scan
+	 * This requires mac80211 (or cfg80211) changes to forward/track when
+	 * a BSS was last updated. cfg80211 already tracks this information but
+	 * it is not exposed within the kernel.
+	 */
+	for_each_set_bit(link_id, &usable_links, IEEE80211_MLD_MAX_NUM_LINKS) {
+		struct ieee80211_bss_conf *link_conf =
+			link_conf_dereference_protected(vif, link_id);
+
+		if (WARN_ON_ONCE(!link_conf))
+			continue;
+
+		data[n_data].link_id = link_id;
+		data[n_data].chandef = &link_conf->chanreq.oper;
+		data[n_data].signal = MBM_TO_DBM(link_conf->bss->signal);
+		data[n_data].grade = iwl_mld_get_link_grade(link_conf);
+
+		if (n_data == 0 || data[n_data].grade > max_grade) {
+			max_grade = data[n_data].grade;
+			*best_link_idx = n_data;
+		}
+		n_data++;
+	}
+
+	return n_data;
+}
+
+static bool
+iwl_mld_valid_emlsr_pair(struct ieee80211_vif *vif,
+			 struct iwl_mld_link_sel_data *a,
+			 struct iwl_mld_link_sel_data *b)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld *mld = mld_vif->mld;
+	enum iwl_mld_emlsr_exit ret = 0;
+
+	/* Per-link considerations */
+	if (iwl_mld_emlsr_disallowed_with_link(mld, vif, a, true) ||
+	    iwl_mld_emlsr_disallowed_with_link(mld, vif, b, false))
+		return false;
+
+	if (a->chandef->chan->band == b->chandef->chan->band) {
+		ret |= IWL_MLD_EMLSR_EXIT_EQUAL_BAND;
+	} else if (a->chandef->width != b->chandef->width) {
+		/* TODO: task=EMLSR task=statistics
+		 * replace BANDWIDTH exit reason with channel load criteria
+		 */
+		ret |= IWL_MLD_EMLSR_EXIT_BANDWIDTH;
+	}
+
+	/* TODO: task=EMLSR task=RFI RFI considerations */
+
+	if (ret) {
+		IWL_DEBUG_INFO(mld,
+			       "Links %d and %d are not a valid pair for EMLSR\n",
+			       a->link_id, b->link_id);
+		IWL_DEBUG_INFO(mld,
+			       "Links bandwidth are: %d and %d\n",
+			       nl80211_chan_width_to_mhz(a->chandef->width),
+			       nl80211_chan_width_to_mhz(b->chandef->width));
+		iwl_mld_print_emlsr_exit(mld, ret);
+		return false;
+	}
+
+	return true;
+}
+
+/* Calculation is done with fixed-point with a scaling factor of 1/256 */
+#define SCALE_FACTOR 256
+
+/*
+ * Returns the combined grade of two given links.
+ * Returns 0 if EMLSR is not allowed with these 2 links.
+ */
+static
+unsigned int iwl_mld_get_emlsr_grade(struct ieee80211_vif *vif,
+				     struct iwl_mld_link_sel_data *a,
+				     struct iwl_mld_link_sel_data *b,
+				     u8 *primary_id)
+{
+	struct ieee80211_bss_conf *primary_conf;
+	struct wiphy *wiphy = ieee80211_vif_to_wdev(vif)->wiphy;
+	unsigned int primary_load;
+
+	lockdep_assert_wiphy(wiphy);
+
+	/* a is always primary, b is always secondary */
+	if (b->grade > a->grade)
+		swap(a, b);
+
+	*primary_id = a->link_id;
+
+	if (!iwl_mld_valid_emlsr_pair(vif, a, b))
+		return 0;
+
+	primary_conf = wiphy_dereference(wiphy, vif->link_conf[*primary_id]);
+
+	if (WARN_ON_ONCE(!primary_conf))
+		return 0;
+
+	/*
+	 * With EMLSR we can use the secondary channel whenever the primary is
+	 * loaded with other traffic. Scale the secondary grade accordingly.
+	 */
+	/* TODO: task=statistics fetch load */
+	primary_load = SCALE_FACTOR / 2;
+
+	return a->grade + ((b->grade * primary_load) / SCALE_FACTOR);
+}
+
 static void _iwl_mld_select_links(struct iwl_mld *mld,
 				  struct ieee80211_vif *vif)
 {
+	struct iwl_mld_link_sel_data data[IEEE80211_MLD_MAX_NUM_LINKS];
+	struct iwl_mld_link_sel_data *best_link;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	int max_active_links = iwl_mld_max_active_links(mld, vif);
+	u16 new_active, usable_links = ieee80211_vif_usable_links(vif);
+	u8 best_idx, new_primary, n_data;
+	u16 max_grade;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* Link selection only works for EMLSR right now */
 	if (!iwl_mld_vif_has_emlsr(vif))
 		return;
 
-	/* TODO: Select links */
+	if (!IWL_MLD_AUTO_EML_ENABLE)
+		return;
+
+	/* The logic below is simple and not suited for more than 2 links */
+	WARN_ON_ONCE(max_active_links > 2);
+
+	n_data = iwl_mld_set_link_sel_data(vif, data, usable_links, &best_idx);
+
+	if (WARN(!n_data, "Couldn't find a valid grade for any link!\n"))
+		return;
+
+	/* Default to selecting the single best link */
+	best_link = &data[best_idx];
+	new_primary = best_link->link_id;
+	new_active = BIT(best_link->link_id);
+	max_grade = best_link->grade;
+
+	/* Only one link available (or only one maximum link) */
+	if (max_active_links == 1 || n_data == 1)
+		goto set_active;
+
+	/* Try to find the best link combination */
+	for (u8 a = 0; a < n_data; a++) {
+		for (u8 b = a + 1; b < n_data; b++) {
+			u8 best_in_pair;
+			u16 emlsr_grade =
+				iwl_mld_get_emlsr_grade(vif,
+							&data[a], &data[b],
+							&best_in_pair);
+
+			/*
+			 * Prefer (new) EMLSR combination to prefer EMLSR over
+			 * a single link.
+			 */
+			if (emlsr_grade < max_grade)
+				continue;
+
+			max_grade = emlsr_grade;
+			new_primary = best_in_pair;
+			new_active = BIT(data[a].link_id) |
+				     BIT(data[b].link_id);
+		}
+	}
+
+set_active:
+	IWL_DEBUG_INFO(mld, "Link selection result: 0x%x. Primary = %d\n",
+		       new_active, new_primary);
+
+	mld_vif->emlsr.selected_primary = new_primary;
+	mld_vif->emlsr.selected_links = new_active;
+
+	/* If EMLSR is currently blocked, then only use the primary link */
+	if (mld_vif->emlsr.blocked_reasons)
+		ieee80211_set_active_links_async(vif, BIT(new_primary));
+	else
+		ieee80211_set_active_links_async(vif, new_active);
 }
 
 static void iwl_mld_vif_iter_select_links(void *_data, u8 *mac,
@@ -395,8 +626,8 @@ static void iwl_mld_vif_iter_select_links(void *_data, u8 *mac,
 
 void iwl_mld_select_links(struct iwl_mld *mld)
 {
-	ieee80211_iterate_active_interfaces(mld->hw,
-					    IEEE80211_IFACE_ITER_NORMAL,
-					    iwl_mld_vif_iter_select_links,
-					    NULL);
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_vif_iter_select_links,
+						NULL);
 }
