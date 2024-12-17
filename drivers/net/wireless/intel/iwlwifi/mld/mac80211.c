@@ -1229,6 +1229,12 @@ iwl_mld_mac80211_link_info_changed(struct ieee80211_hw *hw,
 		WARN_ON_ONCE(1);
 	}
 
+	/* We now know our BSSID, we can configure the MAC context with
+	 * eht_support if needed.
+	 */
+	if (changes & BSS_CHANGED_BSSID)
+		iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_MODIFY);
+
 	if (changes & BSS_CHANGED_TXPOWER)
 		iwl_mld_set_tx_power(mld, link_conf, link_conf->txpower);
 }
