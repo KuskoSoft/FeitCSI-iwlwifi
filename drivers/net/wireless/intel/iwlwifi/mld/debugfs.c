@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include "mld.h"
@@ -220,11 +220,8 @@ iwl_dbgfs_rfi_freq_table_write(struct iwl_mld *mld, char *buf, size_t count)
 static ssize_t
 iwl_dbgfs_rfi_freq_table_read(struct iwl_mld *mld, size_t count, char *buf)
 {
-	const struct iwl_rfi_freq_table_resp_cmd *resp;
+	const struct iwl_rfi_freq_table_resp_cmd *fw_table;
 	ssize_t pos = 0;
-
-	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
-		return -EIO;
 
 	pos += scnprintf(buf + pos, count - pos,
 			 "DDR is supported: %s\n",
@@ -240,60 +237,57 @@ iwl_dbgfs_rfi_freq_table_read(struct iwl_mld *mld, size_t count, char *buf)
 					       IWL_MLD_RFI_DESENSE_FEATURE) ?
 							"Yes" : "No");
 
-	resp = iwl_mld_rfi_get_freq_table(mld);
-	if (IS_ERR(resp)) {
+	fw_table = mld->rfi.fw_table;
+	if (!fw_table) {
 		pos += scnprintf(buf + pos, count - pos,
-				 "Failed to get RFI table = %ld\n",
-				 PTR_ERR(resp));
+				 "RFI table not present in the FW");
 		return pos;
 	}
 
-	if (le32_to_cpu(resp->status) != RFI_FREQ_TABLE_OK) {
+	if (le32_to_cpu(fw_table->status) != RFI_FREQ_TABLE_OK) {
 		pos += scnprintf(buf + pos, count - pos, "status = %d\n",
-				le32_to_cpu(resp->status));
-		goto out;
+				le32_to_cpu(fw_table->status));
+		return pos;
 	}
 
-	BUILD_BUG_ON(ARRAY_SIZE(resp->ddr_table) !=
-		     ARRAY_SIZE(resp->desense_table));
+	BUILD_BUG_ON(ARRAY_SIZE(fw_table->ddr_table) !=
+		     ARRAY_SIZE(fw_table->desense_table));
 	pos += scnprintf(buf + pos, count - pos, "DDR table:\n");
-	for (int i = 0; i < ARRAY_SIZE(resp->ddr_table); i++) {
+	for (int i = 0; i < ARRAY_SIZE(fw_table->ddr_table); i++) {
 		pos += scnprintf(buf + pos, count - pos, "%u: ",
-				 le16_to_cpu(resp->ddr_table[i].freq));
+				 le16_to_cpu(fw_table->ddr_table[i].freq));
 
-		for (int j = 0; j < ARRAY_SIZE(resp->ddr_table[0].channels);
+		for (int j = 0; j < ARRAY_SIZE(fw_table->ddr_table[0].channels);
 		     j++)
 			pos += scnprintf(buf + pos, count - pos,
 					 "(%u, %u) ",
-					 resp->ddr_table[i].channels[j],
-					 resp->ddr_table[i].bands[j]);
+					 fw_table->ddr_table[i].channels[j],
+					 fw_table->ddr_table[i].bands[j]);
 		pos += scnprintf(buf + pos, count - pos, "\n");
 
-		for (int j = 0; j < ARRAY_SIZE(resp->desense_table[0].chain_a);
-		     j++)
+		for (int j = 0;
+		     j < ARRAY_SIZE(fw_table->desense_table[0].chain_a); j++)
 			pos += scnprintf(buf + pos, count - pos,
 					 "(%u, %u) ",
-					 resp->desense_table[i].chain_a[j],
-					 resp->desense_table[i].chain_b[j]);
+					 fw_table->desense_table[i].chain_a[j],
+					 fw_table->desense_table[i].chain_b[j]);
 		pos += scnprintf(buf + pos, count - pos, "\n");
 	}
 
 	pos += scnprintf(buf + pos, count - pos, "DLVR table:\n");
-	for (int i = 0; i < ARRAY_SIZE(resp->dlvr_table); i++) {
+	for (int i = 0; i < ARRAY_SIZE(fw_table->dlvr_table); i++) {
 		pos += scnprintf(buf + pos, count - pos, "%u: ",
-				 le16_to_cpu(resp->dlvr_table[i].freq));
+				 le16_to_cpu(fw_table->dlvr_table[i].freq));
 
-		for (int j = 0; j < ARRAY_SIZE(resp->dlvr_table[0].channels);
-		     j++)
+		for (int j = 0;
+		     j < ARRAY_SIZE(fw_table->dlvr_table[0].channels); j++)
 			pos += scnprintf(buf + pos, count - pos,
 					 "(%u, %u) ",
-					 resp->dlvr_table[i].channels[j],
-					 resp->dlvr_table[i].bands[j]);
+					 fw_table->dlvr_table[i].channels[j],
+					 fw_table->dlvr_table[i].bands[j]);
 		pos += scnprintf(buf + pos, count - pos, "\n");
 	}
 
-out:
-	kfree(resp);
 	return pos;
 }
 

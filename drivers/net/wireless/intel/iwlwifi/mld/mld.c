@@ -472,6 +472,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	kfree(mld->scan.cmd);
 	kfree(mld->error_recovery_buf);
 	kfree(mld->mcast_filter_cmd);
+	kfree(mld->rfi.fw_table);
 #ifdef CPTCFG_IWL_VENDOR_CMDS
 	kfree(mld->rfi.external_config_info);
 #endif

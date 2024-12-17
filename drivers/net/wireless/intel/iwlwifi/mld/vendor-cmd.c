@@ -429,18 +429,18 @@ static int iwl_mld_vendor_rfi_get_table(struct wiphy *wiphy,
 					struct wireless_dev *wdev,
 					const void *data, int data_len)
 {
-	const struct iwl_rfi_freq_table_resp_cmd *resp __free(kfree) = NULL;
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	const struct iwl_rfi_freq_table_resp_cmd *fw_table;
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 	struct sk_buff *skb = NULL;
 	struct nlattr *rfim_info;
 	int ret;
 
-	resp = iwl_mld_rfi_get_freq_table(mld);
-	if (IS_ERR(resp))
-		return PTR_ERR(resp);
+	fw_table = mld->rfi.fw_table;
+	if (!fw_table)
+		return -EOPNOTSUPP;
 
-	if (resp->status != RFI_FREQ_TABLE_OK)
+	if (fw_table->status != RFI_FREQ_TABLE_OK)
 		return -EINVAL;
 
 	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy,
@@ -455,24 +455,24 @@ static int iwl_mld_vendor_rfi_get_table(struct wiphy *wiphy,
 		goto err;
 	}
 
-	BUILD_BUG_ON(ARRAY_SIZE(resp->ddr_table) !=
-		     ARRAY_SIZE(resp->desense_table));
+	BUILD_BUG_ON(ARRAY_SIZE(fw_table->ddr_table) !=
+		     ARRAY_SIZE(fw_table->desense_table));
 
-	for (int i = 0; i < ARRAY_SIZE(resp->ddr_table); i++) {
+	for (int i = 0; i < ARRAY_SIZE(fw_table->ddr_table); i++) {
 		if (nla_put_u16(skb, IWL_MVM_VENDOR_ATTR_RFIM_FREQ,
-				le16_to_cpu(resp->ddr_table[i].freq)) ||
+				le16_to_cpu(fw_table->ddr_table[i].freq)) ||
 		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHANNELS,
-			    sizeof(resp->ddr_table[i].channels),
-			    resp->ddr_table[i].channels) ||
+			    sizeof(fw_table->ddr_table[i].channels),
+			    fw_table->ddr_table[i].channels) ||
 		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_BANDS,
-			    sizeof(resp->ddr_table[i].bands),
-			    resp->ddr_table[i].bands) ||
+			    sizeof(fw_table->ddr_table[i].bands),
+			    fw_table->ddr_table[i].bands) ||
 		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE,
-			    sizeof(resp->desense_table[i].chain_a),
-			    resp->desense_table[i].chain_a) ||
+			    sizeof(fw_table->desense_table[i].chain_a),
+			    fw_table->desense_table[i].chain_a) ||
 		    nla_put(skb, IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE,
-			    sizeof(resp->desense_table[i].chain_b),
-			    resp->desense_table[i].chain_b)) {
+			    sizeof(fw_table->desense_table[i].chain_b),
+			    fw_table->desense_table[i].chain_b)) {
 			ret = -ENOBUFS;
 			goto err;
 		}

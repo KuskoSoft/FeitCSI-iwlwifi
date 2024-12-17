@@ -286,14 +286,23 @@ struct iwl_mld {
 	memset((void *)&(_ptr)->zeroed_on_hw_restart, 0, \
 	       sizeof((_ptr)->zeroed_on_hw_restart))
 
+static inline void
+iwl_mld_cleanup_rfi(struct iwl_mld *mld)
+{
+	CLEANUP_STRUCT(&mld->rfi);
+
+	kfree(mld->rfi.fw_table);
+	mld->rfi.fw_table = NULL;
+}
+
 /* Cleanup function for struct iwl_mld_vif, will be called in restart */
 static inline void
 iwl_cleanup_mld(struct iwl_mld *mld)
 {
 	CLEANUP_STRUCT(mld);
 	CLEANUP_STRUCT(&mld->scan);
-	CLEANUP_STRUCT(&mld->rfi);
 
+	iwl_mld_cleanup_rfi(mld);
 	mld->fw_status.in_d3 = false;
 
 	iwl_mld_low_latency_restart_cleanup(mld);

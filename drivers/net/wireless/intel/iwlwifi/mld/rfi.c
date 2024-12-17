@@ -282,7 +282,7 @@ int iwl_mld_rfi_send_config_cmd(struct iwl_mld *mld)
 	return ret;
 }
 
-struct iwl_rfi_freq_table_resp_cmd *
+static struct iwl_rfi_freq_table_resp_cmd *
 iwl_mld_rfi_get_freq_table(struct iwl_mld *mld)
 {
 	struct iwl_host_cmd cmd = {
@@ -325,10 +325,19 @@ void iwl_mld_handle_rfi_support_notif(struct iwl_mld *mld,
 {
 	const struct iwl_rfi_support_notif *notif = (void *)pkt->data;
 
+	/* Free the current subset table since it is no longer valid */
+	kfree(mld->rfi.fw_table);
+	mld->rfi.fw_table = NULL;
+
 	mld->rfi.fw_state = le32_to_cpu(notif->reason);
 	switch (mld->rfi.fw_state) {
 	case IWL_RFI_DDR_SUBSET_TABLE_READY:
 		IWL_DEBUG_FW(mld, "RFIm, DDR subset table ready\n");
+		mld->rfi.fw_table = iwl_mld_rfi_get_freq_table(mld);
+		if (IS_ERR(mld->rfi.fw_table)) {
+			mld->rfi.fw_table = NULL;
+			IWL_DEBUG_FW(mld, "RFIm, tables read fail\n");
+		}
 		break;
 	case IWL_RFI_PMC_SUPPORTED:
 		IWL_DEBUG_FW(mld, "RFIm, PMC supported\n");
