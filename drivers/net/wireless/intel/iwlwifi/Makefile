@@ -27,6 +27,8 @@ iwlwifi-$(CPTCFG_IWLWIFI_DEBUGFS) += fw/debugfs.o
 iwlwifi-$(CONFIG_PCI) += pcie/drv.o pcie/rx.o pcie/tx.o pcie/trans.o
 iwlwifi-$(CONFIG_PCI) += pcie/ctxt-info.o pcie/ctxt-info-gen3.o pcie/trans-gen2.o pcie/tx-gen2.o
 
+CFLAGS_pcie/drv.o += -Wno-override-init
+
 iwlwifi-$(CPTCFG_IWLMVM) += cfg/7000.o cfg/8000.o
 iwlwifi-$(CPTCFG_IWLMVM) += cfg/9000.o cfg/22000.o
 iwlwifi-$(CPTCFG_IWLMVM) += cfg/ax210.o
