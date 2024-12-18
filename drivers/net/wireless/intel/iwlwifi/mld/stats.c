@@ -136,7 +136,20 @@ iwl_mld_fw_stats_to_mac80211(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta,
 	 * which should be sufficient for the firmware to gather data
 	 * from all LMACs and send notifications to the host.
 	 */
-	return iwl_wait_notification(&mld->notif_wait, &stats_wait, HZ / 2);
+	ret = iwl_wait_notification(&mld->notif_wait, &stats_wait, HZ / 2);
+	if (ret)
+		return ret;
+
+	/* When periodic statistics are sent, FW will clear its statistics DB.
+	 * If the statistics request here happens shortly afterwards,
+	 * the response will contain data collected over a short time
+	 * interval. The response we got here shouldn't be processed by
+	 * the general statistics processing because it's incomplete.
+	 * So, we delete it from the list so it won't be processed.
+	 */
+	iwl_mld_delete_handlers(mld, notifications, ARRAY_SIZE(notifications));
+
+	return 0;
 }
 
 #define PERIODIC_STATS_SECONDS 5

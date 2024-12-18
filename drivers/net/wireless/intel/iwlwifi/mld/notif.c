@@ -632,6 +632,32 @@ void iwl_mld_rx_rss(struct iwl_op_mode *op_mode, struct napi_struct *napi,
 		iwl_mld_handle_frame_release_notif(mld, napi, pkt, queue);
 }
 
+void iwl_mld_delete_handlers(struct iwl_mld *mld, const u16 *cmds, int n_cmds)
+{
+	struct iwl_async_handler_entry *entry, *tmp;
+
+	spin_lock_bh(&mld->async_handlers_lock);
+	list_for_each_entry_safe(entry, tmp, &mld->async_handlers_list, list) {
+		bool match = false;
+
+		for (int i = 0; i < n_cmds; i++) {
+			if (entry->rx_h->cmd_id == cmds[i]) {
+				match = true;
+				break;
+			}
+		}
+
+		if (!match)
+			continue;
+
+		iwl_mld_log_async_handler_op(mld, "Delete", &entry->rxb);
+		iwl_free_rxb(&entry->rxb);
+		list_del(&entry->list);
+		kfree(entry);
+	}
+	spin_unlock_bh(&mld->async_handlers_lock);
+}
+
 void iwl_mld_async_handlers_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 {
 	struct iwl_mld *mld =

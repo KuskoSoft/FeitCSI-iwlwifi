@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #ifndef __iwl_mld_notif_h__
 #define __iwl_mld_notif_h__
@@ -29,5 +29,6 @@ enum iwl_mld_object_type {
 void iwl_mld_cancel_notifications_of_object(struct iwl_mld *mld,
 					    enum iwl_mld_object_type obj_type,
 					    u32 obj_id);
+void iwl_mld_delete_handlers(struct iwl_mld *mld, const u16 *cmds, int n_cmds);
 
 #endif /* __iwl_mld_notif_h__ */
