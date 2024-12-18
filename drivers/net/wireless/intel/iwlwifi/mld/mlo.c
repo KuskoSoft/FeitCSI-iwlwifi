@@ -224,7 +224,7 @@ static int _iwl_mld_emlsr_block(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (!iwl_mld_vif_has_emlsr(vif))
+	if (!IWL_MLD_AUTO_EML_ENABLE || !iwl_mld_vif_has_emlsr(vif))
 		return 0;
 
 	if (mld_vif->emlsr.blocked_reasons & reason)
@@ -261,7 +261,7 @@ static void iwl_mld_unblocked_emlsr(struct iwl_mld *mld,
 		time_before(jiffies, mld_vif->emlsr.last_exit_ts +
 				     IWL_MLD_TRIGGER_LINK_SEL_TIME);
 
-	if (!IWL_MLD_AUTO_EML_ENABLE && iwl_mld_emlsr_active(vif))
+	if (iwl_mld_emlsr_active(vif))
 		return;
 
 	IWL_DEBUG_INFO(mld, "EMLSR is unblocked\n");
