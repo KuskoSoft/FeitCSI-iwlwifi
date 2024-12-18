@@ -21,7 +21,9 @@ struct iwl_mld_cooling_device {
 	u32 cur_state;
 	struct thermal_cooling_device *cdev;
 };
-int iwl_mld_config_ctdp(struct iwl_mld *mld, u32 state);
+
+int iwl_mld_config_ctdp(struct iwl_mld *mld, u32 state,
+			enum iwl_ctdp_cmd_operation op);
 #endif
 
 void iwl_mld_handle_temp_notif(struct iwl_mld *mld, struct iwl_rx_packet *pkt);

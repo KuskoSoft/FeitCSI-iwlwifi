@@ -453,7 +453,8 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 		return ret;
 
 #ifdef CONFIG_THERMAL
-	ret = iwl_mld_config_ctdp(mld, mld->cooling_dev.cur_state);
+	ret = iwl_mld_config_ctdp(mld, mld->cooling_dev.cur_state,
+				  CTDP_CMD_OPERATION_START);
 	if (ret)
 		return ret;
 #endif

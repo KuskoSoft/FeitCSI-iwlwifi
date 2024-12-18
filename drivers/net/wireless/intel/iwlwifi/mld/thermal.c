@@ -295,10 +295,11 @@ static const u32 iwl_mld_cdev_budgets[] = {
 	150,	/* cooling state 20 */
 };
 
-int iwl_mld_config_ctdp(struct iwl_mld *mld, u32 state)
+int iwl_mld_config_ctdp(struct iwl_mld *mld, u32 state,
+			enum iwl_ctdp_cmd_operation op)
 {
 	struct iwl_ctdp_cmd cmd = {
-		.operation = cpu_to_le32(CTDP_CMD_OPERATION_START),
+		.operation = cpu_to_le32(op),
 		.budget = cpu_to_le32(iwl_mld_cdev_budgets[state]),
 		.window_size = 0,
 	};
@@ -312,7 +313,8 @@ int iwl_mld_config_ctdp(struct iwl_mld *mld, u32 state)
 		return ret;
 	}
 
-	mld->cooling_dev.cur_state = state;
+	if (op == CTDP_CMD_OPERATION_START)
+		mld->cooling_dev.cur_state = state;
 
 	return 0;
 }
@@ -346,7 +348,7 @@ static int iwl_mld_tcool_set_cur_state(struct thermal_cooling_device *cdev,
 	if (new_state >= ARRAY_SIZE(iwl_mld_cdev_budgets))
 		return -EINVAL;
 
-	return iwl_mld_config_ctdp(mld, new_state);
+	return iwl_mld_config_ctdp(mld, new_state, CTDP_CMD_OPERATION_START);
 }
 
 static const struct thermal_cooling_device_ops tcooling_ops = {

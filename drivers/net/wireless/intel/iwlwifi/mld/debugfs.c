@@ -15,6 +15,9 @@
 #include "ap.h"
 #include "iwl-utils.h"
 #include "rfi.h"
+#ifdef CONFIG_THERMAL
+#include "thermal.h"
+#endif
 
 #include "fw/api/rs.h"
 #include "fw/api/dhc.h"
@@ -338,6 +341,34 @@ out:
 
 WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(inject_packet, 512);
 
+#ifdef CONFIG_THERMAL
+
+static ssize_t iwl_dbgfs_stop_ctdp_write(struct iwl_mld *mld,
+					 char *buf, size_t count)
+{
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	return iwl_mld_config_ctdp(mld, mld->cooling_dev.cur_state,
+				   CTDP_CMD_OPERATION_STOP) ? : count;
+}
+
+WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(stop_ctdp, 8);
+
+static ssize_t iwl_dbgfs_start_ctdp_write(struct iwl_mld *mld,
+					  char *buf, size_t count)
+{
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	return iwl_mld_config_ctdp(mld, mld->cooling_dev.cur_state,
+				   CTDP_CMD_OPERATION_START) ? : count;
+}
+
+WIPHY_DEBUGFS_WRITE_FILE_OPS_MLD(start_ctdp, 8);
+
+#endif /* CONFIG_THERMAL */
+
 void
 iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 {
@@ -350,6 +381,10 @@ iwl_mld_add_debugfs_files(struct iwl_mld *mld, struct dentry *debugfs_dir)
 	MLD_DEBUGFS_ADD_FILE(rfi_freq_table, debugfs_dir, 0600);
 	MLD_DEBUGFS_ADD_FILE(fw_dbg_clear, debugfs_dir, 0200);
 	MLD_DEBUGFS_ADD_FILE(send_echo_cmd, debugfs_dir, 0200);
+#ifdef CONFIG_THERMAL
+	MLD_DEBUGFS_ADD_FILE(start_ctdp, debugfs_dir, 0200);
+	MLD_DEBUGFS_ADD_FILE(stop_ctdp, debugfs_dir, 0200);
+#endif
 	MLD_DEBUGFS_ADD_FILE(inject_packet, debugfs_dir, 0200);
 
 	/* Create a symlink with mac80211. It will be removed when mac80211
