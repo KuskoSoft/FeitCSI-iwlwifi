@@ -1124,7 +1124,7 @@ int iwl_mld_update_link_stas(struct iwl_mld *mld,
 	unsigned long old_links_long = old_links;
 	unsigned long sta_mask_added = 0;
 	u32 current_sta_mask = 0, sta_mask_to_rem = 0;
-	unsigned int link_id;
+	unsigned int link_id, sta_id;
 	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
@@ -1207,9 +1207,13 @@ int iwl_mld_update_link_stas(struct iwl_mld *mld,
 	return 0;
 
 remove_added_link_stas:
-	for_each_set_bit(link_id, &sta_mask_added, IEEE80211_MLD_MAX_NUM_LINKS) {
+	for_each_set_bit(sta_id, &sta_mask_added, mld->fw->ucode_capa.num_stations) {
 		struct ieee80211_link_sta *link_sta =
-			link_sta_dereference_protected(sta, link_id);
+			wiphy_dereference(mld->wiphy,
+					  mld->fw_id_to_link_sta[sta_id]);
+
+		if (WARN_ON(!link_sta))
+			continue;
 
 		iwl_mld_remove_link_sta(mld, link_sta);
 	}
