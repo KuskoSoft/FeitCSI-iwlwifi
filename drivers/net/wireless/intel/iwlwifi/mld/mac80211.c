@@ -1325,7 +1325,7 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 			 * ask for periodic statistics, as they are needed for
 			 * link selection and RX OMI decisions.
 			 */
-			iwl_mld_request_fw_stats(mld, true);
+			iwl_mld_clear_stats_in_fw(mld);
 			iwl_mld_request_periodic_fw_stats(mld, true);
 
 			iwl_mld_set_vif_associated(mld, vif);
