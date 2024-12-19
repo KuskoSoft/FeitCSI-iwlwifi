@@ -100,6 +100,9 @@ static bool iwl_mld_cancel_##name##_notif(struct iwl_mld *mld,			\
 #define RX_HANDLER_OF_ROC(_grp, _cmd, _name)				\
 	RX_HANDLER_OF_OBJ(_grp, _cmd, _name, ROC)
 
+#define RX_HANDLER_OF_SCAN(_grp, _cmd, _name)				\
+	RX_HANDLER_OF_OBJ(_grp, _cmd, _name, SCAN)
+
 static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt)
 {
@@ -352,6 +355,7 @@ DEFINE_SIMPLE_CANCELLATION(channel_switch_error,
 DEFINE_SIMPLE_CANCELLATION(datapath_monitor, iwl_datapath_monitor_notif,
 			   link_id)
 DEFINE_SIMPLE_CANCELLATION(roc, iwl_roc_notif, activity)
+DEFINE_SIMPLE_CANCELLATION(scan_complete, iwl_umac_scan_complete, uid)
 
 /*
  * Handlers for fw notifications
@@ -366,8 +370,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     RX_HANDLER_SYNC)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, BA_NOTIF, compressed_ba_notif,
 			     RX_HANDLER_SYNC)
-	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, SCAN_COMPLETE_UMAC,
-			     scan_complete_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_OF_SCAN(LEGACY_GROUP, SCAN_COMPLETE_UMAC,
+			   scan_complete_notif)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, SCAN_ITERATION_COMPLETE_UMAC,
 			     scan_iter_complete_notif,
 			     RX_HANDLER_SYNC)

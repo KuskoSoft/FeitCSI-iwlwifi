@@ -1392,7 +1392,6 @@ iwl_mld_mac80211_sched_scan_stop(struct ieee80211_hw *hw,
 				 struct ieee80211_vif *vif)
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
-	int ret;
 
 	/* Due to a race condition, it's possible that mac80211 asks
 	 * us to stop a sched_scan when it's already stopped. This
@@ -1405,10 +1404,7 @@ iwl_mld_mac80211_sched_scan_stop(struct ieee80211_hw *hw,
 	if (!(mld->scan.status & IWL_MLD_SCAN_SCHED))
 		return 0;
 
-	ret = iwl_mld_scan_stop(mld, IWL_MLD_SCAN_SCHED, false);
-	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
-
-	return ret;
+	return iwl_mld_scan_stop(mld, IWL_MLD_SCAN_SCHED, false);
 }
 
 static void

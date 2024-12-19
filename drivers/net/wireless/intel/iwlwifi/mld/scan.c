@@ -1143,7 +1143,8 @@ iwl_mld_scan_build_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	/* TODO: scan filter (task=mei)*/
 
-	uid = iwl_mld_scan_uid_by_status(mld, 0);
+	/* find a free UID entry */
+	uid = iwl_mld_scan_uid_by_status(mld, IWL_MLD_SCAN_NONE);
 	if (uid < 0)
 		return uid;
 
@@ -1541,26 +1542,16 @@ out:
 }
 
 static int
-iwl_mld_scan_abort(struct iwl_mld *mld, int type, bool *wait)
+iwl_mld_scan_abort(struct iwl_mld *mld, int type, int uid, bool *wait)
 {
-	int uid, ret;
 	enum iwl_umac_scan_abort_status status;
+	int ret;
 
 	*wait = true;
-
-	/* We should always get a valid index here, because we already
-	 * checked that this type of scan was running in the generic
-	 * code.
-	 */
-	uid = iwl_mld_scan_uid_by_status(mld, type);
-	if (WARN_ON_ONCE(uid < 0))
-		return uid;
 
 	IWL_DEBUG_SCAN(mld, "Sending scan abort, uid %u\n", uid);
 
 	ret = iwl_mld_scan_send_abort_cmd_status(mld, uid, &status);
-
-	mld->scan.uid_status[uid] = type << IWL_MLD_SCAN_STOPPING_SHIFT;
 
 	IWL_DEBUG_SCAN(mld, "Scan abort: ret=%d status=%u\n", ret, status);
 
@@ -1580,7 +1571,7 @@ iwl_mld_scan_abort(struct iwl_mld *mld, int type, bool *wait)
 }
 
 static int
-iwl_mld_scan_stop_wait(struct iwl_mld *mld, int type)
+iwl_mld_scan_stop_wait(struct iwl_mld *mld, int type, int uid)
 {
 	struct iwl_notification_wait wait_scan_done;
 	static const u16 scan_comp_notif[] = { SCAN_COMPLETE_UMAC };
@@ -1594,7 +1585,7 @@ iwl_mld_scan_stop_wait(struct iwl_mld *mld, int type)
 
 	IWL_DEBUG_SCAN(mld, "Preparing to stop scan, type=%x\n", type);
 
-	ret = iwl_mld_scan_abort(mld, type, &wait);
+	ret = iwl_mld_scan_abort(mld, type, uid, &wait);
 	if (ret) {
 		IWL_DEBUG_SCAN(mld, "couldn't stop scan type=%d\n", type);
 		goto return_no_wait;
@@ -1708,7 +1699,7 @@ out:
 
 int iwl_mld_scan_stop(struct iwl_mld *mld, int type, bool notify)
 {
-	int ret;
+	int uid, ret;
 
 	IWL_DEBUG_SCAN(mld,
 		       "Request to stop scan: type=0x%x, status=0x%x\n",
@@ -1717,23 +1708,30 @@ int iwl_mld_scan_stop(struct iwl_mld *mld, int type, bool notify)
 	if (!(mld->scan.status & type))
 		return 0;
 
-	ret = iwl_mld_scan_stop_wait(mld, type);
-	if (!ret)
-		mld->scan.status |= type << IWL_MLD_SCAN_STOPPING_SHIFT;
-	else
+	uid = iwl_mld_scan_uid_by_status(mld, type);
+	/* must be valid, we just checked it's running */
+	if (WARN_ON_ONCE(uid < 0))
+		return uid;
+
+	ret = iwl_mld_scan_stop_wait(mld, type, uid);
+	if (ret)
 		IWL_DEBUG_SCAN(mld, "Failed to stop scan\n");
 
 	/* Clear the scan status so the next scan requests will
 	 * succeed and mark the scan as stopping, so that the Rx
 	 * handler doesn't do anything, as the scan was stopped from
-	 * above.
+	 * above. Also remove the handler to not notify mac80211
+	 * erroneously after a new scan starts, for example.
 	 */
 	mld->scan.status &= ~type;
+	mld->scan.uid_status[uid] = IWL_MLD_SCAN_NONE;
+	iwl_mld_cancel_notifications_of_object(mld, IWL_MLD_OBJECT_TYPE_SCAN,
+					       uid);
 
 	if (type == IWL_MLD_SCAN_REGULAR) {
 		if (notify) {
 			struct cfg80211_scan_info info = {
-			    .aborted = true,
+				.aborted = true,
 			};
 
 			ieee80211_scan_completed(mld->hw, &info);
@@ -1835,6 +1833,10 @@ void iwl_mld_handle_scan_iter_complete_notif(struct iwl_mld *mld,
 	struct iwl_umac_scan_iter_complete_notif *notif = (void *)pkt->data;
 	u32 uid = __le32_to_cpu(notif->uid);
 
+	if (IWL_FW_CHECK(mld, uid >= ARRAY_SIZE(mld->scan.uid_status),
+			 "FW reports out-of-range scan UID %d\n", uid))
+		return;
+
 	if (mld->scan.uid_status[uid] == IWL_MLD_SCAN_REGULAR)
 		mld->scan.start_tsf = le64_to_cpu(notif->start_tsf);
 
@@ -1869,6 +1871,10 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 
 	/* TODO: scan filter (task=mei)*/
 
+	if (IWL_FW_CHECK(mld, uid >= ARRAY_SIZE(mld->scan.uid_status),
+			 "FW reports out-of-range scan UID %d\n", uid))
+		return;
+
 	IWL_DEBUG_SCAN(mld,
 		       "Scan completed: uid=%u type=%u, status=%s, EBS=%s\n",
 		       uid, mld->scan.uid_status[uid],
@@ -1882,7 +1888,8 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 		       notif->last_schedule, notif->last_iter,
 		       __le32_to_cpu(notif->time_from_last_iter));
 
-	if (WARN_ON(!(mld->scan.uid_status[uid] & mld->scan.status)))
+	if (IWL_FW_CHECK(mld, !(mld->scan.uid_status[uid] & mld->scan.status),
+			 "FW reports scan UID %d we didn't trigger\n", uid))
 		return;
 
 	/* if the scan is already stopping, we don't need to notify mac80211 */
@@ -1926,7 +1933,7 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 	IWL_DEBUG_SCAN(mld, "Scan completed: after update: scan_status=0x%x\n",
 		       mld->scan.status);
 
-	mld->scan.uid_status[uid] = 0;
+	mld->scan.uid_status[uid] = IWL_MLD_SCAN_NONE;
 
 	if (notif->ebs_status != IWL_SCAN_EBS_SUCCESS &&
 	    notif->ebs_status != IWL_SCAN_EBS_INACTIVE)
@@ -1947,13 +1954,13 @@ void iwl_mld_report_scan_aborted(struct iwl_mld *mld)
 		};
 
 		ieee80211_scan_completed(mld->hw, &info);
-		mld->scan.uid_status[uid] = 0;
+		mld->scan.uid_status[uid] = IWL_MLD_SCAN_NONE;
 	}
 
 	uid = iwl_mld_scan_uid_by_status(mld, IWL_MLD_SCAN_SCHED);
 	if (uid >= 0) {
 		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
-		mld->scan.uid_status[uid] = 0;
+		mld->scan.uid_status[uid] = IWL_MLD_SCAN_NONE;
 
 		/* sched scan will be restarted by mac80211 in reconfig.
 		 * report to mac80211 that sched scan stopped only if we won't
@@ -1965,6 +1972,7 @@ void iwl_mld_report_scan_aborted(struct iwl_mld *mld)
 
 	/* TODO: IWL_MLD_SCAN_INT_MLO */
 
+	BUILD_BUG_ON(IWL_MLD_SCAN_NONE != 0);
 	memset(mld->scan.uid_status, 0, sizeof(mld->scan.uid_status));
 }
 
