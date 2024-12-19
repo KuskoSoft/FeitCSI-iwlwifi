@@ -42,20 +42,10 @@ int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		.action = cpu_to_le32(FW_CTXT_ACTION_ADD),
 	};
 	enum iwl_roc_activity activity;
-	int ret;
+	int ret = 0;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* Make sure all the handlers have run. We can have a race when mac80211
-	 * cancels and starts another ROC immediately while holding the wiphy
-	 * lock. The ASYNC handler that handles the notification can be stuck
-	 * on the lock and then, we can start the handling the notification of
-	 * ROC number n while we already started ROC n + 1.
-	 * Avoid this by waiting for all the handlers to complete.
-	 */
-	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
-
-	ret = 0;
 	ieee80211_iterate_active_interfaces_mtx(mld->hw,
 						IEEE80211_IFACE_ITER_NORMAL,
 						iwl_mld_vif_iter_emlsr_block_roc,
@@ -174,6 +164,17 @@ int iwl_mld_cancel_roc(struct ieee80211_hw *hw,
 				   &cmd);
 	if (ret)
 		IWL_ERR(mld, "Couldn't send the command to cancel the ROC\n");
+
+	/* We may have raced with the firmware expiring the ROC instance at
+	 * this very moment. In that case, we can have a notification in the
+	 * async processing queue. However, none can arrive _after_ this as
+	 * ROC_CMD was sent synchronously, i.e. we waited for a response and
+	 * the firmware cannot refer to this ROC after the response. Thus,
+	 * if we just cancel the notification (if there's one) we'll be at a
+	 * clean state for any possible next ROC.
+	 */
+	iwl_mld_cancel_notifications_of_object(mld, IWL_MLD_OBJECT_TYPE_ROC,
+					       mld_vif->roc_activity);
 
 	iwl_mld_destroy_roc(mld, vif, mld_vif);
 
