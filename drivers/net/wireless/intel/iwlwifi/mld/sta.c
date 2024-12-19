@@ -514,9 +514,6 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 		if (mld_link_sta) {
 			fw_id = mld_link_sta->fw_id;
 			goto add_to_fw;
-		} else {
-			/* Link sta was not allocated before the restart. */
-			WARN_ON(1);
 		}
 	}
 
