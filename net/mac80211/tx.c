@@ -24,7 +24,7 @@
 #include <net/mac80211.h>
 #include <net/codel.h>
 #include <net/codel_impl.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 #include <net/fq_impl.h>
 #include <net/gso.h>
 
@@ -1763,7 +1763,8 @@ static bool __ieee80211_tx(struct ieee80211_local *local,
 
 	switch (sdata->vif.type) {
 	case NL80211_IFTYPE_MONITOR:
-		if (sdata->u.mntr.flags & MONITOR_FLAG_ACTIVE) {
+		if ((sdata->u.mntr.flags & MONITOR_FLAG_ACTIVE) ||
+		    ieee80211_hw_check(&local->hw, NO_VIRTUAL_MONITOR)) {
 			vif = &sdata->vif;
 			break;
 		}
@@ -3975,7 +3976,8 @@ begin:
 
 	switch (tx.sdata->vif.type) {
 	case NL80211_IFTYPE_MONITOR:
-		if (tx.sdata->u.mntr.flags & MONITOR_FLAG_ACTIVE) {
+		if ((tx.sdata->u.mntr.flags & MONITOR_FLAG_ACTIVE) ||
+		    ieee80211_hw_check(&local->hw, NO_VIRTUAL_MONITOR)) {
 			vif = &tx.sdata->vif;
 			break;
 		}
@@ -6241,7 +6243,7 @@ int ieee80211_tx_control_port(struct wiphy *wiphy, struct net_device *dev,
 		goto start_xmit;
 
 	/* update QoS header to prioritize control port frames if possible,
-	 * priorization also happens for control port frames send over
+	 * prioritization also happens for control port frames send over
 	 * AF_PACKET
 	 */
 	rcu_read_lock();

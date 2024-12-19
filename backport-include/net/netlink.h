@@ -379,4 +379,159 @@ MIN_LEN_VALIDATION(42)
 #define NLA_POLICY_BINARY_RANGE(_min, _max) NLA_POLICY_RANGE(NLA_BINARY, _min, _max)
 #endif /* < 5.10 */
 
+#if LINUX_VERSION_IS_LESS(6,7,0)
+
+static inline u64 nla_get_uint(const struct nlattr *nla)
+{
+	if (nla_len(nla) == sizeof(u32))
+		return nla_get_u32(nla);
+	return nla_get_u64(nla);
+}
+
+static inline s64 nla_get_sint(const struct nlattr *nla)
+{
+	if (nla_len(nla) == sizeof(s32))
+		return nla_get_s32(nla);
+	return nla_get_s64(nla);
+}
+
+#endif /* < 6.7 */
+
+#if LINUX_VERSION_IS_LESS(6,13,0)
+
+static inline u32 nla_get_u32_default(const struct nlattr *nla, u32 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_u32(nla);
+}
+
+static inline __be32 nla_get_be32_default(const struct nlattr *nla,
+					  __be32 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_be32(nla);
+}
+
+static inline __le32 nla_get_le32_default(const struct nlattr *nla,
+					  __le32 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_le32(nla);
+}
+
+static inline u16 nla_get_u16_default(const struct nlattr *nla, u16 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_u16(nla);
+}
+
+static inline __be16 nla_get_be16_default(const struct nlattr *nla,
+					  __be16 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_be16(nla);
+}
+
+static inline __le16 nla_get_le16_default(const struct nlattr *nla,
+					  __le16 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_le16(nla);
+}
+
+static inline u8 nla_get_u8_default(const struct nlattr *nla, u8 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_u8(nla);
+}
+
+static inline u64 nla_get_u64_default(const struct nlattr *nla, u64 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_u64(nla);
+}
+
+static inline u64 nla_get_uint_default(const struct nlattr *nla, u64 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_uint(nla);
+}
+
+static inline __be64 nla_get_be64_default(const struct nlattr *nla,
+					  __be64 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_be64(nla);
+}
+
+static inline __le64 nla_get_le64_default(const struct nlattr *nla,
+					  __le64 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_le64(nla);
+}
+
+static inline s32 nla_get_s32_default(const struct nlattr *nla, s32 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_s32(nla);
+}
+
+static inline s16 nla_get_s16_default(const struct nlattr *nla, s16 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_s16(nla);
+}
+
+static inline s8 nla_get_s8_default(const struct nlattr *nla, s8 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_s8(nla);
+}
+
+static inline s64 nla_get_s64_default(const struct nlattr *nla, s64 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_s64(nla);
+}
+
+static inline s64 nla_get_sint_default(const struct nlattr *nla, s64 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_sint(nla);
+}
+
+static inline unsigned long nla_get_msecs_default(const struct nlattr *nla,
+						  unsigned long defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_msecs(nla);
+}
+
+static inline __be32 nla_get_in_addr_default(const struct nlattr *nla,
+					     __be32 defvalue)
+{
+	if (!nla)
+		return defvalue;
+	return nla_get_in_addr(nla);
+}
+
+#endif /* < 6.13 */
 #endif /* __BACKPORT_NET_NETLINK_H */

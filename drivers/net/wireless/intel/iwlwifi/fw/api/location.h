@@ -617,7 +617,7 @@ struct iwl_tof_range_req_ap_entry_v2 {
  * @IWL_INITIATOR_AP_FLAGS_TEST_INCORRECT_SAC: send an incorrect SAC in the
  *	first NDP exchange. This is used for testing.
  * @IWL_INITIATOR_AP_FLAGS_TEST_BAD_SLTF: use incorrect secure LTF tx key. This
- *	is used for testing. Only supported from version 15 of the range reqeust
+ *	is used for testing. Only supported from version 15 of the range request
  *	command.
  */
 enum iwl_initiator_ap_flags {

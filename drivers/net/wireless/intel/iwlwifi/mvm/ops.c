@@ -42,7 +42,12 @@
 #define DRV_DESCRIPTION	"The new Intel(R) wireless AGN driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
 MODULE_LICENSE("GPL");
+
+#if LINUX_VERSION_IS_LESS(6,13,0)
 MODULE_IMPORT_NS(IWLWIFI);
+#else
+MODULE_IMPORT_NS("IWLWIFI");
+#endif /* LINUX_VERSION_IS_LESS(6,13,0) */
 
 static const struct iwl_op_mode_ops iwl_mvm_ops;
 static const struct iwl_op_mode_ops iwl_mvm_ops_mq;

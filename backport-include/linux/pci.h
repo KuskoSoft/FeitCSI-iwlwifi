@@ -32,4 +32,14 @@ backport_pci_disable_link_state(struct pci_dev *pdev, int state)
 #endif /* < 5.3 */
 #endif /* defined(CONFIG_PCI) */
 
+#if LINUX_VERSION_IS_LESS(6,13,0)
+
+#define pcim_request_all_regions LINUX_BACKPORT(pcim_request_all_regions)
+static inline int pcim_request_all_regions(struct pci_dev *pdev, const char *name)
+{
+	return pcim_iomap_regions_request_all(pdev, BIT(0), name);
+}
+
+#endif /* LINUX_VERSION_IS_LESS(6,13,0) */
+
 #endif /* _BACKPORT_LINUX_PCI_H */

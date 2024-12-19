@@ -189,4 +189,21 @@ static inline int genlmsg_parse(const struct nlmsghdr *nlh,
 }
 #endif /* LINUX_VERSION_IS_LESS(5,2,0) */
 
+#if LINUX_VERSION_IS_LESS(6,13,0)
+
+#define genlmsg_multicast_allns LINUX_BACKPORT(genlmsg_multicast_allns)
+static inline int genlmsg_multicast_allns(const struct genl_family *family,
+					  struct sk_buff *skb, u32 portid,
+					  unsigned int group)
+{
+	int ret;
+
+	rcu_read_lock();
+	ret = genlmsg_multicast_netns(family, &init_net, skb, portid, group, GFP_ATOMIC);
+	rcu_read_unlock();
+	return ret;
+}
+
+#endif /* LINUX_VERSION_IS_LESS(6,13,0) */
+
 #endif /* __BACKPORT_NET_GENETLINK_H */

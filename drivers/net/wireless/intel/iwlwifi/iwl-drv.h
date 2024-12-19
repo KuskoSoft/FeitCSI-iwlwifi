@@ -100,7 +100,13 @@ int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name);
  * everything is built-in, then we can avoid that.
  */
 #ifdef CPTCFG_IWLWIFI_OPMODE_MODULAR
+
+#if LINUX_VERSION_IS_LESS(6,13,0)
 #define IWL_EXPORT_SYMBOL(sym)	EXPORT_SYMBOL_NS_GPL(sym, IWLWIFI)
+#else
+#define IWL_EXPORT_SYMBOL(sym)	EXPORT_SYMBOL_NS_GPL(sym, "IWLWIFI")
+#endif /* LINUX_VERSION_IS_LESS(6,13,0) */
+
 #else
 #define IWL_EXPORT_SYMBOL(sym)
 #endif

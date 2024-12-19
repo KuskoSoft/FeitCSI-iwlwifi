@@ -22,7 +22,7 @@
 #include <net/cfg80211.h>
 #include <net/codel.h>
 #include <net/ieee80211_radiotap.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 
 /**
  * DOC: Introduction
@@ -1472,8 +1472,6 @@ ieee80211_tx_info_clear_status(struct ieee80211_tx_info *info)
  * @RX_FLAG_AMPDU_IS_LAST: this subframe is the last subframe of the A-MPDU
  * @RX_FLAG_AMPDU_DELIM_CRC_ERROR: A delimiter CRC error has been detected
  *	on this subframe
- * @RX_FLAG_AMPDU_DELIM_CRC_KNOWN: The delimiter CRC field is known (the CRC
- *	is stored in the @ampdu_delimiter_crc field)
  * @RX_FLAG_MIC_STRIPPED: The mic was stripped of this packet. Decryption was
  *	done by the hardware
  * @RX_FLAG_ONLY_MONITOR: Report frame only to monitor interfaces without
@@ -1545,7 +1543,7 @@ enum mac80211_rx_flags {
 	RX_FLAG_AMPDU_LAST_KNOWN	= BIT(12),
 	RX_FLAG_AMPDU_IS_LAST		= BIT(13),
 	RX_FLAG_AMPDU_DELIM_CRC_ERROR	= BIT(14),
-	RX_FLAG_AMPDU_DELIM_CRC_KNOWN	= BIT(15),
+	/* one free bit at 15 */
 	RX_FLAG_MACTIME			= BIT(16) | BIT(17),
 	RX_FLAG_MACTIME_PLCP_START	= 1 << 16,
 	RX_FLAG_MACTIME_START		= 2 << 16,
@@ -1643,7 +1641,6 @@ enum mac80211_rx_encoding {
  * @rx_flags: internal RX flags for mac80211
  * @ampdu_reference: A-MPDU reference number, must be a different value for
  *	each A-MPDU but the same for each subframe within one A-MPDU
- * @ampdu_delimiter_crc: A-MPDU delimiter CRC
  * @zero_length_psdu_type: radiotap type of the 0-length PSDU
  * @link_valid: if the link which is identified by @link_id is valid. This flag
  *	is set only when connection is MLO.
@@ -1681,7 +1678,6 @@ struct ieee80211_rx_status {
 	s8 signal;
 	u8 chains;
 	s8 chain_signal[IEEE80211_MAX_CHAINS];
-	u8 ampdu_delimiter_crc;
 	u8 zero_length_psdu_type;
 	u8 link_valid:1, link_id:4;
 };
@@ -2005,6 +2001,8 @@ enum ieee80211_neg_ttlm_res {
  * @neg_ttlm: negotiated TID to link mapping info.
  *	see &struct ieee80211_neg_ttlm.
  * @addr: address of this interface
+ * @addr_valid: indicates if the address is actively used. Set to false for
+ *	passive monitor interfaces, true in all other cases.
  * @p2p: indicates whether this AP or STA interface is a p2p
  *	interface, i.e. a GO or p2p-sta respectively
  * @netdev_features: tx netdev features supported by the hardware for this
@@ -2044,6 +2042,7 @@ struct ieee80211_vif {
 	u16 valid_links, active_links, dormant_links, suspended_links;
 	struct ieee80211_neg_ttlm neg_ttlm;
 	u8 addr[ETH_ALEN] __aligned(2);
+	bool addr_valid;
 	bool p2p;
 
 	u8 cab_queue;
@@ -2714,6 +2713,11 @@ struct ieee80211_txq {
  *	a virtual monitor interface when monitor interfaces are the only
  *	active interfaces.
  *
+ * @IEEE80211_HW_NO_VIRTUAL_MONITOR: The driver would like to be informed
+ *	of any monitor interface, as well as their configured channel.
+ *	This is useful for supporting multiple monitor interfaces on different
+ *	channels.
+ *
  * @IEEE80211_HW_NO_AUTO_VIF: The driver would like for no wlanX to
  *	be created.  It is expected user-space will create vifs as
  *	desired (and thus have them named as desired).
@@ -2876,6 +2880,7 @@ enum ieee80211_hw_flags {
 	IEEE80211_HW_SUPPORTS_DYNAMIC_PS,
 	IEEE80211_HW_MFP_CAPABLE,
 	IEEE80211_HW_WANT_MONITOR_VIF,
+	IEEE80211_HW_NO_VIRTUAL_MONITOR,
 	IEEE80211_HW_NO_AUTO_VIF,
 	IEEE80211_HW_SW_CRYPTO_CONTROL,
 	IEEE80211_HW_SUPPORT_FAST_XMIT,
@@ -7691,12 +7696,12 @@ static inline bool ieee80211_is_tx_data(struct sk_buff *skb)
  *
  *  - change_vif_links(0x11)
  *  - unassign_vif_chanctx(link_id=0)
+ *  - assign_vif_chanctx(link_id=4)
  *  - change_sta_links(0x11) for each affected STA (the AP)
  *    (TDLS connections on now inactive links should be torn down)
  *  - remove group keys on the old link (link_id 0)
  *  - add new group keys (GTK/IGTK/BIGTK) on the new link (link_id 4)
  *  - change_sta_links(0x10) for each affected STA (the AP)
- *  - assign_vif_chanctx(link_id=4)
  *  - change_vif_links(0x10)
  *
  * Return: 0 on success. An error code otherwise.
