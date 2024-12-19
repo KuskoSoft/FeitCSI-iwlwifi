@@ -378,7 +378,7 @@ int iwl_mld_activate_link(struct iwl_mld *mld,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (WARN_ON(!mld_link))
+	if (WARN_ON(!mld_link || mld_link->active))
 		return -EINVAL;
 
 	mld_link->active = true;
@@ -399,7 +399,7 @@ void iwl_mld_deactivate_link(struct iwl_mld *mld,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (WARN_ON(!mld_link))
+	if (WARN_ON(!mld_link || !mld_link->active))
 		return;
 
 	iwl_mld_cancel_session_protection(mld, link->vif, link->link_id);
