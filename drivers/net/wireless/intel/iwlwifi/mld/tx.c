@@ -117,23 +117,16 @@ static int iwl_mld_add_txq(struct iwl_mld *mld, struct ieee80211_txq *txq)
 	return 0;
 }
 
-void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
+void iwl_mld_add_txq_list(struct iwl_mld *mld)
 {
-	struct iwl_mld *mld = container_of(wk, struct iwl_mld,
-					   add_txqs_wk);
-	int failed;
-
 	lockdep_assert_wiphy(mld->wiphy);
-
-	/* will reschedule to run after restart */
-	if (mld->fw_status.in_hw_restart)
-		return;
 
 	while (!list_empty(&mld->txqs_to_add)) {
 		struct ieee80211_txq *txq;
 		struct iwl_mld_txq *mld_txq =
 			list_first_entry(&mld->txqs_to_add, struct iwl_mld_txq,
 					 list);
+		int failed;
 
 		txq = container_of((void *)mld_txq, struct ieee80211_txq,
 				   drv_priv);
@@ -152,6 +145,18 @@ void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
 			iwl_mld_tx_from_txq(mld, txq);
 		local_bh_enable();
 	}
+}
+
+void iwl_mld_add_txqs_wk(struct wiphy *wiphy, struct wiphy_work *wk)
+{
+	struct iwl_mld *mld = container_of(wk, struct iwl_mld,
+					   add_txqs_wk);
+
+	/* will reschedule to run after restart */
+	if (mld->fw_status.in_hw_restart)
+		return;
+
+	iwl_mld_add_txq_list(mld);
 }
 
 void
