@@ -1840,7 +1840,7 @@ static void iwl_mld_mac80211_flush(struct ieee80211_hw *hw,
 	}
 
 	/* Make sure we're done with the deferred traffic before flushing */
-	iwl_mld_add_txq_list(mld);
+	wiphy_work_flush(mld->wiphy, &mld->add_txqs_wk);
 
 	for (int i = 0; i < mld->fw->ucode_capa.num_stations; i++) {
 		struct ieee80211_link_sta *link_sta =
