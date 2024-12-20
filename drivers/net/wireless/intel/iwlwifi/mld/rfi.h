@@ -34,6 +34,8 @@ struct iwl_mld_rfi_config_info {
  * @fw_state: Firmware RFI state &enum iwl_rfi_support_reason.
  * @bios_enabled: indicates RFI is enabled in BIOS.
  * @fw_table: This holds RFI subset table received from the firmware.
+ * @wlan_master: true if the WLAN is controlling RFI,
+ *	false if the user application controls.
  * @external_config_info: RFI configuration information.
  */
 struct iwl_mld_rfi {
@@ -45,6 +47,7 @@ struct iwl_mld_rfi {
 	bool bios_enabled;
 	struct iwl_rfi_freq_table_resp_cmd *fw_table;
 #ifdef CPTCFG_IWL_VENDOR_CMDS
+	bool wlan_master;
 	struct iwl_mld_rfi_config_info *external_config_info;
 #endif
 };

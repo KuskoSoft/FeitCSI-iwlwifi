@@ -219,6 +219,38 @@ static void iwl_mld_set_default_rfi_config_cmd(struct iwl_rfi_config_cmd *cmd)
 	cmd->snr_threshold = cpu_to_le32(IWL_RFI_DDR_SNR_THRESHOLD);
 }
 
+#ifdef CPTCFG_IWL_VENDOR_CMDS
+static void iwl_mld_set_user_rfi_config_cmd(struct iwl_mld *mld,
+					    struct iwl_rfi_config_cmd *cmd)
+{
+	BUILD_BUG_ON(sizeof(cmd->ddr_table) !=
+		sizeof(mld->rfi.external_config_info->ddr_table));
+	BUILD_BUG_ON(sizeof(cmd->desense_table) !=
+		sizeof(mld->rfi.external_config_info->desense_table));
+
+	if (mld->rfi.external_config_info) {
+		IWL_DEBUG_INFO(mld, "Sending oem RFI table\n");
+		memcpy(cmd->ddr_table, mld->rfi.external_config_info->ddr_table,
+		       sizeof(cmd->ddr_table));
+		memcpy(cmd->desense_table,
+		       mld->rfi.external_config_info->desense_table,
+		       sizeof(cmd->desense_table));
+		cmd->snr_threshold =
+			mld->rfi.external_config_info->snr_threshold;
+		cmd->oem = 1;
+	} else if (!mld->rfi.wlan_master) {
+		/* The absence of external_config_info when the WLAN is
+		 * not master indicates that user-space has requested to
+		 * stop RFIm.
+		 */
+		IWL_DEBUG_INFO(mld, "Sending zero RFI memory support table\n");
+		cmd->rfi_memory_support = 0;
+	} else {
+		IWL_DEBUG_INFO(mld, "Sending default RFI table\n");
+	}
+}
+#endif
+
 int iwl_mld_rfi_send_config_cmd(struct iwl_mld *mld)
 {
 	struct iwl_rfi_config_cmd *cmd __free(kfree) = NULL;
@@ -255,24 +287,7 @@ int iwl_mld_rfi_send_config_cmd(struct iwl_mld *mld)
 			cpu_to_le32(RFI_DESENSE_SUPPORTED_MSK);
 
 #ifdef CPTCFG_IWL_VENDOR_CMDS
-	BUILD_BUG_ON(sizeof(cmd->ddr_table) !=
-		sizeof(mld->rfi.external_config_info->ddr_table));
-	BUILD_BUG_ON(sizeof(cmd->desense_table) !=
-		sizeof(mld->rfi.external_config_info->desense_table));
-
-	if (mld->rfi.external_config_info) {
-		IWL_DEBUG_INFO(mld, "Sending oem RFI table\n");
-		memcpy(cmd->ddr_table, mld->rfi.external_config_info->ddr_table,
-		       sizeof(cmd->ddr_table));
-		memcpy(cmd->desense_table,
-		       mld->rfi.external_config_info->desense_table,
-		       sizeof(cmd->desense_table));
-		cmd->snr_threshold =
-			mld->rfi.external_config_info->snr_threshold;
-		cmd->oem = 1;
-	} else {
-		IWL_DEBUG_INFO(mld, "Sending default RFI table\n");
-	}
+	iwl_mld_set_user_rfi_config_cmd(mld, cmd);
 #endif
 
 	ret = iwl_mld_send_cmd(mld, &hcmd);

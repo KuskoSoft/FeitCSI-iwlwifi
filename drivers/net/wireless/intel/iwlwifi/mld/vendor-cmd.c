@@ -85,6 +85,7 @@ iwl_mld_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 				       IWL_RFI_DDR_LUT_ENTRY_CHANNELS_NUM),
 	[IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD] =
 		NLA_POLICY_MAX(NLA_U32, IWL_RFI_MAX_SNR_THRESHOLD),
+	[IWL_MVM_VENDOR_ATTR_RFIM_CNVI_MASTER] = { .type = NLA_U32 },
 };
 
 static struct nlattr **iwl_mld_parse_vendor_data(const void *data, int data_len)
@@ -245,6 +246,71 @@ static int iwl_mld_vendor_ppag_get_table(struct wiphy *wiphy,
 err:
 	kfree_skb(skb);
 	return ret;
+}
+
+#define IWL_RFI_CNVI_NOT_MASTER 0x3
+
+static int iwl_mld_vendor_rfi_set_cnvi_master(struct wiphy *wiphy,
+					      struct wireless_dev *wdev,
+					      const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	bool old_rfi_wlan_master = mld->rfi.wlan_master;
+	struct nlattr **tb __free(kfree) = NULL;
+	u32 rfi_master_conf;
+	int err = 0;
+
+	tb = iwl_mld_parse_vendor_data(data, data_len);
+	if (IS_ERR(tb))
+		return PTR_ERR(tb);
+
+	if (!tb[IWL_MVM_VENDOR_ATTR_RFIM_CNVI_MASTER])
+		return -EINVAL;
+
+	rfi_master_conf = nla_get_u32(tb[IWL_MVM_VENDOR_ATTR_RFIM_CNVI_MASTER]);
+	IWL_DEBUG_INFO(mld, "rfi cnvi master conf is 0x%08x\n",
+		       rfi_master_conf);
+	rfi_master_conf &= IWL_RFI_CNVI_NOT_MASTER;
+
+	/* rfi_master_conf can be 0 or 3 only.
+	 * i.e 0 means CNVI is master. 3 means user-space application is master.
+	 * 1 and 2 are invalid configurations, which means there is no way for
+	 * the user space to take partial control.
+	 */
+	if (!rfi_master_conf)
+		mld->rfi.wlan_master = true;
+	else if (rfi_master_conf == IWL_RFI_CNVI_NOT_MASTER)
+		mld->rfi.wlan_master = false;
+	else
+		return -EINVAL;
+
+	/* ignore if nothing changed */
+	if (old_rfi_wlan_master == mld->rfi.wlan_master) {
+		IWL_DEBUG_INFO(mld,
+			       "Wlan RFI master configuration is same as old:%d\n",
+			       old_rfi_wlan_master);
+		return 0;
+	}
+
+	/* Drop external stored configuration buffer when there is
+	 * change in master
+	 */
+	kfree(mld->rfi.external_config_info);
+	mld->rfi.external_config_info = NULL;
+
+	/* By-pass sending of RFI_CONFIG command, if user space takes control
+	 * when rfi "rfi_state" is not PMC_SUPPORTED or SUBSET_TABLE_READY.
+	 */
+	if (mld->rfi.wlan_master ||
+	    mld->rfi.fw_state == IWL_RFI_PMC_SUPPORTED ||
+	    mld->rfi.fw_state == IWL_RFI_DDR_SUBSET_TABLE_READY)
+		err = iwl_mld_rfi_send_config_cmd(mld);
+
+	if (err)
+		mld->rfi.wlan_master = old_rfi_wlan_master;
+
+	return err;
 }
 
 static bool
@@ -516,6 +582,17 @@ static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
 		.doit = iwl_mld_vendor_ppag_get_table,
+		.policy = iwl_mld_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mld_vendor_rfi_set_cnvi_master,
 		.policy = iwl_mld_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},

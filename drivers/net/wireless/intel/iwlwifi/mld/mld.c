@@ -84,6 +84,10 @@ void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
 	mld->wiphy = hw->wiphy;
 	mld->debugfs_dir = dbgfs_dir;
 
+#ifdef CPTCFG_IWL_VENDOR_CMDS
+	mld->rfi.wlan_master = true;
+#endif
+
 	iwl_notification_wait_init(&mld->notif_wait);
 
 	/* Setup async RX handling */
