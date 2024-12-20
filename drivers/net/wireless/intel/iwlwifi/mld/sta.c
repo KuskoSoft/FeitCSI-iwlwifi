@@ -538,12 +538,8 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 
 add_to_fw:
 	ret = iwl_mld_add_modify_sta_cmd(mld, link_sta);
-	if (ret) {
+	if (ret)
 		RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
-		RCU_INIT_POINTER(mld_sta->link[link_sta->link_id], NULL);
-		if (link_sta != &link_sta->sta->deflink)
-			kfree(mld_link_sta);
-	}
 
 	return ret;
 }
