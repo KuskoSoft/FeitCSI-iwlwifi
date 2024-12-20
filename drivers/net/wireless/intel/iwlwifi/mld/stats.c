@@ -26,19 +26,11 @@ static int iwl_mld_send_fw_stats_cmd(struct iwl_mld *mld, u32 cfg_mask,
 	return iwl_mld_send_cmd_pdu(mld, cmd_id, &stats_cmd);
 }
 
-int iwl_mld_clear_stats_in_fw(struct iwl_mld *mld)
+int iwl_mld_request_fw_stats(struct iwl_mld *mld, bool clear)
 {
-	u32 cfg_mask = IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK |
-		       IWL_STATS_CFG_FLG_RESET_MSK;
-	u32 type_mask = IWL_STATS_NTFY_TYPE_ID_OPER |
-			IWL_STATS_NTFY_TYPE_ID_OPER_PART1;
-
-	return iwl_mld_send_fw_stats_cmd(mld, cfg_mask, 0, type_mask);
-}
-
-static int iwl_mld_request_fw_stats(struct iwl_mld *mld)
-{
-	u32 cfg_mask = IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK;
+	u32 cfg_mask = clear ? IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK :
+			       IWL_STATS_CFG_FLG_RESET_MSK |
+			       IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK;
 	u32 type_mask = IWL_STATS_NTFY_TYPE_ID_OPER |
 			IWL_STATS_NTFY_TYPE_ID_OPER_PART1;
 	static const u16 stats_complete[] = {
@@ -50,6 +42,8 @@ static int iwl_mld_request_fw_stats(struct iwl_mld *mld)
 	iwl_init_notification_wait(&mld->notif_wait, &stats_wait,
 				   stats_complete, ARRAY_SIZE(stats_complete),
 				   NULL, NULL);
+
+	/* TODO: mvm->statistics_clear (task=statistics) */
 
 	ret = iwl_mld_send_fw_stats_cmd(mld, cfg_mask, 0, type_mask);
 	if (ret) {
@@ -67,6 +61,8 @@ static int iwl_mld_request_fw_stats(struct iwl_mld *mld)
 
 	/* Flush the async_handlers to process the statistics notifications */
 	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
+
+	/* TODO: iwl_mvm_accu_radio_stats (task=statistics)*/
 
 	return 0;
 }
@@ -244,7 +240,7 @@ void iwl_mld_mac80211_sta_statistics(struct ieee80211_hw *hw,
 	if (hweight16(vif->active_links) > 1)
 		return;
 
-	if (iwl_mld_request_fw_stats(mld_sta->mld))
+	if (iwl_mld_request_fw_stats(mld_sta->mld, false))
 		return;
 
 	iwl_mld_sta_stats_fill_signal_avg(mld_sta, sinfo);
