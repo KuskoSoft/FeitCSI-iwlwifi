@@ -9,7 +9,7 @@
 #include "mvm/mvm.h"
 #include "fw/api/rfi.h"
 
-MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
+MODULE_IMPORT_NS("EXPORTED_FOR_KUNIT_TESTING");
 
 static struct wiphy wiphy = {
 	.mtx = __MUTEX_INITIALIZER(wiphy.mtx),

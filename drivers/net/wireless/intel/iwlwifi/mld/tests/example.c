@@ -15,7 +15,7 @@
 #include "phy.h"
 #include "sta.h"
 
-MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
+MODULE_IMPORT_NS("EXPORTED_FOR_KUNIT_TESTING");
 
 static void iwl_mld_kunit_test_example(struct kunit *test)
 {

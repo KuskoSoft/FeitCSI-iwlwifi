@@ -9,7 +9,7 @@
 #include <iwl-trans.h>
 #include "mld.h"
 
-MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
+MODULE_IMPORT_NS("EXPORTED_FOR_KUNIT_TESTING");
 
 static void test_hcmd_names_sorted(struct kunit *test)
 {
