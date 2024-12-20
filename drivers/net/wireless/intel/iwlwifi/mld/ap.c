@@ -304,7 +304,9 @@ int iwl_mld_start_ap_ibss(struct ieee80211_hw *hw,
 	if (ret)
 		goto rm_bcast;
 
-	iwl_mld_vif_update_low_latency(mld, vif, true, LOW_LATENCY_VIF_TYPE);
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
+		iwl_mld_vif_update_low_latency(mld, vif, true,
+					       LOW_LATENCY_VIF_TYPE);
 
 	mld_vif->ap_ibss_active = true;
 
@@ -332,7 +334,9 @@ void iwl_mld_stop_ap_ibss(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		iwl_mld_mac_fw_action(mld, mld->p2p_device_vif,
 				      FW_CTXT_ACTION_MODIFY);
 
-	iwl_mld_vif_update_low_latency(mld, vif, false, LOW_LATENCY_VIF_TYPE);
+	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
+		iwl_mld_vif_update_low_latency(mld, vif, false,
+					       LOW_LATENCY_VIF_TYPE);
 
 	iwl_mld_remove_bcast_sta(mld, vif, link);
 
