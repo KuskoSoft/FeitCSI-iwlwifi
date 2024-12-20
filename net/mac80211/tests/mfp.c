@@ -9,7 +9,11 @@
 #include "../ieee80211_i.h"
 #include "../sta_info.h"
 
+#if LINUX_VERSION_IS_LESS(6,13,0)
+MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
+#else
 MODULE_IMPORT_NS("EXPORTED_FOR_KUNIT_TESTING");
+#endif
 
 static const struct mfp_test_case {
 	const char *desc;
