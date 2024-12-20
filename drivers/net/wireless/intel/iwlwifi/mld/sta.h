@@ -29,6 +29,7 @@ struct iwl_mld_rxq_dup_data {
  * ieee80211_link_sta
  *
  * @last_rate_n_flags: rate_n_flags from the last &iwl_tlc_update_notif
+ * @avg_energy: average energy as reported by firmware statistics notification
  * @rcu_head: RCU head for freeing this object
  * @fw_id: the FW id of this link sta.
  */
@@ -36,6 +37,7 @@ struct iwl_mld_link_sta {
 	/* Add here fields that need clean up on restart */
 	struct_group(zeroed_on_hw_restart,
 		u32 last_rate_n_flags;
+		u8 avg_energy;
 	);
 	/* And here fields that survive a fw restart */
 	struct rcu_head rcu_head;

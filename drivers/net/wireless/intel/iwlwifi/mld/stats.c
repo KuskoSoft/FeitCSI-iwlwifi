@@ -36,70 +36,20 @@ int iwl_mld_clear_stats_in_fw(struct iwl_mld *mld)
 	return iwl_mld_send_fw_stats_cmd(mld, cfg_mask, 0, type_mask);
 }
 
-static void
-iwl_mld_fill_stats_from_oper_notif(struct iwl_rx_packet *pkt,
-				   u8 fw_sta_id, struct station_info *sinfo)
-{
-	const struct iwl_system_statistics_notif_oper *notif =
-		(void *)&pkt->data;
-	const struct iwl_stats_ntfy_per_sta *per_sta =
-		&notif->per_sta[fw_sta_id];
-
-	if (le32_to_cpu(per_sta->average_energy)) {
-		sinfo->signal_avg = -(s8)le32_to_cpu(per_sta->average_energy);
-		sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL_AVG);
-	}
-}
-
-struct iwl_mld_stats_data {
-	u8 fw_sta_id;
-	struct station_info *sinfo;
-};
-
-static bool iwl_mld_wait_stats_handler(struct iwl_notif_wait_data *notif_data,
-				       struct iwl_rx_packet *pkt, void *data)
-{
-	struct iwl_mld_stats_data *stats_data = data;
-	u16 cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
-
-	switch (cmd) {
-	case WIDE_ID(STATISTICS_GROUP, STATISTICS_OPER_NOTIF):
-		iwl_mld_fill_stats_from_oper_notif(pkt, stats_data->fw_sta_id,
-						   stats_data->sinfo);
-		break;
-	case WIDE_ID(STATISTICS_GROUP, STATISTICS_OPER_PART1_NOTIF):
-		break;
-	case WIDE_ID(SYSTEM_GROUP, SYSTEM_STATISTICS_END_NOTIF):
-		return true;
-	}
-
-	return false;
-}
-
-static int
-iwl_mld_fw_stats_to_mac80211(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta,
-			     struct station_info *sinfo)
+static int iwl_mld_request_fw_stats(struct iwl_mld *mld)
 {
 	u32 cfg_mask = IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK;
 	u32 type_mask = IWL_STATS_NTFY_TYPE_ID_OPER |
 			IWL_STATS_NTFY_TYPE_ID_OPER_PART1;
-	static const u16 notifications[] = {
-		WIDE_ID(STATISTICS_GROUP, STATISTICS_OPER_NOTIF),
-		WIDE_ID(STATISTICS_GROUP, STATISTICS_OPER_PART1_NOTIF),
+	static const u16 stats_complete[] = {
 		WIDE_ID(SYSTEM_GROUP, SYSTEM_STATISTICS_END_NOTIF),
-	};
-	struct iwl_mld_stats_data wait_stats_data = {
-		/* We don't support drv_sta_statistics in EMLSR */
-		.fw_sta_id = mld_sta->deflink.fw_id,
-		.sinfo = sinfo,
 	};
 	struct iwl_notification_wait stats_wait;
 	int ret;
 
 	iwl_init_notification_wait(&mld->notif_wait, &stats_wait,
-				   notifications, ARRAY_SIZE(notifications),
-				   iwl_mld_wait_stats_handler,
-				   &wait_stats_data);
+				   stats_complete, ARRAY_SIZE(stats_complete),
+				   NULL, NULL);
 
 	ret = iwl_mld_send_fw_stats_cmd(mld, cfg_mask, 0, type_mask);
 	if (ret) {
@@ -111,7 +61,14 @@ iwl_mld_fw_stats_to_mac80211(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta,
 	 * which should be sufficient for the firmware to gather data
 	 * from all LMACs and send notifications to the host.
 	 */
-	return iwl_wait_notification(&mld->notif_wait, &stats_wait, HZ / 2);
+	ret = iwl_wait_notification(&mld->notif_wait, &stats_wait, HZ / 2);
+	if (ret)
+		return ret;
+
+	/* Flush the async_handlers to process the statistics notifications */
+	wiphy_work_flush(mld->wiphy, &mld->async_handlers_wk);
+
+	return 0;
 }
 
 #define PERIODIC_STATS_SECONDS 5
@@ -265,6 +222,15 @@ static void iwl_mld_sta_stats_fill_txrate(struct iwl_mld_sta *mld_sta,
 	}
 }
 
+static void iwl_mld_sta_stats_fill_signal_avg(struct iwl_mld_sta *mld_sta,
+					      struct station_info *sinfo)
+{
+	if (mld_sta->deflink.avg_energy) {
+		sinfo->signal_avg = -(s8)mld_sta->deflink.avg_energy;
+		sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL_AVG);
+	}
+}
+
 void iwl_mld_mac80211_sta_statistics(struct ieee80211_hw *hw,
 				     struct ieee80211_vif *vif,
 				     struct ieee80211_sta *sta,
@@ -278,14 +244,43 @@ void iwl_mld_mac80211_sta_statistics(struct ieee80211_hw *hw,
 	if (hweight16(vif->active_links) > 1)
 		return;
 
-	if (iwl_mld_fw_stats_to_mac80211(mld_sta->mld, mld_sta, sinfo))
+	if (iwl_mld_request_fw_stats(mld_sta->mld))
 		return;
+
+	iwl_mld_sta_stats_fill_signal_avg(mld_sta, sinfo);
 
 	iwl_mld_sta_stats_fill_txrate(mld_sta, sinfo);
 
 	/* TODO: NL80211_STA_INFO_BEACON_RX */
 
 	/* TODO: NL80211_STA_INFO_BEACON_SIGNAL_AVG */
+}
+
+static void
+iwl_mld_proccess_per_sta_stats(struct iwl_mld *mld,
+			       const struct iwl_stats_ntfy_per_sta *per_sta)
+{
+	u32 num_stations = mld->fw->ucode_capa.num_stations;
+
+	for (u32 fw_id = 0; fw_id < num_stations; fw_id++) {
+		struct iwl_mld_link_sta *mld_link_sta;
+		struct ieee80211_link_sta *link_sta;
+
+		if (!per_sta[fw_id].average_energy)
+			continue;
+
+		link_sta = wiphy_dereference(mld->wiphy,
+					     mld->fw_id_to_link_sta[fw_id]);
+		if (IS_ERR_OR_NULL(link_sta))
+			continue;
+
+		mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+		if (WARN_ON(!mld_link_sta))
+			continue;
+
+		mld_link_sta->avg_energy =
+			le32_to_cpu(per_sta[fw_id].average_energy);
+	}
 }
 
 #define IWL_MLD_TRAFFIC_LOAD_MEDIUM_THRESH	10 /* percentage */
@@ -408,6 +403,8 @@ void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 	BUILD_BUG_ON(ARRAY_SIZE(stats->per_sta) < IWL_STATION_COUNT_MAX);
 	BUILD_BUG_ON(ARRAY_SIZE(stats->per_link) <
 		     ARRAY_SIZE(mld->fw_id_to_bss_conf));
+
+	iwl_mld_proccess_per_sta_stats(mld, stats->per_sta);
 
 	iwl_mld_process_per_link_stats(mld, stats->per_link, curr_ts_usec);
 
