@@ -9,7 +9,7 @@
 
 #include "util.h"
 
-MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
+MODULE_IMPORT_NS("EXPORTED_FOR_KUNIT_TESTING");
 
 static const struct determine_chan_mode_case {
 	const char *desc;
