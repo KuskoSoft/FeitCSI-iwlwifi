@@ -1109,8 +1109,9 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 	}
 
 	IWL_DEBUG_TX_REPLY(mld,
-			   "TXQ %d status 0x%08x ssn=%d\n",
-			   txq_id, status, ssn);
+			   "TXQ %d status 0x%08x ssn=%d initial_rate 0x%x retries %d\n",
+			   txq_id, status, ssn, le32_to_cpu(tx_resp->initial_rate),
+			   tx_resp->failure_frame);
 
 	if (tx_failure && mgmt)
 		iwl_mld_toggle_tx_ant(mld, &mld->mgmt_tx_ant);
