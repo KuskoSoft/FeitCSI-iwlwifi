@@ -622,7 +622,7 @@ extern const struct iwl_cfg iwl_cfg_so_a0_hr_a0;
 extern const struct iwl_cfg iwl_cfg_quz_a0_hr_b0;
 #endif /* CPTCFG_IWLMVM */
 
-#if IS_ENABLED(CPTCFG_IWLMVM) || IS_ENABLED(CPTCFG_IWLMLD)
+#if IS_ENABLED(CPTCFG_IWLMLD)
 extern const struct iwl_ht_params iwl_bz_ht_params;
 
 extern const struct iwl_cfg iwl_cfg_bz;
@@ -633,6 +633,6 @@ extern const struct iwl_cfg iwl_cfg_sc2;
 extern const struct iwl_cfg iwl_cfg_sc2f;
 extern const struct iwl_cfg iwl_cfg_dr;
 extern const struct iwl_cfg iwl_cfg_br;
-#endif /* CPTCFG_IWLMVM || CPTCFG_IWLMLD */
+#endif /* CPTCFG_IWLMLD */
 
 #endif /* __IWL_CONFIG_H__ */
