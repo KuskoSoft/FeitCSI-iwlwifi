@@ -356,6 +356,8 @@ DEFINE_SIMPLE_CANCELLATION(datapath_monitor, iwl_datapath_monitor_notif,
 			   link_id)
 DEFINE_SIMPLE_CANCELLATION(roc, iwl_roc_notif, activity)
 DEFINE_SIMPLE_CANCELLATION(scan_complete, iwl_umac_scan_complete, uid)
+DEFINE_SIMPLE_CANCELLATION(probe_resp_data, iwl_probe_resp_data_notif,
+			   mac_id)
 
 /*
  * Handlers for fw notifications
@@ -402,8 +404,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     mu_mimo_grp_notif, RX_HANDLER_SYNC)
 	RX_HANDLER_NO_OBJECT(PROT_OFFLOAD_GROUP, STORED_BEACON_NTF,
 			     stored_beacon_notif, RX_HANDLER_SYNC)
-	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, PROBE_RESPONSE_DATA_NOTIF,
-			     probe_resp_data_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_OF_VIF(MAC_CONF_GROUP, PROBE_RESPONSE_DATA_NOTIF,
+			  probe_resp_data_notif)
 	RX_HANDLER_NO_OBJECT(PHY_OPS_GROUP, CT_KILL_NOTIFICATION,
 			     ct_kill_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_OF_LINK(DATA_PATH_GROUP, MONITOR_NOTIF,
