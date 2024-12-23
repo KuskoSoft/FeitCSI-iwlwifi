@@ -46,8 +46,8 @@ struct iwl_mld_link_sta {
 	rcu_dereference_check((mld_sta)->link[link_id],			\
 			      lockdep_is_held(&mld_sta->mld->wiphy->mtx))
 
-#define for_each_mld_link_sta(mld_sta, link_sta)			\
-	for (int link_id = 0; link_id < ARRAY_SIZE((mld_sta)->link);	\
+#define for_each_mld_link_sta(mld_sta, link_sta, link_id)		\
+	for (link_id = 0; link_id < ARRAY_SIZE((mld_sta)->link);	\
 	     link_id++)							\
 		if ((link_sta =						\
 			iwl_mld_link_sta_dereference_check(mld_sta, link_id)))
@@ -146,11 +146,12 @@ iwl_mld_cleanup_sta(void *data, struct ieee80211_sta *sta)
 {
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct iwl_mld_link_sta *mld_link_sta;
+	u8 link_id;
 
 	for (int i = 0; i < ARRAY_SIZE(sta->txq); i++)
 		CLEANUP_STRUCT(iwl_mld_txq_from_mac80211(sta->txq[i]));
 
-	for_each_mld_link_sta(mld_sta, mld_link_sta) {
+	for_each_mld_link_sta(mld_sta, mld_link_sta, link_id) {
 		CLEANUP_STRUCT(mld_link_sta);
 
 		if (!ieee80211_vif_is_mld(mld_sta->vif)) {

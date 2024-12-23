@@ -2368,6 +2368,7 @@ static void iwl_mld_sta_pre_rcu_remove(struct ieee80211_hw *hw,
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link_sta *mld_link_sta;
+	u8 link_id;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -2378,7 +2379,7 @@ static void iwl_mld_sta_pre_rcu_remove(struct ieee80211_hw *hw,
 	 * on further RCU synchronisation after the sta_state()
 	 * callback deleted the station.
 	 */
-	for_each_mld_link_sta(mld_sta, mld_link_sta)
+	for_each_mld_link_sta(mld_sta, mld_link_sta, link_id)
 		RCU_INIT_POINTER(mld->fw_id_to_link_sta[mld_link_sta->fw_id],
 				 NULL);
 
