@@ -514,16 +514,21 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	if (iwl_mld_error_before_recovery(mld))
 		return -ENODEV;
 
-	/* We need to preserve the fw sta ids during a restart, since the fw
-	 * will recover SN/PN for them
-	 */
-	if (mld->fw_status.in_hw_restart) {
-		mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+	mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
 
-		if (mld_link_sta) {
-			fw_id = mld_link_sta->fw_id;
-			goto add_to_fw;
-		}
+	/* We need to preserve the fw sta ids during a restart, since the fw
+	 * will recover SN/PN for them, this is why the mld_link_sta exists.
+	 */
+	if (mld_link_sta) {
+		/* But if we are not restarting, this is not OK */
+		WARN_ON(!mld->fw_status.in_hw_restart);
+
+		/* Avoid adding a STA that is already in FW to avoid an assert */
+		if (WARN_ON(mld_link_sta->in_fw))
+			return -EINVAL;
+
+		fw_id = mld_link_sta->fw_id;
+		goto add_to_fw;
 	}
 
 	/* Allocate a fw id and map it to the link_sta */
@@ -549,9 +554,11 @@ add_to_fw:
 		RCU_INIT_POINTER(mld_sta->link[link_sta->link_id], NULL);
 		if (link_sta != &link_sta->sta->deflink)
 			kfree(mld_link_sta);
+		return ret;
 	}
+	mld_link_sta->in_fw = true;
 
-	return ret;
+	return 0;
 }
 
 static int iwl_mld_rm_sta_from_fw(struct iwl_mld *mld, u8 fw_sta_id)
@@ -582,6 +589,7 @@ iwl_mld_remove_link_sta(struct iwl_mld *mld,
 		return;
 
 	iwl_mld_rm_sta_from_fw(mld, mld_link_sta->fw_id);
+	mld_link_sta->in_fw = false;
 
 	/* Now that the STA doesn't exist in FW, we don't expect any new
 	 * notifications for it. Cancel the ones that are already pending
@@ -1187,22 +1195,13 @@ int iwl_mld_update_link_stas(struct iwl_mld *mld,
 		if (WARN_ON(!link_sta))
 			return -EINVAL;
 
+		ret = iwl_mld_add_link_sta(mld, link_sta);
+		if (ret)
+			goto remove_added_link_stas;
+
 		mld_link_sta =
-			iwl_mld_link_sta_dereference_check(mld_sta, link_id);
-
-		/* We may only have an mld_link_sta already when restarting */
-		if (WARN_ON(mld_link_sta && !mld->fw_status.in_hw_restart))
-			return -EINVAL;
-
-		if (!mld_link_sta) {
-			ret = iwl_mld_add_link_sta(mld, link_sta);
-			if (ret)
-				goto remove_added_link_stas;
-
-			mld_link_sta =
-				iwl_mld_link_sta_dereference_check(mld_sta,
-								   link_id);
-		}
+			iwl_mld_link_sta_dereference_check(mld_sta,
+							   link_id);
 
 		link = link_conf_dereference_protected(mld_sta->vif,
 						       link_sta->link_id);
