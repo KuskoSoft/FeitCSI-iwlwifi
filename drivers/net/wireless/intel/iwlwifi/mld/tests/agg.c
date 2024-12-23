@@ -450,8 +450,18 @@ fake_iwl_mld_pass_packet_to_mac80211(struct iwl_mld *mld,
 static u32
 fake_iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 {
-	/* We don't care about the getting actual mask; return a valid value */
-	return BIT(0);
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_link_sta *mld_link_sta;
+	u8 link_id;
+	u32 sta_mask = 0;
+
+	/* This is the expectation in the real function */
+	lockdep_assert_wiphy(mld->wiphy);
+
+	/* We can't use for_each_sta_active_link */
+	for_each_mld_link_sta(mld_sta, mld_link_sta, link_id)
+		sta_mask |= BIT(mld_link_sta->fw_id);
+	return sta_mask;
 }
 
 static struct iwl_rx_mpdu_desc *setup_mpdu_desc(void)
@@ -573,7 +583,11 @@ static struct iwl_mld_reorder_buffer *setup_ba_data(struct ieee80211_sta *sta)
 	baid_data->baid = baid;
 	baid_data->tid = param->rx_pkt.tid;
 	baid_data->buf_size = BA_WINDOW_SIZE;
+
+	wiphy_lock(mld->wiphy);
 	baid_data->sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+	wiphy_unlock(mld->wiphy);
+
 	baid_data->entries_per_queue = BA_WINDOW_SIZE;
 
 	buffer = setup_reorder_buffer(baid_data);

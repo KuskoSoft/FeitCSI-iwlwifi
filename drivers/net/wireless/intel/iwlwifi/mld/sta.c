@@ -22,6 +22,12 @@ int iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
 {
 	struct iwl_mld_link_sta *mld_link_sta;
 
+	/* This function should only be used with the wiphy lock held,
+	 * In other cases, it is not guaranteed that the link_sta will exist
+	 * in the driver too, and it is checked here.
+	 */
+	lockdep_assert_wiphy(mld->wiphy);
+
 	/* This is not meant to be called with a NULL pointer */
 	if (WARN_ON(!link_sta))
 		return -ENOENT;
@@ -794,6 +800,13 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	u32 result = 0;
 
 	KUNIT_STATIC_STUB_REDIRECT(iwl_mld_fw_sta_id_mask, mld, sta);
+
+	/* This function should only be used with the wiphy lock held,
+	 * In other cases, it is not guaranteed that the link_sta will exist
+	 * in the driver too, and it is checked in
+	 * iwl_mld_fw_sta_id_from_link_sta.
+	 */
+	lockdep_assert_wiphy(mld->wiphy);
 
 	for_each_sta_active_link(vif, sta, link_sta, link_id) {
 		int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);

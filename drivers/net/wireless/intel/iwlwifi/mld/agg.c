@@ -193,13 +193,16 @@ iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 	struct iwl_mld_baid_data *baid_data;
 	struct iwl_mld_reorder_buffer *buffer;
 	struct iwl_mld_reorder_buf_entry *entries;
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
+	struct iwl_mld_link_sta *mld_link_sta;
 	u32 reorder = le32_to_cpu(desc->reorder_data);
 	bool amsdu, last_subframe, is_old_sn, is_dup;
 	u8 tid = ieee80211_get_tid(hdr);
 	u8 baid;
 	u16 nssn, sn;
-	u32 sta_mask;
+	u32 sta_mask = 0;
 	int index;
+	u8 link_id;
 
 	baid = u32_get_bits(reorder, IWL_RX_MPDU_REORDER_BAID_MASK);
 
@@ -231,7 +234,8 @@ iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 			 baid, reorder))
 		return IWL_MLD_PASS_SKB;
 
-	sta_mask = iwl_mld_fw_sta_id_mask(mld, sta);
+	for_each_mld_link_sta(mld_sta, mld_link_sta, link_id)
+		sta_mask |= BIT(mld_link_sta->fw_id);
 
 	/* verify the BAID is correctly mapped to the sta and tid */
 	if (IWL_FW_CHECK(mld,
