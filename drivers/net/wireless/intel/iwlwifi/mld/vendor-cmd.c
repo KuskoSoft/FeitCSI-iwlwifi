@@ -248,6 +248,53 @@ err:
 	return ret;
 }
 
+enum iwl_mld_rfi_capabilites {
+	IWL_MLD_RFI_DDR_CAPA_CNVI		= BIT(2),
+	IWL_MLD_RFI_DDR_CAPA_SCAN		= BIT(3),
+	IWL_MLD_RFI_DDR_CAPA_ASSOC		= BIT(4),
+	IWL_MLD_RFI_DDR_CAPA_TPT		= BIT(5),
+	IWL_MLD_RFI_DLVR_CAPA			= BIT(9),
+	IWL_MLD_RFI_DDR_DESENSE_CAPA		= BIT(12),
+};
+
+#define IWL_MLD_RFI_DDR_CAPA_ALL (IWL_MLD_RFI_DDR_CAPA_CNVI    |\
+				  IWL_MLD_RFI_DDR_CAPA_SCAN     |\
+				  IWL_MLD_RFI_DDR_CAPA_ASSOC    |\
+				  IWL_MLD_RFI_DDR_CAPA_TPT)
+
+static int iwl_mld_vendor_rfim_get_capa(struct wiphy *wiphy,
+					struct wireless_dev *wdev,
+					const void *data, int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct sk_buff *skb;
+	u16 capa = 0;
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 4);
+	if (!skb)
+		return -ENOMEM;
+
+	if (iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DDR_FEATURE))
+		capa |= IWL_MLD_RFI_DDR_CAPA_ALL;
+	else if (mld->trans->trans_cfg->integrated)
+		capa |= IWL_MLD_RFI_DDR_CAPA_CNVI;
+
+	if (iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DLVR_FEATURE))
+		capa |= IWL_MLD_RFI_DLVR_CAPA;
+
+	if (iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DESENSE_FEATURE))
+		capa |= IWL_MLD_RFI_DDR_DESENSE_CAPA;
+
+	IWL_DEBUG_FW(mld, "RFIm capabilities:%04x\n", capa);
+	if (nla_put_u16(skb, IWL_MVM_VENDOR_ATTR_RFIM_CAPA, capa)) {
+		kfree_skb(skb);
+		return -ENOBUFS;
+	}
+
+	return cfg80211_vendor_cmd_reply(skb);
+}
+
 #define IWL_RFI_CNVI_NOT_MASTER 0x3
 
 static int iwl_mld_vendor_rfi_set_cnvi_master(struct wiphy *wiphy,
@@ -582,6 +629,16 @@ static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
 		.doit = iwl_mld_vendor_ppag_get_table,
+		.policy = iwl_mld_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_RFIM_GET_CAPA,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
+		.doit = iwl_mld_vendor_rfim_get_capa,
 		.policy = iwl_mld_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},
