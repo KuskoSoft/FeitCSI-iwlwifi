@@ -118,7 +118,7 @@ static u32 iwl_mld_get_key_sta_mask(struct iwl_mld *mld,
 	 */
 	link_sta = link_sta_dereference_check(sta, key->link_id);
 
-	sta_id = iwl_mld_fw_sta_id_from_link_sta(link_sta);
+	sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 	if (WARN_ON(sta_id < 0))
 		return 0;
 

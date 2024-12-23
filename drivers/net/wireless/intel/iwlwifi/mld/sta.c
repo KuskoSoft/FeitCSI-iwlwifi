@@ -17,7 +17,8 @@
 #include "fw/api/mac.h"
 #include "fw/api/rx.h"
 
-int iwl_mld_fw_sta_id_from_link_sta(struct ieee80211_link_sta *link_sta)
+int iwl_mld_fw_sta_id_from_link_sta(struct iwl_mld *mld,
+				    struct ieee80211_link_sta *link_sta)
 {
 	struct iwl_mld_link_sta *mld_link_sta;
 
@@ -26,8 +27,10 @@ int iwl_mld_fw_sta_id_from_link_sta(struct ieee80211_link_sta *link_sta)
 		return -ENOENT;
 
 	mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
-	if (WARN_ON(!mld_link_sta))
+	if (!mld_link_sta) {
+		WARN_ON(!iwl_mld_error_before_recovery(mld));
 		return -ENOENT;
+	}
 
 	return mld_link_sta->fw_id;
 }
@@ -409,7 +412,7 @@ iwl_mld_add_modify_sta_cmd(struct iwl_mld *mld,
 	struct ieee80211_bss_conf *link;
 	struct iwl_mld_link *mld_link;
 	struct iwl_sta_cfg_cmd cmd = {};
-	int fw_id = iwl_mld_fw_sta_id_from_link_sta(link_sta);
+	int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -724,7 +727,7 @@ void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	int link_id;
 
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
-		u32 fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(link_sta);
+		u32 fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 
 		iwl_mld_flush_link_sta_txqs(mld, fw_sta_id);
 	}
@@ -793,9 +796,9 @@ u32 iwl_mld_fw_sta_id_mask(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	KUNIT_STATIC_STUB_REDIRECT(iwl_mld_fw_sta_id_mask, mld, sta);
 
 	for_each_sta_active_link(vif, sta, link_sta, link_id) {
-		int fw_id = iwl_mld_fw_sta_id_from_link_sta(link_sta);
+		int fw_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 
-		if (!WARN_ON(fw_id < 0))
+		if (!(fw_id < 0))
 			result |= BIT(fw_id);
 	}
 

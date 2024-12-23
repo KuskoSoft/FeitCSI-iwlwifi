@@ -480,7 +480,7 @@ static void iwl_mld_send_tlc_cmd(struct iwl_mld *mld,
 		.sgi_ch_width_supp = iwl_mld_get_fw_sgi(link_sta),
 		.max_mpdu_len = cpu_to_le16(link_sta->agg.max_rc_amsdu_len),
 	};
-	int fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(link_sta);
+	int fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 	int ret;
 
 	if (WARN_ON(fw_sta_id < 0))
