@@ -992,6 +992,25 @@ iwl_mld_chandef_get_primary_80(struct cfg80211_chan_def *chandef)
 	return (control_start - data_start) / 80;
 }
 
+static bool iwl_mld_can_activate_link(struct ieee80211_vif *vif,
+				      struct ieee80211_bss_conf *link)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_sta *mld_sta;
+
+	/* In association, we activate the assoc link before adding the STA. */
+	if (!mld_vif->ap_sta || !vif->cfg.assoc)
+		return true;
+
+	mld_sta = iwl_mld_sta_from_mac80211(mld_vif->ap_sta);
+
+	/* When switching links, we need to wait with the activation until the
+	 * STA was added to the FW. It'll be activated in
+	 * iwl_mld_update_link_stas
+	 */
+	return rcu_access_pointer(mld_sta->link[link->link_id]);
+}
+
 static
 int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 			       struct ieee80211_vif *vif,
@@ -1063,9 +1082,11 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 	 */
 
 	/* Now activate the link */
-	ret = iwl_mld_activate_link(mld, link);
-	if (ret)
-		goto err;
+	if (iwl_mld_can_activate_link(vif, link)) {
+		ret = iwl_mld_activate_link(mld, link);
+		if (ret)
+			goto err;
+	}
 
 	if (vif->type == NL80211_IFTYPE_STATION)
 		iwl_mld_send_ap_tx_power_constraint_cmd(mld, vif, link);

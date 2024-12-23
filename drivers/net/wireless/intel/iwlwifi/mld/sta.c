@@ -1222,6 +1222,17 @@ int iwl_mld_update_link_stas(struct iwl_mld *mld,
 			goto remove_added_link_stas;
 	}
 
+	/* We couldn't activate the links before it has a STA. Now we can */
+	for_each_set_bit(link_id, &links_to_add, IEEE80211_MLD_MAX_NUM_LINKS) {
+		struct ieee80211_bss_conf *link =
+			link_conf_dereference_protected(mld_sta->vif, link_id);
+
+		if (WARN_ON(!link))
+			continue;
+
+		iwl_mld_activate_link(mld, link);
+	}
+
 	return 0;
 
 remove_added_link_stas:
