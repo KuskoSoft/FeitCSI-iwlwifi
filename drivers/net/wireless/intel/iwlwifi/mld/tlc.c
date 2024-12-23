@@ -483,7 +483,7 @@ static void iwl_mld_send_tlc_cmd(struct iwl_mld *mld,
 	int fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 	int ret;
 
-	if (WARN_ON(fw_sta_id < 0))
+	if (fw_sta_id < 0)
 		return;
 
 	cmd.sta_id = fw_sta_id;

@@ -427,7 +427,7 @@ iwl_mld_add_modify_sta_cmd(struct iwl_mld *mld,
 
 	mld_link = iwl_mld_link_from_mac80211(link);
 
-	if (WARN_ON(!link || !mld_link || fw_id < 0))
+	if (WARN_ON(!link || !mld_link) || fw_id < 0)
 		return -EINVAL;
 
 	cmd.sta_id = cpu_to_le32(fw_id);
@@ -741,7 +741,10 @@ void iwl_mld_flush_sta_txqs(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	int link_id;
 
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
-		u32 fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+		int fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
+
+		if (fw_sta_id < 0)
+			continue;
 
 		iwl_mld_flush_link_sta_txqs(mld, fw_sta_id);
 	}

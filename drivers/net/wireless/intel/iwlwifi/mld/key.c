@@ -119,7 +119,7 @@ static u32 iwl_mld_get_key_sta_mask(struct iwl_mld *mld,
 	link_sta = link_sta_dereference_check(sta, key->link_id);
 
 	sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
-	if (WARN_ON(sta_id < 0))
+	if (sta_id < 0)
 		return 0;
 
 	return BIT(sta_id);
@@ -185,6 +185,9 @@ void iwl_mld_remove_key(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
+	if (!sta_mask)
+		return;
+
 	if (key->keyidx == 4 || key->keyidx == 5) {
 		struct iwl_mld_link *mld_link;
 		unsigned int link_id = 0;
@@ -222,6 +225,9 @@ int iwl_mld_add_key(struct iwl_mld *mld,
 	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
+
+	if (!sta_mask)
+		return -EINVAL;
 
 	if (igtk) {
 		if (mld->num_igtks == IWL_MAX_NUM_IGTKS)
