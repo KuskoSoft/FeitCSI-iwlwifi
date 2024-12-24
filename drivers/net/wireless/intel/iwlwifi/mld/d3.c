@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include "mld.h"
 
@@ -473,9 +473,14 @@ iwl_mld_handle_wowlan_info_notif(struct iwl_mld *mld,
 
 	if (IWL_FW_CHECK(mld, len < expected_len,
 			 "Invalid wowlan_info_notif (expected=%ud got=%ud)\n",
-			 expected_len, len)) {
+			 expected_len, len))
 		return true;
-	}
+
+	if (IWL_FW_CHECK(mld, notif->tid_offloaded_tx != IWL_WOWLAN_OFFLOAD_TID,
+			 "Invalid tid_offloaded_tx %d\n",
+			 wowlan_status->tid_offloaded_tx))
+		return true;
+
 
 	iwl_mld_convert_gtk_resume_data(mld, wowlan_status, notif->gtk,
 					&notif->gtk[0].sc);
@@ -486,16 +491,14 @@ iwl_mld_handle_wowlan_info_notif(struct iwl_mld *mld,
 
 	wowlan_status->replay_ctr = le64_to_cpu(notif->replay_ctr);
 	wowlan_status->pattern_number = le16_to_cpu(notif->pattern_number);
-	/* TODO: FW_CHECK the tid_offloaded_tx (task=wowlan)
-	 * With the new wowlan_info_notif we'll get this value from the FW
-	 */
+
 	wowlan_status->tid_offloaded_tx = notif->tid_offloaded_tx;
 	wowlan_status->last_qos_seq = le16_to_cpu(notif->qos_seq_ctr);
 	wowlan_status->num_of_gtk_rekeys =
 		le32_to_cpu(notif->num_of_gtk_rekeys);
 	wowlan_status->wakeup_reasons = le32_to_cpu(notif->wakeup_reasons);
 	return false;
-	/* TODO: mlo_links (task=mlo)*/
+	/* TODO: mlo_links (task=MLO)*/
 }
 
 static bool
@@ -560,18 +563,6 @@ iwl_mld_set_wake_packet(struct iwl_mld *mld,
 		skb_put_data(pkt, pktdata, hdrlen);
 		pktdata += hdrlen;
 		pkt_bufsize -= hdrlen;
-
-		if (ieee80211_has_protected(hdr->frame_control)) {
-			/* This is unlocked and using gtk_i(c)vlen,
-			 * but since everything is under RTNL still
-			 * that's not really a problem - changing
-			 * it would be difficult.
-			 */
-
-			IWL_ERR(mld, "NOT IMPLEMENTED YET: %s\n",
-				__func__);
-			/* TODO: (task=security) */
-		}
 
 		/* if truncated, FCS/ICV is (partially) gone */
 		if (truncated >= icvlen) {
@@ -796,7 +787,7 @@ iwl_mld_resume_keys_iter(struct ieee80211_hw *hw,
 	struct iwl_mld_wowlan_status *wowlan_status = data->wowlan_status;
 	u8 status_idx;
 
-	/* TODO: check key link id (task=mlo) */
+	/* TODO: check key link id (task=MLO) */
 	if (data->unhandled_cipher)
 		return;
 
@@ -1834,7 +1825,6 @@ iwl_mld_wowlan_config(struct iwl_mld *mld, struct ieee80211_vif *bss_vif,
 	if (ret)
 		return ret;
 
-	/* TODO: check if order matters*/
 	ret = iwl_mld_suspend_send_security_cmds(mld, bss_vif, mld_vif,
 						 ap_sta_id);
 	if (ret)
