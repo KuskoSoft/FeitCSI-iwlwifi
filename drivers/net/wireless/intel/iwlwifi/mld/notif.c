@@ -31,7 +31,6 @@
 #include "mac80211.h"
 #include "thermal.h"
 #include "roc.h"
-#include "iface.h"
 #include "stats.h"
 
 /* Please use this in an increasing order of the versions */
@@ -345,6 +344,8 @@ CMD_VERSIONS(emlsr_mode_notif,
 	     CMD_VER_ENTRY(1, iwl_mvm_esr_mode_notif))
 CMD_VERSIONS(emlsr_trans_fail_notif,
 	     CMD_VER_ENTRY(1, iwl_esr_trans_fail_notif))
+CMD_VERSIONS(uapsd_misbehaving_ap_notif,
+	     CMD_VER_ENTRY(1, iwl_uapsd_misbehaving_ap_notif))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -357,6 +358,8 @@ DEFINE_SIMPLE_CANCELLATION(datapath_monitor, iwl_datapath_monitor_notif,
 DEFINE_SIMPLE_CANCELLATION(roc, iwl_roc_notif, activity)
 DEFINE_SIMPLE_CANCELLATION(scan_complete, iwl_umac_scan_complete, uid)
 DEFINE_SIMPLE_CANCELLATION(probe_resp_data, iwl_probe_resp_data_notif,
+			   mac_id)
+DEFINE_SIMPLE_CANCELLATION(uapsd_misbehaving_ap, iwl_uapsd_misbehaving_ap_notif,
 			   mac_id)
 
 /*
@@ -420,6 +423,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     emlsr_mode_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(MAC_CONF_GROUP, EMLSR_TRANS_FAIL_NOTIF,
 			     emlsr_trans_fail_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_OF_VIF(LEGACY_GROUP, PSM_UAPSD_AP_MISBEHAVING_NOTIFICATION,
+			  uapsd_misbehaving_ap_notif)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 
