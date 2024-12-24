@@ -10680,7 +10680,7 @@ static void ieee80211_ml_epcs(struct ieee80211_sub_if_data *sdata,
 		struct ieee802_11_elems *link_elems __free(kfree);
 		u8 *pos = (void *)sub->data;
 		u16 control;
-		size_t len = sub->datalen;
+		ssize_t len;
 		u8 link_id;
 
 		if (sub->id != IEEE80211_MLE_SUBELEM_PER_STA_PROFILE)
@@ -10700,7 +10700,7 @@ static void ieee80211_ml_epcs(struct ieee80211_sub_if_data *sdata,
 						  elems->ml_epcs_len,
 						  scratch, scratch_len,
 						  IEEE80211_MLE_SUBELEM_FRAGMENT);
-		if (len < 0)
+		if (len < sizeof(control))
 			continue;
 
 		pos = scratch + sizeof(control);
