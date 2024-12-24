@@ -1141,8 +1141,6 @@ iwl_mld_scan_build_cmd(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	memset(mld->scan.cmd, 0, mld->scan.cmd_size);
 
-	/* TODO: scan filter (task=mei)*/
-
 	/* find a free UID entry */
 	uid = iwl_mld_scan_uid_by_status(mld, IWL_MLD_SCAN_NONE);
 	if (uid < 0)
@@ -1868,8 +1866,6 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 	struct iwl_umac_scan_complete *notif = (void *)pkt->data;
 	bool aborted = (notif->status == IWL_SCAN_OFFLOAD_ABORTED);
 	u32 uid = __le32_to_cpu(notif->uid);
-
-	/* TODO: scan filter (task=mei)*/
 
 	if (IWL_FW_CHECK(mld, uid >= ARRAY_SIZE(mld->scan.uid_status),
 			 "FW reports out-of-range scan UID %d\n", uid))

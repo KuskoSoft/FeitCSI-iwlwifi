@@ -2108,8 +2108,6 @@ static int iwl_mld_set_key_add(struct iwl_mld *mld,
 			return ret;
 	}
 
-	/* TODO: for iwlmei, track the cipher of the pairwise key (task=iwlmei) */
-
 	IWL_DEBUG_MAC80211(mld, "set hwcrypto key (sta:%pM, id:%d)\n",
 			   sta ? sta->addr : NULL, keyidx);
 

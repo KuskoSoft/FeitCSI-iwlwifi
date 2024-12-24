@@ -189,8 +189,6 @@ iwl_mld_get_regdomain(struct iwl_mld *mld,
 	else
 		__clear_bit(IEEE80211_HW_DISALLOW_PUNCTURING, mld->hw->flags);
 
-	/* TODO: MEI iwl_mei_set_country_code */
-
 out:
 	kfree(resp);
 	return regd;

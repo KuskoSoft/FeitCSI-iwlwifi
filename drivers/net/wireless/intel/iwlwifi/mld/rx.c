@@ -1828,8 +1828,6 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		goto drop;
 	}
 
-	/* TODO: mei_scan_filter (task=mei)*/
-
 	iwl_mld_pass_packet_to_mac80211(mld, napi, skb, queue, sta);
 
 	goto out;
