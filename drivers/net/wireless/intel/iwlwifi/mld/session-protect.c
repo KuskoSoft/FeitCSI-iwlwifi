@@ -26,10 +26,9 @@ void iwl_mld_handle_session_prot_notif(struct iwl_mld *mld,
 	mld_vif = iwl_mld_vif_from_mac80211(vif);
 	session_protect = &mld_vif->session_protect;
 
-	if (!le32_to_cpu(notif->status))
-	// TODO assoc: iwl_mvm_te_check_disconnect
+	if (!le32_to_cpu(notif->status)) {
 		memset(session_protect, 0, sizeof(*session_protect));
-	else if (le32_to_cpu(notif->start)) {
+	} else if (le32_to_cpu(notif->start)) {
 		/* End_jiffies indicates an active session */
 		session_protect->session_requested = false;
 		session_protect->end_jiffies =
@@ -38,7 +37,6 @@ void iwl_mld_handle_session_prot_notif(struct iwl_mld *mld,
 		if (!session_protect->end_jiffies)
 			session_protect->end_jiffies = 1;
 	} else {
-		// TODO assoc: iwl_mvm_te_check_disconnect
 		memset(session_protect, 0, sizeof(*session_protect));
 	}
 }
