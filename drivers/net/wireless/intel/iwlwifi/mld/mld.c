@@ -9,6 +9,7 @@
 #include "fw/api/datapath.h"
 #include "fw/api/commands.h"
 #include "fw/api/offload.h"
+#include "fw/api/coex.h"
 #include "fw/dbg.h"
 #include "fw/uefi.h"
 
@@ -293,6 +294,13 @@ static const struct iwl_hcmd_names iwl_mld_prot_offload_names[] = {
 	HCMD_NAME(STORED_BEACON_NTF),
 };
 
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
+static const struct iwl_hcmd_names iwl_mld_coex_names[] = {
+	HCMD_NAME(PROFILE_NOTIF),
+};
+
 VISIBLE_IF_IWLWIFI_KUNIT
 const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mld_legacy_names),
@@ -305,6 +313,7 @@ const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[PHY_OPS_GROUP] = HCMD_ARR(iwl_mld_phy_names),
 	[STATISTICS_GROUP] = HCMD_ARR(iwl_mld_statistics_names),
 	[PROT_OFFLOAD_GROUP] = HCMD_ARR(iwl_mld_prot_offload_names),
+	[BT_COEX_GROUP] = HCMD_ARR(iwl_mld_coex_names),
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_groups);
 

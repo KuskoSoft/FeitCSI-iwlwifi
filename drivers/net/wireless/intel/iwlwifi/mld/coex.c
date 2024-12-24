@@ -19,3 +19,13 @@ int iwl_mld_send_bt_init_conf(struct iwl_mld *mld)
 
 	return iwl_mld_send_cmd_pdu(mld, BT_CONFIG, &cmd);
 }
+
+void iwl_mld_handle_bt_coex_notif(struct iwl_mld *mld,
+				  struct iwl_rx_packet *pkt)
+{
+	const struct iwl_bt_coex_profile_notif *notif = (void *)pkt->data;
+
+	/* TODO: task=EMLSR handle coex notification */
+	IWL_DEBUG_INFO(mld, "wifi_loss_low_rssi[0][0] = %d\n",
+		       notif->wifi_loss_low_rssi[0][0]);
+}

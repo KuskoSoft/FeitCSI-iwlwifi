@@ -9,4 +9,7 @@
 
 int iwl_mld_send_bt_init_conf(struct iwl_mld *mld);
 
+void iwl_mld_handle_bt_coex_notif(struct iwl_mld *mld,
+				  struct iwl_rx_packet *pkt);
+
 #endif /* __iwl_mld_coex_h__ */

@@ -20,6 +20,7 @@
 #include "fw/api/offload.h"
 #include "fw/api/stats.h"
 #include "fw/api/rfi.h"
+#include "fw/api/coex.h"
 
 #include "rfi.h"
 #include "mcc.h"
@@ -32,6 +33,7 @@
 #include "thermal.h"
 #include "roc.h"
 #include "stats.h"
+#include "coex.h"
 
 /* Please use this in an increasing order of the versions */
 #define CMD_VER_ENTRY(_ver, _struct) { .size = sizeof(struct _struct), .ver = _ver },
@@ -338,6 +340,8 @@ CMD_VERSIONS(stats_oper_part1_notif,
 	     CMD_VER_ENTRY(4, iwl_system_statistics_part1_notif_oper))
 CMD_VERSIONS(rfi_support_notif,
 	     CMD_VER_ENTRY(1, iwl_rfi_support_notif))
+CMD_VERSIONS(bt_coex_notif,
+	     CMD_VER_ENTRY(1, iwl_bt_coex_profile_notif))
 CMD_VERSIONS(beacon_notification,
 	     CMD_VER_ENTRY(6, iwl_extended_beacon_notif))
 CMD_VERSIONS(emlsr_mode_notif,
@@ -417,6 +421,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(SYSTEM_GROUP, RFI_SUPPORT_NOTIF,
 			     rfi_support_notif, RX_HANDLER_ASYNC)
+	RX_HANDLER_NO_OBJECT(BT_COEX_GROUP, PROFILE_NOTIF,
+			     bt_coex_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(LEGACY_GROUP, BEACON_NOTIFICATION,
 			     beacon_notification, RX_HANDLER_ASYNC)
 	RX_HANDLER_NO_OBJECT(DATA_PATH_GROUP, ESR_MODE_NOTIF,
