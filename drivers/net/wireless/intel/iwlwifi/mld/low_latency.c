@@ -272,6 +272,9 @@ void iwl_mld_low_latency_update_counters(struct iwl_mld *mld,
 			 queue >= mld->trans->num_rx_queues))
 		return;
 
+	if (mld->low_latency.stopped)
+		return;
+
 	if (!iwl_mld_is_vo_vi_pkt(hdr))
 		return;
 
@@ -294,6 +297,8 @@ void iwl_mld_low_latency_stop(struct iwl_mld *mld)
 {
 	lockdep_assert_wiphy(mld->wiphy);
 
+	mld->low_latency.stopped = true;
+
 	wiphy_delayed_work_cancel(mld->wiphy, &mld->low_latency.work);
 }
 
@@ -306,6 +311,7 @@ void iwl_mld_low_latency_restart(struct iwl_mld *mld)
 	lockdep_assert_wiphy(mld->wiphy);
 
 	ll->timestamp = ts;
+	mld->low_latency.stopped = false;
 
 	for (int mac = 0; mac < NUM_MAC_INDEX_DRIVER; mac++) {
 		ll->window_start[mac] = 0;

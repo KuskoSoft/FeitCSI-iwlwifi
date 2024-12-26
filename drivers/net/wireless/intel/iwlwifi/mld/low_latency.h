@@ -40,6 +40,7 @@ enum iwl_mld_low_latency_cause {
  *	the window is over, the counters are reset.
  * @pkts_counters: per-queue array voice/video packet counters
  * @result: per-mac latest low-latency result
+ * @stopped: if true, ignore the requests to update the counters
  */
 struct iwl_mld_low_latency {
 	struct wiphy_delayed_work work;
@@ -47,6 +48,7 @@ struct iwl_mld_low_latency {
 	unsigned long window_start[NUM_MAC_INDEX_DRIVER];
 	struct iwl_mld_low_latency_packets_counters *pkts_counters;
 	bool result[NUM_MAC_INDEX_DRIVER];
+	bool stopped;
 };
 
 int iwl_mld_low_latency_init(struct iwl_mld *mld);
