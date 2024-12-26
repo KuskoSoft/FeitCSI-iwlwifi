@@ -449,12 +449,13 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 
 	wiphy_lock(mld->wiphy);
 	iwl_mld_thermal_exit(mld);
-	iwl_mld_low_latency_exit(mld);
+	iwl_mld_low_latency_stop(mld);
 	wiphy_unlock(mld->wiphy);
 
 	ieee80211_unregister_hw(mld->hw);
 
 	iwl_fw_runtime_free(&mld->fwrt);
+	iwl_mld_low_latency_free(mld);
 
 	iwl_trans_op_mode_leave(mld->trans);
 

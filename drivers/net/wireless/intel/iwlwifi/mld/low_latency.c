@@ -157,14 +157,6 @@ void iwl_mld_low_latency_free(struct iwl_mld *mld)
 	ll->pkts_counters = NULL;
 }
 
-void iwl_mld_low_latency_exit(struct iwl_mld *mld)
-{
-	lockdep_assert_wiphy(mld->wiphy);
-
-	iwl_mld_low_latency_stop(mld);
-	iwl_mld_low_latency_free(mld);
-}
-
 void iwl_mld_low_latency_restart_cleanup(struct iwl_mld *mld)
 {
 	struct iwl_mld_low_latency *ll = &mld->low_latency;

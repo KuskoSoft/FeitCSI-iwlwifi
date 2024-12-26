@@ -50,7 +50,6 @@ struct iwl_mld_low_latency {
 };
 
 int iwl_mld_low_latency_init(struct iwl_mld *mld);
-void iwl_mld_low_latency_exit(struct iwl_mld *mld);
 void iwl_mld_low_latency_free(struct iwl_mld *mld);
 void iwl_mld_low_latency_restart_cleanup(struct iwl_mld *mld);
 void iwl_mld_vif_update_low_latency(struct iwl_mld *mld,
