@@ -45,10 +45,8 @@ iwl_mld_fill_stats_from_oper_notif(struct iwl_rx_packet *pkt,
 	const struct iwl_stats_ntfy_per_sta *per_sta =
 		&notif->per_sta[fw_sta_id];
 
-	if (le32_to_cpu(per_sta->average_energy)) {
-		sinfo->signal_avg = -(s8)le32_to_cpu(per_sta->average_energy);
-		sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL_AVG);
-	}
+	sinfo->signal_avg = -(s8)le32_to_cpu(per_sta->average_energy);
+	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL_AVG);
 }
 
 struct iwl_mld_stats_data {
