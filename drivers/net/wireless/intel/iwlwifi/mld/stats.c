@@ -28,8 +28,7 @@ static int iwl_mld_send_fw_stats_cmd(struct iwl_mld *mld, u32 cfg_mask,
 
 int iwl_mld_clear_stats_in_fw(struct iwl_mld *mld)
 {
-	u32 cfg_mask = IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK |
-		       IWL_STATS_CFG_FLG_RESET_MSK;
+	u32 cfg_mask = IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK;
 	u32 type_mask = IWL_STATS_NTFY_TYPE_ID_OPER |
 			IWL_STATS_NTFY_TYPE_ID_OPER_PART1;
 
@@ -78,7 +77,8 @@ static int
 iwl_mld_fw_stats_to_mac80211(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta,
 			     struct station_info *sinfo)
 {
-	u32 cfg_mask = IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK;
+	u32 cfg_mask = IWL_STATS_CFG_FLG_ON_DEMAND_NTFY_MSK |
+		       IWL_STATS_CFG_FLG_RESET_MSK;
 	u32 type_mask = IWL_STATS_NTFY_TYPE_ID_OPER |
 			IWL_STATS_NTFY_TYPE_ID_OPER_PART1;
 	static const u16 notifications[] = {
