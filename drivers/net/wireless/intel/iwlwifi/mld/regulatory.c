@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include <linux/dmi.h>
@@ -403,3 +403,50 @@ void iwl_mld_init_tas(struct iwl_mld *mld)
 	if (ret)
 		IWL_DEBUG_RADIO(mld, "failed to send TAS_CONFIG (%d)\n", ret);
 }
+
+#ifdef CPTCFG_IWL_VENDOR_CMDS
+int iwl_mld_get_sar_geo_profile(struct iwl_mld *mld)
+{
+	union iwl_geo_tx_power_profiles_cmd cmd;
+	struct iwl_geo_tx_power_profiles_resp *resp;
+	u16 len;
+	int ret;
+	struct iwl_host_cmd hcmd = {
+		.id = WIDE_ID(PHY_OPS_GROUP, PER_CHAIN_LIMIT_OFFSET_CMD),
+		.flags = CMD_WANT_SKB,
+		.data = { &cmd },
+	};
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mld->fw, hcmd.id,
+					   IWL_FW_CMD_VER_UNKNOWN);
+
+	BUILD_BUG_ON(offsetof(struct iwl_geo_tx_power_profiles_cmd_v4, ops) !=
+		     offsetof(struct iwl_geo_tx_power_profiles_cmd_v5, ops));
+
+	cmd.v4.ops = cpu_to_le32(IWL_PER_CHAIN_OFFSET_GET_CURRENT_TABLE);
+
+	if (cmd_ver == 5)
+		len = sizeof(cmd.v5);
+	else if (cmd_ver == 4)
+		len = sizeof(cmd.v4);
+	else
+		return -EOPNOTSUPP;
+
+	hcmd.len[0] = len;
+
+	ret = iwl_mld_send_cmd(mld, &hcmd);
+	if (ret) {
+		IWL_ERR(mld, "Failed to get geographic profile info %d\n", ret);
+		return ret;
+	}
+
+	resp = (void *)hcmd.resp_pkt->data;
+	ret = le32_to_cpu(resp->profile_idx);
+
+	if (IWL_FW_CHECK(mld, ret > BIOS_GEO_MAX_PROFILE_NUM,
+			 "Wrong profile idx: %d\n", ret))
+		ret = -EIO;
+
+	iwl_free_resp(&hcmd);
+	return ret;
+}
+#endif
