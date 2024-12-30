@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2013-2015, 2018-2024 Intel Corporation
+ * Copyright (C) 2013-2015, 2018-2025 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  */
 #if !defined(__IWL_DBG_CFG_H__) || defined(DBG_CFG_REINCLUDE)
@@ -226,6 +226,7 @@ struct iwl_dbg_cfg {
 	IWL_DBG_CFG(int, MLD_LOW_RSSI_THRESH_160MHZ)
 
 	IWL_DBG_CFG(int, MLD_ENTER_EMLSR_TPT_THRESH)
+	IWL_DBG_CFG_NODEF(bool, MLD_SNIFFER_REDUCED_SENSITIVITY)
 #endif /* CPTCFG_IWLMLD */
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 	IWL_DBG_CFG_NODEF(u32, dnt_out_mode)
