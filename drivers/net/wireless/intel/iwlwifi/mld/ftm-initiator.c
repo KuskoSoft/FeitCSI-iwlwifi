@@ -465,3 +465,29 @@ void iwl_mld_handle_ftm_resp_notif(struct iwl_mld *mld,
 		iwl_mld_ftm_reset(mld);
 	}
 }
+
+void iwl_mld_ftm_restart_cleanup(struct iwl_mld *mld)
+{
+	struct cfg80211_pmsr_result result = {
+		.status = NL80211_PMSR_STATUS_FAILURE,
+		.final = 1,
+		.host_time = ktime_get_boottime_ns(),
+		.type = NL80211_PMSR_TYPE_FTM,
+	};
+
+	if (!mld->ftm_initiator.req)
+		return;
+
+	for (int i = 0; i < mld->ftm_initiator.req->n_peers; i++) {
+		memcpy(result.addr, mld->ftm_initiator.req->peers[i].addr,
+		       ETH_ALEN);
+
+		cfg80211_pmsr_report(mld->ftm_initiator.req_wdev,
+				     mld->ftm_initiator.req,
+				     &result, GFP_KERNEL);
+	}
+
+	cfg80211_pmsr_complete(mld->ftm_initiator.req_wdev,
+			       mld->ftm_initiator.req, GFP_KERNEL);
+	iwl_mld_ftm_reset(mld);
+}

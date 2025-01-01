@@ -545,6 +545,8 @@ iwl_mld_restart_cleanup(struct iwl_mld *mld)
 
 	ieee80211_iterate_stations_atomic(mld->hw,
 					  iwl_mld_cleanup_sta, NULL);
+
+	iwl_mld_ftm_restart_cleanup(mld);
 }
 
 static
