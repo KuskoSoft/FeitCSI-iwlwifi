@@ -44,6 +44,7 @@ int iwl_mld_phy_fw_action(struct iwl_mld *mld,
 			  struct ieee80211_chanctx_conf *ctx, u32 action);
 struct cfg80211_chan_def *
 iwl_mld_get_chandef_from_chanctx(struct ieee80211_chanctx_conf *ctx);
+u8 iwl_mld_get_fw_ctrl_pos(const struct cfg80211_chan_def *chandef);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 int iwl_mld_send_phy_cfg_cmd(struct iwl_mld *mld);

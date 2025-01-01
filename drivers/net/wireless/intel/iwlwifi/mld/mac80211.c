@@ -23,6 +23,7 @@
 #include "iface.h"
 #include "mlo.h"
 #include "stats.h"
+#include "ftm-initiator.h"
 #include "low_latency.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
@@ -2690,6 +2691,15 @@ static int iwl_mld_set_hw_timestamp(struct ieee80211_hw *hw,
 	return iwl_mld_time_sync_config(mld, hwts->macaddr, protocols);
 }
 
+static int iwl_mld_start_pmsr(struct ieee80211_hw *hw,
+			      struct ieee80211_vif *vif,
+			      struct cfg80211_pmsr_request *request)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+
+	return iwl_mld_ftm_start(mld, vif, request);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2758,4 +2768,5 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx_last_beacon = iwl_mld_mac80211_tx_last_beacon,
 	.prep_add_interface = iwl_mld_prep_add_interface,
 	.set_hw_timestamp = iwl_mld_set_hw_timestamp,
+	.start_pmsr = iwl_mld_start_pmsr,
 };

@@ -24,6 +24,7 @@
 #include "thermal.h"
 #include "low_latency.h"
 #include "hcmd.h"
+#include "fw/api/location.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -280,6 +281,13 @@ static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
 /* Please keep this array *SORTED* by hex value.
  * Access is done through binary search
  */
+static const struct iwl_hcmd_names iwl_mld_location_names[] = {
+	HCMD_NAME(TOF_RANGE_REQ_CMD),
+};
+
+/* Please keep this array *SORTED* by hex value.
+ * Access is done through binary search
+ */
 static const struct iwl_hcmd_names iwl_mld_phy_names[] = {
 	HCMD_NAME(CMD_DTS_MEASUREMENT_TRIGGER_WIDE),
 	HCMD_NAME(CTDP_CONFIG_CMD),
@@ -318,6 +326,7 @@ const struct iwl_hcmd_arr iwl_mld_groups[] = {
 	[SYSTEM_GROUP] = HCMD_ARR(iwl_mld_system_names),
 	[MAC_CONF_GROUP] = HCMD_ARR(iwl_mld_mac_conf_names),
 	[DATA_PATH_GROUP] = HCMD_ARR(iwl_mld_data_path_names),
+	[LOCATION_GROUP] = HCMD_ARR(iwl_mld_location_names),
 	[REGULATORY_AND_NVM_GROUP] = HCMD_ARR(iwl_mld_reg_and_nvm_names),
 	[DEBUG_GROUP] = HCMD_ARR(iwl_mld_debug_names),
 	[PHY_OPS_GROUP] = HCMD_ARR(iwl_mld_phy_names),

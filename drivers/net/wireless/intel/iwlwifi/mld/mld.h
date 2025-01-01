@@ -185,6 +185,7 @@
  * @rfi: RFI data.
  * @ptp_data: data of the PTP clock
  * @time_sync: time sync data.
+ * @ftm_initiator: FTM initiator data
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -290,6 +291,11 @@ struct iwl_mld {
 	struct ptp_data ptp_data;
 
 	struct iwl_mld_time_sync_data __rcu *time_sync;
+
+	struct {
+		struct cfg80211_pmsr_request *req;
+		struct wireless_dev *req_wdev;
+	} ftm_initiator;
 };
 
 /* memset the part of the struct that requires cleanup on restart */

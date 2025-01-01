@@ -71,6 +71,21 @@
 #define IWL_MLD_ENTER_EMLSR_TPT_THRESH		400
 #define IWL_MLD_CHAN_LOAD_THRESH		2 /* in percentage */
 
+#define IWL_MLD_FTM_INITIATOR_ALGO		IWL_TOF_ALGO_TYPE_MAX_LIKE
+#define IWL_MLD_FTM_INITIATOR_DYNACK		true
+#define IWL_MLD_FTM_LMR_FEEDBACK_TERMINATE	false
+#define IWL_MLD_FTM_TEST_INCORRECT_SAC		false
+#define IWL_MLD_FTM_R2I_MAX_REP			7
+#define IWL_MLD_FTM_I2R_MAX_REP			7
+#define IWL_MLD_FTM_R2I_MAX_STS			1
+#define IWL_MLD_FTM_I2R_MAX_STS			1
+#define IWL_MLD_FTM_R2I_MAX_TOTAL_LTF		3
+#define IWL_MLD_FTM_I2R_MAX_TOTAL_LTF		3
+#define IWL_MLD_FTM_RESP_NDP_SUPPORT		true
+#define IWL_MLD_FTM_RESP_LMR_FEEDBACK_SUPPORT	true
+#define IWL_MLD_FTM_NON_TB_MIN_TIME_BETWEEN_MSR	7
+#define IWL_MLD_FTM_NON_TB_MAX_TIME_BETWEEN_MSR	1000
+
 #else
 #define IWL_MLD_DIS_RANDOM_FW_ID	        (mld->trans->dbg_cfg.MLD_DIS_RANDOM_FW_ID)
 #define IWL_MLD_D3_DEBUG		        (((struct iwl_mld *)ctx)->trans->dbg_cfg.MLD_D3_DEBUG)
@@ -90,6 +105,21 @@
 #define IWL_MLD_LOW_RSSI_THRESH_160MHZ		(mld->trans->dbg_cfg.MLD_LOW_RSSI_THRESH_160MHZ)
 #define IWL_MLD_ENTER_EMLSR_TPT_THRESH		(mld->trans->dbg_cfg.MLD_ENTER_EMLSR_TPT_THRESH)
 #define IWL_MLD_CHAN_LOAD_THRESH		(mld->trans->dbg_cfg.MLD_CHAN_LOAD_THRESH)
+#define IWL_MLD_FTM_INITIATOR_ALGO	    	(mld->trans->dbg_cfg.MLD_FTM_INITIATOR_ALGO)
+#define IWL_MLD_FTM_INITIATOR_DYNACK		(mld->trans->dbg_cfg.MLD_FTM_INITIATOR_DYNACK)
+#define IWL_MLD_FTM_LMR_FEEDBACK_TERMINATE	(mld->trans->dbg_cfg.MLD_FTM_LMR_FEEDBACK_TERMINATE)
+#define IWL_MLD_FTM_TEST_INCORRECT_SAC		(mld->trans->dbg_cfg.MLD_FTM_TEST_INCORRECT_SAC)
+#define IWL_MLD_FTM_TEST_BAD_SLTF		(mld->trans->dbg_cfg.MLD_FTM_TEST_BAD_SLTF)
+#define IWL_MLD_FTM_INITIATOR_MCSI_ENABLED	(mld->trans->dbg_cfg.MLD_FTM_INITIATOR_MCSI_ENABLED)
+#define IWL_MLD_FTM_INITIATOR_FAST_ALGO_DISABLE (mld->trans->dbg_cfg.MLD_FTM_INITIATOR_FAST_ALGO_DISABLE)
+#define IWL_MLD_FTM_R2I_MAX_REP                 (mld->trans->dbg_cfg.MLD_FTM_R2I_MAX_REP)
+#define IWL_MLD_FTM_I2R_MAX_REP                 (mld->trans->dbg_cfg.MLD_FTM_I2R_MAX_REP)
+#define IWL_MLD_FTM_R2I_MAX_STS                 (mld->trans->dbg_cfg.MLD_FTM_R2I_MAX_STS)
+#define IWL_MLD_FTM_I2R_MAX_STS                 (mld->trans->dbg_cfg.MLD_FTM_I2R_MAX_STS)
+#define IWL_MLD_FTM_R2I_MAX_TOTAL_LTF           (mld->trans->dbg_cfg.MLD_FTM_R2I_MAX_TOTAL_LTF)
+#define IWL_MLD_FTM_I2R_MAX_TOTAL_LTF           (mld->trans->dbg_cfg.MLD_FTM_I2R_MAX_TOTAL_LTF)
+#define IWL_MLD_FTM_NON_TB_MIN_TIME_BETWEEN_MSR (mld->trans->dbg_cfg.MLD_FTM_NON_TB_MIN_TIME_BETWEEN_MSR)
+#define IWL_MLD_FTM_NON_TB_MAX_TIME_BETWEEN_MSR (mld->trans->dbg_cfg.MLD_FTM_NON_TB_MAX_TIME_BETWEEN_MSR)
 #endif
 
 #endif /* __iwl_mld_constants_h__ */

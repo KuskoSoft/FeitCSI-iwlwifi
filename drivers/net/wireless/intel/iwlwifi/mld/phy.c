@@ -57,7 +57,7 @@ iwl_mld_nl80211_width_to_fw(enum nl80211_chan_width width)
 /* Maps the driver specific control channel position (relative to the center
  * freq) definitions to the fw values
  */
-static u8 iwl_mld_get_fw_ctrl_pos(const struct cfg80211_chan_def *chandef)
+u8 iwl_mld_get_fw_ctrl_pos(const struct cfg80211_chan_def *chandef)
 {
 	int offs = chandef->chan->center_freq - chandef->center_freq1;
 	int abs_offs = abs(offs);
