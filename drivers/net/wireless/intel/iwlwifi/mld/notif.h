@@ -24,6 +24,7 @@ enum iwl_mld_object_type {
 	IWL_MLD_OBJECT_TYPE_VIF,
 	IWL_MLD_OBJECT_TYPE_ROC,
 	IWL_MLD_OBJECT_TYPE_SCAN,
+	IWL_MLD_OBJECT_TYPE_FTM_REQ,
 };
 
 void iwl_mld_cancel_notifications_of_object(struct iwl_mld *mld,

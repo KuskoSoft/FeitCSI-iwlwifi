@@ -8,4 +8,7 @@
 int iwl_mld_ftm_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		      struct cfg80211_pmsr_request *req);
 
+void iwl_mld_handle_ftm_resp_notif(struct iwl_mld *mld,
+				   struct iwl_rx_packet *pkt);
+
 #endif /* __iwl_mld_ftm_initiator_h__ */

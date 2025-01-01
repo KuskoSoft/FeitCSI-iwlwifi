@@ -24,6 +24,7 @@
 #include "fw/api/rs.h"
 #include "fw/api/context.h"
 #include "fw/api/coex.h"
+#include "fw/api/location.h"
 
 #include "fw/dbg.h"
 
@@ -295,6 +296,7 @@ struct iwl_mld {
 	struct {
 		struct cfg80211_pmsr_request *req;
 		struct wireless_dev *req_wdev;
+		int responses[IWL_TOF_MAX_APS];
 	} ftm_initiator;
 };
 

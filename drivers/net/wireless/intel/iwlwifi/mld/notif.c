@@ -35,6 +35,7 @@
 #include "stats.h"
 #include "coex.h"
 #include "time_sync.h"
+#include "ftm-initiator.h"
 
 /* Please use this in an increasing order of the versions */
 #define CMD_VER_ENTRY(_ver, _struct) { .size = sizeof(struct _struct), .ver = _ver },
@@ -111,6 +112,9 @@ static bool iwl_mld_always_cancel(struct iwl_mld *mld,
 
 #define RX_HANDLER_OF_SCAN(_grp, _cmd, _name)				\
 	RX_HANDLER_OF_OBJ(_grp, _cmd, _name, SCAN)
+
+#define RX_HANDLER_OF_FTM_REQ(_grp, _cmd, _name)				\
+	RX_HANDLER_OF_OBJ(_grp, _cmd, _name, FTM_REQ)
 
 static void iwl_mld_handle_mfuart_notif(struct iwl_mld *mld,
 					struct iwl_rx_packet *pkt)
@@ -384,6 +388,7 @@ CMD_VERSIONS(time_sync_confirm_notif,
 	     CMD_VER_ENTRY(1, iwl_time_msmt_cfm_notify))
 CMD_VERSIONS(omi_status_notif,
 	     CMD_VER_ENTRY(1, iwl_omi_send_status_notif))
+CMD_VERSIONS(ftm_resp_notif, CMD_VER_ENTRY(9, iwl_tof_range_rsp_ntfy))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -400,6 +405,7 @@ DEFINE_SIMPLE_CANCELLATION(probe_resp_data, iwl_probe_resp_data_notif,
 DEFINE_SIMPLE_CANCELLATION(uapsd_misbehaving_ap, iwl_uapsd_misbehaving_ap_notif,
 			   mac_id)
 #define iwl_mld_cancel_omi_status_notif iwl_mld_always_cancel
+DEFINE_SIMPLE_CANCELLATION(ftm_resp, iwl_tof_range_rsp_ntfy, request_id)
 
 /**
  * DOC: Handlers for fw notifications
@@ -496,6 +502,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     time_sync_confirm_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_OF_LINK(DATA_PATH_GROUP, OMI_SEND_STATUS_NOTIF,
 			   omi_status_notif)
+	RX_HANDLER_OF_FTM_REQ(LOCATION_GROUP, TOF_RANGE_RESPONSE_NOTIF,
+			      ftm_resp_notif)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 

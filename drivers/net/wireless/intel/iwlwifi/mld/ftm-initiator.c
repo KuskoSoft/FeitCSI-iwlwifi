@@ -303,3 +303,165 @@ int iwl_mld_ftm_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	return ret;
 }
+
+static void iwl_mld_ftm_reset(struct iwl_mld *mld)
+{
+	lockdep_assert_wiphy(mld->wiphy);
+
+	mld->ftm_initiator.req = NULL;
+	mld->ftm_initiator.req_wdev = NULL;
+	memset(mld->ftm_initiator.responses, 0,
+	       sizeof(mld->ftm_initiator.responses));
+}
+
+static int iwl_mld_ftm_range_resp_valid(struct iwl_mld *mld, u8 request_id,
+					u8 num_of_aps)
+{
+	if (IWL_FW_CHECK(mld, request_id != (u8)mld->ftm_initiator.req->cookie,
+			 "Request ID mismatch, got %u, active %u\n",
+			 request_id, (u8)mld->ftm_initiator.req->cookie))
+		return -EINVAL;
+
+	if (IWL_FW_CHECK(mld, num_of_aps > mld->ftm_initiator.req->n_peers ||
+			 num_of_aps > IWL_TOF_MAX_APS,
+			 "FTM range response: invalid num of APs (%u)\n",
+			 num_of_aps))
+		return -EINVAL;
+
+	return 0;
+}
+
+static int iwl_mld_ftm_find_peer(struct cfg80211_pmsr_request *req,
+				 const u8 *addr)
+{
+	for (int i = 0; i < req->n_peers; i++) {
+		struct cfg80211_pmsr_request_peer *peer = &req->peers[i];
+
+		if (ether_addr_equal_unaligned(peer->addr, addr))
+			return i;
+	}
+
+	return -ENOENT;
+}
+
+static void iwl_mld_debug_range_resp(struct iwl_mld *mld, u8 index,
+				     struct cfg80211_pmsr_result *res)
+{
+	s64 rtt_avg = div_s64(res->ftm.rtt_avg * 100, 6666);
+
+	IWL_DEBUG_INFO(mld, "entry %d\n", index);
+	IWL_DEBUG_INFO(mld, "\tstatus: %d\n", res->status);
+	IWL_DEBUG_INFO(mld, "\tBSSID: %pM\n", res->addr);
+	IWL_DEBUG_INFO(mld, "\thost time: %llu\n", res->host_time);
+	IWL_DEBUG_INFO(mld, "\tburst index: %d\n", res->ftm.burst_index);
+	IWL_DEBUG_INFO(mld, "\tsuccess num: %u\n", res->ftm.num_ftmr_successes);
+	IWL_DEBUG_INFO(mld, "\trssi: %d\n", res->ftm.rssi_avg);
+	IWL_DEBUG_INFO(mld, "\trssi spread: %d\n", res->ftm.rssi_spread);
+	IWL_DEBUG_INFO(mld, "\trtt: %lld\n", res->ftm.rtt_avg);
+	IWL_DEBUG_INFO(mld, "\trtt var: %llu\n", res->ftm.rtt_variance);
+	IWL_DEBUG_INFO(mld, "\trtt spread: %llu\n", res->ftm.rtt_spread);
+	IWL_DEBUG_INFO(mld, "\tdistance: %lld\n", rtt_avg);
+}
+
+void iwl_mld_handle_ftm_resp_notif(struct iwl_mld *mld,
+				   struct iwl_rx_packet *pkt)
+{
+	struct iwl_tof_range_rsp_ntfy *fw_resp = (void *)pkt->data;
+	u8 num_of_aps, last_in_batch;
+
+	if (IWL_FW_CHECK(mld, !mld->ftm_initiator.req,
+			 "FTM response without a pending request\n"))
+		return;
+
+	if (iwl_mld_ftm_range_resp_valid(mld, fw_resp->request_id,
+					 fw_resp->num_of_aps))
+		return;
+
+	num_of_aps = fw_resp->num_of_aps;
+	last_in_batch = fw_resp->last_report;
+
+	IWL_DEBUG_INFO(mld, "Range response received\n");
+	IWL_DEBUG_INFO(mld, "request id: %llu, num of entries: %u\n",
+		       mld->ftm_initiator.req->cookie, num_of_aps);
+
+	for (int i = 0; i < num_of_aps; i++) {
+		struct cfg80211_pmsr_result result = {};
+		struct iwl_tof_range_rsp_ap_entry_ntfy *fw_ap;
+		int peer_idx;
+
+		fw_ap = &fw_resp->ap[i];
+		result.final = fw_ap->last_burst;
+		result.ap_tsf = le32_to_cpu(fw_ap->start_tsf);
+		result.ap_tsf_valid = 1;
+
+		peer_idx = iwl_mld_ftm_find_peer(mld->ftm_initiator.req,
+						 fw_ap->bssid);
+		if (peer_idx < 0) {
+			IWL_WARN(mld,
+				 "Unknown address (%pM, target #%d) in FTM response\n",
+				 fw_ap->bssid, i);
+			continue;
+		}
+
+		switch (fw_ap->measure_status) {
+		case IWL_TOF_ENTRY_SUCCESS:
+			result.status = NL80211_PMSR_STATUS_SUCCESS;
+			break;
+		case IWL_TOF_ENTRY_TIMING_MEASURE_TIMEOUT:
+			result.status = NL80211_PMSR_STATUS_TIMEOUT;
+			break;
+		case IWL_TOF_ENTRY_NO_RESPONSE:
+			result.status = NL80211_PMSR_STATUS_FAILURE;
+			result.ftm.failure_reason =
+				NL80211_PMSR_FTM_FAILURE_NO_RESPONSE;
+			break;
+		case IWL_TOF_ENTRY_REQUEST_REJECTED:
+			result.status = NL80211_PMSR_STATUS_FAILURE;
+			result.ftm.failure_reason =
+				NL80211_PMSR_FTM_FAILURE_PEER_BUSY;
+			result.ftm.busy_retry_time = fw_ap->refusal_period;
+			break;
+		default:
+			result.status = NL80211_PMSR_STATUS_FAILURE;
+			result.ftm.failure_reason =
+				NL80211_PMSR_FTM_FAILURE_UNSPECIFIED;
+			break;
+		}
+		memcpy(result.addr, fw_ap->bssid, ETH_ALEN);
+
+		/* TODO: convert the timestamp from the result to systime */
+		result.host_time = ktime_get_boottime_ns();
+
+		result.type = NL80211_PMSR_TYPE_FTM;
+		result.ftm.burst_index = mld->ftm_initiator.responses[peer_idx];
+		mld->ftm_initiator.responses[peer_idx]++;
+		result.ftm.rssi_avg = fw_ap->rssi;
+		result.ftm.rssi_avg_valid = 1;
+		result.ftm.rssi_spread = fw_ap->rssi_spread;
+		result.ftm.rssi_spread_valid = 1;
+		result.ftm.rtt_avg = (s32)le32_to_cpu(fw_ap->rtt);
+		result.ftm.rtt_avg_valid = 1;
+		result.ftm.rtt_variance = le32_to_cpu(fw_ap->rtt_variance);
+		result.ftm.rtt_variance_valid = 1;
+		result.ftm.rtt_spread = le32_to_cpu(fw_ap->rtt_spread);
+		result.ftm.rtt_spread_valid = 1;
+
+		cfg80211_pmsr_report(mld->ftm_initiator.req_wdev,
+				     mld->ftm_initiator.req,
+				     &result, GFP_KERNEL);
+
+		if (fw_has_api(&mld->fw->ucode_capa,
+			       IWL_UCODE_TLV_API_FTM_RTT_ACCURACY))
+			IWL_DEBUG_INFO(mld, "RTT confidence: %u\n",
+				       fw_ap->rttConfidence);
+
+		iwl_mld_debug_range_resp(mld, i, &result);
+	}
+
+	if (last_in_batch) {
+		cfg80211_pmsr_complete(mld->ftm_initiator.req_wdev,
+				       mld->ftm_initiator.req,
+				       GFP_KERNEL);
+		iwl_mld_ftm_reset(mld);
+	}
+}
