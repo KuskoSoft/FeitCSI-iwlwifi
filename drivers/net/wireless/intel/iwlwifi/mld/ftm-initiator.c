@@ -14,6 +14,21 @@
 #include "fw/api/location.h"
 #include "ftm-initiator.h"
 
+enum iwl_mld_pasn_flags {
+	IWL_MLD_PASN_FLAG_HAS_HLTK = BIT(0),
+};
+
+struct iwl_mld_ftm_pasn_entry {
+	struct list_head list;
+	u8 addr[ETH_ALEN];
+	u8 hltk[HLTK_11AZ_LEN];
+	u8 tk[TK_11AZ_LEN];
+	u8 cipher;
+	u8 tx_pn[IEEE80211_CCMP_PN_LEN];
+	u8 rx_pn[IEEE80211_CCMP_PN_LEN];
+	u32 flags;
+};
+
 static void iwl_mld_ftm_cmd_common(struct iwl_mld *mld,
 				   struct ieee80211_vif *vif,
 				   struct iwl_tof_range_req_cmd *cmd,
@@ -314,6 +329,24 @@ static void iwl_mld_ftm_reset(struct iwl_mld *mld)
 	       sizeof(mld->ftm_initiator.responses));
 }
 
+static void
+iwl_mld_ftm_pasn_update_pn(struct iwl_mld *mld,
+			   struct iwl_tof_range_rsp_ap_entry_ntfy *fw_ap)
+{
+	struct iwl_mld_ftm_pasn_entry *entry;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	list_for_each_entry(entry, &mld->ftm_initiator.pasn_list, list) {
+		if (memcmp(fw_ap->bssid, entry->addr, sizeof(entry->addr)))
+			continue;
+
+		memcpy(entry->rx_pn, fw_ap->rx_pn, sizeof(entry->rx_pn));
+		memcpy(entry->tx_pn, fw_ap->tx_pn, sizeof(entry->tx_pn));
+		return;
+	}
+}
+
 static int iwl_mld_ftm_range_resp_valid(struct iwl_mld *mld, u8 request_id,
 					u8 num_of_aps)
 {
@@ -393,6 +426,7 @@ void iwl_mld_handle_ftm_resp_notif(struct iwl_mld *mld,
 		result.final = fw_ap->last_burst;
 		result.ap_tsf = le32_to_cpu(fw_ap->start_tsf);
 		result.ap_tsf_valid = 1;
+		iwl_mld_ftm_pasn_update_pn(mld, fw_ap);
 
 		peer_idx = iwl_mld_ftm_find_peer(mld->ftm_initiator.req,
 						 fw_ap->bssid);
@@ -490,4 +524,119 @@ void iwl_mld_ftm_restart_cleanup(struct iwl_mld *mld)
 	cfg80211_pmsr_complete(mld->ftm_initiator.req_wdev,
 			       mld->ftm_initiator.req, GFP_KERNEL);
 	iwl_mld_ftm_reset(mld);
+}
+
+void iwl_mld_ftm_remove_pasn_sta(struct iwl_mld *mld, u8 *addr)
+{
+	struct iwl_mld_ftm_pasn_entry *entry, *prev;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	list_for_each_entry_safe(entry, prev, &mld->ftm_initiator.pasn_list,
+				 list) {
+		if (memcmp(entry->addr, addr, sizeof(entry->addr)))
+			continue;
+
+		list_del(&entry->list);
+		kfree(entry);
+		return;
+	}
+}
+
+static enum iwl_location_cipher iwl_mld_cipher_to_location_cipher(u32 cipher)
+{
+	switch (cipher) {
+	case WLAN_CIPHER_SUITE_CCMP:
+		return IWL_LOCATION_CIPHER_CCMP_128;
+	case WLAN_CIPHER_SUITE_GCMP:
+		return IWL_LOCATION_CIPHER_GCMP_128;
+	case WLAN_CIPHER_SUITE_GCMP_256:
+		return IWL_LOCATION_CIPHER_GCMP_256;
+	default:
+		return IWL_LOCATION_CIPHER_INVALID;
+	}
+}
+
+int iwl_mld_ftm_add_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     u8 *addr, u32 cipher, u8 *tk, u32 tk_len,
+			     u8 *hltk, u32 hltk_len)
+{
+	u32 expected_tk_len;
+	struct iwl_mld_ftm_pasn_entry *pasn;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	pasn = kzalloc(sizeof(*pasn), GFP_KERNEL);
+	if (!pasn)
+		return -ENOBUFS;
+
+	iwl_mld_ftm_remove_pasn_sta(mld, addr);
+
+	pasn->cipher = iwl_mld_cipher_to_location_cipher(cipher);
+
+	switch (pasn->cipher) {
+	case IWL_LOCATION_CIPHER_CCMP_128:
+	case IWL_LOCATION_CIPHER_GCMP_128:
+		expected_tk_len = WLAN_KEY_LEN_CCMP;
+		break;
+	case IWL_LOCATION_CIPHER_GCMP_256:
+		expected_tk_len = WLAN_KEY_LEN_GCMP_256;
+		break;
+	default:
+		IWL_ERR(mld, "Invalid cipher:%u\n", cipher);
+		goto out;
+	}
+
+	/* If associated to this AP and already have security context,
+	 * the TK is already configured for this station, so it
+	 * shouldn't be set again here.
+	 */
+	if (!tk)
+		expected_tk_len = 0;
+
+	if (tk_len != expected_tk_len ||
+	    (hltk_len && hltk_len != sizeof(pasn->hltk))) {
+		IWL_ERR(mld, "Invalid key length: tk_len=%u hltk_len=%u\n",
+			tk_len, hltk_len);
+		goto out;
+	}
+
+	if (!expected_tk_len && !hltk_len) {
+		IWL_ERR(mld, "TK and HLTK not set\n");
+		goto out;
+	}
+
+	memcpy(pasn->addr, addr, sizeof(pasn->addr));
+
+	if (hltk_len) {
+		memcpy(pasn->hltk, hltk, sizeof(pasn->hltk));
+		pasn->flags |= IWL_MLD_PASN_FLAG_HAS_HLTK;
+	}
+
+	if (tk && tk_len)
+		memcpy(pasn->tk, tk, tk_len);
+
+	list_add_tail(&pasn->list, &mld->ftm_initiator.pasn_list);
+	return 0;
+out:
+	kfree(pasn);
+	return -EINVAL;
+}
+
+void iwl_mld_ftm_initiator_init(struct iwl_mld *mld)
+{
+	INIT_LIST_HEAD(&mld->ftm_initiator.pasn_list);
+}
+
+void iwl_mld_ftm_initiator_stop(struct iwl_mld *mld)
+{
+	struct iwl_mld_ftm_pasn_entry *entry, *prev;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	list_for_each_entry_safe(entry, prev, &mld->ftm_initiator.pasn_list,
+				 list) {
+		list_del(&entry->list);
+		kfree(entry);
+	}
 }

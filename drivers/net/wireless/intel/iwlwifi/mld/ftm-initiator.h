@@ -12,11 +12,14 @@
  * @req_wdev: a pointer to the wdev that requested the current FTM request
  * @responses: the number of responses received for the current FTM session.
  *	Used for tracking the burst index in a periodic request.
+ * @pasn_list: a list of PASN stations with security configurations for each
+ *	station. Used for secured ranging.
  */
 struct ftm_initiator_data {
 		struct cfg80211_pmsr_request *req;
 		struct wireless_dev *req_wdev;
 		int responses[IWL_TOF_MAX_APS];
+		struct list_head pasn_list;
 };
 
 int iwl_mld_ftm_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
@@ -25,5 +28,11 @@ int iwl_mld_ftm_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 void iwl_mld_handle_ftm_resp_notif(struct iwl_mld *mld,
 				   struct iwl_rx_packet *pkt);
 void iwl_mld_ftm_restart_cleanup(struct iwl_mld *mld);
+void iwl_mld_ftm_remove_pasn_sta(struct iwl_mld *mld, u8 *addr);
+int iwl_mld_ftm_add_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     u8 *addr, u32 cipher, u8 *tk, u32 tk_len,
+			     u8 *hltk, u32 hltk_len);
+void iwl_mld_ftm_initiator_stop(struct iwl_mld *mld);
+void iwl_mld_ftm_initiator_init(struct iwl_mld *mld);
 
 #endif /* __iwl_mld_ftm_initiator_h__ */

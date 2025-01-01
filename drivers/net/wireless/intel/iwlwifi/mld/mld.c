@@ -25,6 +25,7 @@
 #include "low_latency.h"
 #include "hcmd.h"
 #include "fw/api/location.h"
+#include "ftm-initiator.h"
 
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
@@ -477,6 +478,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_mld_thermal_initialize(mld);
 
 	iwl_mld_ptp_init(mld);
+	iwl_mld_ftm_initiator_init(mld);
 
 	return op_mode;
 
@@ -505,6 +507,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	iwl_mld_thermal_exit(mld);
 	iwl_mld_low_latency_stop(mld);
 	iwl_mld_deinit_time_sync(mld);
+	iwl_mld_ftm_initiator_stop(mld);
 	wiphy_unlock(mld->wiphy);
 
 	ieee80211_unregister_hw(mld->hw);
