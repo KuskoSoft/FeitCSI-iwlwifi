@@ -713,6 +713,7 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 	struct ieee80211_sta *sta = txq ? txq->sta : NULL;
 	struct iwl_device_tx_cmd *dev_tx_cmd;
 	int queue = iwl_mld_get_tx_queue_id(mld, txq, skb);
+	u8 tid = IWL_MAX_TID_COUNT;
 
 	if (WARN_ONCE(queue == IWL_MLD_INVALID_QUEUE, "Invalid TX Queue id") ||
 	    queue == IWL_MLD_INVALID_DROP_TX)
@@ -734,7 +735,15 @@ static int iwl_mld_tx_mpdu(struct iwl_mld *mld, struct sk_buff *skb,
 
 	iwl_mld_fill_tx_cmd(mld, skb, dev_tx_cmd, sta);
 
-	IWL_DEBUG_TX(mld, "TX from Q:%d. Len %d\n", queue, skb->len);
+	if (ieee80211_is_data(hdr->frame_control)) {
+		if (ieee80211_is_data_qos(hdr->frame_control))
+			tid = ieee80211_get_tid(hdr);
+		else
+			tid = IWL_TID_NON_QOS;
+	}
+
+	IWL_DEBUG_TX(mld, "TX TID:%d from Q:%d len %d\n",
+		     tid, queue, skb->len);
 
 	/* From now on, we cannot access info->control */
 	memset(&info->status, 0, sizeof(info->status));
