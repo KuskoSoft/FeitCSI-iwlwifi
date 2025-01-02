@@ -112,6 +112,33 @@ static const struct wiphy_iftype_ext_capab iftypes_ext_capa[] = {
 	},
 };
 
+static const struct cfg80211_pmsr_capabilities iwl_mld_pmsr_capa = {
+	.max_peers = IWL_TOF_MAX_APS,
+	.report_ap_tsf = 1,
+	.randomize_mac_addr = 1,
+
+	.ftm = {
+		.supported = 1,
+		.asap = 1,
+		.non_asap = 1,
+		.request_lci = 1,
+		.request_civicloc = 1,
+		.trigger_based = 1,
+		.non_trigger_based = 1,
+		.max_bursts_exponent = -1, /* all supported */
+		.max_ftms_per_burst = 0, /* no limits */
+		.bandwidths = BIT(NL80211_CHAN_WIDTH_20_NOHT) |
+			      BIT(NL80211_CHAN_WIDTH_20) |
+			      BIT(NL80211_CHAN_WIDTH_40) |
+			      BIT(NL80211_CHAN_WIDTH_80) |
+			      BIT(NL80211_CHAN_WIDTH_160),
+		.preambles = BIT(NL80211_PREAMBLE_LEGACY) |
+			     BIT(NL80211_PREAMBLE_HT) |
+			     BIT(NL80211_PREAMBLE_VHT) |
+			     BIT(NL80211_PREAMBLE_HE),
+	},
+};
+
 static void iwl_mld_hw_set_addresses(struct iwl_mld *mld)
 {
 	struct wiphy *wiphy = mld->wiphy;
@@ -428,6 +455,22 @@ static int iwl_mld_hw_verify_preconditions(struct iwl_mld *mld)
 	return 0;
 }
 
+static void iwl_mac_hw_set_ftm(struct iwl_mld *mld)
+{
+	struct ieee80211_hw *hw = mld->hw;
+
+	if (fw_has_capa(&mld->fw->ucode_capa,
+			IWL_UCODE_TLV_CAPA_FTM_CALIBRATED)) {
+		wiphy_ext_feature_set(hw->wiphy,
+				      NL80211_EXT_FEATURE_PROT_RANGE_NEGO_AND_MEASURE);
+		wiphy_ext_feature_set(hw->wiphy,
+				      NL80211_EXT_FEATURE_SECURE_LTF);
+		wiphy_ext_feature_set(hw->wiphy,
+				      NL80211_EXT_FEATURE_ENABLE_FTM_RESPONDER);
+		hw->wiphy->pmsr_capa = &iwl_mld_pmsr_capa;
+	}
+}
+
 int iwl_mld_register_hw(struct iwl_mld *mld)
 {
 	/* verify once essential preconditions required for setting
@@ -445,6 +488,7 @@ int iwl_mld_register_hw(struct iwl_mld *mld)
 	iwl_mac_hw_set_flags(mld);
 	iwl_mac_hw_set_wiphy(mld);
 	iwl_mac_hw_set_misc(mld);
+	iwl_mac_hw_set_ftm(mld);
 
 	SET_IEEE80211_DEV(mld->hw, mld->trans->dev);
 
