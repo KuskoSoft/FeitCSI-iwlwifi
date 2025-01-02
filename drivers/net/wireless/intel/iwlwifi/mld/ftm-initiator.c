@@ -29,6 +29,13 @@ struct iwl_mld_ftm_pasn_entry {
 	u32 flags;
 };
 
+struct iwl_mld_lci_civic_entry {
+	struct list_head list;
+	u8 addr[ETH_ALEN];
+	u8 lci_len, civic_len;
+	u8 buf[];
+};
+
 static void iwl_mld_ftm_cmd_common(struct iwl_mld *mld,
 				   struct ieee80211_vif *vif,
 				   struct iwl_tof_range_req_cmd *cmd,
@@ -441,12 +448,20 @@ int iwl_mld_ftm_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 static void iwl_mld_ftm_reset(struct iwl_mld *mld)
 {
+	struct iwl_mld_lci_civic_entry *entry, *prev;
+
 	lockdep_assert_wiphy(mld->wiphy);
 
 	mld->ftm_initiator.req = NULL;
 	mld->ftm_initiator.req_wdev = NULL;
 	memset(mld->ftm_initiator.responses, 0,
 	       sizeof(mld->ftm_initiator.responses));
+
+	list_for_each_entry_safe(entry, prev, &mld->ftm_initiator.loc_list,
+				 list) {
+		list_del(&entry->list);
+		kfree(entry);
+	}
 }
 
 static void
@@ -495,6 +510,31 @@ static int iwl_mld_ftm_find_peer(struct cfg80211_pmsr_request *req,
 	}
 
 	return -ENOENT;
+}
+
+static void iwl_mld_ftm_get_lci_civic(struct iwl_mld *mld,
+				      struct cfg80211_pmsr_result *res)
+{
+	struct iwl_mld_lci_civic_entry *entry;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	list_for_each_entry(entry, &mld->ftm_initiator.loc_list, list) {
+		if (!ether_addr_equal_unaligned(res->addr, entry->addr))
+			continue;
+
+		if (entry->lci_len) {
+			res->ftm.lci_len = entry->lci_len;
+			res->ftm.lci = entry->buf;
+		}
+
+		if (entry->civic_len) {
+			res->ftm.civicloc_len = entry->civic_len;
+			res->ftm.civicloc = entry->buf + entry->lci_len;
+		}
+
+		break;
+	}
 }
 
 static void iwl_mld_debug_range_resp(struct iwl_mld *mld, u8 index,
@@ -599,6 +639,8 @@ void iwl_mld_handle_ftm_resp_notif(struct iwl_mld *mld,
 		result.ftm.rtt_variance_valid = 1;
 		result.ftm.rtt_spread = le32_to_cpu(fw_ap->rtt_spread);
 		result.ftm.rtt_spread_valid = 1;
+
+		iwl_mld_ftm_get_lci_civic(mld, &result);
 
 		cfg80211_pmsr_report(mld->ftm_initiator.req_wdev,
 				     mld->ftm_initiator.req,
@@ -723,6 +765,7 @@ out:
 void iwl_mld_ftm_initiator_init(struct iwl_mld *mld)
 {
 	INIT_LIST_HEAD(&mld->ftm_initiator.pasn_list);
+	INIT_LIST_HEAD(&mld->ftm_initiator.loc_list);
 }
 
 void iwl_mld_ftm_initiator_stop(struct iwl_mld *mld)
@@ -736,4 +779,59 @@ void iwl_mld_ftm_initiator_stop(struct iwl_mld *mld)
 		list_del(&entry->list);
 		kfree(entry);
 	}
+
+	iwl_mld_ftm_reset(mld);
+}
+
+void iwl_mld_handle_lci_civic_notif(struct iwl_mld *mld,
+				    struct iwl_rx_packet *pkt)
+{
+	const struct ieee80211_mgmt *mgmt = (void *)pkt->data;
+	size_t len = iwl_rx_packet_payload_len(pkt);
+	struct iwl_mld_lci_civic_entry *entry;
+	const u8 *ies, *lci, *civic, *msr_ie;
+	size_t ies_len, lci_len = 0, civic_len = 0;
+	size_t baselen = IEEE80211_MIN_ACTION_SIZE +
+			 sizeof(mgmt->u.action.u.ftm);
+	const u8 rprt_type_lci = IEEE80211_SPCT_MSR_RPRT_TYPE_LCI;
+	const u8 rprt_type_civic = IEEE80211_SPCT_MSR_RPRT_TYPE_CIVIC;
+
+	if (IWL_FW_CHECK(mld, len <= baselen,
+			 "Invalid LCI/CIVIC notification length (%zu)\n", len))
+		return;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	ies = mgmt->u.action.u.ftm.variable;
+	ies_len = len - baselen;
+
+	msr_ie = cfg80211_find_ie_match(WLAN_EID_MEASURE_REPORT, ies, ies_len,
+					&rprt_type_lci, 1, 4);
+	if (msr_ie) {
+		lci = msr_ie + 2;
+		lci_len = msr_ie[1];
+	}
+
+	msr_ie = cfg80211_find_ie_match(WLAN_EID_MEASURE_REPORT, ies, ies_len,
+					&rprt_type_civic, 1, 4);
+	if (msr_ie) {
+		civic = msr_ie + 2;
+		civic_len = msr_ie[1];
+	}
+
+	entry = kmalloc(sizeof(*entry) + lci_len + civic_len, GFP_KERNEL);
+	if (!entry)
+		return;
+
+	memcpy(entry->addr, mgmt->bssid, ETH_ALEN);
+
+	entry->lci_len = lci_len;
+	if (lci_len)
+		memcpy(entry->buf, lci, lci_len);
+
+	entry->civic_len = civic_len;
+	if (civic_len)
+		memcpy(entry->buf + lci_len, civic, civic_len);
+
+	list_add_tail(&entry->list, &mld->ftm_initiator.loc_list);
 }

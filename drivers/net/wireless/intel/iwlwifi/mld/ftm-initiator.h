@@ -14,12 +14,14 @@
  *	Used for tracking the burst index in a periodic request.
  * @pasn_list: a list of PASN stations with security configurations for each
  *	station. Used for secured ranging.
+ * @loc_list: list of LCI/CIVIC information for the current FTM request.
  */
 struct ftm_initiator_data {
 		struct cfg80211_pmsr_request *req;
 		struct wireless_dev *req_wdev;
 		int responses[IWL_TOF_MAX_APS];
 		struct list_head pasn_list;
+		struct list_head loc_list;
 };
 
 int iwl_mld_ftm_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
@@ -34,5 +36,7 @@ int iwl_mld_ftm_add_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			     u8 *hltk, u32 hltk_len);
 void iwl_mld_ftm_initiator_stop(struct iwl_mld *mld);
 void iwl_mld_ftm_initiator_init(struct iwl_mld *mld);
+void iwl_mld_handle_lci_civic_notif(struct iwl_mld *mld,
+				    struct iwl_rx_packet *pkt);
 
 #endif /* __iwl_mld_ftm_initiator_h__ */

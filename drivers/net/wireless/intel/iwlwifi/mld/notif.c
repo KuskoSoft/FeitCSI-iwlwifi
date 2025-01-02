@@ -504,6 +504,8 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			   omi_status_notif)
 	RX_HANDLER_OF_FTM_REQ(LOCATION_GROUP, TOF_RANGE_RESPONSE_NOTIF,
 			      ftm_resp_notif)
+	RX_HANDLER_NO_VAL(LOCATION_GROUP, TOF_LC_NOTIF, lci_civic_notif,
+			  RX_HANDLER_ASYNC)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 
