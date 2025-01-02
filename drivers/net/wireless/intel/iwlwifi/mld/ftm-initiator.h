@@ -38,5 +38,6 @@ void iwl_mld_ftm_initiator_stop(struct iwl_mld *mld);
 void iwl_mld_ftm_initiator_init(struct iwl_mld *mld);
 void iwl_mld_handle_lci_civic_notif(struct iwl_mld *mld,
 				    struct iwl_rx_packet *pkt);
+void iwl_mld_ftm_abort(struct iwl_mld *mld, struct cfg80211_pmsr_request *req);
 
 #endif /* __iwl_mld_ftm_initiator_h__ */
