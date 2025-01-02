@@ -85,6 +85,7 @@
 #define IWL_MLD_FTM_RESP_LMR_FEEDBACK_SUPPORT	true
 #define IWL_MLD_FTM_NON_TB_MIN_TIME_BETWEEN_MSR	7
 #define IWL_MLD_FTM_NON_TB_MAX_TIME_BETWEEN_MSR	1000
+#define IWL_MLD_FTM_INITIATOR_SECURE_LTF	false
 
 #else
 #define IWL_MLD_DIS_RANDOM_FW_ID	        (mld->trans->dbg_cfg.MLD_DIS_RANDOM_FW_ID)
@@ -120,6 +121,7 @@
 #define IWL_MLD_FTM_I2R_MAX_TOTAL_LTF           (mld->trans->dbg_cfg.MLD_FTM_I2R_MAX_TOTAL_LTF)
 #define IWL_MLD_FTM_NON_TB_MIN_TIME_BETWEEN_MSR (mld->trans->dbg_cfg.MLD_FTM_NON_TB_MIN_TIME_BETWEEN_MSR)
 #define IWL_MLD_FTM_NON_TB_MAX_TIME_BETWEEN_MSR (mld->trans->dbg_cfg.MLD_FTM_NON_TB_MAX_TIME_BETWEEN_MSR)
+#define IWL_MLD_FTM_INITIATOR_SECURE_LTF        (mld->trans->dbg_cfg.MLD_FTM_INITIATOR_SECURE_LTF)
 #endif
 
 #endif /* __iwl_mld_constants_h__ */

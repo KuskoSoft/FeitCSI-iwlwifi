@@ -224,6 +224,124 @@ static void iwl_mld_ftm_set_calib(struct iwl_mld *mld, __le16 *calib,
 }
 #endif
 
+static enum iwl_location_cipher iwl_mld_cipher_to_location_cipher(u32 cipher)
+{
+	switch (cipher) {
+	case WLAN_CIPHER_SUITE_CCMP:
+		return IWL_LOCATION_CIPHER_CCMP_128;
+	case WLAN_CIPHER_SUITE_GCMP:
+		return IWL_LOCATION_CIPHER_GCMP_128;
+	case WLAN_CIPHER_SUITE_GCMP_256:
+		return IWL_LOCATION_CIPHER_GCMP_256;
+	default:
+		return IWL_LOCATION_CIPHER_INVALID;
+	}
+}
+
+struct iwl_mld_ftm_iter_data {
+	u8 cipher;
+	u8 *bssid;
+	u8 *tk;
+};
+
+static void iwl_mld_ftm_set_assoc_tk_iter(struct ieee80211_hw *hw,
+					  struct ieee80211_vif *vif,
+					  struct ieee80211_sta *sta,
+					  struct ieee80211_key_conf *key,
+					  void *data)
+{
+	struct iwl_mld_ftm_iter_data *target = data;
+	enum iwl_location_cipher cipher;
+
+	if (!sta || memcmp(sta->addr, target->bssid, ETH_ALEN))
+		return;
+
+	if (WARN_ON(!sta->mfp))
+		return;
+
+	cipher = iwl_mld_cipher_to_location_cipher(key->cipher);
+	if (WARN_ON(cipher != target->cipher))
+		return;
+
+	target->tk = key->key;
+}
+
+static u32 iwl_mld_ftm_get_tk_len(struct iwl_mld *mld, u32 cipher)
+{
+	switch (cipher) {
+	case IWL_LOCATION_CIPHER_CCMP_128:
+	case IWL_LOCATION_CIPHER_GCMP_128:
+		return WLAN_KEY_LEN_CCMP;
+	case IWL_LOCATION_CIPHER_GCMP_256:
+		return WLAN_KEY_LEN_GCMP_256;
+	default:
+		IWL_ERR(mld, "Invalid cipher:%u\n", cipher);
+	}
+
+	return 0;
+}
+
+static int
+iwl_mld_ftm_set_secured_ranging(struct iwl_mld *mld, struct ieee80211_vif *vif,
+				struct iwl_tof_range_req_ap_entry *target)
+{
+	struct iwl_mld_ftm_pasn_entry *entry;
+	u8 *tk;
+	u32 tk_len;
+
+	/* TODO: add support for ftm_unprotected debugs */
+
+	if (!(le32_to_cpu(target->initiator_ap_flags) &
+	      (IWL_INITIATOR_AP_FLAGS_NON_TB | IWL_INITIATOR_AP_FLAGS_TB)))
+		return 0;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	list_for_each_entry(entry, &mld->ftm_initiator.pasn_list, list) {
+		if (memcmp(entry->addr, target->bssid, sizeof(entry->addr)))
+			continue;
+
+		target->cipher = entry->cipher;
+
+		if (entry->flags & IWL_MLD_PASN_FLAG_HAS_HLTK)
+			memcpy(target->hltk, entry->hltk, sizeof(entry->hltk));
+		else
+			memset(target->hltk, 0, sizeof(target->hltk));
+
+		if (vif->cfg.assoc &&
+		    !memcmp(vif->bss_conf.bssid, target->bssid, ETH_ALEN)) {
+			struct iwl_mld_ftm_iter_data iter_data;
+
+			iter_data.bssid = target->bssid;
+			iter_data.cipher = target->cipher;
+			iter_data.tk = NULL;
+			ieee80211_iter_keys(mld->hw, vif,
+					    iwl_mld_ftm_set_assoc_tk_iter,
+					    &iter_data);
+			tk = iter_data.tk;
+		} else {
+			tk = entry->tk;
+		}
+
+		if (WARN_ON(!tk))
+			return -EINVAL;
+
+		tk_len = iwl_mld_ftm_get_tk_len(mld, target->cipher);
+		memcpy(target->tk, tk, tk_len);
+
+		memcpy(target->rx_pn, entry->rx_pn, sizeof(entry->rx_pn));
+		memcpy(target->tx_pn, entry->tx_pn, sizeof(entry->tx_pn));
+
+		if (IWL_MLD_FTM_INITIATOR_SECURE_LTF)
+			FTM_SET_FLAG(SECURED);
+
+		FTM_SET_FLAG(PMF);
+		return 0;
+	}
+
+	return 0;
+}
+
 static int
 iwl_mld_ftm_set_target(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		       struct cfg80211_pmsr_request_peer *peer,
@@ -246,7 +364,9 @@ iwl_mld_ftm_set_target(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	iwl_mld_ftm_set_calib(mld, target->calib, target);
 #endif
 
-	/* TODO: add secured ranging support */
+	ret = iwl_mld_ftm_set_secured_ranging(mld, vif, target);
+	if (ret)
+		return ret;
 
 	i2r_max_sts = IWL_MLD_FTM_I2R_MAX_STS > 1 ? 1 :
 		IWL_MLD_FTM_I2R_MAX_STS;
@@ -543,20 +663,6 @@ void iwl_mld_ftm_remove_pasn_sta(struct iwl_mld *mld, u8 *addr)
 	}
 }
 
-static enum iwl_location_cipher iwl_mld_cipher_to_location_cipher(u32 cipher)
-{
-	switch (cipher) {
-	case WLAN_CIPHER_SUITE_CCMP:
-		return IWL_LOCATION_CIPHER_CCMP_128;
-	case WLAN_CIPHER_SUITE_GCMP:
-		return IWL_LOCATION_CIPHER_GCMP_128;
-	case WLAN_CIPHER_SUITE_GCMP_256:
-		return IWL_LOCATION_CIPHER_GCMP_256;
-	default:
-		return IWL_LOCATION_CIPHER_INVALID;
-	}
-}
-
 int iwl_mld_ftm_add_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			     u8 *addr, u32 cipher, u8 *tk, u32 tk_len,
 			     u8 *hltk, u32 hltk_len)
@@ -574,18 +680,9 @@ int iwl_mld_ftm_add_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	pasn->cipher = iwl_mld_cipher_to_location_cipher(cipher);
 
-	switch (pasn->cipher) {
-	case IWL_LOCATION_CIPHER_CCMP_128:
-	case IWL_LOCATION_CIPHER_GCMP_128:
-		expected_tk_len = WLAN_KEY_LEN_CCMP;
-		break;
-	case IWL_LOCATION_CIPHER_GCMP_256:
-		expected_tk_len = WLAN_KEY_LEN_GCMP_256;
-		break;
-	default:
-		IWL_ERR(mld, "Invalid cipher:%u\n", cipher);
+	expected_tk_len = iwl_mld_ftm_get_tk_len(mld, pasn->cipher);
+	if (!expected_tk_len)
 		goto out;
-	}
 
 	/* If associated to this AP and already have security context,
 	 * the TK is already configured for this station, so it
