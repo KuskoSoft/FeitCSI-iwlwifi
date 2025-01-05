@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include <net/mac80211.h>
@@ -86,6 +86,7 @@ static const u8 if_types_ext_capa_sta[] = {
 	 [7] = WLAN_EXT_CAPA8_OPMODE_NOTIF |
 	       WLAN_EXT_CAPA8_MAX_MSDU_IN_AMSDU_LSB,
 	 [8] = WLAN_EXT_CAPA9_MAX_MSDU_IN_AMSDU_MSB,
+	 [9] = WLAN_EXT_CAPA10_TWT_REQUESTER_SUPPORT,
 };
 
 #define IWL_MLD_EMLSR_CAPA	(IEEE80211_EML_CAP_EMLSR_SUPP | \
