@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #ifndef __iwl_mld_sta_h__
@@ -29,6 +29,7 @@ struct iwl_mld_rxq_dup_data {
  * ieee80211_link_sta
  *
  * @last_rate_n_flags: rate_n_flags from the last &iwl_tlc_update_notif
+ * @signal_avg: the signal average coming from the firmware
  * @in_fw: whether the link STA is uploaded to the FW (false during restart)
  * @rcu_head: RCU head for freeing this object
  * @fw_id: the FW id of this link sta.
@@ -38,6 +39,7 @@ struct iwl_mld_link_sta {
 	struct_group(zeroed_on_hw_restart,
 		u32 last_rate_n_flags;
 		bool in_fw;
+		s8 signal_avg;
 	);
 	/* And here fields that survive a fw restart */
 	struct rcu_head rcu_head;

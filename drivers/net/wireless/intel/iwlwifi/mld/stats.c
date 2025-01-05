@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include "mld.h"
@@ -36,21 +36,45 @@ int iwl_mld_clear_stats_in_fw(struct iwl_mld *mld)
 }
 
 static void
-iwl_mld_fill_stats_from_oper_notif(struct iwl_rx_packet *pkt,
+iwl_mld_fill_stats_from_oper_notif(struct iwl_mld *mld,
+				   struct iwl_rx_packet *pkt,
 				   u8 fw_sta_id, struct station_info *sinfo)
 {
 	const struct iwl_system_statistics_notif_oper *notif =
 		(void *)&pkt->data;
 	const struct iwl_stats_ntfy_per_sta *per_sta =
 		&notif->per_sta[fw_sta_id];
+	struct ieee80211_link_sta *link_sta;
+	struct iwl_mld_link_sta *mld_link_sta;
 
-	sinfo->signal_avg = -(s8)le32_to_cpu(per_sta->average_energy);
+	/* 0 isn't a valid value, but FW might send 0.
+	 * In that case, set the latest non-zero value we stored
+	 */
+	rcu_read_lock();
+
+	link_sta = rcu_dereference(mld->fw_id_to_link_sta[fw_sta_id]);
+	if (IS_ERR_OR_NULL(link_sta))
+		goto unlock;
+
+	mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+	if (WARN_ON(!mld_link_sta))
+		goto unlock;
+
+	if (per_sta->average_energy)
+		mld_link_sta->signal_avg =
+			-(s8)le32_to_cpu(per_sta->average_energy);
+
+	sinfo->signal_avg = mld_link_sta->signal_avg;
 	sinfo->filled |= BIT_ULL(NL80211_STA_INFO_SIGNAL_AVG);
+
+unlock:
+	rcu_read_unlock();
 }
 
 struct iwl_mld_stats_data {
 	u8 fw_sta_id;
 	struct station_info *sinfo;
+	struct iwl_mld *mld;
 };
 
 static bool iwl_mld_wait_stats_handler(struct iwl_notif_wait_data *notif_data,
@@ -61,7 +85,8 @@ static bool iwl_mld_wait_stats_handler(struct iwl_notif_wait_data *notif_data,
 
 	switch (cmd) {
 	case WIDE_ID(STATISTICS_GROUP, STATISTICS_OPER_NOTIF):
-		iwl_mld_fill_stats_from_oper_notif(pkt, stats_data->fw_sta_id,
+		iwl_mld_fill_stats_from_oper_notif(stats_data->mld, pkt,
+						   stats_data->fw_sta_id,
 						   stats_data->sinfo);
 		break;
 	case WIDE_ID(STATISTICS_GROUP, STATISTICS_OPER_PART1_NOTIF):
@@ -90,6 +115,7 @@ iwl_mld_fw_stats_to_mac80211(struct iwl_mld *mld, struct iwl_mld_sta *mld_sta,
 		/* We don't support drv_sta_statistics in EMLSR */
 		.fw_sta_id = mld_sta->deflink.fw_id,
 		.sinfo = sinfo,
+		.mld = mld,
 	};
 	struct iwl_notification_wait stats_wait;
 	int ret;
@@ -396,6 +422,29 @@ iwl_mld_process_per_link_stats(struct iwl_mld *mld,
 					  curr_ts_usec);
 }
 
+static void
+iwl_mld_process_per_sta_stats(struct iwl_mld *mld,
+			      const struct iwl_stats_ntfy_per_sta *per_sta)
+{
+	for (int i = 0; i < mld->fw->ucode_capa.num_stations; i++) {
+		struct ieee80211_link_sta *link_sta =
+			wiphy_dereference(mld->wiphy,
+					  mld->fw_id_to_link_sta[i]);
+		struct iwl_mld_link_sta *mld_link_sta;
+		s8 avg_energy =
+			-(s8)le32_to_cpu(per_sta[i].average_energy);
+
+		if (IS_ERR_OR_NULL(link_sta) || !avg_energy)
+			continue;
+
+		mld_link_sta = iwl_mld_link_sta_from_mac80211(link_sta);
+		if (WARN_ON(!mld_link_sta))
+			continue;
+
+		mld_link_sta->signal_avg = avg_energy;
+	}
+}
+
 void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 				     struct iwl_rx_packet *pkt)
 {
@@ -403,11 +452,12 @@ void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 		(void *)&pkt->data;
 	u32 curr_ts_usec = le32_to_cpu(stats->time_stamp);
 
-	BUILD_BUG_ON(ARRAY_SIZE(stats->per_sta) < IWL_STATION_COUNT_MAX);
+	BUILD_BUG_ON(ARRAY_SIZE(stats->per_sta) != IWL_STATION_COUNT_MAX);
 	BUILD_BUG_ON(ARRAY_SIZE(stats->per_link) <
 		     ARRAY_SIZE(mld->fw_id_to_bss_conf));
 
 	iwl_mld_process_per_link_stats(mld, stats->per_link, curr_ts_usec);
+	iwl_mld_process_per_sta_stats(mld, stats->per_sta);
 
 	/* TODO: per_phy stats (task=statistics) */
 
