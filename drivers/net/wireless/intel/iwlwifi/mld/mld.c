@@ -292,6 +292,8 @@ static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
  */
 static const struct iwl_hcmd_names iwl_mld_location_names[] = {
 	HCMD_NAME(TOF_RANGE_REQ_CMD),
+	HCMD_NAME(TOF_RESPONDER_CONFIG_CMD),
+	HCMD_NAME(TOF_RESPONDER_DYN_CONFIG_CMD),
 	HCMD_NAME(TOF_LC_NOTIF),
 	HCMD_NAME(TOF_RANGE_RESPONSE_NOTIF),
 };

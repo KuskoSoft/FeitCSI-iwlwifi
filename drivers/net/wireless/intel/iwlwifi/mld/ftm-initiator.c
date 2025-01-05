@@ -231,20 +231,6 @@ static void iwl_mld_ftm_set_calib(struct iwl_mld *mld, __le16 *calib,
 }
 #endif
 
-static enum iwl_location_cipher iwl_mld_cipher_to_location_cipher(u32 cipher)
-{
-	switch (cipher) {
-	case WLAN_CIPHER_SUITE_CCMP:
-		return IWL_LOCATION_CIPHER_CCMP_128;
-	case WLAN_CIPHER_SUITE_GCMP:
-		return IWL_LOCATION_CIPHER_GCMP_128;
-	case WLAN_CIPHER_SUITE_GCMP_256:
-		return IWL_LOCATION_CIPHER_GCMP_256;
-	default:
-		return IWL_LOCATION_CIPHER_INVALID;
-	}
-}
-
 struct iwl_mld_ftm_iter_data {
 	u8 cipher;
 	u8 *bssid;

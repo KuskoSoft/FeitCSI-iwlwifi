@@ -24,6 +24,7 @@
 #include "mlo.h"
 #include "stats.h"
 #include "ftm-initiator.h"
+#include "ftm-responder.h"
 #include "low_latency.h"
 #include "fw/api/scan.h"
 #include "fw/api/context.h"
@@ -1231,6 +1232,14 @@ iwl_mld_link_info_changed_ap_ibss(struct iwl_mld *mld,
 
 	if (changes & BSS_CHANGED_BEACON)
 		iwl_mld_update_beacon_template(mld, vif, link);
+
+	if (changes & BSS_CHANGED_FTM_RESPONDER) {
+		int ret = iwl_mld_ftm_start_responder(mld, vif, link);
+
+		if (ret)
+			IWL_WARN(mld, "Failed to enable FTM responder (%d)\n",
+				 ret);
+	}
 }
 
 static
