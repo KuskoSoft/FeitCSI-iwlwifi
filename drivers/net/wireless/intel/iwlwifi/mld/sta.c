@@ -1288,3 +1288,40 @@ remove_added_link_stas:
 
 	return ret;
 }
+
+int iwl_mld_add_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			 struct iwl_mld_int_sta *sta, u8 *addr, u32 cipher,
+			 u8 *key, u32 key_len,
+			 struct ieee80211_key_conf *keyconf)
+{
+	int ret;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld_link *link = &mld_vif->deflink;
+
+	ret = iwl_mld_add_internal_sta(mld, sta, STATION_TYPE_PEER,
+				       link->fw_id, addr, IWL_MGMT_TID);
+	if (ret)
+		return ret;
+
+	keyconf->cipher = cipher;
+	memcpy(keyconf->key, key, key_len);
+	keyconf->keylen = key_len;
+	keyconf->flags = IEEE80211_KEY_FLAG_PAIRWISE;
+
+	ret = iwl_mld_add_pasn_key(mld, vif, keyconf, sta);
+	if (ret)
+		iwl_mld_remove_internal_sta(mld, sta, true, IWL_MGMT_TID);
+
+	return ret;
+}
+
+void iwl_mld_remove_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     struct iwl_mld_int_sta *sta,
+			     struct ieee80211_key_conf *keyconf)
+{
+	if (!WARN_ON(!keyconf || !keyconf->keylen))
+		iwl_mld_remove_pasn_key(mld, vif, sta, keyconf);
+
+	if (!WARN_ON(!sta))
+		iwl_mld_remove_internal_sta(mld, sta, true, IWL_MGMT_TID);
+}

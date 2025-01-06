@@ -6,9 +6,25 @@
 #include <linux/etherdevice.h>
 #include "mld.h"
 #include "constants.h"
+#include "sta.h"
 #include "phy.h"
 #include "iface.h"
 #include "ftm-responder.h"
+
+struct iwl_mld_pasn_sta {
+	struct list_head list;
+	struct iwl_mld_int_sta int_sta;
+	u8 addr[ETH_ALEN];
+
+	/* must be last as it is followed by buffer holding the key */
+	struct ieee80211_key_conf keyconf;
+};
+
+struct iwl_mld_pasn_hltk_data {
+	u8 *addr;
+	u8 cipher;
+	u8 *hltk;
+};
 
 static void
 iwl_mld_ftm_responder_set_ndp(struct iwl_mld *mld,
@@ -130,7 +146,8 @@ iwl_mld_ftm_responder_cmd(struct iwl_mld *mld,
 
 static int
 iwl_mld_ftm_responder_dyn_cfg_cmd(struct iwl_mld *mld,
-				  struct ieee80211_ftm_responder_params *params)
+				  struct ieee80211_ftm_responder_params *params,
+				  struct iwl_mld_pasn_hltk_data *hltk_data)
 {
 	struct iwl_tof_responder_dyn_config_cmd cmd;
 	struct iwl_host_cmd hcmd = {
@@ -172,6 +189,21 @@ iwl_mld_ftm_responder_dyn_cfg_cmd(struct iwl_mld *mld,
 		}
 	}
 
+	if (hltk_data) {
+		if (hltk_data->cipher > IWL_LOCATION_CIPHER_GCMP_256) {
+			IWL_ERR(mld, "invalid cipher: %u\n",
+				hltk_data->cipher);
+			return -EINVAL;
+		}
+
+		cmd.cipher = hltk_data->cipher;
+		memcpy(cmd.addr, hltk_data->addr, sizeof(cmd.addr));
+
+		BUILD_BUG_ON(sizeof(cmd.hltk_buf) != HLTK_11AZ_LEN);
+		memcpy(cmd.hltk_buf, hltk_data->hltk, sizeof(cmd.hltk_buf));
+		cmd.valid_flags |= IWL_RESPONDER_DYN_CFG_VALID_PASN_STA;
+	}
+
 	return iwl_mld_send_cmd(mld, &hcmd);
 }
 
@@ -203,7 +235,111 @@ int iwl_mld_ftm_start_responder(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	if (bss_conf->ftmr_params)
 		ret = iwl_mld_ftm_responder_dyn_cfg_cmd(mld,
-							bss_conf->ftmr_params);
+							bss_conf->ftmr_params,
+							NULL);
 
 	return ret;
+}
+
+static void iwl_mld_resp_del_pasn_sta(struct iwl_mld *mld,
+				      struct ieee80211_vif *vif,
+				      struct iwl_mld_pasn_sta *sta)
+{
+	list_del(&sta->list);
+
+	iwl_mld_remove_pasn_sta(mld, vif, &sta->int_sta, &sta->keyconf);
+
+	kfree(sta);
+}
+
+int iwl_mld_ftm_resp_remove_pasn_sta(struct iwl_mld *mld,
+				     struct ieee80211_vif *vif, u8 *addr)
+{
+	struct iwl_mld_pasn_sta *sta, *prev;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	list_for_each_entry_safe(sta, prev, &mld->ftm_responder.resp_pasn_list,
+				 list) {
+		if (!memcmp(sta->addr, addr, ETH_ALEN)) {
+			iwl_mld_resp_del_pasn_sta(mld, vif, sta);
+			return 0;
+		}
+	}
+
+	IWL_ERR(mld, "FTM: PASN station %pM not found\n", addr);
+	return -EINVAL;
+}
+
+int iwl_mld_ftm_responder_add_pasn_sta(struct iwl_mld *mld,
+				       struct ieee80211_vif *vif,
+				       u8 *addr, u32 cipher, u8 *tk, u32 tk_len,
+				       u8 *hltk, u32 hltk_len)
+{
+	int ret;
+	struct iwl_mld_pasn_sta *sta = NULL;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if ((!hltk || !hltk_len) && (!tk || !tk_len)) {
+		IWL_ERR(mld, "TK and HLTK not set\n");
+		return -EINVAL;
+	}
+
+	if (hltk && hltk_len) {
+		struct iwl_mld_pasn_hltk_data hltk_data = {
+			.addr = addr,
+			.hltk = hltk,
+		};
+
+		if (!fw_has_capa(&mld->fw->ucode_capa,
+				 IWL_UCODE_TLV_CAPA_SECURE_LTF_SUPPORT)) {
+			IWL_ERR(mld, "No support for secure LTF measurement\n");
+			return -EINVAL;
+		}
+
+		hltk_data.cipher = iwl_mld_cipher_to_location_cipher(cipher);
+		if (hltk_data.cipher == IWL_LOCATION_CIPHER_INVALID) {
+			IWL_ERR(mld, "invalid cipher: %u\n", cipher);
+			return -EINVAL;
+		}
+
+		ret = iwl_mld_ftm_responder_dyn_cfg_cmd(mld, NULL, &hltk_data);
+		if (ret)
+			return ret;
+	}
+
+	if (tk && tk_len) {
+		sta = kzalloc(sizeof(*sta) + tk_len, GFP_KERNEL);
+		if (!sta)
+			return -ENOBUFS;
+
+		ret = iwl_mld_add_pasn_sta(mld, vif, &sta->int_sta, addr,
+					   cipher, tk, tk_len, &sta->keyconf);
+		if (ret) {
+			kfree(sta);
+			return ret;
+		}
+
+		memcpy(sta->addr, addr, ETH_ALEN);
+		list_add_tail(&sta->list, &mld->ftm_responder.resp_pasn_list);
+	}
+
+	return ret;
+}
+
+void iwl_mld_ftm_responder_clear(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	struct iwl_mld_pasn_sta *sta, *prev;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	list_for_each_entry_safe(sta, prev, &mld->ftm_responder.resp_pasn_list,
+				 list)
+		iwl_mld_resp_del_pasn_sta(mld, vif, sta);
+}
+
+void iwl_mld_ftm_responder_init(struct iwl_mld *mld)
+{
+	INIT_LIST_HEAD(&mld->ftm_responder.resp_pasn_list);
 }

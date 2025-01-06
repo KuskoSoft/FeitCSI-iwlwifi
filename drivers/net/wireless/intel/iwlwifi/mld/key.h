@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #ifndef __iwl_mld_key_h__
 #define __iwl_mld_key_h__
@@ -8,6 +8,7 @@
 #include "mld.h"
 #include <net/mac80211.h>
 #include "fw/api/sta.h"
+#include "sta.h"
 
 void iwl_mld_remove_key(struct iwl_mld *mld,
 			struct ieee80211_vif *vif,
@@ -36,4 +37,10 @@ iwl_mld_cleanup_keys_iter(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	key->hw_key_idx = STA_KEY_IDX_INVALID;
 }
 
+int iwl_mld_add_pasn_key(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			 struct ieee80211_key_conf *keyconf,
+			 struct iwl_mld_int_sta *sta);
+void iwl_mld_remove_pasn_key(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     struct iwl_mld_int_sta *sta,
+			     struct ieee80211_key_conf *keyconf);
 #endif /* __iwl_mld_key_h__ */

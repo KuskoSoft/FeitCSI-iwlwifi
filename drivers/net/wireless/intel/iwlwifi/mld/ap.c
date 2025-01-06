@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include <linux/crc32.h>
 
@@ -337,6 +337,8 @@ void iwl_mld_stop_ap_ibss(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	if (ieee80211_vif_type_p2p(vif) == NL80211_IFTYPE_AP)
 		iwl_mld_vif_update_low_latency(mld, vif, false,
 					       LOW_LATENCY_VIF_TYPE);
+
+	iwl_mld_ftm_responder_clear(mld, vif);
 
 	iwl_mld_remove_bcast_sta(mld, vif, link);
 

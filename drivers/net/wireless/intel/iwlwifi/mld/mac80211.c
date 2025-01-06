@@ -1234,8 +1234,10 @@ iwl_mld_link_info_changed_ap_ibss(struct iwl_mld *mld,
 		iwl_mld_update_beacon_template(mld, vif, link);
 
 	if (changes & BSS_CHANGED_FTM_RESPONDER) {
-		int ret = iwl_mld_ftm_start_responder(mld, vif, link);
+		int ret;
 
+		iwl_mld_ftm_responder_clear(mld, vif);
+		ret = iwl_mld_ftm_start_responder(mld, vif, link);
 		if (ret)
 			IWL_WARN(mld, "Failed to enable FTM responder (%d)\n",
 				 ret);

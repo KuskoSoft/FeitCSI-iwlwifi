@@ -15,6 +15,7 @@
 #include "iface.h"
 #include "mlo.h"
 #include "ftm-initiator.h"
+#include "ftm-responder.h"
 
 static int validate_rfi_channel(const struct nlattr *attr,
 				struct netlink_ext_ack *extack)
@@ -826,8 +827,13 @@ static int iwl_mld_vendor_add_pasn_sta(struct wiphy *wiphy,
 		tk_len = nla_len(tb[IWL_MVM_VENDOR_ATTR_STA_TK]);
 	}
 
-	return iwl_mld_ftm_add_pasn_sta(mld, vif, addr, cipher, tk, tk_len,
-					hltk, hltk_len);
+	if (vif->bss_conf.ftm_responder)
+		return iwl_mld_ftm_responder_add_pasn_sta(mld, vif, addr,
+							  cipher, tk, tk_len,
+							  hltk, hltk_len);
+	else
+		return iwl_mld_ftm_add_pasn_sta(mld, vif, addr, cipher, tk,
+						tk_len, hltk, hltk_len);
 }
 
 static int iwl_mld_vendor_remove_pasn_sta(struct wiphy *wiphy,
@@ -837,6 +843,7 @@ static int iwl_mld_vendor_remove_pasn_sta(struct wiphy *wiphy,
 	struct nlattr **tb;
 	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
 	u8 *addr;
 	int ret = 0;
 
@@ -848,7 +855,11 @@ static int iwl_mld_vendor_remove_pasn_sta(struct wiphy *wiphy,
 		return -EINVAL;
 
 	addr = nla_data(tb[IWL_MVM_VENDOR_ATTR_ADDR]);
-	iwl_mld_ftm_remove_pasn_sta(mld, addr);
+
+	if (vif->bss_conf.ftm_responder)
+		iwl_mld_ftm_resp_remove_pasn_sta(mld, vif, addr);
+	else
+		iwl_mld_ftm_remove_pasn_sta(mld, addr);
 	return ret;
 }
 

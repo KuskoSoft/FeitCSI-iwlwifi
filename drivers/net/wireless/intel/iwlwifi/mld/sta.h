@@ -265,4 +265,13 @@ int iwl_mld_update_link_stas(struct iwl_mld *mld,
 			     struct ieee80211_vif *vif,
 			     struct ieee80211_sta *sta,
 			     u16 old_links, u16 new_links);
+
+int iwl_mld_add_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			 struct iwl_mld_int_sta *sta, u8 *addr, u32 cipher,
+			 u8 *key, u32 key_len,
+			 struct ieee80211_key_conf *keyconf);
+
+void iwl_mld_remove_pasn_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     struct iwl_mld_int_sta *sta,
+			     struct ieee80211_key_conf *keyconf);
 #endif /* __iwl_mld_sta_h__ */

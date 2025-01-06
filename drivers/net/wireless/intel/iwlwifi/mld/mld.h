@@ -38,6 +38,7 @@
 #include "ptp.h"
 #include "time_sync.h"
 #include "ftm-initiator.h"
+#include "ftm-responder.h"
 
 /**
  * DOC: Introduction
@@ -188,6 +189,7 @@
  * @ptp_data: data of the PTP clock
  * @time_sync: time sync data.
  * @ftm_initiator: FTM initiator data
+ * @ftm_responder: FTM responder data
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -295,6 +297,7 @@ struct iwl_mld {
 	struct iwl_mld_time_sync_data __rcu *time_sync;
 
 	struct ftm_initiator_data ftm_initiator;
+	struct ftm_responder_data ftm_responder;
 };
 
 /* memset the part of the struct that requires cleanup on restart */

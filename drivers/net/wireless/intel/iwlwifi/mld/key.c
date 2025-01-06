@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include "key.h"
 #include "iface.h"
@@ -364,4 +364,29 @@ int iwl_mld_update_sta_keys(struct iwl_mld *mld,
 	ieee80211_iter_keys(mld->hw, vif, iwl_mld_update_sta_key_iter,
 			    &data);
 	return data.err;
+}
+
+int iwl_mld_add_pasn_key(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			 struct ieee80211_key_conf *keyconf,
+			 struct iwl_mld_int_sta *sta)
+{
+	/* The MFP flag is set according to the station mfp field. Since
+	 * we don't have a station, set it manually.
+	 */
+	u32 key_flags = iwl_mld_get_key_flags(mld, vif, NULL, keyconf) |
+		IWL_SEC_KEY_FLAG_MFP;
+	u32 sta_mask = BIT(sta->sta_id);
+
+	return iwl_mld_add_key_to_fw(mld, sta_mask, key_flags, keyconf);
+}
+
+void iwl_mld_remove_pasn_key(struct iwl_mld *mld, struct ieee80211_vif *vif,
+			     struct iwl_mld_int_sta *sta,
+			     struct ieee80211_key_conf *keyconf)
+{
+	u32 key_flags = iwl_mld_get_key_flags(mld, vif, NULL, keyconf) |
+		IWL_SEC_KEY_FLAG_MFP;
+	u32 sta_mask = BIT(sta->sta_id);
+
+	iwl_mld_remove_key_from_fw(mld, sta_mask, key_flags, keyconf->keyidx);
 }

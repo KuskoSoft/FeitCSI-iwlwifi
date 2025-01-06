@@ -482,6 +482,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	iwl_mld_ptp_init(mld);
 	iwl_mld_ftm_initiator_init(mld);
+	iwl_mld_ftm_responder_init(mld);
 
 	return op_mode;
 
