@@ -90,7 +90,7 @@ static const struct determine_chan_mode_case {
 		},
 	}, {
 		.desc = "AP has higher VHT requirement than client",
-		.conn_mode = IEEE80211_CONN_MODE_VHT,
+		.conn_mode = IEEE80211_CONN_MODE_EHT,
 		.expected_mode = IEEE80211_CONN_MODE_HT,
 		.vht_basic_mcs_5_8_set = 1,
 		.vht_basic_mcs_5_8 = 0xFE, /* require 5th stream */

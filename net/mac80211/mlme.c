@@ -387,6 +387,7 @@ static bool
 ieee80211_verify_sta_vht_mcs_support(struct ieee80211_sub_if_data *sdata,
 				     int link_id,
 				     struct ieee80211_supported_band *sband,
+				     enum ieee80211_conn_mode mode,
 				     const struct ieee80211_vht_operation *vht_op)
 {
 	struct ieee80211_sta_vht_cap sta_vht_cap;
@@ -409,9 +410,16 @@ ieee80211_verify_sta_vht_mcs_support(struct ieee80211_sub_if_data *sdata,
 	/*
 	 * Many APs are incorrectly advertising an all-zero value here,
 	 * which really means MCS 0-7 are required for 1-8 streams, but
-	 * they don't really mean it that way. Ignore that.
+	 * they don't really mean it that way.
+	 * Some other APs are incorrectly advertising 3 spatial streams
+	 * with MCS 0-7 are required, but don't really mean it that way
+	 * and we'll connect only with HT, rather than even HE.
+	 * As a result, unfortunately the VHT basic MCS/NSS set cannot
+	 * be used at all unless the AP supports EHT, so check it only
+	 * in strict mode.
 	 */
-	if (!ieee80211_hw_check(&sdata->local->hw, STRICT) && !ap_min_req_set)
+	if (!ieee80211_hw_check(&sdata->local->hw, STRICT) &&
+	    (!ap_min_req_set || mode < IEEE80211_CONN_MODE_EHT))
 		return true;
 
 	/*
@@ -1157,6 +1165,7 @@ again:
 
 	if (conn->mode >= IEEE80211_CONN_MODE_VHT &&
 	    !ieee80211_verify_sta_vht_mcs_support(sdata, link_id, sband,
+						  conn->mode,
 						  elems->vht_operation)) {
 		conn->mode = IEEE80211_CONN_MODE_HT;
 		conn->bw_limit = min_t(enum ieee80211_conn_bw_limit,
