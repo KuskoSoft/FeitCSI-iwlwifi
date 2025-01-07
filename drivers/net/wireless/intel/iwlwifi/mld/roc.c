@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024 - 2025 Intel Corporation
  */
 #include <net/cfg80211.h>
 #include <net/mac80211.h>
@@ -41,6 +41,9 @@ int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct iwl_roc_req cmd = {
 		.action = cpu_to_le32(FW_CTXT_ACTION_ADD),
 	};
+	u8 ver = iwl_fw_lookup_cmd_ver(mld->fw,
+				       WIDE_ID(MAC_CONF_GROUP, ROC_CMD), 0);
+	u16 cmd_len = ver < 6 ? sizeof(struct iwl_roc_req_v5) : sizeof(cmd);
 	enum iwl_roc_activity activity;
 	int ret = 0;
 
@@ -97,7 +100,7 @@ int iwl_mld_start_roc(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	memcpy(cmd.node_addr, vif->addr, ETH_ALEN);
 
 	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(MAC_CONF_GROUP, ROC_CMD),
-				   &cmd);
+				   &cmd, cmd_len);
 	if (ret) {
 		IWL_ERR(mld, "Couldn't send the ROC_CMD\n");
 		return ret;
@@ -146,6 +149,9 @@ int iwl_mld_cancel_roc(struct ieee80211_hw *hw,
 	struct iwl_roc_req cmd = {
 		.action = cpu_to_le32(FW_CTXT_ACTION_REMOVE),
 	};
+	u8 ver = iwl_fw_lookup_cmd_ver(mld->fw,
+				       WIDE_ID(MAC_CONF_GROUP, ROC_CMD), 0);
+	u16 cmd_len = ver < 6 ? sizeof(struct iwl_roc_req_v5) : sizeof(cmd);
 	int ret;
 
 	lockdep_assert_wiphy(mld->wiphy);
@@ -161,7 +167,7 @@ int iwl_mld_cancel_roc(struct ieee80211_hw *hw,
 	cmd.activity = cpu_to_le32(mld_vif->roc_activity);
 
 	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(MAC_CONF_GROUP, ROC_CMD),
-				   &cmd);
+				   &cmd, cmd_len);
 	if (ret)
 		IWL_ERR(mld, "Couldn't send the command to cancel the ROC\n");
 
