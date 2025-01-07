@@ -122,7 +122,7 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 	u32 umac_error_table;
 	u16 status;
 
-	if (version != 6 || pkt_len != sizeof(*palive))
+	if (version < 6 || version > 7 || pkt_len != sizeof(*palive))
 		return false;
 
 	palive = (void *)pkt->data;
@@ -171,6 +171,10 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 		     "UMAC version: Major - 0x%x, Minor - 0x%x\n",
 		     le32_to_cpu(umac->umac_major),
 		     le32_to_cpu(umac->umac_minor));
+
+	if (version >= 7)
+		IWL_DEBUG_FW(mld, "FW alive flags 0x%x\n",
+			     le16_to_cpu(palive->flags));
 
 	iwl_fwrt_update_fw_versions(&mld->fwrt, lmac1, umac);
 

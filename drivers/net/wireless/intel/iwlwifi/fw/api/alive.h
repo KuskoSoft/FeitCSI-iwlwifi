@@ -110,7 +110,8 @@ struct iwl_alive_ntf_v6 {
 	struct iwl_umac_alive umac_data;
 	struct iwl_sku_id sku_id;
 	struct iwl_imr_alive_info imr;
-} __packed; /* UCODE_ALIVE_NTFY_API_S_VER_6 */
+} __packed; /* UCODE_ALIVE_NTFY_API_S_VER_6,
+	     * UCODE_ALIVE_NTFY_API_S_VER_7 */
 
 /**
  * enum iwl_extended_cfg_flags - commands driver may send before
