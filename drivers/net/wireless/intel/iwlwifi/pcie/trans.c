@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2007-2015, 2018-2024 Intel Corporation
+ * Copyright (C) 2007-2015, 2018-2025 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -3974,19 +3974,7 @@ struct iwl_trans *iwl_trans_pcie_alloc(struct pci_dev *pdev,
 		goto out_no_pci;
 	}
 
-#if LINUX_VERSION_IS_LESS(6,13,0)
-	/* In older kernels, pcim_request_all_regions does also the mapping */
-	void __iomem * const *table = pcim_iomap_table(pdev);
-	if (!table) {
-		dev_err(&pdev->dev, "pcim_iomap_table failed\n");
-		ret = -ENOMEM;
-		goto out_no_pci;
-	}
-
-	trans_pcie->hw_base = table[0];
-#else
 	trans_pcie->hw_base = pcim_iomap(pdev, 0, 0);
-#endif
 	if (!trans_pcie->hw_base) {
 		dev_err(&pdev->dev, "Could not ioremap PCI BAR 0.\n");
 		ret = -ENODEV;

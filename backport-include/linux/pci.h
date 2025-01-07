@@ -37,7 +37,18 @@ backport_pci_disable_link_state(struct pci_dev *pdev, int state)
 #define pcim_request_all_regions LINUX_BACKPORT(pcim_request_all_regions)
 static inline int pcim_request_all_regions(struct pci_dev *pdev, const char *name)
 {
-	return pcim_iomap_regions_request_all(pdev, BIT(0), name);
+	/* NOTE: this only works with pcim_enable_device() on older kernels */
+	int mask = 0;
+
+	for (int i = 0; i < PCI_STD_NUM_BARS; i++) {
+		if (!pci_resource_start(pdev, i))
+			continue;
+		if (!pci_resource_len(pdev, i))
+			continue;
+		mask |= BIT(i);
+	}
+
+	return pci_request_selected_regions(pdev, mask, name);
 }
 
 #endif /* LINUX_VERSION_IS_LESS(6,13,0) */
