@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2005-2014, 2018-2024 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2025 Intel Corporation
  * Copyright (C) 2015-2017 Intel Deutschland GmbH
  */
 #include "iwl-trans.h"
@@ -105,8 +105,8 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 				le32_to_cpu(lmac2_err_ptr);
 
 			IWL_DEBUG_FW(xvt, "Alive VER4\n");
-		} else if (version == 5 || version == 6) {
-			/* v5 and v6 are compatible (only IMR addition) */
+		} else if (version >= 5 && version <= 7) {
+			/* v5-7 are compatible (only IMR/flags addition) */
 			__le32 lmac2_err_ptr;
 
 			palive5 = (void *)pkt->data;
