@@ -20,6 +20,7 @@ static const struct determine_chan_mode_case {
 	u8 extra_supp_rate;
 	enum ieee80211_conn_mode conn_mode;
 	enum ieee80211_conn_mode expected_mode;
+	bool strict;
 	u8 userspace_selector;
 	struct ieee80211_ht_cap ht_capa_mask;
 	struct ieee80211_vht_cap vht_capa;
@@ -76,6 +77,7 @@ static const struct determine_chan_mode_case {
 		.vht_capa_mask = {
 			.supp_mcs.rx_mcs_map = cpu_to_le16(0xffff),
 		},
+		.strict = true,
 	}, {
 		.desc = "Masking out a TX rate in VHT capabilities",
 		.conn_mode = IEEE80211_CONN_MODE_EHT,
@@ -88,12 +90,14 @@ static const struct determine_chan_mode_case {
 		.vht_capa_mask = {
 			.supp_mcs.tx_mcs_map = cpu_to_le16(0xffff),
 		},
+		.strict = true,
 	}, {
 		.desc = "AP has higher VHT requirement than client",
 		.conn_mode = IEEE80211_CONN_MODE_EHT,
 		.expected_mode = IEEE80211_CONN_MODE_HT,
 		.vht_basic_mcs_5_8_set = 1,
 		.vht_basic_mcs_5_8 = 0xFE, /* require 5th stream */
+		.strict = true,
 	}, {
 		.desc = "all zero VHT basic rates are ignored (many APs broken)",
 		.conn_mode = IEEE80211_CONN_MODE_VHT,
@@ -198,6 +202,11 @@ static void test_determine_chan_mode(struct kunit *test)
 	struct ieee80211_chan_req chanreq = {};
 	struct cfg80211_chan_def ap_chandef = {};
 	struct ieee802_11_elems *elems;
+
+	if (params->strict)
+		set_bit(IEEE80211_HW_STRICT, t_sdata->local.hw.flags);
+	else
+		clear_bit(IEEE80211_HW_STRICT, t_sdata->local.hw.flags);
 
 	t_sdata->sdata->u.mgd.ht_capa_mask = params->ht_capa_mask;
 	t_sdata->sdata->u.mgd.vht_capa = params->vht_capa;

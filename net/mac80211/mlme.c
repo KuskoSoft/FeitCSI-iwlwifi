@@ -415,11 +415,9 @@ ieee80211_verify_sta_vht_mcs_support(struct ieee80211_sub_if_data *sdata,
 	 * with MCS 0-7 are required, but don't really mean it that way
 	 * and we'll connect only with HT, rather than even HE.
 	 * As a result, unfortunately the VHT basic MCS/NSS set cannot
-	 * be used at all unless the AP supports EHT, so check it only
-	 * in strict mode.
+	 * be used at all, so check it only in strict mode.
 	 */
-	if (!ieee80211_hw_check(&sdata->local->hw, STRICT) &&
-	    (!ap_min_req_set || mode < IEEE80211_CONN_MODE_EHT))
+	if (!ieee80211_hw_check(&sdata->local->hw, STRICT))
 		return true;
 
 	/*
