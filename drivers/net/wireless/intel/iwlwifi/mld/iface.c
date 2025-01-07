@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include <net/cfg80211.h>
 
@@ -389,7 +389,8 @@ iwl_mld_init_vif(struct iwl_mld *mld, struct ieee80211_vif *vif)
 
 	wiphy_work_init(&mld_vif->emlsr.unblock_tpt_wk,
 			iwl_mld_emlsr_unblock_tpt_wk);
-
+	wiphy_delayed_work_init(&mld_vif->emlsr.check_tpt_wk,
+				iwl_mld_emlsr_check_tpt);
 	wiphy_delayed_work_init(&mld_vif->emlsr.prevent_done_wk,
 				iwl_mld_emlsr_prevent_done_wk);
 	wiphy_delayed_work_init(&mld_vif->emlsr.tmp_non_bss_done_wk,

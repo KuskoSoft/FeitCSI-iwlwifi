@@ -85,10 +85,12 @@ struct iwl_mld_per_link_mpdu_counter {
  *
  * @lock: Needed to protect the counters when modified from statistics.
  * @per_link: per-link counters.
+ * @window_start_time: timestamp of the counting-window start
  */
 struct iwl_mld_per_q_mpdu_counter {
 	spinlock_t lock;
 	struct iwl_mld_per_link_mpdu_counter per_link[IWL_FW_MAX_LINK_ID + 1];
+	unsigned long window_start_time;
 } ____cacheline_aligned_in_smp;
 
 /**

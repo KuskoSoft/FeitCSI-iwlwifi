@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #ifndef __iwl_mld_iface_h__
 #define __iwl_mld_iface_h__
@@ -81,6 +81,8 @@ enum iwl_mld_emlsr_exit {
  * @last_exit_ts: Time of the last EMLSR exit (if @last_exit_reason is non-zero)
  * @exit_repeat_count: Number of times EMLSR was exited for the same reason
  * @unblock_tpt_wk: Unblock EMLSR because the throughput limit was reached
+ * @check_tpt_wk: a worker to check if IWL_MLD_EMLSR_BLOCKED_TPT should be
+ *	added, for example if there is no longer enough traffic.
  * @prevent_done_wk: Worker to remove %IWL_MLD_EMLSR_BLOCKED_PREVENTION
  * @tmp_non_bss_done_wk: Worker to remove %IWL_MLD_EMLSR_BLOCKED_TMP_NON_BSS
  */
@@ -99,6 +101,7 @@ struct iwl_mld_emlsr {
 	);
 
 	struct wiphy_work unblock_tpt_wk;
+	struct wiphy_delayed_work check_tpt_wk;
 
 	struct wiphy_delayed_work prevent_done_wk;
 	struct wiphy_delayed_work tmp_non_bss_done_wk;

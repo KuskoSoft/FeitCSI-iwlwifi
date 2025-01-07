@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #ifndef __iwl_mld_constants_h__
 #define __iwl_mld_constants_h__
@@ -36,6 +36,8 @@
 #define IWL_MLD_PS_HEAVY_RX_THLD_PACKETS	8
 
 #define IWL_MLD_TRIGGER_LINK_SEL_TIME_SEC	30
+
+#define IWL_MLD_TPT_COUNT_WINDOW (5 * HZ)
 
 #ifndef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 #define IWL_MLD_DIS_RANDOM_FW_ID                false

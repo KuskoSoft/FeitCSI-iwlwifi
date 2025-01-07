@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include <linux/ieee80211.h>
@@ -855,6 +855,22 @@ static void iwl_mld_count_mpdu(struct ieee80211_link_sta *link_sta, int queue,
 		return;
 
 	queue_counter = &mld_sta->mpdu_counters[queue];
+
+	mld = mld_vif->mld;
+
+	/* If it the window is over, first clear the counters.
+	 * When we are not blocked by TPT, the window is managed by check_tpt_wk
+	 */
+	if ((mld_vif->emlsr.blocked_reasons & IWL_MLD_EMLSR_BLOCKED_TPT) &&
+	    time_is_before_jiffies(queue_counter->window_start_time +
+					IWL_MLD_TPT_COUNT_WINDOW)) {
+		memset(queue_counter->per_link, 0,
+		       sizeof(queue_counter->per_link));
+		queue_counter->window_start_time = jiffies;
+
+		IWL_DEBUG_INFO(mld, "MPDU counters are cleared\n");
+	}
+
 	link_counter = &queue_counter->per_link[mld_link->fw_id];
 
 	spin_lock_bh(&queue_counter->lock);
@@ -876,7 +892,6 @@ static void iwl_mld_count_mpdu(struct ieee80211_link_sta *link_sta, int queue,
 		total_mpdus += tx ? queue_counter->per_link[i].tx :
 				    queue_counter->per_link[i].rx;
 
-	mld = mld_vif->mld;
 
 	/* Unblock is already queued if the threshold was reached before */
 	if (total_mpdus - count >= IWL_MLD_ENTER_EMLSR_TPT_THRESH)

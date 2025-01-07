@@ -460,8 +460,6 @@ void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 	iwl_mld_process_per_sta_stats(mld, stats->per_sta);
 
 	/* TODO: per_phy stats (task=statistics) */
-
-	iwl_mld_emlsr_update_tpt(mld);
 }
 
 void iwl_mld_handle_stats_oper_part1_notif(struct iwl_mld *mld,

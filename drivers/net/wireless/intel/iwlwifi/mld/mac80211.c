@@ -1776,6 +1776,8 @@ static int iwl_mld_move_sta_state_down(struct iwl_mld *mld,
 			wiphy_delayed_work_cancel(mld->wiphy,
 						  &mld_vif->emlsr.tmp_non_bss_done_wk);
 			wiphy_work_cancel(mld->wiphy, &mld_vif->emlsr.unblock_tpt_wk);
+			wiphy_delayed_work_cancel(mld->wiphy,
+						  &mld_vif->emlsr.check_tpt_wk);
 
 			iwl_mld_reset_cca_40mhz_workaround(mld, vif);
 		}

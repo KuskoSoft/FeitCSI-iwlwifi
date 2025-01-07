@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include "mlo.h"
 
@@ -239,6 +239,10 @@ static int _iwl_mld_emlsr_block(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		       iwl_mld_get_emlsr_blocked_string(reason), reason);
 	iwl_mld_print_emlsr_blocked(mld, mld_vif->emlsr.blocked_reasons);
 
+	if (reason == IWL_MLD_EMLSR_BLOCKED_TPT)
+		wiphy_delayed_work_cancel(mld_vif->mld->wiphy,
+					  &mld_vif->emlsr.check_tpt_wk);
+
 	return _iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_BLOCK,
 				   link_to_keep, sync);
 }
@@ -309,6 +313,11 @@ void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 		       "Unblocking EMLSR mode. reason = %s (0x%x)\n",
 		       iwl_mld_get_emlsr_blocked_string(reason), reason);
 	iwl_mld_print_emlsr_blocked(mld, mld_vif->emlsr.blocked_reasons);
+
+	if (reason == IWL_MLD_EMLSR_BLOCKED_TPT)
+		wiphy_delayed_work_queue(mld_vif->mld->wiphy,
+					 &mld_vif->emlsr.check_tpt_wk,
+					 round_jiffies_relative(IWL_MLD_TPT_COUNT_WINDOW));
 
 	if (!mld_vif->emlsr.blocked_reasons)
 		iwl_mld_unblocked_emlsr(mld, vif);
@@ -471,39 +480,36 @@ int iwl_mld_emlsr_check_non_bss_block(struct iwl_mld *mld,
 #define EMLSR_MIN_TX 3000
 #define EMLSR_MIN_RX 400
 
-static void
-_iwl_mld_emlsr_update_tpt(struct iwl_mld *mld, struct ieee80211_vif *vif)
+void iwl_mld_emlsr_check_tpt(struct wiphy *wiphy, struct wiphy_work *wk)
 {
-	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
-	struct iwl_mld_sta *mld_sta =
-		iwl_mld_sta_from_mac80211(mld_vif->ap_sta);
+	struct iwl_mld_vif *mld_vif = container_of(wk, struct iwl_mld_vif,
+						   emlsr.check_tpt_wk.work);
+	struct ieee80211_vif *vif =
+		container_of((void *)mld_vif, struct ieee80211_vif, drv_priv);
+	struct iwl_mld *mld = mld_vif->mld;
+	struct iwl_mld_sta *mld_sta;
 	struct iwl_mld_link *sec_link;
 	unsigned long total_tx = 0, total_rx = 0;
 	unsigned long sec_link_tx = 0, sec_link_rx = 0;
 	u8 sec_link_tx_perc, sec_link_rx_perc;
 	s8 sec_link_id;
 
+	if (!iwl_mld_vif_has_emlsr(vif) || !mld_vif->ap_sta)
+		return;
+
+	mld_sta = iwl_mld_sta_from_mac80211(mld_vif->ap_sta);
+
 	/* We only count for the AP sta in a MLO connection */
 	if (!mld_sta->mpdu_counters)
 		return;
 
-	/* We are waiting for TPT in order to unblock, just zero counters */
-	if (mld_vif->emlsr.blocked_reasons & IWL_MLD_EMLSR_BLOCKED_TPT) {
-		for (int q = 0; q < mld->trans->num_rx_queues; q++) {
-			struct iwl_mld_per_q_mpdu_counter *queue_counter =
-				&mld_sta->mpdu_counters[q];
-
-			spin_lock_bh(&queue_counter->lock);
-
-			memset(queue_counter->per_link, 0,
-			       sizeof(queue_counter->per_link));
-
-			spin_unlock_bh(&queue_counter->lock);
-		}
-
+	/* This wk should only run when the TPT blocker isn't set.
+	 * When the blocker is set, the decision to remove it, as well as
+	 * clearing the counters is done in DP (to avoid having a wk every
+	 * 5 seconds when idle. When the blocker is unset, we are not idle anyway)
+	 */
+	if (WARN_ON(mld_vif->emlsr.blocked_reasons & IWL_MLD_EMLSR_BLOCKED_TPT))
 		return;
-	}
-
 	/*
 	 * TPT is unblocked, need to check if the TPT criteria is still met.
 	 *
@@ -576,29 +582,16 @@ _iwl_mld_emlsr_update_tpt(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	if ((total_tx > EMLSR_MIN_TX &&
 	     sec_link_tx_perc < EMLSR_SEC_LINK_MIN_PERC) ||
 	    (total_rx > EMLSR_MIN_RX &&
-	     sec_link_rx_perc < EMLSR_SEC_LINK_MIN_PERC))
+	     sec_link_rx_perc < EMLSR_SEC_LINK_MIN_PERC)) {
 		iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_LINK_USAGE,
 				   iwl_mld_get_primary_link(vif));
-}
-
-static void iwl_mld_vif_iter_emlsr_update_tpt(void *_data, u8 *mac,
-					      struct ieee80211_vif *vif)
-{
-	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
-	struct iwl_mld *mld = mld_vif->mld;
-
-	if (!iwl_mld_vif_has_emlsr(vif) || !mld_vif->ap_sta)
 		return;
+	}
 
-	_iwl_mld_emlsr_update_tpt(mld, vif);
-}
-
-void iwl_mld_emlsr_update_tpt(struct iwl_mld *mld)
-{
-	ieee80211_iterate_active_interfaces_mtx(mld->hw,
-						IEEE80211_IFACE_ITER_NORMAL,
-						iwl_mld_vif_iter_emlsr_update_tpt,
-						NULL);
+	/* Check again when the next window ends  */
+	wiphy_delayed_work_queue(mld_vif->mld->wiphy,
+				 &mld_vif->emlsr.check_tpt_wk,
+				 round_jiffies_relative(IWL_MLD_TPT_COUNT_WINDOW));
 }
 
 void iwl_mld_emlsr_unblock_tpt_wk(struct wiphy *wiphy, struct wiphy_work *wk)
