@@ -263,6 +263,7 @@ static const struct iwl_hcmd_names iwl_mld_mac_conf_names[] = {
 static const struct iwl_hcmd_names iwl_mld_data_path_names[] = {
 	HCMD_NAME(TRIGGER_RX_QUEUES_NOTIF_CMD),
 	HCMD_NAME(WNM_PLATFORM_PTM_REQUEST_CMD),
+	HCMD_NAME(WNM_80211V_TIMING_MEASUREMENT_CONFIG_CMD),
 	HCMD_NAME(RFH_QUEUE_CONFIG_CMD),
 	HCMD_NAME(TLC_MNG_CONFIG_CMD),
 	HCMD_NAME(RX_BAID_ALLOCATION_CONFIG_CMD),
@@ -473,6 +474,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 	wiphy_lock(mld->wiphy);
 	iwl_mld_thermal_exit(mld);
 	iwl_mld_low_latency_stop(mld);
+	iwl_mld_deinit_time_sync(mld);
 	wiphy_unlock(mld->wiphy);
 
 	ieee80211_unregister_hw(mld->hw);

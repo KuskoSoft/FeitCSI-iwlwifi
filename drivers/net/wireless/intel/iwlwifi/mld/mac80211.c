@@ -2610,6 +2610,24 @@ static void iwl_mld_prep_add_interface(struct ieee80211_hw *hw,
 						NULL);
 }
 
+static int iwl_mld_set_hw_timestamp(struct ieee80211_hw *hw,
+				    struct ieee80211_vif *vif,
+				    struct cfg80211_set_hw_timestamp *hwts)
+{
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	u32 protocols = 0;
+
+	/* HW timestamping is only supported for a specific station */
+	if (!hwts->macaddr)
+		return -EOPNOTSUPP;
+
+	if (hwts->enable)
+		protocols =
+			IWL_TIME_SYNC_PROTOCOL_TM | IWL_TIME_SYNC_PROTOCOL_FTM;
+
+	return iwl_mld_time_sync_config(mld, hwts->macaddr, protocols);
+}
+
 const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
@@ -2677,4 +2695,5 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.leave_ibss = iwl_mld_mac80211_leave_ibss,
 	.tx_last_beacon = iwl_mld_mac80211_tx_last_beacon,
 	.prep_add_interface = iwl_mld_prep_add_interface,
+	.set_hw_timestamp = iwl_mld_set_hw_timestamp,
 };

@@ -505,8 +505,10 @@ static int iwl_mld_config_fw(struct iwl_mld *mld)
 	if (ret)
 		return ret;
 
-	if (mld->fw_status.in_hw_restart)
+	if (mld->fw_status.in_hw_restart) {
 		iwl_mld_send_recovery_cmd(mld, ERROR_RECOVERY_UPDATE_DB);
+		iwl_mld_time_sync_fw_config(mld);
+	}
 
 	iwl_mld_led_config_fw(mld);
 
