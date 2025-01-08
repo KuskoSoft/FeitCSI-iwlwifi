@@ -709,6 +709,53 @@ iwl_dbgfs_vif_twt_setup_write(struct iwl_mld *mld, char *buf, size_t count,
 
 VIF_DEBUGFS_WRITE_FILE_OPS(twt_setup, 256);
 
+static ssize_t
+iwl_dbgfs_vif_twt_operation_write(struct iwl_mld *mld, char *buf, size_t count,
+				  void *data)
+{
+	struct ieee80211_vif *vif = data;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_twt_operation_cmd twt_cmd = {};
+	int link_id = vif->active_links ? __ffs(vif->active_links) : 0;
+	struct iwl_mld_link *mld_link = iwl_mld_link_dereference_check(mld_vif,
+								       link_id);
+	int ret;
+
+	if (WARN_ON(!mld_link))
+		return -ENODEV;
+
+	if (iwl_mld_dbgfs_fw_cmd_disabled(mld))
+		return -EIO;
+
+	if (hweight16(vif->active_links) > 1)
+		return -EOPNOTSUPP;
+
+	ret = sscanf(buf, "%u %llu %u %u %u %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu %hhu",
+		     &twt_cmd.twt_operation, &twt_cmd.target_wake_time,
+		     &twt_cmd.interval_exponent, &twt_cmd.interval_mantissa,
+		     &twt_cmd.minimum_wake_duration, &twt_cmd.trigger,
+		     &twt_cmd.flow_type, &twt_cmd.flow_id,
+		     &twt_cmd.twt_protection, &twt_cmd.ndp_paging_indicator,
+		     &twt_cmd.responder_pm_mode, &twt_cmd.negotiation_type,
+		     &twt_cmd.twt_request, &twt_cmd.implicit,
+		     &twt_cmd.twt_group_assignment, &twt_cmd.twt_channel,
+		     &twt_cmd.restricted_info_present, &twt_cmd.dl_bitmap_valid,
+		     &twt_cmd.ul_bitmap_valid, &twt_cmd.dl_tid_bitmap,
+		     &twt_cmd.ul_tid_bitmap);
+
+	if (ret != 21)
+		return -EINVAL;
+
+	twt_cmd.link_id = cpu_to_le32(mld_link->fw_id);
+
+	ret = iwl_mld_send_cmd_pdu(mld,
+				   WIDE_ID(MAC_CONF_GROUP, TWT_OPERATION_CMD),
+				   &twt_cmd);
+	return ret ?: count;
+}
+
+VIF_DEBUGFS_WRITE_FILE_OPS(twt_operation, 256);
+
 void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 			     struct ieee80211_vif *vif)
 {
@@ -752,6 +799,7 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 	VIF_DEBUGFS_ADD_FILE(low_latency, mld_vif_dbgfs, 0600);
 
 	VIF_DEBUGFS_ADD_FILE(twt_setup, mld_vif_dbgfs, 0200);
+	VIF_DEBUGFS_ADD_FILE(twt_operation, mld_vif_dbgfs, 0200);
 }
 
 #define LINK_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\
