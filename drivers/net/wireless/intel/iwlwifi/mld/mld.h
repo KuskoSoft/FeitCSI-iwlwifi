@@ -34,6 +34,7 @@
 #include "low_latency.h"
 #include "constants.h"
 #include "rfi.h"
+#include "ptp.h"
 
 /**
  * DOC: Introduction
@@ -181,6 +182,7 @@
  *	being IBSS manager for that time and needing to respond to probe
  *	requests
  * @rfi: RFI data.
+ * @ptp_data: data of the PTP clock
  */
 struct iwl_mld {
 	/* Add here fields that need clean up on restart */
@@ -282,6 +284,8 @@ struct iwl_mld {
 #endif
 
 	struct iwl_mld_rfi rfi;
+
+	struct ptp_data ptp_data;
 };
 
 /* memset the part of the struct that requires cleanup on restart */

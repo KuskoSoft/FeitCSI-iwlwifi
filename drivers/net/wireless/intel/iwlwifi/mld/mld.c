@@ -438,6 +438,8 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_mld_add_debugfs_files(mld, dbgfs_dir);
 	iwl_mld_thermal_initialize(mld);
 
+	iwl_mld_ptp_init(mld);
+
 	return op_mode;
 
 low_latency_free:
@@ -458,6 +460,7 @@ iwl_op_mode_mld_stop(struct iwl_op_mode *op_mode)
 {
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 
+	iwl_mld_ptp_remove(mld);
 	iwl_mld_leds_exit(mld);
 
 	wiphy_lock(mld->wiphy);
