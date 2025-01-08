@@ -1715,6 +1715,8 @@ static int iwl_mld_move_sta_state_up(struct iwl_mld *mld,
 		return ret;
 	} else if (old_state == IEEE80211_STA_ASSOC &&
 		   new_state == IEEE80211_STA_AUTHORIZED) {
+		ret = 0;
+
 		if (!sta->tdls) {
 			mld_vif->authorized = true;
 
