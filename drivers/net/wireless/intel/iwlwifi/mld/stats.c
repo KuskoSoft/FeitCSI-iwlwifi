@@ -11,6 +11,7 @@
 #include "iface.h"
 #include "mlo.h"
 #include "scan.h"
+#include "phy.h"
 #include "fw/api/stats.h"
 
 static int iwl_mld_send_fw_stats_cmd(struct iwl_mld *mld, u32 cfg_mask,
@@ -445,6 +446,31 @@ iwl_mld_process_per_sta_stats(struct iwl_mld *mld,
 	}
 }
 
+static void iwl_mld_fill_chanctx_stats(struct ieee80211_hw *hw,
+				       struct ieee80211_chanctx_conf *ctx,
+				       void *data)
+{
+	struct iwl_mld_phy *phy = iwl_mld_phy_from_mac80211(ctx);
+	const struct iwl_stats_ntfy_per_phy *per_phy = data;
+
+	if (WARN_ON(phy->fw_id >= IWL_STATS_MAX_PHY_OPERATIONAL))
+		return;
+
+	phy->channel_load_by_us =
+		le32_to_cpu(per_phy[phy->fw_id].channel_load_by_us);
+
+	/* TODO: channel load not by us (task=statistics) */
+}
+
+static void
+iwl_mld_process_per_phy_stats(struct iwl_mld *mld,
+			      const struct iwl_stats_ntfy_per_phy *per_phy)
+{
+	ieee80211_iter_chan_contexts_atomic(mld->hw,
+					    iwl_mld_fill_chanctx_stats,
+					    (void *)(uintptr_t)per_phy);
+}
+
 void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 				     struct iwl_rx_packet *pkt)
 {
@@ -458,8 +484,7 @@ void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
 
 	iwl_mld_process_per_link_stats(mld, stats->per_link, curr_ts_usec);
 	iwl_mld_process_per_sta_stats(mld, stats->per_sta);
-
-	/* TODO: per_phy stats (task=statistics) */
+	iwl_mld_process_per_phy_stats(mld, stats->per_phy);
 }
 
 void iwl_mld_handle_stats_oper_part1_notif(struct iwl_mld *mld,

@@ -13,6 +13,8 @@
  * @fw_id: fw id of the phy.
  * @chandef: the last chandef that mac80211 configured the driver
  *	with. Used to detect a no-op when the chanctx changes.
+ * @channel_load_by_us: channel load on this channel caused by
+ *	the NIC itself, as indicated by firmware
  */
 struct iwl_mld_phy {
 	/* Add here fields that need clean up on hw restart */
@@ -21,6 +23,7 @@ struct iwl_mld_phy {
 		struct cfg80211_chan_def chandef;
 	);
 	/* And here fields that survive a hw restart */
+	u32 channel_load_by_us;
 };
 
 static inline struct iwl_mld_phy *
