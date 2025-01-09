@@ -19,6 +19,10 @@
  * @scale_update_adj_time_ns: adjusted time when the scale was last updated,
  *	in nanoseconds
  * @scaled_freq: clock frequency offset, scaled to 65536000000
+ * @last_gp2: the last GP2 reading from the hardware, used for tracking GP2
+ *	wraparounds
+ * @wrap_counter: number of wraparounds since scale_update_adj_time_ns
+ * @dwork: worker scheduled every 1 hour to detect workarounds
  */
 struct ptp_data {
 	struct ptp_clock *ptp_clock;
@@ -29,6 +33,9 @@ struct ptp_data {
 	u32 scale_update_gp2;
 	u64 scale_update_adj_time_ns;
 	u64 scaled_freq;
+	u32 last_gp2;
+	u32 wrap_counter;
+	struct delayed_work dwork;
 };
 
 void iwl_mld_ptp_init(struct iwl_mld *mld);
