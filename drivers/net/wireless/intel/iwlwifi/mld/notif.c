@@ -34,6 +34,7 @@
 #include "roc.h"
 #include "stats.h"
 #include "coex.h"
+#include "time_sync.h"
 
 /* Please use this in an increasing order of the versions */
 #define CMD_VER_ENTRY(_ver, _struct) { .size = sizeof(struct _struct), .ver = _ver },
@@ -370,6 +371,8 @@ CMD_VERSIONS(emlsr_trans_fail_notif,
 	     CMD_VER_ENTRY(1, iwl_esr_trans_fail_notif))
 CMD_VERSIONS(uapsd_misbehaving_ap_notif,
 	     CMD_VER_ENTRY(1, iwl_uapsd_misbehaving_ap_notif))
+CMD_VERSIONS(time_msmt_notif,
+	     CMD_VER_ENTRY(1, iwl_time_msmt_notify))
 
 DEFINE_SIMPLE_CANCELLATION(session_prot, iwl_session_prot_notif, mac_link_id)
 DEFINE_SIMPLE_CANCELLATION(tlc, iwl_tlc_update_notif, sta_id)
@@ -473,6 +476,9 @@ const struct iwl_rx_handler iwl_mld_rx_handlers[] = {
 			     emlsr_trans_fail_notif, RX_HANDLER_ASYNC)
 	RX_HANDLER_OF_VIF(LEGACY_GROUP, PSM_UAPSD_AP_MISBEHAVING_NOTIFICATION,
 			  uapsd_misbehaving_ap_notif)
+	RX_HANDLER_NO_OBJECT(LEGACY_GROUP,
+			     WNM_80211V_TIMING_MEASUREMENT_NOTIFICATION,
+			     time_msmt_notif, RX_HANDLER_SYNC)
 };
 EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rx_handlers);
 

@@ -56,7 +56,7 @@ static void iwl_mld_ptp_update_new_read(struct iwl_mld *mld, u32 gp2)
 	schedule_delayed_work(&mld->ptp_data.dwork, IWL_PTP_WRAP_TIME);
 }
 
-static u64 iwl_mld_ptp_get_adj_time(struct iwl_mld *mld, u64 base_time_ns)
+u64 iwl_mld_ptp_get_adj_time(struct iwl_mld *mld, u64 base_time_ns)
 {
 	struct ptp_data *data = &mld->ptp_data;
 	u64 scale_time_gp2_ns = mld->ptp_data.scale_update_gp2 * NSEC_PER_USEC;

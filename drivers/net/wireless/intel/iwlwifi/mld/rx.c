@@ -12,6 +12,7 @@
 #include "rx.h"
 #include "hcmd.h"
 #include "iface.h"
+#include "time_sync.h"
 #include "fw/dbg.h"
 #include "fw/api/rx.h"
 
@@ -1821,6 +1822,12 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 
 	if (iwl_mld_build_rx_skb(mld, skb, hdr, mpdu_len, crypto_len, rxb))
 		goto drop;
+
+	/* time sync frame is saved and will be released later when the
+	 * notification with the timestamps arrives.
+	 */
+	if (iwl_mld_time_sync_frame(mld, skb, hdr->addr2))
+		goto out;
 
 	reorder_res = iwl_mld_reorder(mld, napi, queue, sta, skb, mpdu_desc);
 	switch (reorder_res) {

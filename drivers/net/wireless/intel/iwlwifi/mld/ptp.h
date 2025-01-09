@@ -40,5 +40,6 @@ struct ptp_data {
 
 void iwl_mld_ptp_init(struct iwl_mld *mld);
 void iwl_mld_ptp_remove(struct iwl_mld *mld);
+u64 iwl_mld_ptp_get_adj_time(struct iwl_mld *mld, u64 base_time_ns);
 
 #endif /* __iwl_mld_ptp_h__ */
