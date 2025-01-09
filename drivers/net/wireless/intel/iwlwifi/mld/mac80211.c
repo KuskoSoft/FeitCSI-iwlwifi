@@ -1240,7 +1240,8 @@ iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
 	if (changes & (BSS_CHANGED_CQM | BSS_CHANGED_BEACON_INFO))
 		iwl_mld_enable_beacon_filter(mld, link_conf, false);
 
-	/* TODO: BSS_CHANGED_BANDWIDTH (task=EMLSR) */
+	if (changes & BSS_CHANGED_BANDWIDTH)
+		iwl_mld_emlsr_check_equal_bw(mld, vif, link_conf);
 }
 
 static int iwl_mld_update_mu_groups(struct iwl_mld *mld,

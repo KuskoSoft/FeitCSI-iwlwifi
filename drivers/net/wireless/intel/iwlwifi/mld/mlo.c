@@ -892,3 +892,21 @@ void iwl_mld_select_links(struct iwl_mld *mld)
 						iwl_mld_vif_iter_select_links,
 						NULL);
 }
+
+void iwl_mld_emlsr_check_equal_bw(struct iwl_mld *mld,
+				  struct ieee80211_vif *vif,
+				  struct ieee80211_bss_conf *link)
+{
+	u8 other_link_id = iwl_mld_get_other_link(vif, link->link_id);
+	struct ieee80211_bss_conf *other_link =
+		link_conf_dereference_check(vif, other_link_id);
+
+	if (!ieee80211_vif_link_active(vif, link->link_id) ||
+	    !iwl_mld_emlsr_active(vif) ||
+	    WARN_ON(link->link_id == other_link_id || !other_link))
+		return;
+
+	if (link->chanreq.oper.width != other_link->chanreq.oper.width)
+		iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_BANDWIDTH,
+				   iwl_mld_get_primary_link(vif));
+}
