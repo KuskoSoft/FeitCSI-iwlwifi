@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024 - 2025 Intel Corporation
  */
 #include <net/ip.h>
 
@@ -1072,6 +1072,7 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 	while (!skb_queue_empty(&skbs)) {
 		struct sk_buff *skb = __skb_dequeue(&skbs);
 		struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+		struct ieee80211_hdr *hdr = (void *)skb->data;
 
 		skb_freed++;
 
@@ -1099,7 +1100,6 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 			info->flags |= IEEE80211_TX_STAT_ACK;
 
 		if (tx_failure) {
-			struct ieee80211_hdr *hdr = (void *)skb->data;
 			enum iwl_fw_ini_time_point tp =
 				IWL_FW_INI_TIME_POINT_TX_FAILED;
 
@@ -1114,7 +1114,8 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 		iwl_mld_hwrate_to_tx_rate(le32_to_cpu(tx_resp->initial_rate),
 					  info);
 
-		ieee80211_tx_status_skb(mld->hw, skb);
+		if (likely(!iwl_mld_time_sync_frame(mld, skb, hdr->addr1)))
+			ieee80211_tx_status_skb(mld->hw, skb);
 	}
 
 	IWL_DEBUG_TX_REPLY(mld,

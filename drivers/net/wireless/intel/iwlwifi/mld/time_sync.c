@@ -202,3 +202,39 @@ void iwl_mld_handle_time_msmt_notif(struct iwl_mld *mld,
 		       ktime_to_ns(rx_status->ack_tx_hwtstamp));
 	ieee80211_rx_napi(mld->hw, NULL, skb, NULL);
 }
+
+void iwl_mld_handle_time_sync_confirm_notif(struct iwl_mld *mld,
+					    struct iwl_rx_packet *pkt)
+{
+	struct ptp_data *data = &mld->ptp_data;
+	struct iwl_time_msmt_cfm_notify *notif = (void *)pkt->data;
+	struct ieee80211_tx_status status = {};
+	struct skb_shared_hwtstamps *shwt;
+	u64 ts_10ns, adj_time;
+
+	status.skb =
+		iwl_mld_time_sync_find_skb(mld, notif->peer_addr,
+					   le32_to_cpu(notif->dialog_token));
+
+	if (IWL_FW_CHECK(mld, !status.skb,
+			 "Time sync confirm but no pending skb\n"))
+		return;
+
+	spin_lock_bh(&data->lock);
+	ts_10ns = iwl_mld_get_64_bit(notif->t1_hi, notif->t1_lo);
+	adj_time = iwl_mld_ptp_get_adj_time(mld, ts_10ns * 10);
+	shwt = skb_hwtstamps(status.skb);
+	shwt->hwtstamp = ktime_set(0, adj_time);
+
+	ts_10ns = iwl_mld_get_64_bit(notif->t4_hi, notif->t4_lo);
+	adj_time = iwl_mld_ptp_get_adj_time(mld, ts_10ns * 10);
+	status.info = IEEE80211_SKB_CB(status.skb);
+	status.ack_hwtstamp = ktime_set(0, adj_time);
+	spin_unlock_bh(&data->lock);
+
+	IWL_DEBUG_INFO(mld,
+		       "Time sync: TX event - report frame t1=%llu t4=%llu\n",
+		       ktime_to_ns(shwt->hwtstamp),
+		       ktime_to_ns(status.ack_hwtstamp));
+	ieee80211_tx_status_ext(mld->hw, &status);
+}

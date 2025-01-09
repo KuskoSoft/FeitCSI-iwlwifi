@@ -20,5 +20,7 @@ void iwl_mld_handle_time_msmt_notif(struct iwl_mld *mld,
 				    struct iwl_rx_packet *pkt);
 bool iwl_mld_time_sync_frame(struct iwl_mld *mld, struct sk_buff *skb,
 			     u8 *addr);
+void iwl_mld_handle_time_sync_confirm_notif(struct iwl_mld *mld,
+					    struct iwl_rx_packet *pkt);
 
 #endif /* __iwl_mld_time_sync_h__ */
