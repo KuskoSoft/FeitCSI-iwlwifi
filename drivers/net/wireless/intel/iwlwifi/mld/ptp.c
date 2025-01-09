@@ -5,6 +5,7 @@
 
 #include "mld.h"
 #include "iwl-debug.h"
+#include "hcmd.h"
 #include "ptp.h"
 #include <linux/timekeeping.h>
 
@@ -184,6 +185,90 @@ static void iwl_mld_ptp_work(struct work_struct *wk)
 	spin_unlock_bh(&data->lock);
 }
 
+static int
+iwl_mld_get_crosstimestamp_fw(struct iwl_mld *mld, u32 *gp2, u64 *sys_time)
+{
+	struct iwl_synced_time_cmd synced_time_cmd = {
+		.operation = cpu_to_le32(IWL_SYNCED_TIME_OPERATION_READ_BOTH)
+	};
+	struct iwl_host_cmd cmd = {
+		.id = WIDE_ID(DATA_PATH_GROUP, WNM_PLATFORM_PTM_REQUEST_CMD),
+		.flags = CMD_WANT_SKB,
+		.data[0] = &synced_time_cmd,
+		.len[0] = sizeof(synced_time_cmd),
+	};
+	struct iwl_synced_time_rsp *resp;
+	struct iwl_rx_packet *pkt;
+	int ret;
+	u64 gp2_10ns;
+
+	wiphy_lock(mld->wiphy);
+	ret = iwl_mld_send_cmd(mld, &cmd);
+	wiphy_unlock(mld->wiphy);
+	if (ret)
+		return ret;
+
+	pkt = cmd.resp_pkt;
+
+	if (iwl_rx_packet_payload_len(pkt) != sizeof(*resp)) {
+		IWL_DEBUG_PTP(mld, "PTP: Invalid PTM command response\n");
+		iwl_free_resp(&cmd);
+		return -EIO;
+	}
+
+	resp = (void *)pkt->data;
+
+	gp2_10ns = (u64)le32_to_cpu(resp->gp2_timestamp_hi) << 32 |
+		le32_to_cpu(resp->gp2_timestamp_lo);
+	*gp2 = div_u64(gp2_10ns, 100);
+
+	*sys_time = (u64)le32_to_cpu(resp->platform_timestamp_hi) << 32 |
+		le32_to_cpu(resp->platform_timestamp_lo);
+
+	iwl_free_resp(&cmd);
+	return ret;
+}
+
+static int
+iwl_mld_phc_get_crosstimestamp(struct ptp_clock_info *ptp,
+			       struct system_device_crosststamp *xtstamp)
+{
+	struct iwl_mld *mld = container_of(ptp, struct iwl_mld,
+					   ptp_data.ptp_clock_info);
+	struct ptp_data *data = &mld->ptp_data;
+	int ret = 0;
+	/* Raw value read from GP2 register in usec */
+	u32 gp2;
+	/* GP2 value in ns*/
+	s64 gp2_ns;
+	/* System (wall) time */
+	ktime_t sys_time;
+
+	memset(xtstamp, 0, sizeof(struct system_device_crosststamp));
+
+	ret = iwl_mld_get_crosstimestamp_fw(mld, &gp2, &sys_time);
+	if (ret) {
+		IWL_DEBUG_PTP(mld,
+			      "PTP: fw get_crosstimestamp failed (ret=%d)\n",
+			      ret);
+		return ret;
+	}
+
+	spin_lock_bh(&data->lock);
+	gp2_ns = iwl_mld_ptp_get_adj_time(mld, (u64)gp2 * NSEC_PER_USEC);
+	spin_unlock_bh(&data->lock);
+
+	IWL_DEBUG_PTP(mld,
+		      "Got Sync Time: GP2:%u, last_GP2: %u, GP2_ns: %lld, sys_time: %lld\n",
+		      gp2, mld->ptp_data.last_gp2, gp2_ns, (s64)sys_time);
+
+	/* System monotonic raw time is not used */
+	xtstamp->device = ns_to_ktime(gp2_ns);
+	xtstamp->sys_realtime = sys_time;
+
+	return ret;
+}
+
 void iwl_mld_ptp_init(struct iwl_mld *mld)
 {
 	if (WARN_ON(mld->ptp_data.ptp_clock))
@@ -198,6 +283,8 @@ void iwl_mld_ptp_init(struct iwl_mld *mld)
 	mld->ptp_data.ptp_clock_info.adjtime = iwl_mld_ptp_adjtime;
 	mld->ptp_data.ptp_clock_info.adjfine = iwl_mld_ptp_adjfine;
 	mld->ptp_data.scaled_freq = PTP_SCALE_FACTOR;
+	mld->ptp_data.ptp_clock_info.getcrosststamp =
+					iwl_mld_phc_get_crosstimestamp;
 
 	/* Give a short 'friendly name' to identify the PHC clock */
 	snprintf(mld->ptp_data.ptp_clock_info.name,
