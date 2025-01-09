@@ -59,4 +59,9 @@ void iwl_mld_handle_rfi_support_notif(struct iwl_mld *mld,
 bool iwl_mld_rfi_supported(struct iwl_mld *mld,
 			   enum iwl_mld_rfi_feature rfi_feature);
 
+u32
+iwl_mld_rfi_emlsr_state_link_pair(struct iwl_mld *mld,
+				  const struct cfg80211_chan_def *chandef_a,
+				  const struct cfg80211_chan_def *chandef_b);
+
 #endif /* __iwl_mld_rfi_h__ */

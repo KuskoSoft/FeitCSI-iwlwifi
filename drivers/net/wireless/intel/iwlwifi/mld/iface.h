@@ -61,6 +61,7 @@ enum iwl_mld_emlsr_blocked {
  * @IWL_MLD_EMLSR_EXIT_BT_COEX: Exit EMLSR due to BT coexistence
  * @IWL_MLD_EMLSR_EXIT_CHAN_LOAD: Exit EMLSR because the primary channel is not
  *	loaded enough to justify EMLSR.
+ * @IWL_MLD_EMLSR_EXIT_RFI: Exit EMLSR due to RFI
  */
 enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_BLOCK		= 0x1,
@@ -73,6 +74,7 @@ enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_LINK_USAGE		= 0x80,
 	IWL_MLD_EMLSR_EXIT_BT_COEX		= 0x100,
 	IWL_MLD_EMLSR_EXIT_CHAN_LOAD		= 0x200,
+	IWL_MLD_EMLSR_EXIT_RFI			= 0x400,
 };
 
 /**

@@ -51,7 +51,8 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 	HOW(LOW_RSSI)			\
 	HOW(LINK_USAGE)			\
 	HOW(BT_COEX)			\
-	HOW(CHAN_LOAD)
+	HOW(CHAN_LOAD)			\
+	HOW(RFI)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -742,7 +743,7 @@ iwl_mld_valid_emlsr_pair(struct ieee80211_vif *vif,
 		ret |= IWL_MLD_EMLSR_EXIT_BANDWIDTH;
 	}
 
-	/* TODO: task=EMLSR task=RFI RFI considerations */
+	ret |= iwl_mld_rfi_emlsr_state_link_pair(mld, a->chandef, b->chandef);
 
 	if (ret) {
 		IWL_DEBUG_INFO(mld,
