@@ -8,12 +8,43 @@
 #include "ptp.h"
 #include <linux/timekeeping.h>
 
+static int iwl_mld_get_systime(struct iwl_mld *mld, u32 *gp2)
+{
+	*gp2 = iwl_read_prph(mld->trans, mld->trans->cfg->gp2_reg_addr);
+
+	if (*gp2 == 0x5a5a5a5a)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int iwl_mld_ptp_gettime(struct ptp_clock_info *ptp,
+			       struct timespec64 *ts)
+{
+	struct iwl_mld *mld = container_of(ptp, struct iwl_mld,
+					   ptp_data.ptp_clock_info);
+	struct ptp_data *data = &mld->ptp_data;
+	u32 gp2;
+	u64 ns;
+
+	if (iwl_mld_get_systime(mld, &gp2)) {
+		IWL_DEBUG_PTP(mld, "PTP: gettime: failed to read systime\n");
+		return -EIO;
+	}
+
+	ns = (u64)gp2 * NSEC_PER_USEC;
+
+	*ts = ns_to_timespec64(ns);
+	return 0;
+}
+
 void iwl_mld_ptp_init(struct iwl_mld *mld)
 {
 	if (WARN_ON(mld->ptp_data.ptp_clock))
 		return;
 
 	mld->ptp_data.ptp_clock_info.owner = THIS_MODULE;
+	mld->ptp_data.ptp_clock_info.gettime64 = iwl_mld_ptp_gettime;
 
 	/* Give a short 'friendly name' to identify the PHC clock */
 	snprintf(mld->ptp_data.ptp_clock_info.name,
