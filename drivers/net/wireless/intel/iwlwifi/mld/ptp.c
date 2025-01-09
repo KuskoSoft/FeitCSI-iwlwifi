@@ -8,6 +8,12 @@
 #include "ptp.h"
 #include <linux/timekeeping.h>
 
+/* The scaled_ppm parameter is ppm (parts per million) with a 16-bit fractional
+ * part, which means that a value of 1 in one of those fields actually means
+ * 2^-16 ppm, and 2^16=65536 is 1 ppm.
+ */
+#define PTP_SCALE_FACTOR	65536000000ULL
+
 static int iwl_mld_get_systime(struct iwl_mld *mld, u32 *gp2)
 {
 	*gp2 = iwl_read_prph(mld->trans, mld->trans->cfg->gp2_reg_addr);
@@ -21,10 +27,38 @@ static int iwl_mld_get_systime(struct iwl_mld *mld, u32 *gp2)
 static u64 iwl_mld_ptp_get_adj_time(struct iwl_mld *mld, u64 base_time_ns)
 {
 	struct ptp_data *data = &mld->ptp_data;
+	u64 scale_time_gp2_ns = mld->ptp_data.scale_update_gp2 * NSEC_PER_USEC;
+	u64 res;
+	u64 diff;
+	s64 scaled_diff;
 
 	lockdep_assert_held(&data->lock);
 
-	return base_time_ns + data->delta;
+	/* It is possible that a GP2 timestamp was received from fw before the
+	 * last scale update.
+	 */
+	if (base_time_ns < scale_time_gp2_ns) {
+		diff = scale_time_gp2_ns - base_time_ns;
+		scaled_diff = -mul_u64_u64_div_u64(diff,
+						   data->scaled_freq,
+						   PTP_SCALE_FACTOR);
+	} else {
+		diff = base_time_ns - scale_time_gp2_ns;
+		scaled_diff = mul_u64_u64_div_u64(diff,
+						  data->scaled_freq,
+						  PTP_SCALE_FACTOR);
+	}
+
+	IWL_DEBUG_PTP(mld, "base_time=%llu diff ns=%llu scaled_diff_ns=%lld\n",
+		      (unsigned long long)base_time_ns,
+		      (unsigned long long)diff, (long long)scaled_diff);
+
+	res = data->scale_update_adj_time_ns + data->delta + scaled_diff;
+
+	IWL_DEBUG_PTP(mld, "scale_update_ns=%llu delta=%lld adj=%llu\n",
+		      (unsigned long long)data->scale_update_adj_time_ns,
+		      (long long)data->delta, (unsigned long long)res);
+	return res;
 }
 
 static int iwl_mld_ptp_gettime(struct ptp_clock_info *ptp,
@@ -63,6 +97,39 @@ static int iwl_mld_ptp_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	return 0;
 }
 
+static int iwl_mld_ptp_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+{
+	struct iwl_mld *mld = container_of(ptp, struct iwl_mld,
+					   ptp_data.ptp_clock_info);
+	struct ptp_data *data = &mld->ptp_data;
+	u32 gp2;
+
+	/* Must call iwl_mld_ptp_get_adj_time() before updating
+	 * data->scale_update_gp2 or data->scaled_freq since
+	 * scale_update_adj_time_ns should reflect the previous scaled_freq.
+	 */
+	if (iwl_mld_get_systime(mld, &gp2)) {
+		IWL_DEBUG_PTP(mld, "adjfine: failed to read systime\n");
+		return -EBUSY;
+	}
+
+	spin_lock_bh(&data->lock);
+	data->scale_update_adj_time_ns =
+		iwl_mld_ptp_get_adj_time(mld, gp2 * NSEC_PER_USEC);
+	data->scale_update_gp2 = gp2;
+
+	/* scale_update_adj_time_ns now relects the configured delta and the
+	 * previous scaled frequency. Thus delta should be reset, and the
+	 * scale frequency is updated to the new frequency.
+	 */
+	data->delta = 0;
+	data->scaled_freq = PTP_SCALE_FACTOR + scaled_ppm;
+	IWL_DEBUG_PTP(mld, "adjfine: scaled_ppm=%ld new=%llu\n",
+		      scaled_ppm, (unsigned long long)data->scaled_freq);
+	spin_unlock_bh(&data->lock);
+	return 0;
+}
+
 void iwl_mld_ptp_init(struct iwl_mld *mld)
 {
 	if (WARN_ON(mld->ptp_data.ptp_clock))
@@ -74,6 +141,8 @@ void iwl_mld_ptp_init(struct iwl_mld *mld)
 	mld->ptp_data.ptp_clock_info.gettime64 = iwl_mld_ptp_gettime;
 	mld->ptp_data.ptp_clock_info.max_adj = 0x7fffffff;
 	mld->ptp_data.ptp_clock_info.adjtime = iwl_mld_ptp_adjtime;
+	mld->ptp_data.ptp_clock_info.adjfine = iwl_mld_ptp_adjfine;
+	mld->ptp_data.scaled_freq = PTP_SCALE_FACTOR;
 
 	/* Give a short 'friendly name' to identify the PHC clock */
 	snprintf(mld->ptp_data.ptp_clock_info.name,

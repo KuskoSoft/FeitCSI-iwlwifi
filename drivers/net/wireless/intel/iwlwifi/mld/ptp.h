@@ -15,6 +15,10 @@
  * @ptp_clock_info: struct ptp_clock_info that describes a PTP hardware clock
  * @lock: protects the time adjustments data
  * @delta: delta between hardware clock and ptp clock in nanoseconds
+ * @scale_update_gp2: GP2 time when the scale was last updated
+ * @scale_update_adj_time_ns: adjusted time when the scale was last updated,
+ *	in nanoseconds
+ * @scaled_freq: clock frequency offset, scaled to 65536000000
  */
 struct ptp_data {
 	struct ptp_clock *ptp_clock;
@@ -22,6 +26,9 @@ struct ptp_data {
 
 	spinlock_t lock;
 	s64 delta;
+	u32 scale_update_gp2;
+	u64 scale_update_adj_time_ns;
+	u64 scaled_freq;
 };
 
 void iwl_mld_ptp_init(struct iwl_mld *mld);
