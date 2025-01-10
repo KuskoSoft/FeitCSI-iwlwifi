@@ -18,6 +18,15 @@ static int iwl_mld_get_systime(struct iwl_mld *mld, u32 *gp2)
 	return 0;
 }
 
+static u64 iwl_mld_ptp_get_adj_time(struct iwl_mld *mld, u64 base_time_ns)
+{
+	struct ptp_data *data = &mld->ptp_data;
+
+	lockdep_assert_held(&data->lock);
+
+	return base_time_ns + data->delta;
+}
+
 static int iwl_mld_ptp_gettime(struct ptp_clock_info *ptp,
 			       struct timespec64 *ts)
 {
@@ -32,9 +41,25 @@ static int iwl_mld_ptp_gettime(struct ptp_clock_info *ptp,
 		return -EIO;
 	}
 
-	ns = (u64)gp2 * NSEC_PER_USEC;
+	spin_lock_bh(&data->lock);
+	ns = iwl_mld_ptp_get_adj_time(mld, (u64)gp2 * NSEC_PER_USEC);
+	spin_unlock_bh(&data->lock);
 
 	*ts = ns_to_timespec64(ns);
+	return 0;
+}
+
+static int iwl_mld_ptp_adjtime(struct ptp_clock_info *ptp, s64 delta)
+{
+	struct iwl_mld *mld = container_of(ptp, struct iwl_mld,
+					   ptp_data.ptp_clock_info);
+	struct ptp_data *data = &mld->ptp_data;
+
+	spin_lock_bh(&data->lock);
+	data->delta += delta;
+	IWL_DEBUG_PTP(mld, "delta=%lld, new delta=%lld\n", (long long)delta,
+		      (long long)data->delta);
+	spin_unlock_bh(&data->lock);
 	return 0;
 }
 
@@ -43,8 +68,12 @@ void iwl_mld_ptp_init(struct iwl_mld *mld)
 	if (WARN_ON(mld->ptp_data.ptp_clock))
 		return;
 
+	spin_lock_init(&mld->ptp_data.lock);
+
 	mld->ptp_data.ptp_clock_info.owner = THIS_MODULE;
 	mld->ptp_data.ptp_clock_info.gettime64 = iwl_mld_ptp_gettime;
+	mld->ptp_data.ptp_clock_info.max_adj = 0x7fffffff;
+	mld->ptp_data.ptp_clock_info.adjtime = iwl_mld_ptp_adjtime;
 
 	/* Give a short 'friendly name' to identify the PHC clock */
 	snprintf(mld->ptp_data.ptp_clock_info.name,

@@ -13,10 +13,15 @@
  * @ptp_clock: struct ptp_clock pointer returned by the ptp_clock_register()
  *	function.
  * @ptp_clock_info: struct ptp_clock_info that describes a PTP hardware clock
+ * @lock: protects the time adjustments data
+ * @delta: delta between hardware clock and ptp clock in nanoseconds
  */
 struct ptp_data {
 	struct ptp_clock *ptp_clock;
 	struct ptp_clock_info ptp_clock_info;
+
+	spinlock_t lock;
+	s64 delta;
 };
 
 void iwl_mld_ptp_init(struct iwl_mld *mld);
