@@ -1171,11 +1171,15 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	u8 stbc = u32_get_bits(rate_n_flags, RATE_MCS_STBC_MSK);
 	bool is_sgi = rate_n_flags & RATE_MCS_SGI_MSK;
 
+	if (WARN_ON_ONCE(phy_data->with_data && (!mpdu_desc || !hdr)))
+		return;
+
 	/* Keep packets with CRC errors (and with overrun) for monitor mode
 	 * (otherwise the firmware discards them) but mark them as bad.
 	 */
-	if (!(mpdu_desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_CRC_OK)) ||
-	    !(mpdu_desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_OVERRUN_OK))) {
+	if (phy_data->with_data &&
+	    (!(mpdu_desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_CRC_OK)) ||
+	     !(mpdu_desc->status & cpu_to_le32(IWL_RX_MPDU_STATUS_OVERRUN_OK)))) {
 		IWL_DEBUG_RX(mld, "Bad CRC or FIFO: 0x%08X.\n",
 			     le32_to_cpu(mpdu_desc->status));
 		rx_status->flag |= RX_FLAG_FAILED_FCS_CRC;
@@ -1183,7 +1187,8 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 
 	phy_data->info_type = IWL_RX_PHY_INFO_TYPE_NONE;
 
-	if (likely(!(phy_data->phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD))) {
+	if (phy_data->with_data &&
+	    likely(!(phy_data->phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD))) {
 		rx_status->mactime =
 			le64_to_cpu(mpdu_desc->v3.tsf_on_air_rise);
 
@@ -1196,7 +1201,7 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	}
 
 	/* management stuff on default queue */
-	if (!queue &&
+	if (!queue && phy_data->with_data &&
 	    unlikely(ieee80211_is_beacon(hdr->frame_control) ||
 		     ieee80211_is_probe_resp(hdr->frame_control))) {
 		rx_status->boottime_ns = ktime_get_boottime_ns();
@@ -1934,4 +1939,115 @@ void iwl_mld_handle_rx_queues_sync_notif(struct iwl_mld *mld,
 
 	if (READ_ONCE(mld->rxq_sync.state) == 0)
 		wake_up(&mld->rxq_sync.waitq);
+}
+
+void iwl_mld_rx_monitor_no_data(struct iwl_mld *mld, struct napi_struct *napi,
+				struct iwl_rx_packet *pkt, int queue)
+{
+	struct iwl_rx_no_data_ver_3 *desc;
+	struct iwl_mld_rx_phy_data phy_data;
+	struct ieee80211_rx_status *rx_status;
+	struct sk_buff *skb;
+	u32 format, rssi;
+
+	if (unlikely(mld->fw_status.in_hw_restart))
+		return;
+
+	if (IWL_FW_CHECK(mld, iwl_rx_packet_payload_len(pkt) < sizeof(*desc),
+			 "Bad RX_NO_DATA_NOTIF size (%d)\n",
+			 iwl_rx_packet_payload_len(pkt)))
+		return;
+
+	desc = (void *)pkt->data;
+
+	rssi = le32_to_cpu(desc->rssi);
+	phy_data.energy_a = u32_get_bits(rssi, RX_NO_DATA_CHAIN_A_MSK);
+	phy_data.energy_b = u32_get_bits(rssi, RX_NO_DATA_CHAIN_B_MSK);
+	phy_data.channel = u32_get_bits(rssi, RX_NO_DATA_CHANNEL_MSK);
+	phy_data.data0 = desc->phy_info[0];
+	phy_data.data1 = desc->phy_info[1];
+	phy_data.phy_info = IWL_RX_MPDU_PHY_TSF_OVERLOAD;
+	phy_data.gp2_on_air_rise = le32_to_cpu(desc->on_air_rise_time);
+	phy_data.rate_n_flags = le32_to_cpu(desc->rate);
+	phy_data.with_data = false;
+
+	BUILD_BUG_ON(sizeof(phy_data.rx_vec) != sizeof(desc->rx_vec));
+	memcpy(phy_data.rx_vec, desc->rx_vec, sizeof(phy_data.rx_vec));
+
+	format = phy_data.rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
+
+	/* Don't use dev_alloc_skb(), we'll have enough headroom once
+	 * ieee80211_hdr pulled.
+	 */
+	skb = alloc_skb(128, GFP_ATOMIC);
+	if (!skb) {
+		IWL_ERR(mld, "alloc_skb failed\n");
+		return;
+	}
+
+	rx_status = IEEE80211_SKB_RXCB(skb);
+
+	/* 0-length PSDU */
+	rx_status->flag |= RX_FLAG_NO_PSDU;
+
+	/* mark as failed PLCP on any errors to skip checks in mac80211 */
+	if (le32_get_bits(desc->info, RX_NO_DATA_INFO_ERR_MSK) !=
+	    RX_NO_DATA_INFO_ERR_NONE)
+		rx_status->flag |= RX_FLAG_FAILED_PLCP_CRC;
+
+	switch (le32_get_bits(desc->info, RX_NO_DATA_INFO_TYPE_MSK)) {
+	case RX_NO_DATA_INFO_TYPE_NDP:
+		rx_status->zero_length_psdu_type =
+			IEEE80211_RADIOTAP_ZERO_LEN_PSDU_SOUNDING;
+		break;
+	case RX_NO_DATA_INFO_TYPE_MU_UNMATCHED:
+	case RX_NO_DATA_INFO_TYPE_TB_UNMATCHED:
+		rx_status->zero_length_psdu_type =
+			IEEE80211_RADIOTAP_ZERO_LEN_PSDU_NOT_CAPTURED;
+		break;
+	default:
+		rx_status->zero_length_psdu_type =
+			IEEE80211_RADIOTAP_ZERO_LEN_PSDU_VENDOR;
+		break;
+	}
+
+	rx_status->band = phy_data.channel > 14 ? NL80211_BAND_5GHZ :
+		NL80211_BAND_2GHZ;
+
+	rx_status->freq = ieee80211_channel_to_frequency(phy_data.channel,
+							 rx_status->band);
+
+	iwl_mld_rx_fill_status(mld, skb, &phy_data, NULL, NULL, queue);
+
+	/* No more radiotap info should be added after this point.
+	 * Mark it as mac header for upper layers to know where
+	 * the radiotap header ends.
+	 */
+	skb_set_mac_header(skb, skb->len);
+
+	/* Override the nss from the rx_vec since the rate_n_flags has
+	 * only 1 bit for the nss which gives a max of 2 ss but there
+	 * may be up to 8 spatial streams.
+	 */
+	switch (format) {
+	case RATE_MCS_VHT_MSK:
+		rx_status->nss =
+			le32_get_bits(desc->rx_vec[0],
+				      RX_NO_DATA_RX_VEC0_VHT_NSTS_MSK) + 1;
+		break;
+	case RATE_MCS_HE_MSK:
+		rx_status->nss =
+			le32_get_bits(desc->rx_vec[0],
+				      RX_NO_DATA_RX_VEC0_HE_NSTS_MSK) + 1;
+		break;
+	case RATE_MCS_EHT_MSK:
+		rx_status->nss =
+			le32_get_bits(desc->rx_vec[2],
+				      RX_NO_DATA_RX_VEC2_EHT_NSTS_MSK) + 1;
+	}
+
+	/* pass the packet to mac80211 */
+	rcu_read_lock();
+	ieee80211_rx_napi(mld->hw, NULL, skb, napi);
+	rcu_read_unlock();
 }
