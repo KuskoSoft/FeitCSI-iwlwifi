@@ -23,6 +23,7 @@
 #include "fw/api/rx.h"
 #include "fw/api/rs.h"
 #include "fw/api/context.h"
+#include "fw/api/coex.h"
 
 #include "fw/dbg.h"
 
@@ -124,6 +125,7 @@
  *	cleanup using iwl_mld_free_internal_sta
  * @netdetect: indicates the FW is in suspend mode with netdetect configured
  * @p2p_device_vif: points to the p2p device vif if exists
+ * @bt_is_active: indicates that BT is active
  * @dev: pointer to device struct. For printing purposes
  * @trans: pointer to the transport layer
  * @cfg: pointer to the device configuration
@@ -202,6 +204,7 @@ struct iwl_mld {
 		bool netdetect;
 #endif /* CONFIG_PM_SLEEP */
 		struct ieee80211_vif *p2p_device_vif;
+		bool bt_is_active;
 	);
 	struct ieee80211_link_sta __rcu *fw_id_to_link_sta[IWL_STATION_COUNT_MAX];
 	/* And here fields that survive a fw restart */

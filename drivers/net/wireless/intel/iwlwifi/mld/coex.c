@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include "fw/api/coex.h"
@@ -24,8 +24,13 @@ void iwl_mld_handle_bt_coex_notif(struct iwl_mld *mld,
 				  struct iwl_rx_packet *pkt)
 {
 	const struct iwl_bt_coex_profile_notif *notif = (void *)pkt->data;
+	const struct iwl_bt_coex_profile_notif zero_notif = {};
+	/* zeroed structure means that BT is OFF */
+	bool bt_is_active = memcmp(notif, &zero_notif, sizeof(*notif));
 
-	/* TODO: task=EMLSR handle coex notification */
-	IWL_DEBUG_INFO(mld, "wifi_loss_low_rssi[0][0] = %d\n",
-		       notif->wifi_loss_low_rssi[0][0]);
+	if (bt_is_active != mld->bt_is_active)
+		IWL_DEBUG_INFO(mld, "BT was turned %s\n",
+			       bt_is_active ? "ON" : "OFF");
+
+	mld->bt_is_active = bt_is_active;
 }
