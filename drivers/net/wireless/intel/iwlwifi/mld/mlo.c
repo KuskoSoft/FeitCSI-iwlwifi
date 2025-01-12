@@ -49,7 +49,8 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 	HOW(EQUAL_BAND)			\
 	HOW(BANDWIDTH)			\
 	HOW(LOW_RSSI)			\
-	HOW(LINK_USAGE)
+	HOW(LINK_USAGE)			\
+	HOW(BT_COEX)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -660,7 +661,8 @@ iwl_mld_emlsr_disallowed_with_link(struct iwl_mld *mld,
 	if (WARN_ON_ONCE(!conf))
 		return false;
 
-	/* TODO: handle BT Coex (task=EMLSR, task=coex) */
+	if (link->chandef->chan->band == NL80211_BAND_2GHZ && mld->bt_is_active)
+		ret |= IWL_MLD_EMLSR_EXIT_BT_COEX;
 
 	if (link->signal <
 	    iwl_mld_get_emlsr_rssi_thresh(mld, link->chandef, false))
@@ -909,4 +911,51 @@ void iwl_mld_emlsr_check_equal_bw(struct iwl_mld *mld,
 	if (link->chanreq.oper.width != other_link->chanreq.oper.width)
 		iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_BANDWIDTH,
 				   iwl_mld_get_primary_link(vif));
+}
+
+static void iwl_mld_emlsr_check_bt_iter(void *_data, u8 *mac,
+					struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	struct iwl_mld *mld = mld_vif->mld;
+	struct ieee80211_bss_conf *link;
+	unsigned int link_id;
+
+	if (!mld->bt_is_active) {
+		/* We can now do EMLSR with 2.4 GHz, BT is no longer active */
+		if (!iwl_mld_emlsr_active(vif))
+			goto try_emlsr;
+		return;
+	}
+
+	/* BT is turned ON but we are not in EMLSR, nothing to do */
+	if (!iwl_mld_emlsr_active(vif))
+		return;
+
+	/* In EMLSR and BT is turned ON */
+
+	for_each_vif_active_link(vif, link, link_id) {
+		if (WARN_ON(!link->chanreq.oper.chan))
+			continue;
+
+		if (link->chanreq.oper.chan->band == NL80211_BAND_2GHZ) {
+			iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_BT_COEX,
+					   iwl_mld_get_primary_link(vif));
+
+			/* There might be another link pair to do EMLSR with */
+			goto try_emlsr;
+		}
+	}
+	return;
+try_emlsr:
+	if (iwl_mld_vif_has_emlsr_cap(vif) && !mld_vif->emlsr.blocked_reasons)
+		iwl_mld_int_mlo_scan(mld, vif);
+}
+
+void iwl_mld_emlsr_check_bt(struct iwl_mld *mld)
+{
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+						IEEE80211_IFACE_ITER_NORMAL,
+						iwl_mld_emlsr_check_bt_iter,
+						NULL);
 }

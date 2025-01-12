@@ -58,6 +58,7 @@ enum iwl_mld_emlsr_blocked {
  *      not equal
  * @IWL_MLD_EMLSR_EXIT_LOW_RSSI: Link RSSI is unsuitable for EMLSR
  * @IWL_MLD_EMLSR_EXIT_LINK_USAGE: Exit EMLSR due to low TPT on secondary link
+ * @IWL_MLD_EMLSR_EXIT_BT_COEX: Exit EMLSR due to BT coexistence
  */
 enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_BLOCK		= 0x1,
@@ -68,6 +69,7 @@ enum iwl_mld_emlsr_exit {
 	IWL_MLD_EMLSR_EXIT_BANDWIDTH		= 0x20,
 	IWL_MLD_EMLSR_EXIT_LOW_RSSI		= 0x40,
 	IWL_MLD_EMLSR_EXIT_LINK_USAGE		= 0x80,
+	IWL_MLD_EMLSR_EXIT_BT_COEX		= 0x100,
 };
 
 /**

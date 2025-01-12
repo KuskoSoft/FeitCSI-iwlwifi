@@ -8,6 +8,7 @@
 #include "coex.h"
 #include "mld.h"
 #include "hcmd.h"
+#include "mlo.h"
 
 int iwl_mld_send_bt_init_conf(struct iwl_mld *mld)
 {
@@ -28,9 +29,12 @@ void iwl_mld_handle_bt_coex_notif(struct iwl_mld *mld,
 	/* zeroed structure means that BT is OFF */
 	bool bt_is_active = memcmp(notif, &zero_notif, sizeof(*notif));
 
-	if (bt_is_active != mld->bt_is_active)
-		IWL_DEBUG_INFO(mld, "BT was turned %s\n",
-			       bt_is_active ? "ON" : "OFF");
+	if (bt_is_active == mld->bt_is_active)
+		return;
+
+	IWL_DEBUG_INFO(mld, "BT was turned %s\n", bt_is_active ? "ON" : "OFF");
 
 	mld->bt_is_active = bt_is_active;
+
+	iwl_mld_emlsr_check_bt(mld);
 }

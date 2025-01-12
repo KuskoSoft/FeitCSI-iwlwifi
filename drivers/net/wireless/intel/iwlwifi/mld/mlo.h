@@ -137,4 +137,6 @@ void iwl_mld_emlsr_check_equal_bw(struct iwl_mld *mld,
 				  struct ieee80211_vif *vif,
 				  struct ieee80211_bss_conf *link);
 
+void iwl_mld_emlsr_check_bt(struct iwl_mld *mld);
+
 #endif /* __iwl_mld_mlo_h__ */
