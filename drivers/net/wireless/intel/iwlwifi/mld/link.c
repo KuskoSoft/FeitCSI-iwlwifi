@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include "constants.h"
@@ -290,6 +290,16 @@ iwl_mld_change_link_in_fw(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 	ether_addr_copy(cmd.local_link_addr, link->addr);
 
 	cmd.active = cpu_to_le32(mld_link->active);
+
+	if ((changes & LINK_CONTEXT_MODIFY_ACTIVE) && !mld_link->active &&
+	    mld_link->silent_deactivation) {
+		/* We are de-activating a link that is having CSA with
+		 * immediate quiet in EMLSR. Tell the firmware not to send any
+		 * frame.
+		 */
+		cmd.block_tx = 1;
+		mld_link->silent_deactivation = false;
+	}
 
 	if (vif->type == NL80211_IFTYPE_ADHOC && link->bssid)
 		ether_addr_copy(cmd.ibss_bssid_addr, link->bssid);

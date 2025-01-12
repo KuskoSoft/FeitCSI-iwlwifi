@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #ifndef __iwl_mld_link_h__
 #define __iwl_mld_link_h__
@@ -42,7 +42,7 @@ struct iwl_probe_resp_data {
  * @ap_early_keys: The firmware cannot install keys before bcast/mcast STAs,
  *	but higher layers work differently, so we store the keys here for
  *	later installation.
- * @csa_blocks_tx: indicates channel switch with immediate quiet
+ * @silent_deactivation: next deactivation needs to be silent.
  * @probe_resp_data: data from FW notification to store NOA related data to be
  *	inserted into probe response.
  */
@@ -65,7 +65,7 @@ struct iwl_mld_link {
 
 	/* we can only have 2 GTK + 2 IGTK + 2 BIGTK active at a time */
 	struct ieee80211_key_conf *ap_early_keys[6];
-	bool csa_blocks_tx;
+	bool silent_deactivation;
 	struct iwl_probe_resp_data __rcu *probe_resp_data;
 };
 

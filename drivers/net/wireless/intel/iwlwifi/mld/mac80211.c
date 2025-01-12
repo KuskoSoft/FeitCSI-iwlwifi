@@ -2216,6 +2216,8 @@ iwl_mld_pre_channel_switch(struct ieee80211_hw *hw,
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *mld_link =
 		iwl_mld_link_dereference_check(mld_vif, chsw->link_id);
+	u8 primary;
+	int selected;
 
 	lockdep_assert_wiphy(mld->wiphy);
 
@@ -2224,9 +2226,32 @@ iwl_mld_pre_channel_switch(struct ieee80211_hw *hw,
 
 	IWL_DEBUG_MAC80211(mld, "pre CSA to freq %d\n",
 			   chsw->chandef.center_freq1);
-	mld_link->csa_blocks_tx = chsw->block_tx;
 
-	/* TODO: choose primary link for esr (task=esr) */
+	if (!iwl_mld_emlsr_active(vif))
+		return 0;
+
+	primary = iwl_mld_get_primary_link(vif);
+
+	/* stay on the primary link unless it is undergoing a CSA with quiet */
+	if (chsw->link_id == primary && chsw->block_tx)
+		selected = iwl_mld_get_other_link(vif, primary);
+	else
+		selected = primary;
+
+	/* Remember to tell the firmware that this link can't tx
+	 * Note that this logic seems to be unrelated to emlsr, but it
+	 * really is needed only when emlsr is active. When we have a
+	 * single link, the firmware will handle all this on its own.
+	 * In multi-link scenarios, we can learn about the CSA from
+	 * another link and this logic is too complex for the firmware
+	 * to track.
+	 * Since we want to de-activate the link that got a CSA with mode=1,
+	 * we need to tell the firmware not to send any frame on that link
+	 * as the firmware may not be aware that link is under a CSA
+	 * with mode=1 (no Tx allowed).
+	 */
+	mld_link->silent_deactivation = chsw->block_tx;
+	iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_CSA, selected);
 
 	return 0;
 }
@@ -2258,7 +2283,7 @@ iwl_mld_post_channel_switch(struct ieee80211_hw *hw,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	mld_link->csa_blocks_tx = false;
+	WARN_ON(mld_link->silent_deactivation);
 
 	return 0;
 }
@@ -2273,7 +2298,7 @@ iwl_mld_abort_channel_switch(struct ieee80211_hw *hw,
 
 	IWL_DEBUG_MAC80211(mld,
 			   "abort channel switch op\n");
-	mld_link->csa_blocks_tx = false;
+	mld_link->silent_deactivation = false;
 }
 
 static int
