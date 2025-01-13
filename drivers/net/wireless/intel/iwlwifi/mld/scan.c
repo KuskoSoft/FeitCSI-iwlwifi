@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include <linux/crc32.h>
 
@@ -1763,10 +1763,6 @@ static void iwl_mld_int_mlo_scan_start(struct iwl_mld *mld,
 	IWL_DEBUG_SCAN(mld, "Starting Internal MLO scan: n_channels=%zu\n",
 		       n_channels);
 
-	if (!vif->cfg.assoc || !ieee80211_vif_is_mld(vif) ||
-	    hweight16(vif->valid_links) == 1)
-		return;
-
 	size = struct_size(req, channels, n_channels);
 	req = kzalloc(size, GFP_KERNEL);
 	if (!req)
@@ -1803,6 +1799,10 @@ void iwl_mld_int_mlo_scan(struct iwl_mld *mld, struct ieee80211_vif *vif)
 	u8 link_id;
 
 	lockdep_assert_wiphy(mld->wiphy);
+
+	if (!vif->cfg.assoc || !ieee80211_vif_is_mld(vif) ||
+	    hweight16(vif->valid_links) == 1)
+		return;
 
 	if (mld->scan.status & IWL_MLD_SCAN_INT_MLO) {
 		IWL_DEBUG_SCAN(mld, "Internal MLO scan is already running\n");
