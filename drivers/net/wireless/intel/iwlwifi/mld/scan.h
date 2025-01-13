@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #ifndef __iwl_mld_scan_h__
 #define __iwl_mld_scan_h__
@@ -108,6 +108,7 @@ enum iwl_mld_traffic_load {
  *	in jiffies.
  * @last_start_time_jiffies: stores the last start time in jiffies
  *	(interface up/reset/resume).
+ * @last_mlo_scan_jiffies: end time of the last MLO scan in jiffies.
  */
 struct iwl_mld_scan {
 	/* Add here fields that need clean up on restart */
@@ -128,6 +129,7 @@ struct iwl_mld_scan {
 	void *cmd;
 	unsigned long last_6ghz_passive_jiffies;
 	unsigned long last_start_time_jiffies;
+	unsigned long last_mlo_scan_jiffies;
 };
 
 #endif /* __iwl_mld_scan_h__ */

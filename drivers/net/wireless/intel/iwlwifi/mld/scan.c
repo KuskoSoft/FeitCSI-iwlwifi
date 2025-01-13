@@ -1922,6 +1922,7 @@ void iwl_mld_handle_scan_complete_notif(struct iwl_mld *mld,
 		mld->scan.pass_all_sched_res = SCHED_SCAN_PASS_ALL_STATE_DISABLED;
 	} else if (mld->scan.uid_status[uid] == IWL_MLD_SCAN_INT_MLO) {
 		IWL_DEBUG_SCAN(mld, "Internal MLO scan completed\n");
+		mld->scan.last_mlo_scan_jiffies = jiffies;
 
 		/*
 		 * We limit link selection to internal MLO scans as otherwise

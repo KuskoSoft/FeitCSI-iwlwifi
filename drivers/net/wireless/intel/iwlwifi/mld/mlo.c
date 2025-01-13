@@ -111,6 +111,7 @@ void iwl_mld_emlsr_tmp_non_bss_done_wk(struct wiphy *wiphy,
 }
 
 #define IWL_MLD_TRIGGER_LINK_SEL_TIME	(HZ * IWL_MLD_TRIGGER_LINK_SEL_TIME_SEC)
+#define IWL_MLD_SCAN_EXPIRE_TIME	(HZ * IWL_MLD_SCAN_EXPIRE_TIME_SEC)
 
 /* Exit reasons that can cause longer EMLSR prevention */
 #define IWL_MLD_PREVENT_EMLSR_REASONS	(IWL_MLD_EMLSR_EXIT_MISSED_BEACON | \
@@ -262,6 +263,26 @@ int iwl_mld_block_emlsr_sync(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	return _iwl_mld_emlsr_block(mld, vif, reason, link_to_keep, true);
 }
 
+static void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
+					   struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+	bool last_scan_was_recent =
+		time_before(jiffies, mld->scan.last_mlo_scan_jiffies +
+				     IWL_MLD_SCAN_EXPIRE_TIME);
+
+	if (last_scan_was_recent) {
+		IWL_DEBUG_EHT(mld,
+			      "Use the latest link selection result: 0x%x\n",
+			      mld_vif->emlsr.selected_links);
+		ieee80211_set_active_links_async(vif,
+						 mld_vif->emlsr.selected_links);
+	} else {
+		IWL_DEBUG_EHT(mld, "Doing link selection after MLO scan\n");
+		iwl_mld_int_mlo_scan(mld, vif);
+	}
+}
+
 static void iwl_mld_unblocked_emlsr(struct iwl_mld *mld,
 				    struct ieee80211_vif *vif)
 {
@@ -293,8 +314,7 @@ static void iwl_mld_unblocked_emlsr(struct iwl_mld *mld,
 		return;
 	}
 
-	IWL_DEBUG_INFO(mld, "Doing link selection after MLO scan\n");
-	iwl_mld_int_mlo_scan(mld, vif);
+	iwl_mld_trigger_link_selection(mld, vif);
 }
 
 void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
