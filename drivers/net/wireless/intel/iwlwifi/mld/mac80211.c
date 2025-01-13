@@ -2567,7 +2567,7 @@ static void iwl_mld_vif_iter_emlsr_block_tmp_non_bss(void *_data, u8 *mac,
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	int ret;
 
-	if (!iwl_mld_vif_has_emlsr(vif))
+	if (!iwl_mld_vif_has_emlsr_cap(vif))
 		return;
 
 	ret = iwl_mld_block_emlsr_sync(mld_vif->mld, vif,

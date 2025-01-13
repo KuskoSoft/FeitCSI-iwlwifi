@@ -24,7 +24,7 @@ static inline bool iwl_mld_emlsr_active(struct ieee80211_vif *vif)
 	return !!(vif->driver_flags & IEEE80211_VIF_EML_ACTIVE);
 }
 
-static inline bool iwl_mld_vif_has_emlsr(struct ieee80211_vif *vif)
+static inline bool iwl_mld_vif_has_emlsr_cap(struct ieee80211_vif *vif)
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 

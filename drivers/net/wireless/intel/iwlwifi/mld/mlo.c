@@ -226,7 +226,7 @@ static int _iwl_mld_emlsr_block(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (!IWL_MLD_AUTO_EML_ENABLE || !iwl_mld_vif_has_emlsr(vif))
+	if (!IWL_MLD_AUTO_EML_ENABLE || !iwl_mld_vif_has_emlsr_cap(vif))
 		return 0;
 
 	if (mld_vif->emlsr.blocked_reasons & reason)
@@ -301,7 +301,7 @@ void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (!IWL_MLD_AUTO_EML_ENABLE || !iwl_mld_vif_has_emlsr(vif))
+	if (!IWL_MLD_AUTO_EML_ENABLE || !iwl_mld_vif_has_emlsr_cap(vif))
 		return;
 
 	if (!(mld_vif->emlsr.blocked_reasons & reason))
@@ -330,7 +330,7 @@ iwl_mld_vif_iter_emlsr_mode_notif(void *data, u8 *mac,
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mvm_esr_mode_notif *notif = (void *)data;
 
-	if (!iwl_mld_vif_has_emlsr(vif))
+	if (!iwl_mld_vif_has_emlsr_cap(vif))
 		return;
 
 	switch (le32_to_cpu(notif->action)) {
@@ -364,7 +364,7 @@ static void
 iwl_mld_vif_iter_disconnect_emlsr(void *data, u8 *mac,
 				  struct ieee80211_vif *vif)
 {
-	if (!iwl_mld_vif_has_emlsr(vif))
+	if (!iwl_mld_vif_has_emlsr_cap(vif))
 		return;
 
 	ieee80211_connection_loss(vif);
@@ -494,7 +494,7 @@ void iwl_mld_emlsr_check_tpt(struct wiphy *wiphy, struct wiphy_work *wk)
 	u8 sec_link_tx_perc, sec_link_rx_perc;
 	s8 sec_link_id;
 
-	if (!iwl_mld_vif_has_emlsr(vif) || !mld_vif->ap_sta)
+	if (!iwl_mld_vif_has_emlsr_cap(vif) || !mld_vif->ap_sta)
 		return;
 
 	mld_sta = iwl_mld_sta_from_mac80211(mld_vif->ap_sta);
@@ -815,7 +815,7 @@ static void _iwl_mld_select_links(struct iwl_mld *mld,
 	lockdep_assert_wiphy(mld->wiphy);
 
 	/* Link selection only works for EMLSR right now */
-	if (!iwl_mld_vif_has_emlsr(vif))
+	if (!iwl_mld_vif_has_emlsr_cap(vif))
 		return;
 
 	if (!IWL_MLD_AUTO_EML_ENABLE)
