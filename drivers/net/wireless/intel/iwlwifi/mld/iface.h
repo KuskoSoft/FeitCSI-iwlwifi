@@ -144,6 +144,8 @@ struct iwl_mld_emlsr {
  * @disable_bf: disable beacon filter
  * @dbgfs_slink: debugfs symlink for this interface
  * @dbgfs_slink_mvm: debugfs symlink for legacy tests support
+ * @ftm_unprotected: if set, use unprotected FTM negotiation even if the peer
+ *	has an active security context.
  */
 struct iwl_mld_vif {
 	/* Add here fields that need clean up on restart */
@@ -180,6 +182,7 @@ struct iwl_mld_vif {
 #ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
 	struct dentry *dbgfs_slink_mvm;
 #endif
+	bool ftm_unprotected;
 #endif
 };
 

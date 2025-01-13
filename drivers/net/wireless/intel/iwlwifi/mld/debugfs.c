@@ -800,6 +800,8 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 
 	VIF_DEBUGFS_ADD_FILE(twt_setup, mld_vif_dbgfs, 0200);
 	VIF_DEBUGFS_ADD_FILE(twt_operation, mld_vif_dbgfs, 0200);
+	debugfs_create_bool("ftm_unprotected", 0200, mld_vif_dbgfs,
+			    &mld_vif->ftm_unprotected);
 }
 
 #define LINK_DEBUGFS_WRITE_FILE_OPS(name, bufsz)			\

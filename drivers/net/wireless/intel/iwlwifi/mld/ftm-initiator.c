@@ -196,7 +196,10 @@ static void iwl_mld_ftm_set_sta(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	target->sta_id = IWL_INVALID_STA;
 
-	/* TODO: add ftm_unprotected debugfs support */
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	if (mld_vif->ftm_unprotected)
+		return;
+#endif
 
 	if (!vif->cfg.assoc || !mld_vif->ap_sta)
 		return;
@@ -282,7 +285,12 @@ iwl_mld_ftm_set_secured_ranging(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	u8 *tk;
 	u32 tk_len;
 
-	/* TODO: add support for ftm_unprotected debugs */
+#ifdef CPTCFG_IWLWIFI_DEBUGFS
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	if (mld_vif->ftm_unprotected)
+		return 0;
+#endif
 
 	if (!(le32_to_cpu(target->initiator_ap_flags) &
 	      (IWL_INITIATOR_AP_FLAGS_NON_TB | IWL_INITIATOR_AP_FLAGS_TB)))
