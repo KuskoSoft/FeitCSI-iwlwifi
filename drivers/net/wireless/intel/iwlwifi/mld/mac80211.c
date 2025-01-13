@@ -1151,7 +1151,7 @@ void iwl_mld_unassign_vif_chanctx(struct ieee80211_hw *hw,
 static
 int iwl_mld_mac80211_set_rts_threshold(struct ieee80211_hw *hw, u32 value)
 {
-	return -EOPNOTSUPP;
+	return 0;
 }
 
 static void
