@@ -264,26 +264,6 @@ static bool iwl_mld_fw_needs_restart(struct iwl_mld *mld,
 	return true;
 }
 
-static
-struct ieee80211_vif *iwl_mld_get_bss_vif(struct iwl_mld *mld)
-{
-	unsigned long fw_id_bitmap;
-	int fw_id;
-
-	fw_id_bitmap = iwl_mld_get_fw_bss_vifs_ids(mld);
-
-	if (hweight8(fw_id_bitmap) != 1) {
-		IWL_ERR(mld,
-			"Must have exactly one bss vif for wowlan\n");
-		return NULL;
-	}
-
-	fw_id = __ffs(fw_id_bitmap);
-
-	return wiphy_dereference(mld->wiphy,
-				 mld->fw_id_to_vif[fw_id]);
-}
-
 static int
 iwl_mld_netdetect_config(struct iwl_mld *mld,
 			 struct ieee80211_vif *vif,

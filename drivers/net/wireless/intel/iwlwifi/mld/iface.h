@@ -231,4 +231,6 @@ static inline bool iwl_mld_vif_low_latency(const struct iwl_mld_vif *mld_vif)
 	return !!mld_vif->low_latency_causes;
 }
 
+struct ieee80211_vif *iwl_mld_get_bss_vif(struct iwl_mld *mld);
+
 #endif /* __iwl_mld_iface_h__ */
