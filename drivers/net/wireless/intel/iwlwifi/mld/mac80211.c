@@ -1851,26 +1851,6 @@ static void iwl_mld_mac80211_flush(struct ieee80211_hw *hw,
 {
 	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
 
-	if (!drop && vif) {
-		int link_id = vif->active_links ? __ffs(vif->active_links) : 0;
-		struct ieee80211_bss_conf *link_conf;
-		struct iwl_mld_link *mld_link;
-
-		link_conf = link_conf_dereference_protected(vif, link_id);
-		if (WARN_ON(!link_conf))
-			return;
-
-		mld_link = iwl_mld_link_from_mac80211(link_conf);
-		if (WARN_ON(!mld_link))
-			return;
-
-		if (link_conf->csa_active &&
-		    mld_link->csa_blocks_tx) {
-			WARN_ON(hweight16(vif->active_links) > 1);
-			drop = true;
-		}
-	}
-
 	/* Make sure we're done with the deferred traffic before flushing */
 	iwl_mld_add_txq_list(mld);
 
