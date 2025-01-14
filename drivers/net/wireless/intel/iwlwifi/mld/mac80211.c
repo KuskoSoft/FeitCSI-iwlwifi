@@ -993,11 +993,13 @@ iwl_mld_chandef_get_primary_80(struct cfg80211_chan_def *chandef)
 	return (control_start - data_start) / 80;
 }
 
-static bool iwl_mld_can_activate_link(struct ieee80211_vif *vif,
+static bool iwl_mld_can_activate_link(struct iwl_mld *mld,
+				      struct ieee80211_vif *vif,
 				      struct ieee80211_bss_conf *link)
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_sta *mld_sta;
+	struct iwl_mld_link_sta *link_sta;
 
 	/* In association, we activate the assoc link before adding the STA. */
 	if (!mld_vif->ap_sta || !vif->cfg.assoc)
@@ -1009,7 +1011,10 @@ static bool iwl_mld_can_activate_link(struct ieee80211_vif *vif,
 	 * STA was added to the FW. It'll be activated in
 	 * iwl_mld_update_link_stas
 	 */
-	return rcu_access_pointer(mld_sta->link[link->link_id]);
+	link_sta = wiphy_dereference(mld->wiphy, mld_sta->link[link->link_id]);
+
+	/* In restart we can have a link_sta that doesn't exist in FW yet */
+	return link_sta && link_sta->in_fw;
 }
 
 static
@@ -1083,7 +1088,7 @@ int iwl_mld_assign_vif_chanctx(struct ieee80211_hw *hw,
 	 */
 
 	/* Now activate the link */
-	if (iwl_mld_can_activate_link(vif, link)) {
+	if (iwl_mld_can_activate_link(mld, vif, link)) {
 		ret = iwl_mld_activate_link(mld, link);
 		if (ret)
 			goto err;
