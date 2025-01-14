@@ -1,7 +1,7 @@
 
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include "agg.h"
 #include "sta.h"
@@ -229,10 +229,12 @@ iwl_mld_reorder(struct iwl_mld *mld, struct napi_struct *napi,
 		return IWL_MLD_PASS_SKB;
 
 	baid_data = rcu_dereference(mld->fw_id_to_ba[baid]);
-	if (IWL_FW_CHECK(mld, !baid_data,
-			 "Got valid BAID but no baid allocated (BAID=%d reorder=0x%x)\n",
-			 baid, reorder))
+	if (!baid_data) {
+		IWL_DEBUG_HT(mld,
+			     "Got valid BAID but no baid allocated, bypass re-ordering (BAID=%d reorder=0x%x)\n",
+			     baid, reorder);
 		return IWL_MLD_PASS_SKB;
+	}
 
 	for_each_mld_link_sta(mld_sta, mld_link_sta, link_id)
 		sta_mask |= BIT(mld_link_sta->fw_id);

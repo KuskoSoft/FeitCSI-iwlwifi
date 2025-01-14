@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include <net/mac80211.h>
@@ -1463,8 +1463,10 @@ static void iwl_mld_update_last_rx_timestamp(struct iwl_mld *mld, u8 baid)
 	struct iwl_mld_baid_data *ba_data;
 
 	ba_data = rcu_dereference(mld->fw_id_to_ba[baid]);
-	if (IWL_FW_CHECK(mld, !ba_data, "BAID %d not found in map\n", baid))
+	if (!ba_data) {
+		IWL_DEBUG_HT(mld, "BAID %d not found in map\n", baid);
 		return;
+	}
 
 	if (!ba_data->timeout)
 		return;
