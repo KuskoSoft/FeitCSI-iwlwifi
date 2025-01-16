@@ -377,8 +377,6 @@ static void iwl_mld_update_link_sig(struct ieee80211_vif *vif, int sig,
 		return;
 	}
 
-	/* TODO: task=coex */
-
 	/* TODO: task=statistics handle CQM notifications */
 
 	if (!iwl_mld_vif_has_emlsr_cap(vif))
