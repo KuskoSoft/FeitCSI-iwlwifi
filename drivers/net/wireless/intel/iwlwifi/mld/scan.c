@@ -1966,7 +1966,11 @@ void iwl_mld_report_scan_aborted(struct iwl_mld *mld)
 			ieee80211_sched_scan_stopped(mld->hw);
 	}
 
-	/* TODO: IWL_MLD_SCAN_INT_MLO */
+	uid = iwl_mld_scan_uid_by_status(mld, IWL_MLD_SCAN_INT_MLO);
+	if (uid >= 0) {
+		IWL_DEBUG_SCAN(mld, "Internal MLO scan aborted\n");
+		mld->scan.uid_status[uid] = IWL_MLD_SCAN_NONE;
+	}
 
 	BUILD_BUG_ON(IWL_MLD_SCAN_NONE != 0);
 	memset(mld->scan.uid_status, 0, sizeof(mld->scan.uid_status));
