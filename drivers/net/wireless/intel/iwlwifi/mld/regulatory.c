@@ -355,6 +355,11 @@ void iwl_mld_init_tas(struct iwl_mld *mld)
 	BUILD_BUG_ON(ARRAY_SIZE(cmd.block_list_array) !=
 		     IWL_WTAS_BLACK_LIST_MAX);
 
+	if (!fw_has_capa(&mld->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TAS_CFG)) {
+		IWL_DEBUG_RADIO(mld, "TAS not enabled in FW\n");
+		return;
+	}
+
 	ret = iwl_bios_get_tas_table(&mld->fwrt, &data);
 	if (ret < 0) {
 		IWL_DEBUG_RADIO(mld,
