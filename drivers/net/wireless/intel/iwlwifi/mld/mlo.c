@@ -925,8 +925,10 @@ static void iwl_mld_emlsr_check_bt_iter(void *_data, u8 *mac,
 
 	if (!mld->bt_is_active) {
 		/* We can now do EMLSR with 2.4 GHz, BT is no longer active */
-		if (!iwl_mld_emlsr_active(vif))
-			goto try_emlsr;
+		if (!iwl_mld_emlsr_active(vif) &&
+		    iwl_mld_vif_has_emlsr_cap(vif) &&
+		    !mld_vif->emlsr.blocked_reasons)
+			iwl_mld_int_mlo_scan(mld, vif);
 		return;
 	}
 
@@ -943,15 +945,9 @@ static void iwl_mld_emlsr_check_bt_iter(void *_data, u8 *mac,
 		if (link->chanreq.oper.chan->band == NL80211_BAND_2GHZ) {
 			iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_BT_COEX,
 					   iwl_mld_get_primary_link(vif));
-
-			/* There might be another link pair to do EMLSR with */
-			goto try_emlsr;
+			return;
 		}
 	}
-	return;
-try_emlsr:
-	if (iwl_mld_vif_has_emlsr_cap(vif) && !mld_vif->emlsr.blocked_reasons)
-		iwl_mld_int_mlo_scan(mld, vif);
 }
 
 void iwl_mld_emlsr_check_bt(struct iwl_mld *mld)
