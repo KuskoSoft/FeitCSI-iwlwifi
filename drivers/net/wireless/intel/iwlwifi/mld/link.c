@@ -704,7 +704,8 @@ iwl_mld_get_n_subchannels(const struct ieee80211_bss_conf *link_conf)
 }
 
 /* This function calculates the grade of a link. Returns 0 in error case */
-unsigned int iwl_mld_get_link_grade(struct ieee80211_bss_conf *link_conf)
+unsigned int iwl_mld_get_link_grade(struct iwl_mld *mld,
+				    struct ieee80211_bss_conf *link_conf)
 {
 	enum nl80211_band band;
 	int rssi_idx;
@@ -735,6 +736,12 @@ unsigned int iwl_mld_get_link_grade(struct ieee80211_bss_conf *link_conf)
 	if (!link_rssi)
 		link_rssi = rssi_to_grade_map[0].rssi[rssi_idx];
 
+	IWL_DEBUG_EHT(mld,
+		      "Calculating grade of link %d: band = %d, bandwidth = %d, punctured subchannels =0x%x RSSI = %d\n",
+		      link_conf->link_id, band,
+		      link_conf->chanreq.oper.punctured,
+		      link_conf->chanreq.oper.width, link_rssi);
+
 	/* Get grade based on RSSI */
 	for (int i = 0; i < ARRAY_SIZE(rssi_to_grade_map); i++) {
 		const struct iwl_mld_rssi_to_grade *line =
@@ -749,6 +756,8 @@ unsigned int iwl_mld_get_link_grade(struct ieee80211_bss_conf *link_conf)
 	/* Apply the channel load and puncturing factors */
 	/* TODO: task=EMLSR task=statistics */
 	grade = grade * iwl_mld_get_n_subchannels(link_conf);
+
+	IWL_DEBUG_EHT(mld, "Link %d's grade: %d\n", link_conf->link_id, grade);
 
 	return grade;
 }

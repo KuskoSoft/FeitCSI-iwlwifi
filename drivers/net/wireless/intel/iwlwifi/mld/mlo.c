@@ -683,7 +683,8 @@ iwl_mld_emlsr_disallowed_with_link(struct iwl_mld *mld,
 }
 
 static u8
-iwl_mld_set_link_sel_data(struct ieee80211_vif *vif,
+iwl_mld_set_link_sel_data(struct iwl_mld *mld,
+			  struct ieee80211_vif *vif,
 			  struct iwl_mld_link_sel_data *data,
 			  unsigned long usable_links,
 			  u8 *best_link_idx)
@@ -708,7 +709,7 @@ iwl_mld_set_link_sel_data(struct ieee80211_vif *vif,
 		data[n_data].link_id = link_id;
 		data[n_data].chandef = &link_conf->chanreq.oper;
 		data[n_data].signal = MBM_TO_DBM(link_conf->bss->signal);
-		data[n_data].grade = iwl_mld_get_link_grade(link_conf);
+		data[n_data].grade = iwl_mld_get_link_grade(mld, link_conf);
 
 		if (n_data == 0 || data[n_data].grade > max_grade) {
 			max_grade = data[n_data].grade;
@@ -826,7 +827,8 @@ static void _iwl_mld_select_links(struct iwl_mld *mld,
 	/* The logic below is simple and not suited for more than 2 links */
 	WARN_ON_ONCE(max_active_links > 2);
 
-	n_data = iwl_mld_set_link_sel_data(vif, data, usable_links, &best_idx);
+	n_data = iwl_mld_set_link_sel_data(mld, vif, data, usable_links,
+					   &best_idx);
 
 	if (WARN(!n_data, "Couldn't find a valid grade for any link!\n"))
 		return;
