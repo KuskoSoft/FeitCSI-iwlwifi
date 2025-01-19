@@ -330,7 +330,7 @@ iwl_mld_vif_iter_emlsr_mode_notif(void *data, u8 *mac,
 				  struct ieee80211_vif *vif)
 {
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
-	struct iwl_mvm_esr_mode_notif *notif = (void *)data;
+	struct iwl_esr_mode_notif *notif = (void *)data;
 
 	if (!iwl_mld_vif_has_emlsr_cap(vif))
 		return;
