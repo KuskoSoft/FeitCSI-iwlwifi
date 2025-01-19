@@ -341,9 +341,9 @@ iwl_mld_vif_iter_emlsr_mode_notif(void *data, u8 *mac,
 				      IWL_MLD_EMLSR_BLOCKED_FW);
 		break;
 	case ESR_RECOMMEND_LEAVE:
-		/* FIXME: This should probably be handled in some way */
-		IWL_DEBUG_INFO(mld_vif->mld,
-			       "Received recommendation to leave EMLSR.\n");
+		iwl_mld_block_emlsr(mld_vif->mld, vif,
+				    IWL_MLD_EMLSR_BLOCKED_FW,
+				    iwl_mld_get_primary_link(vif));
 		break;
 	case ESR_FORCE_LEAVE:
 	default:
