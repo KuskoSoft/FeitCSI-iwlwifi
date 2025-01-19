@@ -112,7 +112,8 @@ void iwl_mld_emlsr_tmp_non_bss_done_wk(struct wiphy *wiphy,
 #define IWL_MLD_TRIGGER_LINK_SEL_TIME	(HZ * IWL_MLD_TRIGGER_LINK_SEL_TIME_SEC)
 
 /* Exit reasons that can cause longer EMLSR prevention */
-#define IWL_MLD_PREVENT_EMLSR_REASONS	IWL_MLD_EMLSR_EXIT_MISSED_BEACON
+#define IWL_MLD_PREVENT_EMLSR_REASONS	(IWL_MLD_EMLSR_EXIT_MISSED_BEACON | \
+					 IWL_MLD_EMLSR_EXIT_LINK_USAGE)
 #define IWL_MLD_PREVENT_EMLSR_TIMEOUT	(HZ * 400)
 
 #define IWL_MLD_EMLSR_PREVENT_SHORT	(HZ * 300)
