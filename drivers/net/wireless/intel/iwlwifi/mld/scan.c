@@ -1257,32 +1257,33 @@ iwl_mld_config_sched_scan_profiles(struct iwl_mld *mld,
 	return ret;
 }
 
-static bool
-iwl_mld_sched_scan_handle_non_psc_channels(struct iwl_mld_scan_params *params)
+static int
+iwl_mld_sched_scan_handle_non_psc_channels(struct iwl_mld_scan_params *params,
+					   bool *non_psc_included)
 {
-	bool non_psc_included = false;
 	int i, j;
 
+	*non_psc_included = false;
 	/* for 6 GHZ band only PSC channels need to be added */
 	for (i = 0; i < params->n_channels; i++) {
 		struct ieee80211_channel *channel = params->channels[i];
 
 		if (channel->band == NL80211_BAND_6GHZ &&
 		    !cfg80211_channel_is_psc(channel)) {
-			non_psc_included = true;
+			*non_psc_included = true;
 			break;
 		}
 	}
 
-	if (!non_psc_included)
-		return false;
+	if (!*non_psc_included)
+		return 0;
 
 	params->channels =
 		kmemdup(params->channels,
 			sizeof(params->channels[0]) * params->n_channels,
 			GFP_KERNEL);
 	if (!params->channels)
-		return false;
+		return -ENOMEM;
 
 	for (i = j = 0; i < params->n_channels; i++) {
 		if (params->channels[i]->band == NL80211_BAND_6GHZ &&
@@ -1293,7 +1294,7 @@ iwl_mld_sched_scan_handle_non_psc_channels(struct iwl_mld_scan_params *params)
 
 	params->n_channels = j;
 
-	return true;
+	return 0;
 }
 
 static void
@@ -1665,7 +1666,10 @@ int iwl_mld_sched_scan_start(struct iwl_mld *mld,
 
 	iwl_mld_scan_build_probe_req(mld, vif, ies, &params);
 
-	non_psc_included = iwl_mld_sched_scan_handle_non_psc_channels(&params);
+	ret = iwl_mld_sched_scan_handle_non_psc_channels(&params,
+							 &non_psc_included);
+	if (ret)
+		goto out;
 
 	if (!iwl_mld_scan_fits(mld, req->n_ssids, ies, params.n_channels)) {
 		ret = -ENOBUFS;
