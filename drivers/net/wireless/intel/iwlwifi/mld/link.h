@@ -110,4 +110,7 @@ int iwl_mld_link_set_associated(struct iwl_mld *mld, struct ieee80211_vif *vif,
 unsigned int iwl_mld_get_link_grade(struct iwl_mld *mld,
 				    struct ieee80211_bss_conf *link_conf);
 
+unsigned int iwl_mld_get_chan_load(struct iwl_mld *mld,
+				   struct ieee80211_bss_conf *link_conf);
+
 #endif /* __iwl_mld_link_h__ */

@@ -777,7 +777,8 @@ iwl_mld_valid_emlsr_pair(struct ieee80211_vif *vif,
  * Returns 0 if EMLSR is not allowed with these 2 links.
  */
 static
-unsigned int iwl_mld_get_emlsr_grade(struct ieee80211_vif *vif,
+unsigned int iwl_mld_get_emlsr_grade(struct iwl_mld *mld,
+				     struct ieee80211_vif *vif,
 				     struct iwl_mld_link_sel_data *a,
 				     struct iwl_mld_link_sel_data *b,
 				     u8 *primary_id)
@@ -802,13 +803,9 @@ unsigned int iwl_mld_get_emlsr_grade(struct ieee80211_vif *vif,
 	if (WARN_ON_ONCE(!primary_conf))
 		return 0;
 
-	/*
-	 * With EMLSR we can use the secondary channel whenever the primary is
-	 * loaded with other traffic. Scale the secondary grade accordingly.
-	 */
-	/* TODO: task=statistics fetch load */
-	primary_load = SCALE_FACTOR / 2;
+	primary_load = iwl_mld_get_chan_load(mld, primary_conf);
 
+	/* The more the primary link is loaded, the more worthwhile EMLSR becomes */
 	return a->grade + ((b->grade * primary_load) / SCALE_FACTOR);
 }
 
@@ -856,7 +853,7 @@ static void _iwl_mld_select_links(struct iwl_mld *mld,
 		for (u8 b = a + 1; b < n_data; b++) {
 			u8 best_in_pair;
 			u16 emlsr_grade =
-				iwl_mld_get_emlsr_grade(vif,
+				iwl_mld_get_emlsr_grade(mld, vif,
 							&data[a], &data[b],
 							&best_in_pair);
 

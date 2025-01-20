@@ -802,9 +802,8 @@ iwl_mld_get_default_chan_load(struct ieee80211_bss_conf *link_conf)
 	}
 }
 
-static unsigned int
-iwl_mld_get_chan_load(struct iwl_mld *mld,
-		      struct ieee80211_bss_conf *link_conf)
+unsigned int iwl_mld_get_chan_load(struct iwl_mld *mld,
+				   struct ieee80211_bss_conf *link_conf)
 {
 	int chan_load;
 
