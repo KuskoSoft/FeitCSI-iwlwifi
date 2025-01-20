@@ -693,6 +693,72 @@ static int iwl_mld_vendor_get_sar_profile_info(struct wiphy *wiphy,
 	return cfg80211_vendor_cmd_reply(skb);
 }
 
+static int iwl_mld_vendor_sar_get_table(struct wiphy *wiphy,
+					struct wireless_dev *wdev,
+					const void *data,
+					int data_len)
+{
+	struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+	struct iwl_mld *mld = IWL_MAC80211_GET_MLD(hw);
+	struct sk_buff *skb = NULL;
+	struct nlattr *nl_table;
+	int ret, fw_ver;
+
+	/* if wrds is disabled - ewrd must be disabled too */
+	if (!mld->fwrt.sar_profiles[0].enabled)
+		return -ENOENT;
+
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, 100);
+	if (!skb)
+		return -ENOMEM;
+
+	nl_table = nla_nest_start(skb, IWL_MVM_VENDOR_ATTR_SAR_TABLE);
+	if (!nl_table) {
+		kfree_skb(skb);
+		return -ENOBUFS;
+	}
+
+	for (int prof = 0; prof < ARRAY_SIZE(mld->fwrt.sar_profiles); prof++) {
+		struct nlattr *nl_profile;
+
+		if (!mld->fwrt.sar_profiles[prof].enabled)
+			break;
+
+		nl_profile = nla_nest_start(skb, prof + 1);
+		if (!nl_profile) {
+			ret = -ENOBUFS;
+			goto err;
+		}
+
+		/* put info per chain */
+		for (int chain = 0;
+		     chain < ARRAY_SIZE(mld->fwrt.sar_profiles[prof].chains);
+		     chain++) {
+			if (nla_put(skb, chain + 1,
+				    ARRAY_SIZE(mld->fwrt.sar_profiles[prof].chains[chain].subbands),
+				    mld->fwrt.sar_profiles[prof].chains[chain].subbands)) {
+				ret = -ENOBUFS;
+				goto err;
+			}
+		}
+
+		nla_nest_end(skb, nl_profile);
+	}
+	nla_nest_end(skb, nl_table);
+
+	fw_ver = iwl_fw_lookup_cmd_ver(mld->fw, REDUCE_TX_POWER_CMD,
+				       IWL_FW_CMD_VER_UNKNOWN);
+
+	if (nla_put_u32(skb, IWL_MVM_VENDOR_ATTR_SAR_VER, fw_ver)) {
+		ret = -ENOBUFS;
+		goto err;
+	}
+	return cfg80211_vendor_cmd_reply(skb);
+err:
+	kfree_skb(skb);
+	return ret;
+}
+
 static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 	{
 		.info = {
@@ -786,6 +852,16 @@ static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_mld_vendor_rfi_get_table,
+		.policy = iwl_mld_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_SAR_GET_TABLE,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV,
+		.doit = iwl_mld_vendor_sar_get_table,
 		.policy = iwl_mld_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},
