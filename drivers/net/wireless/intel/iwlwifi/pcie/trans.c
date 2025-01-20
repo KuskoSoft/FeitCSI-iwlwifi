@@ -1299,6 +1299,7 @@ static void _iwl_trans_pcie_stop_device(struct iwl_trans *trans, bool from_irq)
 		return;
 
 	trans_pcie->is_down = true;
+	trans_pcie->alive_isr_received = false;
 
 	/* tell the device to stop sending interrupts */
 	iwl_disable_interrupts(trans);

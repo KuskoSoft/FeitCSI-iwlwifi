@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2003-2014, 2018-2024 Intel Corporation
+ * Copyright (C) 2003-2014, 2018-2025 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -1659,6 +1659,12 @@ irqreturn_t iwl_pcie_irq_rx_msix_handler(int irq, void *dev_id)
 		return IRQ_NONE;
 	}
 
+	if (!trans_pcie->alive_isr_received) {
+		IWL_DEBUG_ISR(trans,
+			      "Ignoring Rx interrupt before ALIVE interrupt\n");
+		return IRQ_HANDLED;
+	}
+
 	rxq = &trans_pcie->rxq[entry->entry];
 	lock_map_acquire(&trans->sync_cmd_lockdep_map);
 	IWL_DEBUG_ISR(trans, "[%d] Got interrupt\n", entry->entry);
@@ -1936,6 +1942,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 	if (inta & CSR_INT_BIT_ALIVE) {
 		IWL_DEBUG_ISR(trans, "Alive interrupt\n");
 		isr_stats->alive++;
+		trans_pcie->alive_isr_received = true;
 		if (trans->trans_cfg->gen2) {
 			/*
 			 * We can restock, since firmware configured
@@ -2337,6 +2344,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void *dev_id)
 	/* Alive notification via Rx interrupt will do the real work */
 	if (inta_hw & MSIX_HW_INT_CAUSES_REG_ALIVE) {
 		IWL_DEBUG_ISR(trans, "Alive interrupt\n");
+		trans_pcie->alive_isr_received = true;
 		isr_stats->alive++;
 		if (trans->trans_cfg->gen2) {
 			/* We can restock, since firmware configured the RFH */

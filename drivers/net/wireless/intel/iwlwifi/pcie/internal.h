@@ -419,6 +419,7 @@ struct iwl_pcie_txqs {
  * @isr_stats: interrupt statistics
  * @napi_dev: (fake) netdev for NAPI registration
  * @txqs: transport tx queues data.
+ * @alive_isr_received: we got the alive interrupt from the firmware
  */
 struct iwl_trans_pcie {
 	struct iwl_rxq *rxq;
@@ -517,6 +518,7 @@ struct iwl_trans_pcie {
 	char rf_name[32];
 
 	struct iwl_pcie_txqs txqs;
+	bool alive_isr_received;
 };
 
 static inline struct iwl_trans_pcie *
