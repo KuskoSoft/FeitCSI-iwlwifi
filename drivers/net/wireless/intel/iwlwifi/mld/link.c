@@ -677,9 +677,16 @@ static const struct iwl_mld_rssi_to_grade rssi_to_grade_map[] = {
 
 #define MAX_GRADE (rssi_to_grade_map[ARRAY_SIZE(rssi_to_grade_map) - 1].grade)
 
-#define DEFAULT_CHAN_LOAD_LB	30
-#define DEFAULT_CHAN_LOAD_HB	15
-#define DEFAULT_CHAN_LOAD_UHB	0
+#define DEFAULT_CHAN_LOAD_2GHZ	30
+#define DEFAULT_CHAN_LOAD_5GHZ	15
+#define DEFAULT_CHAN_LOAD_6GHZ	0
+
+/* Factors calculation is done with fixed-point with a scaling factor of 1/256 */
+#define SCALE_FACTOR 256
+#define MAX_CHAN_LOAD 256
+
+/* Convert a percentage from [0,100] to [0,255] */
+#define NORMALIZE_PERCENT_TO_255(percentage) ((percentage) * SCALE_FACTOR / 100)
 
 static unsigned int
 iwl_mld_get_n_subchannels(const struct ieee80211_bss_conf *link_conf)
@@ -701,6 +708,122 @@ iwl_mld_get_n_subchannels(const struct ieee80211_bss_conf *link_conf)
 		n_subchannels -= hweight16(link_conf->chanreq.oper.punctured);
 
 	return n_subchannels;
+}
+
+static int
+iwl_mld_get_chan_load_from_element(struct iwl_mld *mld,
+				   struct ieee80211_bss_conf *link_conf)
+{
+	struct ieee80211_vif *vif = link_conf->vif;
+	const struct cfg80211_bss_ies *ies;
+	const struct element *bss_load_elem = NULL;
+	const struct ieee80211_bss_load_elem *bss_load;
+
+	if (ieee80211_vif_link_active(vif, link_conf->link_id))
+		ies = wiphy_dereference(mld->wiphy, link_conf->bss->beacon_ies);
+	else
+		ies = wiphy_dereference(mld->wiphy, link_conf->bss->ies);
+
+	if (ies)
+		bss_load_elem = cfg80211_find_elem(WLAN_EID_QBSS_LOAD,
+						   ies->data, ies->len);
+
+	if (!bss_load_elem ||
+	    bss_load_elem->datalen != sizeof(*bss_load))
+		return -EINVAL;
+
+	bss_load = (const void *)bss_load_elem->data;
+
+	return bss_load->channel_util;
+}
+
+static unsigned int
+iwl_mld_get_chan_load_by_us(struct iwl_mld *mld,
+			    struct ieee80211_bss_conf *link_conf)
+{
+	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link_conf);
+	struct ieee80211_chanctx_conf *chan_ctx;
+	struct iwl_mld_phy *phy;
+
+	if (!mld_link || !mld_link->active)
+		return 0;
+
+	if (WARN_ONCE(!rcu_access_pointer(mld_link->chan_ctx),
+		      "Active link (%u) without channel ctxt assigned!\n",
+		      link_conf->link_id))
+		return 0;
+
+	chan_ctx = wiphy_dereference(mld->wiphy, mld_link->chan_ctx);
+	phy = iwl_mld_phy_from_mac80211(chan_ctx);
+
+	return phy->channel_load_by_us;
+}
+
+/* Returns error if the channel utilization element is invalid/unavailable */
+static int iwl_mld_get_chan_load_by_others(struct iwl_mld *mld,
+					   struct ieee80211_bss_conf *link_conf)
+{
+	int chan_load;
+	unsigned int chan_load_by_us;
+
+	/* get overall load */
+	chan_load = iwl_mld_get_chan_load_from_element(mld, link_conf);
+	if (chan_load < 0)
+		return chan_load;
+
+	chan_load_by_us = iwl_mld_get_chan_load_by_us(mld, link_conf);
+
+	/* channel load by us is given in percentage */
+	chan_load_by_us =
+		NORMALIZE_PERCENT_TO_255(chan_load_by_us);
+
+	/* Use only values that firmware sends that can possibly be valid */
+	if (chan_load_by_us <= chan_load)
+		chan_load -= chan_load_by_us;
+
+	return chan_load;
+}
+
+static unsigned int
+iwl_mld_get_default_chan_load(struct ieee80211_bss_conf *link_conf)
+{
+	enum nl80211_band band = link_conf->chanreq.oper.chan->band;
+
+	switch (band) {
+	case NL80211_BAND_2GHZ:
+		return DEFAULT_CHAN_LOAD_2GHZ;
+	case NL80211_BAND_5GHZ:
+		return DEFAULT_CHAN_LOAD_5GHZ;
+	case NL80211_BAND_6GHZ:
+		return DEFAULT_CHAN_LOAD_6GHZ;
+	default:
+		WARN_ON(1);
+		return 0;
+	}
+}
+
+static unsigned int
+iwl_mld_get_chan_load(struct iwl_mld *mld,
+		      struct ieee80211_bss_conf *link_conf)
+{
+	int chan_load;
+
+	chan_load = iwl_mld_get_chan_load_by_others(mld, link_conf);
+	if (chan_load >= 0)
+		return chan_load;
+
+	/* No information from the element, take the defaults */
+	chan_load = iwl_mld_get_default_chan_load(link_conf);
+
+	/* The defaults are given in percentage */
+	return NORMALIZE_PERCENT_TO_255(chan_load);
+}
+
+static unsigned int
+iwl_mld_get_avail_chan_load(struct iwl_mld *mld,
+			    struct ieee80211_bss_conf *link_conf)
+{
+	return MAX_CHAN_LOAD - iwl_mld_get_chan_load(mld, link_conf);
 }
 
 /* This function calculates the grade of a link. Returns 0 in error case */
@@ -754,7 +877,7 @@ unsigned int iwl_mld_get_link_grade(struct iwl_mld *mld,
 	}
 
 	/* Apply the channel load and puncturing factors */
-	/* TODO: task=EMLSR task=statistics */
+	grade = grade * iwl_mld_get_avail_chan_load(mld, link_conf) / SCALE_FACTOR;
 	grade = grade * iwl_mld_get_n_subchannels(link_conf);
 
 	IWL_DEBUG_EHT(mld, "Link %d's grade: %d\n", link_conf->link_id, grade);
