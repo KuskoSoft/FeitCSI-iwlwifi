@@ -139,4 +139,6 @@ void iwl_mld_emlsr_check_equal_bw(struct iwl_mld *mld,
 
 void iwl_mld_emlsr_check_bt(struct iwl_mld *mld);
 
+void iwl_mld_emlsr_check_chan_load(struct iwl_mld *mld);
+
 #endif /* __iwl_mld_mlo_h__ */

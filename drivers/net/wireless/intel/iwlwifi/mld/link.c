@@ -685,9 +685,6 @@ static const struct iwl_mld_rssi_to_grade rssi_to_grade_map[] = {
 #define SCALE_FACTOR 256
 #define MAX_CHAN_LOAD 256
 
-/* Convert a percentage from [0,100] to [0,255] */
-#define NORMALIZE_PERCENT_TO_255(percentage) ((percentage) * SCALE_FACTOR / 100)
-
 static unsigned int
 iwl_mld_get_n_subchannels(const struct ieee80211_bss_conf *link_conf)
 {
@@ -739,14 +736,17 @@ iwl_mld_get_chan_load_from_element(struct iwl_mld *mld,
 
 static unsigned int
 iwl_mld_get_chan_load_by_us(struct iwl_mld *mld,
-			    struct ieee80211_bss_conf *link_conf)
+			    struct ieee80211_bss_conf *link_conf,
+			    bool expect_active_link)
 {
 	struct iwl_mld_link *mld_link = iwl_mld_link_from_mac80211(link_conf);
 	struct ieee80211_chanctx_conf *chan_ctx;
 	struct iwl_mld_phy *phy;
 
-	if (!mld_link || !mld_link->active)
+	if (!mld_link || !mld_link->active) {
+		WARN_ON(expect_active_link);
 		return 0;
+	}
 
 	if (WARN_ONCE(!rcu_access_pointer(mld_link->chan_ctx),
 		      "Active link (%u) without channel ctxt assigned!\n",
@@ -760,8 +760,9 @@ iwl_mld_get_chan_load_by_us(struct iwl_mld *mld,
 }
 
 /* Returns error if the channel utilization element is invalid/unavailable */
-static int iwl_mld_get_chan_load_by_others(struct iwl_mld *mld,
-					   struct ieee80211_bss_conf *link_conf)
+int iwl_mld_get_chan_load_by_others(struct iwl_mld *mld,
+				    struct ieee80211_bss_conf *link_conf,
+				    bool expect_active_link)
 {
 	int chan_load;
 	unsigned int chan_load_by_us;
@@ -771,7 +772,8 @@ static int iwl_mld_get_chan_load_by_others(struct iwl_mld *mld,
 	if (chan_load < 0)
 		return chan_load;
 
-	chan_load_by_us = iwl_mld_get_chan_load_by_us(mld, link_conf);
+	chan_load_by_us = iwl_mld_get_chan_load_by_us(mld, link_conf,
+						      expect_active_link);
 
 	/* channel load by us is given in percentage */
 	chan_load_by_us =
@@ -807,7 +809,7 @@ unsigned int iwl_mld_get_chan_load(struct iwl_mld *mld,
 {
 	int chan_load;
 
-	chan_load = iwl_mld_get_chan_load_by_others(mld, link_conf);
+	chan_load = iwl_mld_get_chan_load_by_others(mld, link_conf, false);
 	if (chan_load >= 0)
 		return chan_load;
 

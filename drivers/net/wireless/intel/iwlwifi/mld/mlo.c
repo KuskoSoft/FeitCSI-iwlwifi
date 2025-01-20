@@ -50,7 +50,8 @@ static void iwl_mld_print_emlsr_blocked(struct iwl_mld *mld, u32 mask)
 	HOW(BANDWIDTH)			\
 	HOW(LOW_RSSI)			\
 	HOW(LINK_USAGE)			\
-	HOW(BT_COEX)
+	HOW(BT_COEX)			\
+	HOW(CHAN_LOAD)
 
 static const char *
 iwl_mld_get_emlsr_exit_string(enum iwl_mld_emlsr_exit exit)
@@ -961,4 +962,37 @@ void iwl_mld_emlsr_check_bt(struct iwl_mld *mld)
 						IEEE80211_IFACE_ITER_NORMAL,
 						iwl_mld_emlsr_check_bt_iter,
 						NULL);
+}
+
+static void iwl_mld_emlsr_check_chan_load_iter(void *_data, u8 *mac,
+					       struct ieee80211_vif *vif)
+{
+	struct iwl_mld *mld = (struct iwl_mld *)_data;
+	struct ieee80211_bss_conf *link;
+	unsigned int link_id;
+
+	if (!iwl_mld_emlsr_active(vif))
+		return;
+
+	for_each_vif_active_link(vif, link, link_id) {
+		int chan_load = iwl_mld_get_chan_load_by_others(mld, link,
+								true);
+
+		if (chan_load < 0)
+			continue;
+
+		/* chan_load is in range [0,255] */
+		if (chan_load < NORMALIZE_PERCENT_TO_255(IWL_MLD_CHAN_LOAD_THRESH))
+			iwl_mld_exit_emlsr(mld, vif,
+					   IWL_MLD_EMLSR_EXIT_CHAN_LOAD,
+					   iwl_mld_get_primary_link(vif));
+	}
+}
+
+void iwl_mld_emlsr_check_chan_load(struct iwl_mld *mld)
+{
+	ieee80211_iterate_active_interfaces_mtx(mld->hw,
+					       IEEE80211_IFACE_ITER_NORMAL,
+					       iwl_mld_emlsr_check_chan_load_iter,
+					       (void *)(uintptr_t)mld);
 }

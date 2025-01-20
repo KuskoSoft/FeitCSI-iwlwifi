@@ -89,6 +89,9 @@ iwl_mld_cleanup_link(struct iwl_mld *mld, struct iwl_mld_link *link)
 		iwl_mld_free_internal_sta(mld, &link->aux_sta);
 }
 
+/* Convert a percentage from [0,100] to [0,255] */
+#define NORMALIZE_PERCENT_TO_255(percentage) ((percentage) * 256 / 100)
+
 int iwl_mld_add_link(struct iwl_mld *mld,
 		     struct ieee80211_bss_conf *bss_conf);
 int iwl_mld_remove_link(struct iwl_mld *mld,
@@ -112,5 +115,9 @@ unsigned int iwl_mld_get_link_grade(struct iwl_mld *mld,
 
 unsigned int iwl_mld_get_chan_load(struct iwl_mld *mld,
 				   struct ieee80211_bss_conf *link_conf);
+
+int iwl_mld_get_chan_load_by_others(struct iwl_mld *mld,
+				    struct ieee80211_bss_conf *link_conf,
+				    bool expect_active_link);
 
 #endif /* __iwl_mld_link_h__ */

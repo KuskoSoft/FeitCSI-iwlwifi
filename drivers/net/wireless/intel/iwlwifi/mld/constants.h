@@ -59,6 +59,8 @@
 #define IWL_MLD_LOW_RSSI_THRESH_160MHZ		-72
 
 #define IWL_MLD_ENTER_EMLSR_TPT_THRESH		400
+#define IWL_MLD_CHAN_LOAD_THRESH		2 /* in percentage */
+
 #else
 #define IWL_MLD_DIS_RANDOM_FW_ID	        (mld->trans->dbg_cfg.MLD_DIS_RANDOM_FW_ID)
 #define IWL_MLD_D3_DEBUG		        (((struct iwl_mld *)ctx)->trans->dbg_cfg.MLD_D3_DEBUG)
@@ -77,6 +79,7 @@
 #define IWL_MLD_HIGH_RSSI_THRESH_160MHZ		(mld->trans->dbg_cfg.MLD_HIGH_RSSI_THRESH_160MHZ)
 #define IWL_MLD_LOW_RSSI_THRESH_160MHZ		(mld->trans->dbg_cfg.MLD_LOW_RSSI_THRESH_160MHZ)
 #define IWL_MLD_ENTER_EMLSR_TPT_THRESH		(mld->trans->dbg_cfg.MLD_ENTER_EMLSR_TPT_THRESH)
+#define IWL_MLD_CHAN_LOAD_THRESH		(mld->trans->dbg_cfg.MLD_CHAN_LOAD_THRESH)
 #endif
 
 #endif /* __iwl_mld_constants_h__ */

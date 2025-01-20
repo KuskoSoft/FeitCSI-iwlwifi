@@ -480,6 +480,9 @@ iwl_mld_process_per_phy_stats(struct iwl_mld *mld,
 	ieee80211_iter_chan_contexts_atomic(mld->hw,
 					    iwl_mld_fill_chanctx_stats,
 					    (void *)(uintptr_t)per_phy);
+
+	/* channel_load_by_us may have been updated, so recheck */
+	iwl_mld_emlsr_check_chan_load(mld);
 }
 
 void iwl_mld_handle_stats_oper_notif(struct iwl_mld *mld,
