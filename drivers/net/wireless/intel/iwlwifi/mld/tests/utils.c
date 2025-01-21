@@ -2,7 +2,7 @@
 /*
  * KUnit tests for channel helper functions
  *
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include <kunit/test.h>
 #include <kunit/test-bug.h>
@@ -91,6 +91,7 @@ static void iwlmld_kunit_init_link(struct ieee80211_vif *vif,
 	ret = iwl_mld_allocate_link_fw_id(mld, &mld_link->fw_id, link);
 	KUNIT_ASSERT_EQ(test, ret, 0);
 	rcu_assign_pointer(mld_vif->link[link_id], mld_link);
+	rcu_assign_pointer(vif->link_conf[link_id], link);
 }
 
 IWL_MLD_ALLOC_FN(vif, vif)
