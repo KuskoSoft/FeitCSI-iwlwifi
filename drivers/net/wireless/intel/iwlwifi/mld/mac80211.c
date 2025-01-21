@@ -278,6 +278,10 @@ static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
 	struct wiphy *wiphy = hw->wiphy;
 	const struct iwl_ucode_capabilities *ucode_capa = &mld->fw->ucode_capa;
 
+	snprintf(wiphy->fw_version,
+		 sizeof(wiphy->fw_version),
+		 "%.31s", mld->fw->fw_version);
+
 	wiphy->interface_modes = BIT(NL80211_IFTYPE_STATION) |
 				 BIT(NL80211_IFTYPE_P2P_CLIENT) |
 				 BIT(NL80211_IFTYPE_AP) |
