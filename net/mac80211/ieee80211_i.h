@@ -467,7 +467,7 @@ struct ieee80211_mgd_assoc_data {
 	bool spp_amsdu;
 	bool acked;
 
-	unsigned int assoc_link_id;
+	s8 assoc_link_id;
 
 	__le16 ext_mld_capa_ops;
 
