@@ -474,6 +474,8 @@ iwl_mld_scan_get_cmd_gen_flags(struct iwl_mld *mld,
 	if (params->enable_6ghz_passive)
 		flags |= IWL_UMAC_SCAN_GEN_FLAGS_V2_6GHZ_PASSIVE_SCAN;
 
+	flags |= IWL_UMAC_SCAN_GEN_FLAGS_V2_ADAPTIVE_DWELL;
+
 	return flags;
 }
 
