@@ -442,3 +442,17 @@ struct ieee80211_vif *iwlmld_kunit_assoc_emlsr(u16 valid_links,
 
 	return vif;
 }
+
+struct element *iwlmld_kunit_gen_element(u8 id, const void *data, size_t len)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct element *elem;
+
+	KUNIT_ALLOC_AND_ASSERT_SIZE(test, elem, sizeof(*elem) + len);
+
+	elem->id = id;
+	elem->datalen = len;
+	memcpy(elem->data, data, len);
+
+	return elem;
+}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #ifndef __iwl_mld_kunit_utils_h__
@@ -104,5 +104,7 @@ _iwl_mld_kunit_create_pkt(const void *notif, size_t notif_sz);
 struct ieee80211_vif *iwlmld_kunit_assoc_emlsr(u16 valid_links,
 					       enum nl80211_band band1,
 					       enum nl80211_band band2);
+
+struct element *iwlmld_kunit_gen_element(u8 id, const void *data, size_t len);
 
 #endif /* __iwl_mld_kunit_utils_h__ */
