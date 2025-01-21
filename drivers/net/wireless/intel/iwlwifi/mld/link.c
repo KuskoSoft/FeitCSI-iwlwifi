@@ -1238,3 +1238,4 @@ unsigned int iwl_mld_get_link_grade(struct iwl_mld *mld,
 
 	return grade;
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_get_link_grade);
