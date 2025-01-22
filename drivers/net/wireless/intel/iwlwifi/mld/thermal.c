@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #ifdef CONFIG_THERMAL
 #include <linux/sort.h>
@@ -85,6 +85,8 @@ static int iwl_mld_get_temp(struct iwl_mld *mld, s32 *temp)
 	const struct iwl_dts_measurement_resp *resp;
 	int ret;
 
+	lockdep_assert_wiphy(mld->wiphy);
+
 	ret = iwl_mld_send_cmd(mld, &cmd);
 	if (ret) {
 		IWL_ERR(mld,
@@ -164,6 +166,8 @@ int iwl_mld_config_temp_report_ths(struct iwl_mld *mld)
 
 send:
 #endif
+	lockdep_assert_wiphy(mld->wiphy);
+
 	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(PHY_OPS_GROUP,
 						TEMP_REPORTING_THRESHOLDS_CMD),
 				   &cmd);
@@ -179,23 +183,27 @@ static int iwl_mld_tzone_get_temp(struct thermal_zone_device *device,
 				  int *temperature)
 {
 	struct iwl_mld *mld = thermal_zone_device_priv(device);
-	int ret;
 	int temp;
+	int ret = 0;
+
+	wiphy_lock(mld->wiphy);
 
 	if (!mld->fw_status.running) {
 		/* Tell the core that there is no valid temperature value to
 		 * return, but it need not worry about this.
 		 */
 		*temperature = THERMAL_TEMP_INVALID;
-		return 0;
+		goto unlock;
 	}
 
 	ret = iwl_mld_get_temp(mld, &temp);
 	if (ret)
-		return ret;
+		goto unlock;
 
 	*temperature = temp * 1000;
-	return 0;
+unlock:
+	wiphy_unlock(mld->wiphy);
+	return ret;
 }
 
 static int iwl_mld_tzone_set_trip_temp(struct thermal_zone_device *device,
@@ -207,14 +215,25 @@ static int iwl_mld_tzone_set_trip_temp(struct thermal_zone_device *device,
 				       int temp)
 {
 	struct iwl_mld *mld = thermal_zone_device_priv(device);
+	int ret;
 
-	if (!mld->fw_status.running)
-		return -EIO;
+	wiphy_lock(mld->wiphy);
 
-	if ((temp / 1000) > S16_MAX)
-		return -EINVAL;
+	if (!mld->fw_status.running) {
+		ret = -EIO;
+		goto unlock;
+	}
 
-	return iwl_mld_config_temp_report_ths(mld);
+	if ((temp / 1000) > S16_MAX) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	ret = iwl_mld_config_temp_report_ths(mld);
+unlock:
+	wiphy_unlock(mld->wiphy);
+	return ret;
+
 }
 
 static  struct thermal_zone_device_ops tzone_ops = {
@@ -305,6 +324,8 @@ int iwl_mld_config_ctdp(struct iwl_mld *mld, u32 state,
 	};
 	int ret;
 
+	lockdep_assert_wiphy(mld->wiphy);
+
 	ret = iwl_mld_send_cmd_pdu(mld, WIDE_ID(PHY_OPS_GROUP, CTDP_CONFIG_CMD),
 				   &cmd);
 
@@ -341,14 +362,25 @@ static int iwl_mld_tcool_set_cur_state(struct thermal_cooling_device *cdev,
 				       unsigned long new_state)
 {
 	struct iwl_mld *mld = (struct iwl_mld *)(cdev->devdata);
+	int ret;
 
-	if (!mld->fw_status.running)
-		return -EIO;
+	wiphy_lock(mld->wiphy);
 
-	if (new_state >= ARRAY_SIZE(iwl_mld_cdev_budgets))
-		return -EINVAL;
+	if (!mld->fw_status.running) {
+		ret = -EIO;
+		goto unlock;
+	}
 
-	return iwl_mld_config_ctdp(mld, new_state, CTDP_CMD_OPERATION_START);
+	if (new_state >= ARRAY_SIZE(iwl_mld_cdev_budgets)) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	ret = iwl_mld_config_ctdp(mld, new_state, CTDP_CMD_OPERATION_START);
+
+unlock:
+	wiphy_unlock(mld->wiphy);
+	return ret;
 }
 
 static const struct thermal_cooling_device_ops tcooling_ops = {
