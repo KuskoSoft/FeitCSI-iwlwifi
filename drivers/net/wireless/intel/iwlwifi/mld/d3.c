@@ -1405,6 +1405,7 @@ int iwl_mld_no_wowlan_resume(struct iwl_mld *mld)
 	if (ret) {
 		mld->trans->state = IWL_TRANS_NO_FW;
 		set_bit(STATUS_FW_ERROR, &mld->trans->status);
+		return ret;
 	} else {
 		iwl_mld_low_latency_restart(mld);
 	}
