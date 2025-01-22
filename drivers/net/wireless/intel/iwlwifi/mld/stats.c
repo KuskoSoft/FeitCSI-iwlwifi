@@ -382,11 +382,10 @@ static void iwl_mld_update_link_sig(struct ieee80211_vif *vif, int sig,
 	if (!iwl_mld_vif_has_emlsr_cap(vif))
 		return;
 
-	/* Handle inactive EMLSR, check whether to trigger an MLO scan */
+	/* Handle inactive EMLSR, check whether to switch links */
 	if (!iwl_mld_emlsr_active(vif)) {
-		/* FIXME: Throttle the amount of scans we do */
 		if (sig < IWL_MLD_LOW_RSSI_MLO_SCAN_THRESH)
-			iwl_mld_int_mlo_scan(mld, vif);
+			iwl_mld_trigger_link_selection(mld, vif);
 		return;
 	}
 

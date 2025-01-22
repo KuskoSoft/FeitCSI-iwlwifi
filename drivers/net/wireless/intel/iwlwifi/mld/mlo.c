@@ -266,8 +266,8 @@ int iwl_mld_block_emlsr_sync(struct iwl_mld *mld, struct ieee80211_vif *vif,
 static void _iwl_mld_select_links(struct iwl_mld *mld,
 				  struct ieee80211_vif *vif);
 
-static void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
-					   struct ieee80211_vif *vif)
+void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
+				    struct ieee80211_vif *vif)
 {
 	bool last_scan_was_recent =
 		time_before(jiffies, mld->scan.last_mlo_scan_jiffies +
@@ -916,7 +916,7 @@ static void iwl_mld_emlsr_check_bt_iter(void *_data, u8 *mac,
 		if (!iwl_mld_emlsr_active(vif) &&
 		    iwl_mld_vif_has_emlsr_cap(vif) &&
 		    !mld_vif->emlsr.blocked_reasons)
-			iwl_mld_int_mlo_scan(mld, vif);
+			iwl_mld_trigger_link_selection(mld, vif);
 		return;
 	}
 

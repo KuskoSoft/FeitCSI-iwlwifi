@@ -141,4 +141,7 @@ void iwl_mld_emlsr_check_bt(struct iwl_mld *mld);
 
 void iwl_mld_emlsr_check_chan_load(struct iwl_mld *mld);
 
+void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
+				    struct ieee80211_vif *vif);
+
 #endif /* __iwl_mld_mlo_h__ */
