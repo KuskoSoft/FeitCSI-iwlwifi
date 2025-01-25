@@ -1216,8 +1216,8 @@ unsigned int iwl_mld_get_link_grade(struct iwl_mld *mld,
 	IWL_DEBUG_EHT(mld,
 		      "Calculating grade of link %d: band = %d, bandwidth = %d, punctured subchannels =0x%x RSSI = %d\n",
 		      link_conf->link_id, band,
-		      link_conf->chanreq.oper.punctured,
-		      link_conf->chanreq.oper.width, link_rssi);
+		      link_conf->chanreq.oper.width,
+		      link_conf->chanreq.oper.punctured, link_rssi);
 
 	/* Get grade based on RSSI */
 	for (int i = 0; i < ARRAY_SIZE(rssi_to_grade_map); i++) {
