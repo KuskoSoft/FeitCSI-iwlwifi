@@ -698,11 +698,10 @@ iwl_mld_set_link_sel_data(struct iwl_mld *mld,
 		if (WARN_ON_ONCE(!link_conf))
 			continue;
 
-		/* Ignore any BSS that was not seen in the last 30 seconds */
+		/* Ignore any BSS that was not seen in the last 5 seconds */
 		if (ktime_before(link_conf->bss->ts_boottime,
 				 ktime_sub_ns(ktime_get_boottime_ns(),
-					      IWL_MLD_TRIGGER_LINK_SEL_TIME_SEC *
-						NSEC_PER_SEC)))
+					      5 * NSEC_PER_SEC)))
 			continue;
 
 		data[n_data].link_id = link_id;
