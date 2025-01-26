@@ -286,33 +286,10 @@ static void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
 static void iwl_mld_unblocked_emlsr(struct iwl_mld *mld,
 				    struct ieee80211_vif *vif)
 {
-	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
-	bool last_exit_was_recent =
-		time_before(jiffies, mld_vif->emlsr.last_exit_ts +
-				     IWL_MLD_TRIGGER_LINK_SEL_TIME);
-
 	if (iwl_mld_emlsr_active(vif))
 		return;
 
 	IWL_DEBUG_INFO(mld, "EMLSR is unblocked\n");
-
-	/*
-	 * Take a shortcut if the last exit happened due to a temporary block
-	 * that was very recent (i.e. no longer than 30s) and we still have a
-	 * valid link selection.
-	 * In that case, simply activate the selection.
-	 */
-	if (mld_vif->emlsr.last_exit_reason == IWL_MLD_EMLSR_EXIT_BLOCK &&
-	    last_exit_was_recent &&
-	    hweight16(mld_vif->emlsr.selected_links) == 2) {
-		IWL_DEBUG_INFO(mld,
-			       "Use the latest link selection result: 0x%x\n",
-			       mld_vif->emlsr.selected_links);
-		ieee80211_set_active_links_async(vif,
-						 mld_vif->emlsr.selected_links);
-
-		return;
-	}
 
 	iwl_mld_trigger_link_selection(mld, vif);
 }
