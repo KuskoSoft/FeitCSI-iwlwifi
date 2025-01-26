@@ -812,11 +812,7 @@ static void _iwl_mld_select_links(struct iwl_mld *mld,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	/* Link selection only works for EMLSR right now */
-	if (!iwl_mld_vif_has_emlsr_cap(vif))
-		return;
-
-	if (!IWL_MLD_AUTO_EML_ENABLE)
+	if (!mld_vif->authorized || hweight16(usable_links) <= 1)
 		return;
 
 	/* The logic below is simple and not suited for more than 2 links */
@@ -834,8 +830,8 @@ static void _iwl_mld_select_links(struct iwl_mld *mld,
 	new_active = BIT(best_link->link_id);
 	max_grade = best_link->grade;
 
-	/* Only one link available (or only one maximum link) */
-	if (max_active_links == 1 || n_data == 1)
+	if (max_active_links == 1 || n_data == 1 ||
+	    !iwl_mld_vif_has_emlsr_cap(vif) || !IWL_MLD_AUTO_EML_ENABLE)
 		goto set_active;
 
 	/* Try to find the best link combination */
