@@ -814,6 +814,11 @@ static void _iwl_mld_select_links(struct iwl_mld *mld,
 	if (!mld_vif->authorized || hweight16(usable_links) <= 1)
 		return;
 
+	if (WARN(time_before(mld->scan.last_mlo_scan_jiffies,
+			     jiffies - IWL_MLD_SCAN_EXPIRE_TIME),
+		"Last MLO scan was too long ago, can't select links\n"))
+		return;
+
 	/* The logic below is simple and not suited for more than 2 links */
 	WARN_ON_ONCE(max_active_links > 2);
 
