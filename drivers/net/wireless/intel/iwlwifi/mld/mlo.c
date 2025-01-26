@@ -283,17 +283,6 @@ static void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
 	}
 }
 
-static void iwl_mld_unblocked_emlsr(struct iwl_mld *mld,
-				    struct ieee80211_vif *vif)
-{
-	if (iwl_mld_emlsr_active(vif))
-		return;
-
-	IWL_DEBUG_INFO(mld, "EMLSR is unblocked\n");
-
-	iwl_mld_trigger_link_selection(mld, vif);
-}
-
 void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 			 enum iwl_mld_emlsr_blocked reason)
 {
@@ -319,8 +308,11 @@ void iwl_mld_unblock_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 					 &mld_vif->emlsr.check_tpt_wk,
 					 round_jiffies_relative(IWL_MLD_TPT_COUNT_WINDOW));
 
-	if (!mld_vif->emlsr.blocked_reasons)
-		iwl_mld_unblocked_emlsr(mld, vif);
+	if (mld_vif->emlsr.blocked_reasons)
+		return;
+
+	IWL_DEBUG_INFO(mld, "EMLSR is unblocked\n");
+	iwl_mld_trigger_link_selection(mld, vif);
 }
 
 static void
