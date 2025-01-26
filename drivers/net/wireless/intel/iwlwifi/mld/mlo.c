@@ -263,20 +263,19 @@ int iwl_mld_block_emlsr_sync(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	return _iwl_mld_emlsr_block(mld, vif, reason, link_to_keep, true);
 }
 
+static void _iwl_mld_select_links(struct iwl_mld *mld,
+				  struct ieee80211_vif *vif);
+
 static void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
 					   struct ieee80211_vif *vif)
 {
-	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	bool last_scan_was_recent =
 		time_before(jiffies, mld->scan.last_mlo_scan_jiffies +
 				     IWL_MLD_SCAN_EXPIRE_TIME);
 
 	if (last_scan_was_recent) {
-		IWL_DEBUG_EHT(mld,
-			      "Use the latest link selection result: 0x%x\n",
-			      mld_vif->emlsr.selected_links);
-		ieee80211_set_active_links_async(vif,
-						 mld_vif->emlsr.selected_links);
+		IWL_DEBUG_EHT(mld, "MLO scan was recent, skip.\n");
+		_iwl_mld_select_links(mld, vif);
 	} else {
 		IWL_DEBUG_EHT(mld, "Doing link selection after MLO scan\n");
 		iwl_mld_int_mlo_scan(mld, vif);
@@ -830,8 +829,10 @@ static void _iwl_mld_select_links(struct iwl_mld *mld,
 	new_active = BIT(best_link->link_id);
 	max_grade = best_link->grade;
 
+	/* If EMLSR is not possible, activate the best link */
 	if (max_active_links == 1 || n_data == 1 ||
-	    !iwl_mld_vif_has_emlsr_cap(vif) || !IWL_MLD_AUTO_EML_ENABLE)
+	    !iwl_mld_vif_has_emlsr_cap(vif) || !IWL_MLD_AUTO_EML_ENABLE ||
+	    mld_vif->emlsr.blocked_reasons)
 		goto set_active;
 
 	/* Try to find the best link combination */
@@ -864,11 +865,7 @@ set_active:
 	mld_vif->emlsr.selected_primary = new_primary;
 	mld_vif->emlsr.selected_links = new_active;
 
-	/* If EMLSR is currently blocked, then only use the primary link */
-	if (mld_vif->emlsr.blocked_reasons)
-		ieee80211_set_active_links_async(vif, BIT(new_primary));
-	else
-		ieee80211_set_active_links_async(vif, new_active);
+	ieee80211_set_active_links_async(vif, new_active);
 }
 
 static void iwl_mld_vif_iter_select_links(void *_data, u8 *mac,
