@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include <net/mac80211.h>
 
@@ -11,12 +11,37 @@
 #include "link.h"
 #include "constants.h"
 
+static void iwl_mld_vif_ps_iterator(void *data, u8 *mac,
+				    struct ieee80211_vif *vif)
+{
+	bool *ps_enable = (bool *)data;
+
+	if (vif->type != NL80211_IFTYPE_STATION)
+		return;
+
+	*ps_enable &= vif->cfg.ps;
+}
+
 int iwl_mld_update_device_power(struct iwl_mld *mld, bool d3)
 {
 	struct iwl_device_power_cmd cmd = {};
+	bool enable_ps = false;
 
-	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
-		cmd.flags |= cpu_to_le16(DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK);
+	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM) {
+		enable_ps = true;
+
+		/* Disable power save if any STA interface has
+		 * power save turned off
+		 */
+		ieee80211_iterate_active_interfaces_mtx(mld->hw,
+							IEEE80211_IFACE_ITER_NORMAL,
+							iwl_mld_vif_ps_iterator,
+							&enable_ps);
+	}
+
+	if (enable_ps)
+		cmd.flags |=
+			cpu_to_le16(DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK);
 
 	if (d3)
 		cmd.flags |=

@@ -1392,8 +1392,14 @@ void iwl_mld_mac80211_vif_cfg_changed(struct ieee80211_hw *hw,
 		}
 	}
 
-	if (changes & BSS_CHANGED_PS)
+	if (changes & BSS_CHANGED_PS) {
+		/* Send both device-level and MAC-level power commands since the
+		 * firmware checks the POWER_TABLE_CMD's POWER_SAVE_EN bit to
+		 * determine SMPS mode.
+		 */
+		iwl_mld_update_device_power(mld, false);
 		iwl_mld_update_mac_power(mld, vif, false);
+	}
 
 	/* TODO: task=MLO BSS_CHANGED_MLD_VALID_LINKS/CHANGED_MLD_TTLM */
 }
