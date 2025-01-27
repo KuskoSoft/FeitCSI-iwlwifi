@@ -955,25 +955,27 @@ static void iwl_mld_emlsr_check_chan_load_iter(void *_data, u8 *mac,
 					       struct ieee80211_vif *vif)
 {
 	struct iwl_mld *mld = (struct iwl_mld *)_data;
-	struct ieee80211_bss_conf *link;
-	unsigned int link_id;
+	struct ieee80211_bss_conf *prim_link;
+	unsigned int prim_link_id;
+	int chan_load;
 
 	if (!iwl_mld_emlsr_active(vif))
 		return;
 
-	for_each_vif_active_link(vif, link, link_id) {
-		int chan_load = iwl_mld_get_chan_load_by_others(mld, link,
-								true);
+	prim_link_id = iwl_mld_get_primary_link(vif);
+	prim_link = link_conf_dereference_protected(vif, prim_link_id);
+	if (WARN_ON(!prim_link))
+		return;
 
-		if (chan_load < 0)
-			continue;
+	chan_load = iwl_mld_get_chan_load_by_others(mld, prim_link, true);
 
-		/* chan_load is in range [0,255] */
-		if (chan_load < NORMALIZE_PERCENT_TO_255(IWL_MLD_CHAN_LOAD_THRESH))
-			iwl_mld_exit_emlsr(mld, vif,
-					   IWL_MLD_EMLSR_EXIT_CHAN_LOAD,
-					   iwl_mld_get_primary_link(vif));
-	}
+	if (chan_load < 0)
+		return;
+
+	/* chan_load is in range [0,255] */
+	if (chan_load < NORMALIZE_PERCENT_TO_255(IWL_MLD_CHAN_LOAD_THRESH))
+		iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_CHAN_LOAD,
+				   prim_link_id);
 }
 
 void iwl_mld_emlsr_check_chan_load(struct iwl_mld *mld)
