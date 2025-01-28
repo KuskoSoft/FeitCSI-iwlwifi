@@ -12,6 +12,8 @@
 #include "iwl-vendor-cmd.h"
 #include "fw/api/rfi.h"
 #include "rfi.h"
+#include "iface.h"
+#include "mlo.h"
 
 static int validate_rfi_channel(const struct nlattr *attr,
 				struct netlink_ext_ack *extack)
@@ -600,6 +602,21 @@ err:
 	return ret;
 }
 
+static int
+iwl_mld_vendor_exit_emlsr(struct wiphy *wiphy, struct wireless_dev *wdev,
+			  const void *data, int data_len)
+{
+	struct ieee80211_vif *vif = wdev_to_ieee80211_vif(wdev);
+	struct iwl_mld *mld = iwl_mld_vif_from_mac80211(vif)->mld;
+
+	if (mld->rfi.wlan_master)
+		return -EINVAL;
+
+	iwl_mld_exit_emlsr(mld, vif, IWL_MLD_EMLSR_EXIT_RFI,
+			   iwl_mld_get_primary_link(vif));
+	return 0;
+}
+
 static int iwl_mld_vendor_put_geo_profile(struct iwl_mld *mld,
 					  struct sk_buff *skb, int profile)
 {
@@ -852,6 +869,17 @@ static const struct wiphy_vendor_command iwl_mld_vendor_commands[] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
 			 WIPHY_VENDOR_CMD_NEED_RUNNING,
 		.doit = iwl_mld_vendor_rfi_get_table,
+		.policy = iwl_mld_vendor_attr_policy,
+		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
+	},
+	{
+		.info = {
+			.vendor_id = INTEL_OUI,
+			.subcmd = IWL_MVM_VENDOR_CMD_EXIT_EMLSR,
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_RUNNING,
+		.doit = iwl_mld_vendor_exit_emlsr,
 		.policy = iwl_mld_vendor_attr_policy,
 		.maxattr = MAX_IWL_MVM_VENDOR_ATTR,
 	},
