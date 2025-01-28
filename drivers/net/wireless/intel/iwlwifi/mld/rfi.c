@@ -433,6 +433,69 @@ iwl_mld_rfi_ddr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
 	return n_interfering_entries < 2;
 }
 
+static bool
+iwl_mld_rfi_dlvr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
+					u8 band_a, u8 channel_b, u8 band_b)
+{
+	struct iwl_rfi_freq_table_resp_cmd *fw_table = mld->rfi.fw_table;
+	bool chan_a_is_interfered = false;
+	bool chan_b_is_interfered = false;
+	bool has_free_entry = false;
+
+	lockdep_assert_wiphy(mld->wiphy);
+
+	if (!iwl_mld_rfi_supported(mld, IWL_MLD_RFI_DLVR_FEATURE))
+		return true;
+
+	for (int i = 0; i < ARRAY_SIZE(fw_table->dlvr_table); i++) {
+		struct iwl_rfi_dlvr_lut_entry *dlvr_table_entry =
+			&fw_table->dlvr_table[i];
+		bool entry_interferes_chan_a = false;
+		bool entry_interferes_chan_b = false;
+
+		/* freq 0 means empty row */
+		if (!dlvr_table_entry->freq)
+			continue;
+
+		for (int j = 0; j < ARRAY_SIZE(dlvr_table_entry->channels);
+		     j++) {
+			/* channel 0 means empty entry */
+			if (!dlvr_table_entry->channels[j])
+				continue;
+
+			if (dlvr_table_entry->channels[j] == channel_a &&
+			    dlvr_table_entry->bands[j] == band_a) {
+				entry_interferes_chan_a = true;
+				chan_a_is_interfered = true;
+			}
+			if (dlvr_table_entry->channels[j] == channel_b &&
+			    dlvr_table_entry->bands[j] == band_b) {
+				entry_interferes_chan_b = true;
+				chan_b_is_interfered = true;
+			}
+
+			if (entry_interferes_chan_a && entry_interferes_chan_b)
+				break;
+		}
+
+		if (!entry_interferes_chan_a && !entry_interferes_chan_b) {
+			has_free_entry = true;
+			break;
+		}
+	}
+
+	/* Allow EMLSR if at least one of the channel is free from DLVR
+	 * interference
+	 */
+	if (!chan_a_is_interfered || !chan_b_is_interfered)
+		return true;
+
+	/* Wifi firmware can request PMC firmware to operate on given DLVR freq.
+	 * hence allow EMLSR if there is free DLVR entry.
+	 */
+	return has_free_entry;
+}
+
 u32
 iwl_mld_rfi_emlsr_state_link_pair(struct iwl_mld *mld,
 				  const struct cfg80211_chan_def *chandef_a,
@@ -447,9 +510,10 @@ iwl_mld_rfi_emlsr_state_link_pair(struct iwl_mld *mld,
 	    !mld->rfi.fw_table)
 		return 0;
 
-	/* TODO: task=EMLSR task=RFI DLVR considerations */
 	if (iwl_mld_rfi_ddr_emlsr_accept_link_pair(mld, channel_a, band_a,
-						   channel_b, band_b))
+						   channel_b, band_b) &&
+	    iwl_mld_rfi_dlvr_emlsr_accept_link_pair(mld, channel_a, band_a,
+						    channel_b, band_b))
 		return 0;
 
 	return IWL_MLD_EMLSR_EXIT_RFI;
