@@ -3159,8 +3159,8 @@ enum cfg80211_assoc_req_flags {
  *	included in the Current AP address field of the Reassociation Request
  *	frame.
  * @flags:  See &enum cfg80211_assoc_req_flags
- * @supported_rates_len: number of supported rates
- * @supported_selectors: supported selectors in IEEE 802.11 format
+ * @supported_selectors_len: number of supported BSS selectors
+ * @supported_selectors: supported BSS selectors in IEEE 802.11 format
  *	(or %NULL for no change).
  *	If %NULL, then support for SAE_H2E should be assumed.
  * @ht_capa:  HT Capabilities over-rides.  Values set in ht_capa_mask
