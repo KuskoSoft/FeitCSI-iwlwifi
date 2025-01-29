@@ -456,3 +456,20 @@ struct element *iwlmld_kunit_gen_element(u8 id, const void *data, size_t len)
 
 	return elem;
 }
+
+struct iwl_mld_phy *iwlmld_kunit_get_phy_of_link(struct ieee80211_vif *vif,
+						 u8 link_id)
+{
+	struct kunit *test = kunit_get_current_test();
+	struct iwl_mld *mld = test->priv;
+	struct ieee80211_chanctx_conf *chanctx;
+	struct ieee80211_bss_conf *link =
+		wiphy_dereference(mld->wiphy, vif->link_conf[link_id]);
+
+	KUNIT_EXPECT_NOT_NULL(test, link);
+
+	chanctx = wiphy_dereference(mld->wiphy, link->chanctx_conf);
+	KUNIT_EXPECT_NOT_NULL(test, chanctx);
+
+	return iwl_mld_phy_from_mac80211(chanctx);
+}

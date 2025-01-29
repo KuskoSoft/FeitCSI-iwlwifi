@@ -107,4 +107,20 @@ struct ieee80211_vif *iwlmld_kunit_assoc_emlsr(u16 valid_links,
 
 struct element *iwlmld_kunit_gen_element(u8 id, const void *data, size_t len);
 
+/**
+ * iwlmld_kunit_get_phy_of_link - Get the phy of a link
+ *
+ * @vif: The vif to get the phy from.
+ * @link_id: The id of the link to get the phy for.
+ *
+ * given a vif and link id, return the phy pointer of that link.
+ * This assumes that the link exists, and that it had a chanctx
+ * assigned.
+ * If this is not the case, the test will fail.
+ *
+ * Return: phy pointer.
+ */
+struct iwl_mld_phy *iwlmld_kunit_get_phy_of_link(struct ieee80211_vif *vif,
+						 u8 link_id);
+
 #endif /* __iwl_mld_kunit_utils_h__ */
