@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2020 - 2024 Intel Corporation
+ * Copyright (C) 2020 - 2025 Intel Corporation
  */
 
 #include "mvm.h"
@@ -201,6 +201,10 @@ bool iwl_mvm_rfi_supported(struct iwl_mvm *mvm, bool so_rfi_mode, bool is_ddr)
 				    IWL_UCODE_TLV_CAPA_RFI_DDR_SUPPORT);
 	bool dlvr_capa = fw_has_capa(&mvm->fw->ucode_capa,
 				     IWL_UCODE_TLV_CAPA_RFI_DLVR_SUPPORT);
+
+	/* Disable RFI feature for SLE, ESL, FPGA */
+	if (CPTCFG_IWL_TIMEOUT_FACTOR > 1)
+		return false;
 
 	IWL_DEBUG_FW(mvm, "FW has RFI DDR capability:%s DLVR capability:%s\n",
 		     ddr_capa ? "yes" : "no", dlvr_capa ? "yes" : "no");
