@@ -19,6 +19,14 @@
 #undef min
 #undef max
 #undef clamp
+#undef max3
+#undef min_t
+#undef max_t
+#undef min3
+#undef clamp_t
+#undef __cmp
+#undef __careful_cmp
+#undef __cmp_once
 #include <linux/minmax.h>
 #endif
 

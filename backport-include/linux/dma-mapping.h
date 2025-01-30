@@ -16,7 +16,7 @@
 #define DMA_MAPPING_ERROR		(~(dma_addr_t)0)
 #endif /* DMA_MAPPING_ERROR */
 
-#if LINUX_VERSION_IS_LESS(5, 7, 0)
+#if LINUX_VERSION_IS_LESS(5,4,233)
 
 static inline int dma_map_sgtable(struct device *dev, struct sg_table *sgt,
 		enum dma_data_direction dir, unsigned long attrs)
