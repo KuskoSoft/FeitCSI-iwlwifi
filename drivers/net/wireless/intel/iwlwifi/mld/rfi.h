@@ -64,4 +64,12 @@ iwl_mld_rfi_emlsr_state_link_pair(struct iwl_mld *mld,
 				  const struct cfg80211_chan_def *chandef_a,
 				  const struct cfg80211_chan_def *chandef_b);
 
+#if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)
+bool iwl_mld_rfi_ddr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
+					    u8 band_a, u8 channel_b, u8 band_b);
+bool iwl_mld_rfi_dlvr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
+					     u8 band_a, u8 channel_b,
+					     u8 band_b);
+#endif
+
 #endif /* __iwl_mld_rfi_h__ */

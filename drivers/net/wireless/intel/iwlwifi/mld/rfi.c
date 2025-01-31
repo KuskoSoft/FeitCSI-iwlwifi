@@ -3,6 +3,7 @@
  * Copyright (C) 2024-2025 Intel Corporation
  */
 
+#include <kunit/static_stub.h>
 #include "mld.h"
 #include "hcmd.h"
 #include "rfi.h"
@@ -188,12 +189,15 @@ static bool iwl_mld_rfi_fw_state_supported(struct iwl_mld *mld)
 bool iwl_mld_rfi_supported(struct iwl_mld *mld,
 			   enum iwl_mld_rfi_feature rfi_feature)
 {
-	u32 mac_type = CSR_HW_REV_TYPE(mld->trans->hw_rev);
+	u32 mac_type;
+
+	KUNIT_STATIC_STUB_REDIRECT(iwl_mld_rfi_supported, mld, rfi_feature);
 
 	/* Disable RFI feature for SLE, ESL, FPGA */
 	if (CPTCFG_IWL_TIMEOUT_FACTOR > 1)
 		return false;
 
+	mac_type = CSR_HW_REV_TYPE(mld->trans->hw_rev);
 	if (!(mld->trans->trans_cfg->integrated && mld->rfi.bios_enabled &&
 	      iwl_mld_rfi_fw_state_supported(mld)))
 		return false;
@@ -212,6 +216,7 @@ bool iwl_mld_rfi_supported(struct iwl_mld *mld,
 	       fw_has_capa(&mld->fw->ucode_capa,
 			   IWL_UCODE_TLV_CAPA_RFI_DDR_SUPPORT);
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rfi_supported);
 
 static void iwl_mld_set_default_rfi_config_cmd(struct iwl_rfi_config_cmd *cmd)
 {
@@ -371,7 +376,8 @@ void iwl_mld_handle_rfi_support_notif(struct iwl_mld *mld,
 	}
 }
 
-static bool
+VISIBLE_IF_IWLWIFI_KUNIT
+bool
 iwl_mld_rfi_ddr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
 				       u8 band_a, u8 channel_b, u8 band_b)
 {
@@ -432,8 +438,10 @@ iwl_mld_rfi_ddr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
 	 */
 	return n_interfering_entries < 2;
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rfi_ddr_emlsr_accept_link_pair);
 
-static bool
+VISIBLE_IF_IWLWIFI_KUNIT
+bool
 iwl_mld_rfi_dlvr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
 					u8 band_a, u8 channel_b, u8 band_b)
 {
@@ -495,6 +503,7 @@ iwl_mld_rfi_dlvr_emlsr_accept_link_pair(struct iwl_mld *mld, u8 channel_a,
 	 */
 	return has_free_entry;
 }
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_rfi_dlvr_emlsr_accept_link_pair);
 
 u32
 iwl_mld_rfi_emlsr_state_link_pair(struct iwl_mld *mld,
