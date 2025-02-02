@@ -476,9 +476,9 @@ static void
 iwl_mld_process_per_phy_stats(struct iwl_mld *mld,
 			      const struct iwl_stats_ntfy_per_phy *per_phy)
 {
-	ieee80211_iter_chan_contexts_atomic(mld->hw,
-					    iwl_mld_fill_chanctx_stats,
-					    (void *)(uintptr_t)per_phy);
+	ieee80211_iter_chan_contexts_mtx(mld->hw,
+					 iwl_mld_fill_chanctx_stats,
+					 (void *)(uintptr_t)per_phy);
 
 	/* channel_load_by_us may have been updated, so recheck */
 	iwl_mld_emlsr_check_chan_load(mld);
