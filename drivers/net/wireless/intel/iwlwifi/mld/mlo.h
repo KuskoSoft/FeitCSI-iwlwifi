@@ -144,4 +144,14 @@ void iwl_mld_emlsr_check_chan_load(struct iwl_mld *mld);
 void iwl_mld_trigger_link_selection(struct iwl_mld *mld,
 				    struct ieee80211_vif *vif);
 
+/**
+ * iwl_mld_retry_emlsr - Retry entering EMLSR
+ * @mld: MLD context
+ * @vif: VIF to retry EMLSR on
+ *
+ * Retry entering EMLSR on the given VIF.
+ * Use this if one of the parameters that can prevent EMLSR has changed.
+ */
+void iwl_mld_retry_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif);
+
 #endif /* __iwl_mld_mlo_h__ */

@@ -917,11 +917,7 @@ static void iwl_mld_emlsr_check_bt_iter(void *_data, u8 *mac,
 	unsigned int link_id;
 
 	if (!mld->bt_is_active) {
-		/* We can now do EMLSR with 2.4 GHz, BT is no longer active */
-		if (!iwl_mld_emlsr_active(vif) &&
-		    iwl_mld_vif_has_emlsr_cap(vif) &&
-		    !mld_vif->emlsr.blocked_reasons)
-			iwl_mld_trigger_link_selection(mld, vif);
+		iwl_mld_retry_emlsr(mld, vif);
 		return;
 	}
 
@@ -984,4 +980,15 @@ void iwl_mld_emlsr_check_chan_load(struct iwl_mld *mld)
 					       IEEE80211_IFACE_ITER_NORMAL,
 					       iwl_mld_emlsr_check_chan_load_iter,
 					       (void *)(uintptr_t)mld);
+}
+
+void iwl_mld_retry_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif)
+{
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+
+	if (!iwl_mld_vif_has_emlsr_cap(vif) || iwl_mld_emlsr_active(vif) ||
+	    mld_vif->emlsr.blocked_reasons)
+		return;
+
+	iwl_mld_trigger_link_selection(mld, vif);
 }
