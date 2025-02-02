@@ -399,7 +399,11 @@ static void iwl_mac_hw_set_misc(struct iwl_mld *mld)
 	hw->sta_data_size = sizeof(struct iwl_mld_sta);
 	hw->txq_data_size = sizeof(struct iwl_mld_txq);
 
-	hw->max_rx_aggregation_subframes = IEEE80211_MAX_AMPDU_BUF_EHT;
+	/* TODO: Remove this division when IEEE80211_MAX_AMPDU_BUF_EHT size
+	 * is supported.
+	 * Note: ensure that IWL_DEFAULT_QUEUE_SIZE_EHT is updated accordingly.
+	 */
+	hw->max_rx_aggregation_subframes = IEEE80211_MAX_AMPDU_BUF_EHT / 2;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	if (mld->trans->dbg_cfg.rx_agg_subframes)
