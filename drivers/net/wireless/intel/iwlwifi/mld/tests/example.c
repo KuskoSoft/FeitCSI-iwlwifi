@@ -58,7 +58,8 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	rcu_read_unlock();
 	KUNIT_EXPECT_TRUE(test, ieee80211_vif_is_mld(vif));
 
-	ctx = iwlmld_kunit_add_chanctx(NL80211_BAND_2GHZ);
+	ctx = iwlmld_kunit_add_chanctx(NL80211_BAND_2GHZ,
+				       NL80211_CHAN_WIDTH_20);
 
 	phy = iwl_mld_phy_from_mac80211(ctx);
 	KUNIT_ASSERT_EQ(test, ctx->def.chan->band, NL80211_BAND_2GHZ);
