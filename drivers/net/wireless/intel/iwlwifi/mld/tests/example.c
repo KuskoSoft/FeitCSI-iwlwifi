@@ -2,7 +2,7 @@
 /*
  * KUnit tests for channel helper functions
  *
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 #include <kunit/test.h>
 
@@ -97,23 +97,26 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 static void iwl_mld_kunit_assoc_example(struct kunit *test)
 {
 	struct ieee80211_vif *vif;
+	struct iwl_mld_kunit_link assoc_link = {
+		.id = 0,
+		.band = NL80211_BAND_2GHZ,
+		.bandwidth = NL80211_CHAN_WIDTH_40,
+	};
 	u16 valid_links = 0x3;
-	u8 assoc_link_id = 1;
 
-	vif = iwlmld_kunit_setup_non_mlo_assoc(NL80211_BAND_2GHZ);
+	vif = iwlmld_kunit_setup_non_mlo_assoc(&assoc_link);
 
 	KUNIT_ASSERT_NOT_NULL(test, vif);
 	KUNIT_ASSERT_FALSE(test, ieee80211_vif_is_mld(vif));
 	KUNIT_ASSERT_TRUE(test, vif->cfg.assoc);
 	KUNIT_ASSERT_NOT_NULL(test, iwl_mld_vif_from_mac80211(vif)->ap_sta);
 
-	vif = iwlmld_kunit_setup_mlo_assoc(valid_links, assoc_link_id,
-					   NL80211_BAND_5GHZ);
+	vif = iwlmld_kunit_setup_mlo_assoc(valid_links, &assoc_link);
 
 	KUNIT_ASSERT_NOT_NULL(test, vif);
 	KUNIT_ASSERT_TRUE(test, ieee80211_vif_is_mld(vif));
 	KUNIT_ASSERT_EQ(test, vif->valid_links, valid_links);
-	KUNIT_ASSERT_EQ(test, vif->active_links, BIT(assoc_link_id));
+	KUNIT_ASSERT_EQ(test, vif->active_links, BIT(assoc_link.id));
 }
 
 static void iwl_mld_kunit_emlsr_example(struct kunit *test)
@@ -122,10 +125,19 @@ static void iwl_mld_kunit_emlsr_example(struct kunit *test)
 	struct ieee80211_sta *sta;
 	struct iwl_mld_vif *mld_vif;
 	struct iwl_mld_sta *mld_sta;
-	u16 valid_links = 0x3;
+	struct iwl_mld_kunit_link link1 = {
+		.id = 0,
+		.band = NL80211_BAND_5GHZ,
+		.bandwidth = NL80211_CHAN_WIDTH_40,
+	};
+	struct iwl_mld_kunit_link link2 = {
+		.id = 1,
+		.band = NL80211_BAND_6GHZ,
+		.bandwidth = NL80211_CHAN_WIDTH_160,
+	};
+	u16 valid_links = BIT(link1.id) | BIT(link2.id);
 
-	vif = iwlmld_kunit_assoc_emlsr(valid_links, NL80211_BAND_5GHZ,
-				       NL80211_BAND_6GHZ);
+	vif = iwlmld_kunit_assoc_emlsr(&link1, &link2);
 	mld_vif = iwl_mld_vif_from_mac80211(vif);
 
 	KUNIT_ASSERT_EQ(test, vif->valid_links, vif->active_links);
