@@ -368,6 +368,8 @@ int iwl_mld_load_fw(struct iwl_mld *mld)
 
 void iwl_mld_stop_fw(struct iwl_mld *mld)
 {
+	lockdep_assert_wiphy(mld->wiphy);
+
 	iwl_abort_notification_waits(&mld->notif_wait);
 
 	iwl_fw_dbg_stop_sync(&mld->fwrt);

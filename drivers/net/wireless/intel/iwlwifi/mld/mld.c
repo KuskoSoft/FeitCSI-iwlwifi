@@ -430,12 +430,15 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 			break;
 	}
 
-	wiphy_unlock(mld->wiphy);
-
-	if (ret)
+	if (ret) {
+		wiphy_unlock(mld->wiphy);
+		iwl_fw_flush_dumps(&mld->fwrt);
 		goto free_hw;
+	}
 
 	iwl_mld_stop_fw(mld);
+
+	wiphy_unlock(mld->wiphy);
 
 	ret = iwl_mld_leds_init(mld);
 	if (ret)
