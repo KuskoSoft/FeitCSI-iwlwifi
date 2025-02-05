@@ -186,7 +186,8 @@ static int _iwl_mld_exit_emlsr(struct iwl_mld *mld, struct ieee80211_vif *vif,
 
 	lockdep_assert_wiphy(mld->wiphy);
 
-	if (!IWL_MLD_AUTO_EML_ENABLE)
+	/* On entry failure need to exit anyway, even if entered from debugfs */
+	if (exit != IWL_MLD_EMLSR_EXIT_FAIL_ENTRY && !IWL_MLD_AUTO_EML_ENABLE)
 		return 0;
 
 	/* Ignore exit request if EMLSR is not active */

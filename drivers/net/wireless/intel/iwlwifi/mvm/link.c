@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2022 - 2024 Intel Corporation
+ * Copyright (C) 2022 - 2025 Intel Corporation
  */
 #include "mvm.h"
 #include "time-event.h"
@@ -1059,7 +1059,8 @@ void iwl_mvm_exit_esr(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 
 	lockdep_assert_held(&mvm->mutex);
 
-	if (!IWL_MVM_AUTO_EML_ENABLE)
+	/* On entry failure need to exit anyway, even if entered from debugfs */
+	if (!IWL_MVM_AUTO_EML_ENABLE && reason != IWL_MVM_ESR_EXIT_FAIL_ENTRY)
 		return;
 
 	/* Nothing to do */
