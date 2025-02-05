@@ -2,7 +2,7 @@
 /*
  * Copyright (C) 2024-2025 Intel Corporation
  */
-
+#include <linux/rtnetlink.h>
 #include <net/mac80211.h>
 
 #include "fw/api/rx.h"
@@ -71,6 +71,14 @@ static void iwl_mld_debug_setup_random_nmi(struct iwl_mld *mld)
 	}
 }
 #endif
+
+static void iwl_mld_hw_set_regulatory(struct iwl_mld *mld)
+{
+	struct wiphy *wiphy = mld->wiphy;
+
+	wiphy->regulatory_flags |= REGULATORY_WIPHY_SELF_MANAGED;
+	wiphy->regulatory_flags |= REGULATORY_ENABLE_RELAX_NO_IR;
+}
 
 VISIBLE_IF_IWLWIFI_KUNIT
 void iwl_construct_mld(struct iwl_mld *mld, struct iwl_trans *trans,
@@ -419,9 +427,13 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	mld->bios_enable_puncturing = iwl_uefi_get_puncturing(&mld->fwrt);
 	mld->rfi.bios_enabled = iwl_rfi_is_enabled_in_bios(&mld->fwrt);
 
+	iwl_mld_hw_set_regulatory(mld);
+
 	/* Configure transport layer with the opmode specific params */
 	iwl_mld_configure_trans(op_mode);
 
+	/* needed for regulatory init */
+	rtnl_lock();
 	/* Needed for sending commands */
 	wiphy_lock(mld->wiphy);
 
@@ -433,6 +445,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 
 	if (ret) {
 		wiphy_unlock(mld->wiphy);
+		rtnl_unlock();
 		iwl_fw_flush_dumps(&mld->fwrt);
 		goto free_hw;
 	}
@@ -440,6 +453,7 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_mld_stop_fw(mld);
 
 	wiphy_unlock(mld->wiphy);
+	rtnl_unlock();
 
 	ret = iwl_mld_leds_init(mld);
 	if (ret)
