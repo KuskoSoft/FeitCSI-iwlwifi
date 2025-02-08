@@ -180,8 +180,7 @@ iwl_dbgfs_he_sniffer_params_write(struct iwl_mld *mld, char *buf,
 }
 
 static ssize_t
-iwl_dbgfs_he_sniffer_params_read(struct iwl_mld *mld, size_t count,
-				 char *buf)
+iwl_dbgfs_he_sniffer_params_read(struct iwl_mld *mld, char *buf, size_t count)
 {
 	return scnprintf(buf, count,
 			 "%d %02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx\n",
@@ -218,7 +217,7 @@ iwl_dbgfs_rfi_freq_table_write(struct iwl_mld *mld, char *buf, size_t count)
 				IWL_RFI_DESENSE_BUF_SIZE + 32)
 
 static ssize_t
-iwl_dbgfs_rfi_freq_table_read(struct iwl_mld *mld, size_t count, char *buf)
+iwl_dbgfs_rfi_freq_table_read(struct iwl_mld *mld, char *buf, size_t count)
 {
 	const struct iwl_rfi_freq_table_resp_cmd *fw_table;
 	ssize_t pos = 0;
