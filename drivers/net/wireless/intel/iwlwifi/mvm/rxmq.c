@@ -2533,7 +2533,7 @@ void iwl_mvm_rx_bar_frame_release(struct iwl_mvm *mvm, struct napi_struct *napi,
 	unsigned int baid, nssn, sta_id, tid;
 
 	if (IWL_FW_CHECK(mvm, pkt_len < sizeof(*release),
-			 "Unexpected frame release notif size %d (expected %ld)\n",
+			 "Unexpected frame release notif size %d (expected %zu)\n",
 			 pkt_len, sizeof(*release)))
 		return;
 

@@ -16,8 +16,9 @@
  * @mpdus_skbs: list to hold the segmented subframes.
  *
  * This function segments a large TCP packet into subframes.
- * Returns 0 on success and subframes are added to the mpdus_skbs list,
- * or negative value on failure.
+ * subframes are added to the mpdus_skbs list
+ *
+ * Returns: 0 on success and negative value on failure.
  */
 int iwl_tx_tso_segment(struct sk_buff *skb, unsigned int num_subframes,
 		       netdev_features_t netdev_flags,

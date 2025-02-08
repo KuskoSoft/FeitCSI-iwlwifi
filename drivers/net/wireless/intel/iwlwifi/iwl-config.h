@@ -107,7 +107,6 @@ enum iwl_nvm_type {
 	MODULE_FIRMWARE(pfx "-" __stringify(api) ".ucode");	\
 	MODULE_FIRMWARE(pfx ".pnvm")
 
-
 static inline u8 num_of_ant(u8 mask)
 {
 	return  !!((mask) & ANT_A) +

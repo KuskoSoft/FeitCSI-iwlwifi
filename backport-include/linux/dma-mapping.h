@@ -48,6 +48,6 @@ static inline void dma_sync_sgtable_for_device(struct device *dev,
 	dma_sync_sg_for_device(dev, sgt->sgl, sgt->orig_nents, dir);
 }
 
-#endif /* LINUX_VERSION_IS_LESS(5, 7, 0) */
+#endif /* LINUX_VERSION_IS_LESS(5, 4, 233) */
 
 #endif /* __BACKPORT_LINUX_DMA_MAPPING_H */

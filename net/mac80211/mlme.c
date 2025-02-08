@@ -486,8 +486,8 @@ ieee80211_verify_peer_he_mcs_support(struct ieee80211_sub_if_data *sdata,
 	if ((mcs_80_map_tx & 0x3) == IEEE80211_HE_MCS_NOT_SUPPORTED ||
 	    (mcs_80_map_rx & 0x3) == IEEE80211_HE_MCS_NOT_SUPPORTED) {
 		link_id_info(sdata, link_id,
-			    "Missing mandatory rates for 1 Nss, rx 0x%x, tx 0x%x, disable HE\n",
-			    mcs_80_map_tx, mcs_80_map_rx);
+			     "Missing mandatory rates for 1 Nss, rx 0x%x, tx 0x%x, disable HE\n",
+			     mcs_80_map_tx, mcs_80_map_rx);
 		return false;
 	}
 

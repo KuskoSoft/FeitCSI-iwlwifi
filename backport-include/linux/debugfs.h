@@ -47,4 +47,28 @@ debugfs_leave_cancellation(struct file *file,
 {}
 #endif /* < 6.7.0 */
 
+#if LINUX_VERSION_IS_LESS(6,14,0)
+static inline int __printf(2, 3) debugfs_change_name(struct dentry *dentry, const char *fmt, ...)
+{
+	const char *new_name;
+	struct dentry *parent;
+	va_list ap;
+
+	va_start(ap, fmt);
+	new_name = kvasprintf_const(GFP_KERNEL, fmt, ap);
+	va_end(ap);
+	if (!new_name)
+		return -ENOMEM;
+
+	parent = dget_parent(dentry);
+
+	debugfs_rename(parent, dentry, parent, new_name);
+
+	dput(parent);
+	kfree_const(new_name);
+	/* We never checked the succession of debugfs_rename anyway */
+	return 0;
+}
+#endif /* < 6.14.0 */
+
 #endif /* __BACKPORT_DEBUGFS_H_ */
