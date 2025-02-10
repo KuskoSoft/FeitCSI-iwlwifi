@@ -1945,7 +1945,14 @@ ieee80211_assoc_add_ml_elem(struct ieee80211_sub_if_data *sdata,
 	}
 	skb_put_data(skb, &mld_capa_ops, sizeof(mld_capa_ops));
 
-	if (assoc_data->ext_mld_capa_ops) {
+	/* Many APs have broken parsing of the extended MLD capa/ops field,
+	 * dropping (re-)association request frames or replying with association
+	 * response with a failure status if it's present. Without a clear
+	 * indication as to whether the AP supports parsing this field or not do
+	 * not include it in the common information unless strict mode is set.
+	 */
+	if (ieee80211_hw_check(&local->hw, STRICT) &&
+	    assoc_data->ext_mld_capa_ops) {
 		ml_elem->control |=
 			cpu_to_le16(IEEE80211_MLC_BASIC_PRES_EXT_MLD_CAPA_OP);
 		common->len += 2;
@@ -8173,30 +8180,6 @@ static int ieee80211_auth(struct ieee80211_sub_if_data *sdata)
 	return 0;
 }
 
-static bool
-ieee80211_mgd_assoc_bss_has_mld_ext_capa_ops(struct ieee80211_mgd_assoc_data *data)
-{
-	struct cfg80211_bss *bss = data->link[data->assoc_link_id].bss;
-	const struct ieee80211_multi_link_elem *mle;
-	const struct cfg80211_bss_ies *ies;
-	const struct element *ml;
-
-	guard(rcu)();
-	ies = rcu_dereference(bss->ies);
-	ml = cfg80211_find_ext_elem(WLAN_EID_EXT_EHT_MULTI_LINK,
-				    ies->data, ies->len);
-	if (!ml)
-		return false;
-
-	if (!ieee80211_mle_type_ok(ml->data + 1,
-				   IEEE80211_ML_CONTROL_TYPE_BASIC,
-				   ml->datalen - 1))
-		return false;
-
-	mle = (void *)(ml->data + 1);
-	return mle->control & cpu_to_le16(IEEE80211_MLC_BASIC_PRES_EXT_MLD_CAPA_OP);
-}
-
 static int ieee80211_do_assoc(struct ieee80211_sub_if_data *sdata)
 {
 	struct ieee80211_mgd_assoc_data *assoc_data = sdata->u.mgd.assoc_data;
@@ -8220,18 +8203,6 @@ static int ieee80211_do_assoc(struct ieee80211_sub_if_data *sdata)
 
 		return -ETIMEDOUT;
 	}
-
-	/*
-	 * Many APs have broken parsing of the extended MLD capa/ops field,
-	 * dropping (re-)association request frames if it's present. Thus,
-	 * if we get an ACK (or don't know), try to resend without it.
-	 */
-	if (!ieee80211_hw_check(&sdata->local->hw, STRICT) &&
-	    assoc_data->tries > 1 &&
-	    (assoc_data->acked ||
-	     !ieee80211_hw_check(&local->hw, REPORTS_TX_ACK_STATUS)) &&
-	    !ieee80211_mgd_assoc_bss_has_mld_ext_capa_ops(assoc_data))
-		assoc_data->ext_mld_capa_ops = 0;
 
 	sdata_info(sdata, "associate with %pM (try %d/%d)\n",
 		   assoc_data->ap_addr, assoc_data->tries,
@@ -8312,7 +8283,6 @@ void ieee80211_sta_work(struct ieee80211_sub_if_data *sdata)
 				ifmgd->assoc_data->timeout =
 					jiffies + IEEE80211_ASSOC_TIMEOUT_SHORT;
 				run_again(sdata, ifmgd->assoc_data->timeout);
-				ifmgd->assoc_data->acked = true;
 			} else {
 				ifmgd->assoc_data->timeout = jiffies - 1;
 			}
