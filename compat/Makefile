@@ -20,5 +20,6 @@ compat-$(CPTCFG_KERNEL_5_15) += backport-5.15.o
 compat-$(CPTCFG_KERNEL_6_3) += backport-6.3.o
 compat-$(CPTCFG_KERNEL_6_4) += backport-6.4.o
 compat-$(CPTCFG_KERNEL_6_5) += backport-6.5.o
+compat-$(CPTCFG_KERNEL_6_7) += backport-6.7.o
 compat-$(CPTCFG_KERNEL_6_9) += backport-6.9.o
 compat-$(CPTCFG_BPAUTO_BUILD_CRYPTO_LIB_ARC4) += lib-crypto-arc4.o

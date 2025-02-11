@@ -24,27 +24,29 @@ static inline void debugfs_create_xul(const char *name, umode_t mode,
 #endif
 
 #if LINUX_VERSION_IS_LESS(6,7,0)
-/**
- * struct debugfs_cancellation - cancellation data
- * @list: internal, for keeping track
- * @cancel: callback to call
- * @cancel_data: extra data for the callback to call
- */
 struct debugfs_cancellation {
 	struct list_head list;
 	void (*cancel)(struct dentry *, void *);
 	void *cancel_data;
+	/* backport only: */
+	struct dentry *dentry;
 };
 
-static inline void
+void
 debugfs_enter_cancellation(struct file *file,
-			   struct debugfs_cancellation *cancellation)
-{}
+			   struct debugfs_cancellation *cancellation);
 
-static inline void
+void
 debugfs_leave_cancellation(struct file *file,
-			   struct debugfs_cancellation *cancellation)
-{}
+			   struct debugfs_cancellation *cancellation);
+
+#define debugfs_remove LINUX_BACKPORT(debugfs_remove)
+void debugfs_remove(struct dentry *dentry);
+
+#if LINUX_VERSION_IS_LESS(5,6,0)
+#define debugfs_remove_recursive LINUX_BACKPORT(debugfs_remove)
+void debugfs_remove_recursive(struct dentry *dentry);
+#endif
 #endif /* < 6.7.0 */
 
 #if LINUX_VERSION_IS_LESS(6,14,0)
