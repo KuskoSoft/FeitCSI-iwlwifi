@@ -11,6 +11,7 @@
 #include <linux/pci.h>
 #include <linux/firmware.h>
 
+#include "fw/file.h"
 #include "iwl-drv.h"
 #include "iwl-modparams.h"
 #include "iwl-nvm-parse.h"
@@ -1120,6 +1121,10 @@ iwl_nvm_fixup_sband_iftd(struct iwl_trans *trans,
 		iftype_data->eht_cap.eht_cap_elem.phy_cap_info[8] &=
 			~IEEE80211_EHT_PHY_CAP8_RX_4096QAM_WIDER_BW_DL_OFDMA;
 	}
+
+	if (fw_has_capa(&fw->ucode_capa, IWL_UCODE_TLV_CAPA_RESTRICTED_TWT_SUPPORT))
+		iftype_data->eht_cap.eht_cap_elem.mac_cap_info[0] |=
+			IEEE80211_EHT_MAC_CAP0_RESTRICTED_TWT;
 }
 
 static void iwl_init_he_hw_capab(struct iwl_trans *trans,
