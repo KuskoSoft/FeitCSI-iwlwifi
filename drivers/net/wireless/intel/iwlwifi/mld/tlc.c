@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2024 Intel Corporation
+ * Copyright (C) 2024-2025 Intel Corporation
  */
 
 #include <net/mac80211.h>
@@ -478,7 +478,7 @@ static void iwl_mld_send_tlc_cmd(struct iwl_mld *mld,
 						   own_he_cap, own_eht_cap),
 		.chains = iwl_mld_get_fw_chains(mld),
 		.sgi_ch_width_supp = iwl_mld_get_fw_sgi(link_sta),
-		.max_mpdu_len = cpu_to_le16(link_sta->agg.max_rc_amsdu_len),
+		.max_mpdu_len = cpu_to_le16(link_sta->agg.max_amsdu_len),
 	};
 	int fw_sta_id = iwl_mld_fw_sta_id_from_link_sta(mld, link_sta);
 	int ret;
@@ -487,6 +487,12 @@ static void iwl_mld_send_tlc_cmd(struct iwl_mld *mld,
 		return;
 
 	cmd.sta_id = fw_sta_id;
+
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (mld->trans->dbg_cfg.amsdu_in_ampdu_disabled ||
+	    mld->trans->dbg_cfg.HW_CSUM_DISABLE)
+		cmd.max_mpdu_len = 0;
+#endif /* CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES */
 
 	iwl_mld_fill_supp_rates(mld, vif, link_sta, sband,
 				own_he_cap, own_eht_cap,
@@ -502,43 +508,6 @@ static void iwl_mld_send_tlc_cmd(struct iwl_mld *mld,
 					      CMD_ASYNC, &cmd);
 	if (ret)
 		IWL_ERR(mld, "Failed to send TLC cmd (%d)\n", ret);
-}
-
-static void iwl_mld_recalc_amsdu_len(struct iwl_mld *mld,
-				     struct ieee80211_link_sta *link_sta)
-{
-	const struct ieee80211_sta_ht_cap *ht_cap = &link_sta->ht_cap;
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-	/* For WFA testbed station, we need be able to create aggregation
-	 * sessions without requesting A-MSDU inside. Setting A-MSDU size of 0
-	 * will then make the firmware requests such sessions. This is OK
-	 * because we never allow A-MSDU outside A-MPDU in the first place.
-	 */
-	if (mld->trans->dbg_cfg.amsdu_in_ampdu_disabled ||
-	    mld->trans->dbg_cfg.HW_CSUM_DISABLE) {
-		link_sta->agg.max_rc_amsdu_len = 0;
-		ieee80211_sta_recalc_aggregates(link_sta->sta);
-		return;
-	}
-#endif
-	/* For EHT, HE and VHT - we can use the value as it was calculated by
-	 * mac80211.
-	 */
-	if (link_sta->eht_cap.has_eht || link_sta->he_cap.has_he ||
-	    link_sta->vht_cap.vht_supported)
-		goto recalc;
-
-	/* But for HT, mac80211 doesn't enforce to 4095, so force it here */
-	if (ht_cap->ht_supported && ht_cap->cap & IEEE80211_HT_CAP_MAX_AMSDU)
-		/* Agg is offloaded, so we need to assume that agg are enabled
-		 * and max mpdu in ampdu is 4095 (spec 802.11-2016 9.3.2.1)
-		 */
-		link_sta->agg.max_amsdu_len = IEEE80211_MAX_MPDU_LEN_HT_BA;
-
-recalc:
-	link_sta->agg.max_rc_amsdu_len = link_sta->agg.max_amsdu_len;
-	ieee80211_sta_recalc_aggregates(link_sta->sta);
 }
 
 int iwl_mld_send_tlc_dhc(struct iwl_mld *mld, u8 sta_id, u32 type, u32 data)
@@ -571,15 +540,22 @@ void iwl_mld_config_tlc_link(struct iwl_mld *mld,
 			     struct ieee80211_bss_conf *link_conf,
 			     struct ieee80211_link_sta *link_sta)
 {
+	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
 	enum nl80211_band band;
 
 	if (WARN_ON_ONCE(!link_conf->chanreq.oper.chan))
 		return;
 
+	/* Before we have information about a station, configure the A-MSDU RC
+	 * limit such that iwlmd and mac80211 would not be allowed to build
+	 * A-MSDUs.
+	 */
+	if (mld_sta->sta_state < IEEE80211_STA_ASSOC) {
+		link_sta->agg.max_rc_amsdu_len = 1;
+		ieee80211_sta_recalc_aggregates(link_sta->sta);
+	}
+
 	band = link_conf->chanreq.oper.chan->band;
-
-	iwl_mld_recalc_amsdu_len(mld, link_sta);
-
 	iwl_mld_send_tlc_cmd(mld, vif, link_sta, band);
 
 }
@@ -731,7 +707,7 @@ void iwl_mld_handle_tlc_notif(struct iwl_mld *mld,
 			link_sta->agg.max_tid_amsdu_len[i] =
 				iwl_mld_get_amsdu_size_of_tid(mld, link_sta, i);
 		else
-			link_sta->agg.max_tid_amsdu_len[i] = 0;
+			link_sta->agg.max_tid_amsdu_len[i] = 1;
 	}
 
 	ieee80211_sta_recalc_aggregates(link_sta->sta);
