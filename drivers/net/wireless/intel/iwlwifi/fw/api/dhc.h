@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
- * Copyright (C) 2018-2024 Intel Corporation
+ * Copyright (C) 2018-2025 Intel Corporation
  */
 #ifndef __iwl_fw_api_dhc_h__
 #define __iwl_fw_api_dhc_h__
@@ -30,10 +30,12 @@ enum iwl_dhc_umac_integration_table {
 	 * @DHC_INTEGRATION_TLC_DEBUG_CONFIG: TLC debug
 	 */
 	DHC_INTEGRATION_TLC_DEBUG_CONFIG = 1,
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/**
 	 * @DHC_INT_UMAC_TWT_CONTROL: TWT hooks (like disable internal TWT triggers)
 	 */
 	DHC_INT_UMAC_TWT_CONTROL = 10,
+#endif /* CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES */
 	/**
 	 * @DHC_INTEGRATION_MAX: Maximum UMAC integration table entries
 	 */
@@ -133,6 +135,7 @@ struct iwl_dhc_twt_operation {
 	u8 reserved;
 }; /* DHC_TWT_OPERATION_API_S */
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 /**
  * struct iwl_dhc_twt_control - control TWT behavior
  *
@@ -143,5 +146,6 @@ struct iwl_dhc_twt_control {
 	u8 twt_test_mode;
 	u8 reserved[3];
 }; /* DHC_TWT_CONTROL_API_S_VER_1 */
+#endif
 
 #endif /* __iwl_fw_api_dhc_h__ */
