@@ -43,8 +43,6 @@ enum iwl_dhc_umac_integration_table {
 };
 
 #define DHC_TARGET_UMAC BIT(27)
-#define DHC_ADWELL_SCAN_CHANNEL_DWELL_INDEX 2
-#define DHC_ADWELL_SCAN_FINE_TUNE_INDEX 3
 
 /**
  * struct iwl_dhc_cmd - debug host command
