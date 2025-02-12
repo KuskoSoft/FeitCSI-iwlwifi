@@ -440,7 +440,7 @@ int iwl_mld_ftm_start(struct iwl_mld *mld, struct ieee80211_vif *vif,
 	return ret;
 }
 
-static void iwl_mld_ftm_reset(struct iwl_mld *mld)
+static void iwl_mld_ftm_reset_request(struct iwl_mld *mld)
 {
 	struct iwl_mld_lci_civic_entry *entry, *prev;
 
@@ -652,7 +652,7 @@ void iwl_mld_handle_ftm_resp_notif(struct iwl_mld *mld,
 		cfg80211_pmsr_complete(mld->ftm_initiator.req_wdev,
 				       mld->ftm_initiator.req,
 				       GFP_KERNEL);
-		iwl_mld_ftm_reset(mld);
+		iwl_mld_ftm_reset_request(mld);
 	}
 }
 
@@ -679,7 +679,7 @@ void iwl_mld_ftm_restart_cleanup(struct iwl_mld *mld)
 
 	cfg80211_pmsr_complete(mld->ftm_initiator.req_wdev,
 			       mld->ftm_initiator.req, GFP_KERNEL);
-	iwl_mld_ftm_reset(mld);
+	iwl_mld_ftm_reset_request(mld);
 }
 
 void iwl_mld_ftm_remove_pasn_sta(struct iwl_mld *mld, u8 *addr)
@@ -774,7 +774,7 @@ void iwl_mld_ftm_initiator_stop(struct iwl_mld *mld)
 		kfree(entry);
 	}
 
-	iwl_mld_ftm_reset(mld);
+	iwl_mld_ftm_reset_request(mld);
 }
 
 void iwl_mld_handle_lci_civic_notif(struct iwl_mld *mld,
@@ -848,5 +848,5 @@ void iwl_mld_ftm_abort(struct iwl_mld *mld, struct cfg80211_pmsr_request *req)
 
 	iwl_mld_cancel_notifications_of_object(mld, IWL_MLD_OBJECT_TYPE_FTM_REQ,
 					       mld->ftm_initiator.req->cookie);
-	iwl_mld_ftm_reset(mld);
+	iwl_mld_ftm_reset_request(mld);
 }
