@@ -118,6 +118,18 @@ iwl_mld_ftm_set_target_chandef(struct iwl_mld *mld,
 			target->format_bw = IWL_LOCATION_FRAME_FORMAT_HE;
 			target->format_bw |= IWL_LOCATION_BW_160MHZ << LOCATION_BW_POS;
 			break;
+		case NL80211_CHAN_WIDTH_320:
+			if (!fw_has_capa(&mld->fw->ucode_capa,
+					 IWL_UCODE_TLV_CAPA_TOF_320MHZ_SUPPORT)) {
+				IWL_ERR(mld,
+					"No support for 320MHz measurement\n");
+				return -EOPNOTSUPP;
+			}
+
+			target->format_bw = IWL_LOCATION_FRAME_FORMAT_HE;
+			target->format_bw |=
+				IWL_LOCATION_BW_320MHZ << LOCATION_BW_POS;
+			break;
 		default:
 			IWL_ERR(mld, "Unsupported BW in FTM request (%d)\n",
 				peer->chandef.width);

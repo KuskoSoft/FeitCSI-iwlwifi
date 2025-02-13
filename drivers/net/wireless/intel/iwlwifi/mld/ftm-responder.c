@@ -44,7 +44,8 @@ iwl_mld_ftm_responder_set_ndp(struct iwl_mld *mld,
 		cpu_to_le32(IWL_TOF_RESPONDER_CMD_VALID_NDP_PARAMS);
 }
 
-static int iwl_mld_ftm_responder_set_bw(struct cfg80211_chan_def *chandef,
+static int iwl_mld_ftm_responder_set_bw(struct iwl_mld *mld,
+					struct cfg80211_chan_def *chandef,
 					u8 *format_bw, u8 *ctrl_ch_position)
 {
 	switch (chandef->width) {
@@ -69,6 +70,17 @@ static int iwl_mld_ftm_responder_set_bw(struct cfg80211_chan_def *chandef,
 	case NL80211_CHAN_WIDTH_160:
 		*format_bw = IWL_LOCATION_FRAME_FORMAT_HE;
 		*format_bw |= IWL_LOCATION_BW_160MHZ << LOCATION_BW_POS;
+		*ctrl_ch_position = iwl_mld_get_fw_ctrl_pos(chandef);
+		break;
+	case NL80211_CHAN_WIDTH_320:
+		if (!fw_has_capa(&mld->fw->ucode_capa,
+				 IWL_UCODE_TLV_CAPA_TOF_320MHZ_SUPPORT)) {
+			IWL_ERR(mld, "No support for 320MHz measurement\n");
+			return -EOPNOTSUPP;
+		}
+
+		*format_bw = IWL_LOCATION_FRAME_FORMAT_HE;
+		*format_bw |= IWL_LOCATION_BW_320MHZ << LOCATION_BW_POS;
 		*ctrl_ch_position = iwl_mld_get_fw_ctrl_pos(chandef);
 		break;
 	default:
@@ -131,7 +143,7 @@ iwl_mld_ftm_responder_cmd(struct iwl_mld *mld,
 
 	iwl_mld_ftm_responder_set_ndp(mld, &cmd);
 
-	err = iwl_mld_ftm_responder_set_bw(chandef, &cmd.format_bw,
+	err = iwl_mld_ftm_responder_set_bw(mld, chandef, &cmd.format_bw,
 					   &cmd.ctrl_ch_position);
 
 	if (err) {

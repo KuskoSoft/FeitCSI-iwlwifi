@@ -132,7 +132,8 @@ static const struct cfg80211_pmsr_capabilities iwl_mld_pmsr_capa = {
 			      BIT(NL80211_CHAN_WIDTH_20) |
 			      BIT(NL80211_CHAN_WIDTH_40) |
 			      BIT(NL80211_CHAN_WIDTH_80) |
-			      BIT(NL80211_CHAN_WIDTH_160),
+			      BIT(NL80211_CHAN_WIDTH_160) |
+			      BIT(NL80211_CHAN_WIDTH_320),
 		.preambles = BIT(NL80211_PREAMBLE_LEGACY) |
 			     BIT(NL80211_PREAMBLE_HT) |
 			     BIT(NL80211_PREAMBLE_VHT) |
