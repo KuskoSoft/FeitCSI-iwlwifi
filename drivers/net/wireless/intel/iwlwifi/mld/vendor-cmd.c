@@ -93,9 +93,8 @@ iwl_mld_vendor_attr_policy[NUM_IWL_MVM_VENDOR_ATTR] = {
 	[IWL_MVM_VENDOR_ATTR_ADDR] = { .type = NLA_BINARY, .len = ETH_ALEN },
 	[IWL_MVM_VENDOR_ATTR_STA_CIPHER] = { .type = NLA_U32 },
 	[IWL_MVM_VENDOR_ATTR_STA_HLTK] = NLA_POLICY_EXACT_LEN(HLTK_11AZ_LEN),
-	[IWL_MVM_VENDOR_ATTR_STA_TK] = NLA_POLICY_RANGE(NLA_BINARY,
-							WLAN_KEY_LEN_CCMP,
-							WLAN_KEY_LEN_GCMP_256),
+	[IWL_MVM_VENDOR_ATTR_STA_TK] = { .type = NLA_BINARY,
+				         .len = WLAN_KEY_LEN_GCMP_256 },
 };
 
 static struct nlattr **iwl_mld_parse_vendor_data(const void *data, int data_len)
@@ -823,8 +822,13 @@ static int iwl_mld_vendor_add_pasn_sta(struct wiphy *wiphy,
 		return ret;
 
 	if (tb[IWL_MVM_VENDOR_ATTR_STA_TK]) {
+		u32 expected_tk_len = cipher == WLAN_CIPHER_SUITE_GCMP_256 ?
+			WLAN_KEY_LEN_GCMP_256 : WLAN_KEY_LEN_CCMP;
+
 		tk = nla_data(tb[IWL_MVM_VENDOR_ATTR_STA_TK]);
 		tk_len = nla_len(tb[IWL_MVM_VENDOR_ATTR_STA_TK]);
+		if (tk_len != expected_tk_len)
+			return -EINVAL;
 	}
 
 	if (vif->bss_conf.ftm_responder)
