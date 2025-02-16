@@ -229,6 +229,15 @@ static int iwl_dbg_tlv_alloc_region(struct iwl_trans *trans,
 		IWL_DEBUG_FW(trans, "WRT: skipping HW-SMEM region\n");
 		return 0;
 	}
+
+	if (type == IWL_FW_INI_REGION_DEVICE_MEMORY &&
+	    reg->sub_type == IWL_FW_INI_REGION_DEVICE_MEMORY_SUBTYPE_SW_SMEM &&
+	    CSR_HW_RFID_TYPE(trans->hw_rf_id) ==
+	    CSR_HW_RFID_TYPE(CSR_HW_RF_ID_TYPE_HR)) {
+		IWL_DEBUG_FW(trans, "WRT: skipping SW-SMEM region\n");
+		return 0;
+	}
+
 #endif
 	if (type == IWL_FW_INI_REGION_INTERNAL_BUFFER) {
 		trans->dbg.imr_data.sram_addr =
