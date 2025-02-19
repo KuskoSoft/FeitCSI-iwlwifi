@@ -2627,6 +2627,12 @@ enum iwl_dump_ini_region_selector {
 	IWL_INI_DUMP_LATE_REGIONS,
 };
 
+static bool iwl_dump_due_to_error(enum iwl_fw_ini_time_point tp_id)
+{
+	return tp_id == IWL_FW_INI_TIME_POINT_FW_ASSERT ||
+	       tp_id == IWL_FW_INI_TIME_POINT_FW_HW_ERROR;
+}
+
 static u32
 iwl_dump_ini_dump_regions(struct iwl_fw_runtime *fwrt,
 			  struct iwl_fwrt_dump_data *dump_data,
@@ -2692,8 +2698,7 @@ iwl_dump_ini_dump_regions(struct iwl_fw_runtime *fwrt,
 		 * debug data which also need to be collected.
 		 */
 		if (reg_type == IWL_FW_INI_REGION_DRAM_IMR) {
-			if (tp_id == IWL_FW_INI_TIME_POINT_FW_ASSERT ||
-			    tp_id == IWL_FW_INI_TIME_POINT_FW_HW_ERROR)
+			if (iwl_dump_due_to_error(tp_id))
 				imr_reg_data->reg_tlv =
 					fwrt->trans->dbg.active_regions[i];
 			else
@@ -2730,7 +2735,7 @@ static u32 iwl_dump_ini_trigger(struct iwl_fw_runtime *fwrt,
 		     ARRAY_SIZE(fwrt->trans->dbg.active_regions));
 
 	if (trigger->time_point &
-			cpu_to_le32(IWL_FW_INI_APPLY_POLICY_RESET_HANDSHAKE)) {
+			cpu_to_le32(IWL_FW_INI_APPLY_POLICY_SPLIT_DUMP_RESET)) {
 		size += iwl_dump_ini_dump_regions(fwrt, dump_data, list, tp_id,
 						  regions_mask, &imr_reg_data,
 						  IWL_INI_DUMP_EARLY_REGIONS);
@@ -2739,6 +2744,10 @@ static u32 iwl_dump_ini_trigger(struct iwl_fw_runtime *fwrt,
 						  regions_mask, &imr_reg_data,
 						  IWL_INI_DUMP_LATE_REGIONS);
 	} else {
+		if (fw_has_capa(&fwrt->fw->ucode_capa,
+				IWL_UCODE_TLV_CAPA_RESET_DURING_ASSERT) &&
+		    iwl_dump_due_to_error(tp_id))
+			iwl_trans_pcie_fw_reset_handshake(fwrt->trans);
 		size += iwl_dump_ini_dump_regions(fwrt, dump_data, list, tp_id,
 						  regions_mask, &imr_reg_data,
 						  IWL_INI_DUMP_ALL_REGIONS);
@@ -3223,8 +3232,9 @@ static void iwl_fw_dbg_collect_sync(struct iwl_fw_runtime *fwrt, u8 wk_idx)
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	goto out;
 out_maybe_reset:
-	if (dump_data->trig->time_point &
-			cpu_to_le32(IWL_FW_INI_APPLY_POLICY_RESET_HANDSHAKE))
+	if (fw_has_capa(&fwrt->fw->ucode_capa,
+			IWL_UCODE_TLV_CAPA_RESET_DURING_ASSERT) &&
+	    iwl_dump_due_to_error(le32_to_cpu(dump_data->trig->time_point)))
 		iwl_trans_pcie_fw_reset_handshake(fwrt->trans);
 #endif
 out:

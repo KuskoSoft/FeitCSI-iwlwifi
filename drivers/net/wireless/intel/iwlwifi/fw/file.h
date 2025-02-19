@@ -524,6 +524,13 @@ enum iwl_ucode_tlv_capa {
 	IWL_UCODE_TLV_CAPA_UHB_CANADA_TAS_SUPPORT	= (__force iwl_ucode_tlv_capa_t)124,
 	IWL_UCODE_TLV_CAPA_RESTRICTED_TWT_SUPPORT	= (__force iwl_ucode_tlv_capa_t)126,
 	IWL_UCODE_TLV_CAPA_TOF_320MHZ_SUPPORT		= (__force iwl_ucode_tlv_capa_t)127,
+
+	/* set 4 */
+	/**
+	 * @IWL_UCODE_TLV_CAPA_RESET_DURING_ASSERT: FW reset handshake is needed
+	 *	during assert handling even if the dump isn't split
+	 */
+	IWL_UCODE_TLV_CAPA_RESET_DURING_ASSERT		= (__force iwl_ucode_tlv_capa_t)(4 * 32 +  0),
 	NUM_IWL_UCODE_TLV_CAPA
 /*
  * This construction make both sparse (which cannot increment the previous
