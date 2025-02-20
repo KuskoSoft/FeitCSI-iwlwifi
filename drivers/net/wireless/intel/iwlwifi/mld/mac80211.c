@@ -1324,9 +1324,6 @@ iwl_mld_mac80211_link_info_changed_sta(struct iwl_mld *mld,
 	}
 	if (changes & BSS_CHANGED_BANDWIDTH)
 		iwl_mld_retry_emlsr(mld, vif);
-	
-	if (changes & BSS_CHANGED_P2P_PS)
-		iwl_mld_mac_fw_action(mld, vif, FW_CTXT_ACTION_MODIFY);
 }
 
 static int iwl_mld_update_mu_groups(struct iwl_mld *mld,
