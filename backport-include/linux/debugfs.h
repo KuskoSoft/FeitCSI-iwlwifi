@@ -44,7 +44,7 @@ debugfs_leave_cancellation(struct file *file,
 void debugfs_remove(struct dentry *dentry);
 
 #if LINUX_VERSION_IS_LESS(5,6,0)
-#define debugfs_remove_recursive LINUX_BACKPORT(debugfs_remove)
+#define debugfs_remove_recursive LINUX_BACKPORT(debugfs_remove_recursive)
 void debugfs_remove_recursive(struct dentry *dentry);
 #endif
 #endif /* < 6.7.0 */
