@@ -718,9 +718,9 @@ iwl_mld_get_min_chan_load_thresh(struct ieee80211_chanctx_conf *chanctx)
 {
 	const struct iwl_mld_phy *phy = iwl_mld_phy_from_mac80211(chanctx);
 
-#ifdef CPTCFG_IWLWIFI_DEBUG_OVERRIDES
-	if (mld->trans.dbg_cfg.MLD_ENTER_EMLSR_CHAN_LOAD != -1)
-		return mld->trans.dbg_cfg.MLD_ENTER_EMLSR_CHAN_LOAD;
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if (phy->mld->trans->dbg_cfg.MLD_ENTER_EMLSR_CHAN_LOAD != -1)
+		return phy->mld->trans->dbg_cfg.MLD_ENTER_EMLSR_CHAN_LOAD;
 #endif
 
 	switch (phy->chandef.width) {

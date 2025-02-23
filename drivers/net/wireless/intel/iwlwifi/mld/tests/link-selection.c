@@ -263,6 +263,8 @@ static void test_iwl_mld_channel_load_allows_emlsr(struct kunit *test)
 	};
 	bool result;
 
+	mld->trans->dbg_cfg.MLD_ENTER_EMLSR_CHAN_LOAD = -1;
+
 	vif = iwlmld_kunit_setup_mlo_assoc(BIT(a.link_id) | BIT(b.link_id),
 					   &assoc_link);
 
