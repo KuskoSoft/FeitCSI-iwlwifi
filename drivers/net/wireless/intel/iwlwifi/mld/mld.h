@@ -322,7 +322,10 @@ iwl_cleanup_mld(struct iwl_mld *mld)
 	CLEANUP_STRUCT(&mld->scan);
 
 	iwl_mld_cleanup_rfi(mld);
+
+#ifdef CONFIG_PM_SLEEP
 	mld->fw_status.in_d3 = false;
+#endif
 
 	iwl_mld_low_latency_restart_cleanup(mld);
 
