@@ -106,7 +106,7 @@ struct iwl_mld_scan_params {
 	struct cfg80211_sched_scan_plan *scan_plans;
 	bool iter_notif;
 	bool respect_p2p_go;
-	s8 fw_link_id;
+	u8 fw_link_id;
 	struct cfg80211_scan_6ghz_params *scan_6ghz_params;
 	u32 n_6ghz_params;
 	bool scan_6ghz;
