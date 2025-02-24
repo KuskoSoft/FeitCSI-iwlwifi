@@ -151,6 +151,7 @@ static void _iwl_trans_pcie_gen2_stop_device(struct iwl_trans *trans)
 		iwl_trans_pcie_fw_reset_handshake(trans);
 
 	trans_pcie->is_down = true;
+	trans_pcie->alive_isr_received = false;
 
 	/* tell the device to stop sending interrupts */
 	iwl_disable_interrupts(trans);
