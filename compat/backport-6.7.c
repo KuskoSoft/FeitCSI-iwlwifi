@@ -46,10 +46,10 @@ static bool is_parent_of(struct dentry *p, struct dentry *e)
 
 void debugfs_remove(struct dentry *dentry)
 {
-	struct debugfs_cancellation *cancellation;
+	struct debugfs_cancellation *cancellation, *tmp;
 
 	mutex_lock(&cancellations_mtx);
-	list_for_each_entry(cancellation, &cancellations_list, list) {
+	list_for_each_entry_safe(cancellation, tmp, &cancellations_list, list) {
 		if (!is_parent_of(dentry, cancellation->dentry))
 			continue;
 		list_del_init(&cancellation->list);
@@ -67,10 +67,10 @@ EXPORT_SYMBOL_GPL(LINUX_BACKPORT(debugfs_remove));
 #if LINUX_VERSION_IS_LESS(5,6,0)
 void debugfs_remove_recursive(struct dentry *dentry)
 {
-	struct debugfs_cancellation *cancellation;
+	struct debugfs_cancellation *cancellation, *tmp;
 
 	mutex_lock(&cancellations_mtx);
-	list_for_each_entry(cancellation, &cancellations_list, list) {
+	list_for_each_entry_safe(cancellation, tmp, &cancellations_list, list) {
 		if (!is_parent_of(dentry, cancellation->dentry))
 			continue;
 		list_del_init(&cancellation->list);
