@@ -243,22 +243,17 @@ static int iwl_mld_load_fw_wait_alive(struct iwl_mld *mld)
 			iwl_fw_dbg_error_collect(&mld->fwrt,
 						 FW_DBG_TRIGGER_ALIVE_TIMEOUT);
 		iwl_mld_print_alive_notif_timeout(mld);
-		goto alive_failure;
+		return ret;
 	}
 
 	if (!alive_valid) {
 		IWL_ERR(mld, "Loaded firmware is not valid!\n");
-		ret = -EIO;
-		goto alive_failure;
+		return -EIO;
 	}
 
 	iwl_trans_fw_alive(mld->trans, 0);
 
 	return 0;
-
-alive_failure:
-	iwl_trans_stop_device(mld->trans);
-	return ret;
 }
 
 static int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld)
@@ -284,7 +279,7 @@ static int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld)
 			    &mld->fw->ucode_capa);
 	if (ret) {
 		IWL_ERR(mld, "Timeout waiting for PNVM load %d\n", ret);
-		goto init_failure;
+		return ret;
 	}
 
 	iwl_dbg_tlv_time_point(&mld->fwrt, IWL_FW_INI_TIME_POINT_AFTER_ALIVE,
@@ -307,7 +302,7 @@ static int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld)
 	if (ret) {
 		IWL_ERR(mld, "Failed to send init config command: %d\n", ret);
 		iwl_remove_notification(&mld->notif_wait, &init_wait);
-		goto init_failure;
+		return ret;
 	}
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
@@ -317,7 +312,7 @@ static int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld)
 			IWL_ERR(mld, "Failed to send PHY config command: %d\n",
 				ret);
 			iwl_remove_notification(&mld->notif_wait, &init_wait);
-			goto init_failure;
+			return ret;
 		}
 	}
 #endif
@@ -326,14 +321,10 @@ static int iwl_mld_run_fw_init_sequence(struct iwl_mld *mld)
 				    MLD_INIT_COMPLETE_TIMEOUT);
 	if (ret) {
 		IWL_ERR(mld, "Failed to get INIT_COMPLETE %d\n", ret);
-		goto init_failure;
+		return ret;
 	}
 
 	return 0;
-
-init_failure:
-	iwl_trans_stop_device(mld->trans);
-	return ret;
 }
 
 int iwl_mld_load_fw(struct iwl_mld *mld)
@@ -348,15 +339,18 @@ int iwl_mld_load_fw(struct iwl_mld *mld)
 
 	ret = iwl_mld_run_fw_init_sequence(mld);
 	if (ret)
-		return ret;
+		goto err;
 
 	ret = iwl_mld_init_mcc(mld);
 	if (ret)
-		return ret;
+		goto err;
 
 	mld->fw_status.running = true;
 
 	return 0;
+err:
+	iwl_trans_stop_device(mld->trans);
+	return ret;
 }
 
 void iwl_mld_stop_fw(struct iwl_mld *mld)
