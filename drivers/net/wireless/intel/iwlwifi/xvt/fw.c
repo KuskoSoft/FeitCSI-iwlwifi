@@ -223,6 +223,8 @@ static int iwl_xvt_load_ucode_wait_alive(struct iwl_xvt *xvt,
 	/* fresh firmware was loaded */
 	xvt->fw_error = false;
 
+	iwl_trans_fw_alive(xvt->trans, alive_data.scd_base_addr);
+
 	ret = iwl_xvt_pnvm_load(xvt->trans, &xvt->notif_wait,
 				&xvt->fw->ucode_capa);
 	if (ret) {
@@ -230,8 +232,6 @@ static int iwl_xvt_load_ucode_wait_alive(struct iwl_xvt *xvt,
 		iwl_fw_set_current_image(&xvt->fwrt, old_type);
 		return ret;
 	}
-
-	iwl_trans_fw_alive(xvt->trans, alive_data.scd_base_addr);
 
 	ret = iwl_init_paging(&xvt->fwrt, ucode_type);
 	if (ret)
