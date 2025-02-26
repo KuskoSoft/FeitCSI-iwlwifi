@@ -27,6 +27,8 @@
 #include "fw/api/location.h"
 #include "ftm-initiator.h"
 
+#include "iwl-nvm-parse.h"
+
 #define DRV_DESCRIPTION "Intel(R) MLD wireless driver for Linux"
 MODULE_DESCRIPTION(DRV_DESCRIPTION);
 MODULE_LICENSE("GPL");
@@ -447,6 +449,14 @@ iwl_op_mode_mld_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		ret = iwl_mld_load_fw(mld);
 		if (!ret)
 			break;
+	}
+
+	if (!ret) {
+		mld->nvm_data = iwl_get_nvm(mld->trans, mld->fw, 0, 0);
+		if (IS_ERR(mld->nvm_data)) {
+			IWL_ERR(mld, "Failed to read NVM: %d\n", ret);
+			ret = PTR_ERR(mld->nvm_data);
+		}
 	}
 
 	if (ret) {
