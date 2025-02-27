@@ -761,9 +761,6 @@ void iwl_mld_mac80211_remove_interface(struct ieee80211_hw *hw,
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	debugfs_remove(iwl_mld_vif_from_mac80211(vif)->dbgfs_slink);
-#ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
-	debugfs_remove(iwl_mld_vif_from_mac80211(vif)->dbgfs_slink_mvm);
-#endif
 #endif
 
 	iwl_mld_rm_vif(mld, vif);

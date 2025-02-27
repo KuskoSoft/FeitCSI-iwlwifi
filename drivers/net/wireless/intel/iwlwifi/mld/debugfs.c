@@ -1039,8 +1039,7 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 		debugfs_create_symlink(name, mld->debugfs_dir, target);
 
 #ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
-	mld_vif->dbgfs_slink_mvm =
-		debugfs_create_symlink("iwlmvm", vif->debugfs_dir, "iwlmld");
+	debugfs_create_symlink("iwlmvm", vif->debugfs_dir, "iwlmld");
 #endif
 
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM &&

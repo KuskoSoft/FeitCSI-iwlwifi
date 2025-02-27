@@ -176,9 +176,6 @@ struct iwl_mld_vif {
 	bool use_ps_poll;
 	bool disable_bf;
 	struct dentry *dbgfs_slink;
-#ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
-	struct dentry *dbgfs_slink_mvm;
-#endif
 	bool ftm_unprotected;
 #endif
 };
