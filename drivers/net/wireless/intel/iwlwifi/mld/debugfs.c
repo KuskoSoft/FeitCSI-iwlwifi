@@ -1035,8 +1035,9 @@ void iwl_mld_add_vif_debugfs(struct ieee80211_hw *hw,
 	snprintf(name, sizeof(name), "%pd", vif->debugfs_dir);
 	snprintf(target, sizeof(target), "../../../%pd3/iwlmld",
 		 vif->debugfs_dir);
-	mld_vif->dbgfs_slink =
-		debugfs_create_symlink(name, mld->debugfs_dir, target);
+	if (!mld_vif->dbgfs_slink)
+		mld_vif->dbgfs_slink =
+			debugfs_create_symlink(name, mld->debugfs_dir, target);
 
 #ifdef HACK_IWLWIFI_DEBUGFS_IWLMVM_SYMLINK
 	debugfs_create_symlink("iwlmvm", vif->debugfs_dir, "iwlmld");
