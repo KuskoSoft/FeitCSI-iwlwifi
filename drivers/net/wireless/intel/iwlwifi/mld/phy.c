@@ -154,7 +154,6 @@ int iwl_mld_phy_fw_action(struct iwl_mld *mld,
 	return ret;
 }
 
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 static u32 iwl_mld_get_phy_config(struct iwl_mld *mld)
 {
 	u32 phy_config = ~(FW_PHY_CFG_TX_CHAIN |
@@ -176,23 +175,19 @@ int iwl_mld_send_phy_cfg_cmd(struct iwl_mld *mld)
 		.phy_cfg = cpu_to_le32(iwl_mld_get_phy_config(mld)),
 		.calib_control.event_trigger = default_calib->event_trigger,
 		.calib_control.flow_trigger = default_calib->flow_trigger,
+		.phy_specific_cfg = mld->fwrt.phy_filters,
 	};
 
-	/* For now, this function is called only if
-	 * MLD_SNIFFER_REDUCED_SENSITIVITY is enabled, but since we remove the
-	 * sensitivity calibration, better be safe than sorry and ensure
-	 * nobody called this function with MLD_SNIFFER_REDUCED_SENSITIVITY
-	 * disabled.
-	 */
-	WARN_ON(!mld->trans->dbg_cfg.MLD_SNIFFER_REDUCED_SENSITIVITY);
-
-	cmd.calib_control.event_trigger &=
-		cpu_to_le32(~IWL_CALIB_CFG_SENSITIVITY_IDX);
-	cmd.calib_control.flow_trigger &=
-		cpu_to_le32(~IWL_CALIB_CFG_SENSITIVITY_IDX);
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
+	if(mld->trans->dbg_cfg.MLD_SNIFFER_REDUCED_SENSITIVITY) {
+		cmd.calib_control.event_trigger &=
+			cpu_to_le32(~IWL_CALIB_CFG_SENSITIVITY_IDX);
+		cmd.calib_control.flow_trigger &=
+			cpu_to_le32(~IWL_CALIB_CFG_SENSITIVITY_IDX);
+	}
+#endif
 
 	IWL_INFO(mld, "Sending Phy CFG command: 0x%x\n", cmd.phy_cfg);
 
 	return iwl_mld_send_cmd_pdu(mld, PHY_CONFIGURATION_CMD, &cmd);
 }
-#endif /* CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES */
