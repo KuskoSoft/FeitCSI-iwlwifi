@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
  * Copyright (C) 2018-2020 Intel Corporation
+ * Copyright (C) 2025 Intel Corporation
  */
 #include <linux/module.h>
 #include <linux/types.h>
@@ -69,24 +70,26 @@ void iwl_xvt_rx_frame_release(struct iwl_xvt *xvt, struct iwl_rx_packet *pkt)
 		return;
 
 	buffer = &xvt->reorder_bufs[baid];
-	if (buffer->sta_id == IWL_XVT_INVALID_STA)
-		return;
-
 	spin_lock_bh(&buffer->lock);
+	if (buffer->sta_id == IWL_XVT_INVALID_STA)
+		goto unlock;
+
 	iwl_xvt_release_frames(xvt, buffer, le16_to_cpu(release->nssn));
+unlock:
 	spin_unlock_bh(&buffer->lock);
 }
 
 void iwl_xvt_destroy_reorder_buffer(struct iwl_xvt *xvt,
 				    struct iwl_xvt_reorder_buffer *buf)
 {
-	if (buf->sta_id == IWL_XVT_INVALID_STA)
-		return;
-
 	spin_lock_bh(&buf->lock);
+	if (buf->sta_id == IWL_XVT_INVALID_STA)
+		goto unlock;
+
 	iwl_xvt_release_frames(xvt, buf,
 			       ieee80211_sn_add(buf->head_sn, buf->buf_size));
 	buf->sta_id = IWL_XVT_INVALID_STA;
+unlock:
 	spin_unlock_bh(&buf->lock);
 }
 

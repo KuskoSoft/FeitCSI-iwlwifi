@@ -1888,6 +1888,8 @@ static int iwl_xvt_add_txq(struct iwl_xvt *xvt, u32 sta_mask,
 					    size, 0);
 		if (queue_id < 0)
 			return queue_id;
+		if (queue_id >= ARRAY_SIZE(xvt->queue_data))
+			return -ENOSPC;
 	} else {
 		iwl_trans_txq_enable_cfg(xvt->trans, queue_id, ssn, NULL, 0);
 		ret = iwl_xvt_send_cmd_pdu(xvt, SCD_QUEUE_CFG, 0, sizeof(*cmd),
