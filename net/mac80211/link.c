@@ -2,7 +2,7 @@
 /*
  * MLO link handling
  *
- * Copyright (C) 2022-2024 Intel Corporation
+ * Copyright (C) 2022-2025 Intel Corporation
  */
 #include <linux/slab.h>
 #include <linux/kernel.h>
@@ -285,6 +285,13 @@ static int ieee80211_vif_update_links(struct ieee80211_sub_if_data *sdata,
 		if (!new_links)
 			ieee80211_debugfs_recreate_netdev(sdata, false);
 	}
+
+	/*
+	 * Ignore errors if we are only removing links as removal should
+	 * always succeed
+	 */
+	if (!new_links)
+		ret = 0;
 
 	if (ret) {
 		/* restore config */
