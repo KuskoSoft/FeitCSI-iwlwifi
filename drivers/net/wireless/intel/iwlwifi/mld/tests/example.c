@@ -58,8 +58,7 @@ static void iwl_mld_kunit_test_example(struct kunit *test)
 	rcu_read_unlock();
 	KUNIT_EXPECT_TRUE(test, ieee80211_vif_is_mld(vif));
 
-	ctx = iwlmld_kunit_add_chanctx(NL80211_BAND_2GHZ,
-				       NL80211_CHAN_WIDTH_20);
+	ctx = iwlmld_kunit_add_chanctx(&chandef_2ghz_20mhz);
 
 	phy = iwl_mld_phy_from_mac80211(ctx);
 	KUNIT_ASSERT_EQ(test, ctx->def.chan->band, NL80211_BAND_2GHZ);
@@ -100,8 +99,7 @@ static void iwl_mld_kunit_assoc_example(struct kunit *test)
 	struct ieee80211_vif *vif;
 	struct iwl_mld_kunit_link assoc_link = {
 		.id = 0,
-		.band = NL80211_BAND_2GHZ,
-		.bandwidth = NL80211_CHAN_WIDTH_40,
+		.chandef = &chandef_2ghz_40mhz,
 	};
 	u16 valid_links = 0x3;
 
@@ -128,13 +126,11 @@ static void iwl_mld_kunit_emlsr_example(struct kunit *test)
 	struct iwl_mld_sta *mld_sta;
 	struct iwl_mld_kunit_link link1 = {
 		.id = 0,
-		.band = NL80211_BAND_5GHZ,
-		.bandwidth = NL80211_CHAN_WIDTH_40,
+		.chandef = &chandef_5ghz_40mhz,
 	};
 	struct iwl_mld_kunit_link link2 = {
 		.id = 1,
-		.band = NL80211_BAND_6GHZ,
-		.bandwidth = NL80211_CHAN_WIDTH_160,
+		.chandef = &chandef_6ghz_160mhz,
 	};
 	u16 valid_links = BIT(link1.id) | BIT(link2.id);
 
