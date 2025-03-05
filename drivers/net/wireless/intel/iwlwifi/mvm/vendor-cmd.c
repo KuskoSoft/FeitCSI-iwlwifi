@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2012-2014, 2018-2024 Intel Corporation
+ * Copyright (C) 2012-2014, 2018-2025 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -1219,7 +1219,7 @@ static int iwl_mvm_vendor_ppag_get_table(struct wiphy *wiphy,
 		goto err;
 	}
 
-	per_chain_size = (mvm->fwrt.ppag_ver == 0) ?
+	per_chain_size = (mvm->fwrt.ppag_bios_rev == 0) ?
 		IWL_NUM_SUB_BANDS_V1 : IWL_NUM_SUB_BANDS_V2;
 
 	for (chain = 0; chain < IWL_NUM_CHAIN_LIMITS; chain++) {

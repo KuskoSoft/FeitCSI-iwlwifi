@@ -353,17 +353,17 @@ int iwl_fill_ppag_table(struct iwl_fw_runtime *fwrt,
 		num_sub_bands = IWL_NUM_SUB_BANDS_V1;
 		gain = cmd->v1.gain[0];
 		*cmd_size = sizeof(cmd->v1);
-		if (fwrt->ppag_ver >= 1) {
+		if (fwrt->ppag_bios_rev >= 1) {
 			/* in this case FW supports revision 0 */
 			IWL_DEBUG_RADIO(fwrt,
 					"PPAG table rev is %d, send truncated table\n",
-					fwrt->ppag_ver);
+					fwrt->ppag_bios_rev);
 		}
 	} else if (cmd_ver >= 2 && cmd_ver <= 6) {
 		num_sub_bands = IWL_NUM_SUB_BANDS_V2;
 		gain = cmd->v2.gain[0];
 		*cmd_size = sizeof(cmd->v2);
-		if (fwrt->ppag_ver == 0) {
+		if (fwrt->ppag_bios_rev == 0) {
 			/* in this case FW supports revisions 1,2 or 3 */
 			IWL_DEBUG_RADIO(fwrt,
 					"PPAG table rev is 0, send padded table\n");
@@ -386,7 +386,7 @@ int iwl_fill_ppag_table(struct iwl_fw_runtime *fwrt,
 	if ((cmd_ver == 1 &&
 	     !fw_has_capa(&fwrt->fw->ucode_capa,
 			  IWL_UCODE_TLV_CAPA_PPAG_CHINA_BIOS_SUPPORT)) ||
-	    (cmd_ver == 2 && fwrt->ppag_ver >= 2)) {
+	    (cmd_ver == 2 && fwrt->ppag_bios_rev >= 2)) {
 		cmd->v1.flags &= cpu_to_le32(IWL_PPAG_ETSI_MASK);
 		IWL_DEBUG_RADIO(fwrt, "masking ppag China bit\n");
 	} else {
@@ -435,7 +435,7 @@ void iwl_bios_print_ppag(struct iwl_fw_runtime *fwrt)
 	int i, j;
 
 	IWL_DEBUG_RADIO(fwrt, "PPAG table as read from BIOS:\n");
-	IWL_DEBUG_RADIO(fwrt, "PPAG revision = %d\n", fwrt->ppag_ver);
+	IWL_DEBUG_RADIO(fwrt, "PPAG revision = %d\n", fwrt->ppag_bios_rev);
 	IWL_DEBUG_RADIO(fwrt, "PPAG flags = 0x%x\n", fwrt->ppag_flags);
 
 	for (i = 0; i < IWL_NUM_CHAIN_LIMITS; i++)

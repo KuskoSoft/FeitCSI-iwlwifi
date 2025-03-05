@@ -231,7 +231,7 @@ static int iwl_mld_vendor_ppag_get_table(struct wiphy *wiphy,
 		goto err;
 	}
 
-	per_chain_size = (mld->fwrt.ppag_ver == 0) ?
+	per_chain_size = (mld->fwrt.ppag_bios_rev == 0) ?
 		IWL_NUM_SUB_BANDS_V1 : IWL_NUM_SUB_BANDS_V2;
 
 	for (chain = 0; chain < IWL_NUM_CHAIN_LIMITS; chain++) {
