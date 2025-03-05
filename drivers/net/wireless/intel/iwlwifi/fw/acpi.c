@@ -910,6 +910,7 @@ read_table:
 	}
 
 	iwl_bios_print_ppag(fwrt);
+	fwrt->ppag_bios_source = BIOS_SOURCE_ACPI;
 	ret = 0;
 
 out_free:

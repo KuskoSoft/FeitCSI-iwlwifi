@@ -571,6 +571,7 @@ int iwl_uefi_get_ppag_table(struct iwl_fw_runtime *fwrt)
 	memcpy(&fwrt->ppag_chains, &data->ppag_chains,
 	       sizeof(data->ppag_chains));
 	iwl_bios_print_ppag(fwrt);
+	fwrt->ppag_bios_source = BIOS_SOURCE_UEFI;
 out:
 	kfree(data);
 	return ret;
