@@ -453,7 +453,7 @@ VISIBLE_IF_IWLWIFI_KUNIT const struct iwl_dev_info iwl_dev_info_table[] = {
 
 /* AX200 */
 	IWL_DEV_INFO(iwl_ax200_cfg_cc, iwl_ax200_name,
-		     DEVICE(0x2723), SUBDEV(IWL_CFG_ANY), BW_NO_LIMIT),
+		     DEVICE(0x2723), BW_NO_LIMIT),
 	IWL_DEV_INFO(iwl_ax200_cfg_cc, iwl_ax200_killer_1650w_name,
 		     DEVICE(0x2723), SUBDEV(0x1653), BW_NO_LIMIT),
 	IWL_DEV_INFO(iwl_ax200_cfg_cc, iwl_ax200_killer_1650x_name,
