@@ -1576,7 +1576,7 @@ out:
 
 VISIBLE_IF_IWLWIFI_KUNIT const struct iwl_dev_info *
 iwl_pci_find_dev_info(u16 device, u16 subsystem_device,
-		      u16 mac_type, u8 mac_step, u16 rf_type, u8 cdb,
+		      u8 mac_type, u8 mac_step, u16 rf_type, u8 cdb,
 		      u8 jacket, u8 rf_id, u8 bw_limit, u8 cores, u8 rf_step)
 {
 	int i;
@@ -1595,7 +1595,7 @@ iwl_pci_find_dev_info(u16 device, u16 subsystem_device,
 		    dev_info->subdevice != subsystem_device)
 			continue;
 
-		if (dev_info->mac_type != (u16)IWL_CFG_ANY &&
+		if (dev_info->mac_type != (u8)IWL_CFG_ANY &&
 		    dev_info->mac_type != mac_type)
 			continue;
 
