@@ -644,12 +644,16 @@ bool
 iwl_mld_bt_allows_emlsr(struct iwl_mld *mld, struct ieee80211_bss_conf *link,
 			bool check_entry)
 {
-	int bt_penalty;
-	s32 link_rssi = MBM_TO_DBM(link->bss->signal);
-	int rssi_thresh = check_entry ?
-			  IWL_MLD_BT_COEX_ENABLE_EMLSR_RSSI_THRESH :
-			  IWL_MLD_BT_COEX_DISABLE_EMLSR_RSSI_THRESH;
+	int bt_penalty, rssi_thresh;
+	s32 link_rssi;
 
+	if (WARN_ON_ONCE(!link->bss))
+		return false;
+
+	link_rssi = MBM_TO_DBM(link->bss->signal);
+	rssi_thresh = check_entry ?
+		      IWL_MLD_BT_COEX_ENABLE_EMLSR_RSSI_THRESH :
+		      IWL_MLD_BT_COEX_DISABLE_EMLSR_RSSI_THRESH;
 	/* No valid RSSI - force to take low rssi */
 	if (!link_rssi)
 		link_rssi = rssi_thresh - 1;
@@ -1029,6 +1033,9 @@ static void iwl_mld_emlsr_check_bt_iter(void *_data, u8 *mac,
 	struct ieee80211_bss_conf *link;
 	unsigned int link_id;
 	const struct iwl_bt_coex_profile_notif *notif = &mld->last_bt_notif;
+
+	if (!iwl_mld_vif_has_emlsr_cap(vif))
+		return;
 
 	/* zeroed structure means that BT is OFF */
 	if (!memcmp(notif, &zero_notif, sizeof(*notif))) {
