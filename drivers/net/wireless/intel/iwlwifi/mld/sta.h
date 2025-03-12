@@ -248,6 +248,10 @@ int iwl_mld_add_mcast_sta(struct iwl_mld *mld,
 int iwl_mld_add_aux_sta(struct iwl_mld *mld,
 			struct iwl_mld_int_sta *internal_sta);
 
+int iwl_mld_add_mon_sta(struct iwl_mld *mld,
+			struct ieee80211_vif *vif,
+			struct ieee80211_bss_conf *link);
+
 void iwl_mld_remove_bcast_sta(struct iwl_mld *mld,
 			      struct ieee80211_vif *vif,
 			      struct ieee80211_bss_conf *link);
@@ -260,6 +264,9 @@ void iwl_mld_remove_aux_sta(struct iwl_mld *mld,
 			    struct ieee80211_vif *vif,
 			    struct ieee80211_bss_conf *link);
 
+void iwl_mld_remove_mon_sta(struct iwl_mld *mld,
+			    struct ieee80211_vif *vif,
+			    struct ieee80211_bss_conf *link);
 
 int iwl_mld_update_link_stas(struct iwl_mld *mld,
 			     struct ieee80211_vif *vif,
