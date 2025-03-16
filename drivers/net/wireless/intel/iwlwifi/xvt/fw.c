@@ -50,6 +50,7 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 	struct iwl_alive_ntf_v3 *palive3;
 	struct iwl_alive_ntf_v4 *palive4;
 	struct iwl_alive_ntf_v5 *palive5;
+	struct iwl_alive_ntf *palive8;
 	struct iwl_lmac_alive *lmac1, *lmac2;
 	struct iwl_umac_alive *umac;
 	u32 rx_packet_payload_size = iwl_rx_packet_payload_len(pkt);
@@ -122,6 +123,33 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data *notif_wait,
 			xvt->trans->sku_id[0] = le32_to_cpu(palive5->sku_id.data[0]);
 			xvt->trans->sku_id[1] = le32_to_cpu(palive5->sku_id.data[1]);
 			xvt->trans->sku_id[2] = le32_to_cpu(palive5->sku_id.data[2]);
+
+			IWL_DEBUG_FW(xvt,
+				     "Alive VER%d - Got sku_id: 0x0%x 0x0%x 0x0%x\n",
+				     version,
+				     xvt->trans->sku_id[0],
+				     xvt->trans->sku_id[1],
+				     xvt->trans->sku_id[2]);
+		} else if (rx_packet_payload_size == sizeof(*palive8)) {
+			/* v8 compatible (only platform_id addition) */
+			__le32 lmac2_err_ptr;
+
+			palive8 = (void *)pkt->data;
+			status = le16_to_cpu(palive8->status);
+			flags = le16_to_cpu(palive8->flags);
+			lmac1 = &palive8->lmac_data[0];
+			lmac2 = &palive8->lmac_data[1];
+			umac = &palive8->umac_data;
+			lmac2_err_ptr = lmac2->dbg_ptrs.error_event_table_ptr;
+			xvt->trans->dbg.lmac_error_event_table[1] =
+				le32_to_cpu(lmac2_err_ptr);
+
+			xvt->trans->sku_id[0] =
+				le32_to_cpu(palive8->sku_id.data[0]);
+			xvt->trans->sku_id[1] =
+				le32_to_cpu(palive8->sku_id.data[1]);
+			xvt->trans->sku_id[2] =
+				le32_to_cpu(palive8->sku_id.data[2]);
 
 			IWL_DEBUG_FW(xvt,
 				     "Alive VER%d - Got sku_id: 0x0%x 0x0%x 0x0%x\n",
