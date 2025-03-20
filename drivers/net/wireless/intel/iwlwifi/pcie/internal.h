@@ -421,6 +421,9 @@ struct iwl_pcie_txqs {
  * @napi_dev: (fake) netdev for NAPI registration
  * @txqs: transport tx queues data.
  * @alive_isr_received: we got the alive interrupt from the firmware
+ * @me_present: WiAMT/CSME is detected as present (1), not present (0)
+ *	or unknown (-1, so can still use it as a boolean safely)
+ * @me_recheck_wk: worker to recheck WiAMT/CSME presence
  */
 struct iwl_trans_pcie {
 	struct iwl_rxq *rxq;
@@ -535,6 +538,9 @@ struct iwl_trans_pcie {
 
 	struct iwl_pcie_txqs txqs;
 	bool alive_isr_received;
+
+	s8 me_present;
+	struct delayed_work me_recheck_wk;
 };
 
 static inline struct iwl_trans_pcie *
