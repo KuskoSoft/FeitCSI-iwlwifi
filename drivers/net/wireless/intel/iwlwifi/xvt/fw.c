@@ -9,7 +9,6 @@
 #include "iwl-csr.h"
 
 #include "xvt.h"
-#include "iwl-dnt-cfg.h"
 #include "fw/dbg.h"
 #include "fw/testmode.h"
 #include "fw/api/power.h"
@@ -386,7 +385,6 @@ int iwl_xvt_run_fw(struct iwl_xvt *xvt, u32 ucode_type)
 			return ret;
 		}
 	}
-	iwl_dnt_start(xvt->trans);
 
 	if (xvt->fwrt.cur_fw_img == IWL_UCODE_REGULAR &&
 	    (!fw_has_capa(&xvt->fw->ucode_capa,

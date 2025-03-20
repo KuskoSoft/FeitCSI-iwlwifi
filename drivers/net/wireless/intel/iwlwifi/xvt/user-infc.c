@@ -24,8 +24,6 @@
 #include "iwl-nvm-parse.h"
 #include "xvt.h"
 #include "user-infc.h"
-#include "iwl-dnt-cfg.h"
-#include "iwl-dnt-dispatch.h"
 #include "iwl-trans.h"
 #include "fw/dbg.h"
 #include "fw/acpi.h"
@@ -93,9 +91,6 @@ void iwl_xvt_send_user_rx_notif(struct iwl_xvt *xvt,
 	case REPLY_HD_PARAMS_CMD:
 		iwl_xvt_user_send_notif(xvt, IWL_TM_USER_CMD_NOTIF_BFE,
 					data, size, GFP_ATOMIC);
-		break;
-	case DEBUG_LOG_MSG:
-		iwl_dnt_dispatch_collect_ucode_message(xvt->trans, rxb);
 		break;
 	case WIDE_ID(LOCATION_GROUP, TOF_MCSI_DEBUG_NOTIF):
 		iwl_xvt_user_send_notif(xvt,

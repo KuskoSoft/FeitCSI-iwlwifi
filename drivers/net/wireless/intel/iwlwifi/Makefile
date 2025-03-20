@@ -40,8 +40,7 @@ iwlwifi-objs += $(iwlwifi-m)
 iwlwifi-objs += $(iwlwifi-y)
 
 iwlwifi-$(CPTCFG_IWLWIFI_DEVICE_TRACING) += iwl-devtrace.o
-iwlwifi-$(CPTCFG_IWLWIFI_DEVICE_TESTMODE) += iwl-tm-gnl.o iwl-dnt-cfg.o iwl-dnt-dispatch.o
-iwlwifi-$(CPTCFG_IWLWIFI_DEVICE_TESTMODE) += iwl-dnt-dev-if.o fw/testmode.o
+iwlwifi-$(CPTCFG_IWLWIFI_DEVICE_TESTMODE) += iwl-tm-gnl.o fw/testmode.o
 
 ccflags-y += -I$(src)
 subdir-ccflags-y += $(call cc-option,-Wimplicit-fallthrough)

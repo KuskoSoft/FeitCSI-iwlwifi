@@ -34,8 +34,6 @@
 #include "time-sync.h"
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-dnt-cfg.h"
-#include "iwl-dnt-dispatch.h"
 #include "iwl-tm-gnl.h"
 #endif
 
@@ -59,14 +57,6 @@ struct iwl_mvm_mod_params iwlmvm_mod_params = {
 module_param_named(power_scheme, iwlmvm_mod_params.power_scheme, int, 0444);
 MODULE_PARM_DESC(power_scheme,
 		 "power management scheme: 1-active, 2-balanced, 3-low power, default: 2");
-
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-static void iwl_mvm_rx_fw_logs(struct iwl_mvm *mvm,
-			       struct iwl_rx_cmd_buffer *rxb)
-{
-	iwl_dnt_dispatch_collect_ucode_message(mvm->trans, rxb);
-}
-#endif
 
 /*
  * module init and exit functions
@@ -535,9 +525,6 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 		       iwl_mvm_channel_switch_error_notif,
 		       RX_HANDLER_ASYNC_UNLOCKED,
 		       struct iwl_channel_switch_error_notif),
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	RX_HANDLER_NO_SIZE(DEBUG_LOG_MSG, iwl_mvm_rx_fw_logs, RX_HANDLER_SYNC),
-#endif
 	RX_HANDLER_GRP(DATA_PATH_GROUP, ESR_MODE_NOTIF,
 		       iwl_mvm_rx_esr_mode_notif,
 		       RX_HANDLER_ASYNC_LOCKED_WIPHY,
@@ -1326,9 +1313,6 @@ out_free:
 	iwl_fw_flush_dumps(&mvm->fwrt);
 	iwl_mvm_thermal_exit(mvm);
 	iwl_fw_runtime_free(&mvm->fwrt);
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_free(mvm->trans);
-#endif
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
 	iwl_trans_op_mode_leave(mvm->trans);
@@ -1631,7 +1615,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_notification_wait_init(&mvm->notif_wait);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_init(mvm->trans, dbgfs_dir);
 	iwl_tm_init(trans, mvm->fw, &mvm->mutex, mvm);
 #endif
 
@@ -1720,9 +1703,6 @@ iwl_op_mode_mvm_start(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	iwl_fw_flush_dumps(&mvm->fwrt);
 	iwl_fw_runtime_free(&mvm->fwrt);
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_free(trans);
-#endif
 	iwl_phy_db_free(mvm->phy_db);
 	kfree(mvm->scan_cmd);
 	iwl_trans_op_mode_leave(trans);
@@ -1812,9 +1792,6 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode *op_mode)
 	iwl_phy_db_free(mvm->phy_db);
 	mvm->phy_db = NULL;
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_free(mvm->trans);
-#endif
 	kfree(mvm->nvm_data);
 	kfree(mvm->mei_nvm_data);
 	kfree(rcu_access_pointer(mvm->csme_conn_info));

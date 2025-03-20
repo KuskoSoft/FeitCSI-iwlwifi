@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2010-2014, 2018-2023 Intel Corporation
+ * Copyright (C) 2010-2014, 2018-2023, 2025 Intel Corporation
  * Copyright (C) 2013-2014 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -14,8 +14,6 @@
 #include "iwl-op-mode.h"
 #include "iwl-tm-gnl.h"
 #include "iwl-tm-infc.h"
-#include "iwl-dnt-cfg.h"
-#include "iwl-dnt-dispatch.h"
 #include "iwl-csr.h"
 
 /**
@@ -83,70 +81,6 @@ static int iwl_tm_validate_reg_ops(struct iwl_tm_data *data_in)
 				return -EINVAL;
 		}
 	}
-
-	return 0;
-}
-
-/**
- * iwl_tm_trace_end - Ends debug trace. Common for all op modes.
- * @dev: testmode device struct
- * Returns: an error code
- */
-static int iwl_tm_trace_end(struct iwl_tm_gnl_dev *dev)
-{
-	struct iwl_trans *trans = dev->trans;
-	struct iwl_test_trace *trace = &dev->tst.trace;
-
-	if (!trace->enabled)
-		return -EILSEQ;
-
-	if (trace->cpu_addr && trace->dma_addr)
-		dma_free_coherent(trans->dev, trace->size,
-				  trace->cpu_addr, trace->dma_addr);
-	memset(trace, 0, sizeof(struct iwl_test_trace));
-
-	return 0;
-}
-
-/**
- * iwl_tm_trace_begin() - Checks input data for trace request
- * @dev:	testmode device struct
- * @data_in:	Only size is relevant - Desired size of trace buffer.
- * @data_out:	Trace request data (address & size)
- * Returns: an error code
- */
-static int iwl_tm_trace_begin(struct iwl_tm_gnl_dev *dev,
-			      struct iwl_tm_data *data_in,
-			      struct iwl_tm_data *data_out)
-{
-	struct iwl_tm_trace_request *req = data_in->data;
-	struct iwl_tm_trace_request *resp;
-
-	if (!data_in->data ||
-	    data_in->len < sizeof(struct iwl_tm_trace_request))
-		return -EINVAL;
-
-	req = data_in->data;
-
-	/* size zero means use the default */
-	if (!req->size)
-		req->size = TRACE_BUFF_SIZE_DEF;
-	else if (req->size < TRACE_BUFF_SIZE_MIN ||
-		 req->size > TRACE_BUFF_SIZE_MAX)
-		return -EINVAL;
-	else if (!dev->dnt->mon_buf_cpu_addr)
-		return -ENOMEM;
-
-	resp = kmalloc(sizeof(*resp), GFP_KERNEL);
-	if (!resp) {
-		return -ENOMEM;
-	}
-	resp->size = dev->dnt->mon_buf_size;
-	/* Casting to avoid compilation warnings when DMA address is 32bit */
-	resp->addr = (u64)dev->dnt->mon_base_addr;
-
-	data_out->data = resp;
-	data_out->len = sizeof(*resp);
 
 	return 0;
 }
@@ -299,24 +233,6 @@ static int iwl_tm_validate_apmg_pd_mode_req(struct iwl_tm_data *data_in)
 	if (!data_in->data ||
 	    (data_in->len != sizeof(struct iwl_xvt_apmg_pd_mode_request)))
 		return -EINVAL;
-
-	return 0;
-}
-
-static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev *dev,
-				    struct iwl_tm_data *data_in,
-				    struct iwl_tm_data *data_out)
-{
-	__u32 *status;
-
-	status = kmalloc(sizeof(__u32), GFP_KERNEL);
-	if (!status)
-		return -ENOMEM;
-
-	*status = dev->dnt->iwl_dnt_status;
-
-	data_out->data = status;
-	data_out->len = sizeof(__u32);
 
 	return 0;
 }
@@ -681,14 +597,12 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 		break;
 
 	case IWL_TM_USER_CMD_BEGIN_TRACE:
-		ret = iwl_tm_trace_begin(dev,
-					 &cmd_data->data_in,
-					 &cmd_data->data_out);
+		ret = -EOPNOTSUPP;
 		common_op = true;
 		break;
 
 	case IWL_TM_USER_CMD_END_TRACE:
-		ret = iwl_tm_trace_end(dev);
+		ret = -EOPNOTSUPP;
 		common_op = true;
 		break;
 
@@ -710,8 +624,7 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd *cmd_data)
 		break;
 
 	case IWL_TM_USER_CMD_GET_DEVICE_STATUS:
-		ret = iwl_tm_get_device_status(dev, &cmd_data->data_in,
-					       &cmd_data->data_out);
+		ret = -EOPNOTSUPP;
 		common_op = true;
 		break;
 #if IS_ENABLED(CPTCFG_IWLXVT)
@@ -791,44 +704,6 @@ static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev *dev,
 }
 
 /**
- * iwl_tm_trace_dump - Returns trace buffer data
- * @dev:	Device pointer
- * @data_out:	Dump data
- * Returns: an error code
- */
-static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev *dev,
-			     struct iwl_tm_data *data_out)
-{
-	int ret;
-	u32 buf_size;
-
-	if (!(dev->dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED)) {
-		IWL_ERR(dev->trans, "Invalid monitor status\n");
-		return -EINVAL;
-	}
-
-	if (dev->dnt->mon_buf_size == 0) {
-		IWL_ERR(dev->trans, "No available monitor buffer\n");
-		return -ENOMEM;
-	}
-
-	buf_size = dev->dnt->mon_buf_size;
-	data_out->data =  kmalloc(buf_size, GFP_KERNEL);
-	if (!data_out->data)
-		return -ENOMEM;
-
-	ret = iwl_dnt_dispatch_pull(dev->trans, data_out->data,
-				    buf_size, MONITOR);
-	if (ret < 0) {
-		kfree(data_out->data);
-		return ret;
-	}
-	data_out->len = ret;
-
-	return 0;
-}
-
-/**
  * iwl_tm_gnl_command_dump() - Returns dump buffer data
  * @cmd_data:	Pointer to the data of dump command.
  *		Only device name and command index are the relevant input.
@@ -849,7 +724,7 @@ static int iwl_tm_gnl_command_dump(struct iwl_tm_gnl_cmd *cmd_data)
 	switch (cmd_data->cmd) {
 
 	case IWL_TM_USER_CMD_TRACE_DUMP:
-		ret = iwl_tm_trace_dump(dev, &cmd_data->data_out);
+		ret = -EOPNOTSUPP;
 		break;
 
 	case IWL_TM_USER_CMD_SRAM_READ:

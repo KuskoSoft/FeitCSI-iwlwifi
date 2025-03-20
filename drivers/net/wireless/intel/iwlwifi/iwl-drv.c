@@ -1326,16 +1326,6 @@ fw_dbg_conf:
 				break;
 			}
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-			if (drv->trans->dbg_cfg.dbm_destination_path) {
-				IWL_ERR(drv,
-					"Ignoring destination, ini file present\n");
-				break;
-			}
-#endif
-#endif
-
 			if (pieces->dbg_dest_tlv_init) {
 				IWL_ERR(drv,
 					"dbg destination ignored, already exists\n");

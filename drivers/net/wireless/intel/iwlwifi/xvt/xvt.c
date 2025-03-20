@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2005-2014, 2018-2024 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2025 Intel Corporation
  * Copyright (C) 2015-2017 Intel Deutschland GmbH
  */
 #include <linux/module.h>
@@ -15,8 +15,6 @@
 #include "iwl-csr.h"
 #include "xvt.h"
 #include "user-infc.h"
-#include "iwl-dnt-cfg.h"
-#include "iwl-dnt-dispatch.h"
 #include "iwl-io.h"
 #include "iwl-prph.h"
 #include "fw/dbg.h"
@@ -281,8 +279,6 @@ static struct iwl_op_mode *iwl_xvt_start(struct iwl_trans *trans,
 		goto out_free;
 	}
 
-	iwl_dnt_init(xvt->trans, dbgfs_dir);
-
 	for (i = 0; i < NUM_OF_LMACS; i++) {
 		init_waitqueue_head(&xvt->tx_meta_data[i].mod_tx_wq);
 		init_waitqueue_head(&xvt->tx_meta_data[i].mod_tx_done_wq);
@@ -341,7 +337,6 @@ static void iwl_xvt_stop(struct iwl_op_mode *op_mode)
 
 	iwl_phy_db_free(xvt->phy_db);
 	xvt->phy_db = NULL;
-	iwl_dnt_free(xvt->trans);
 	kfree(op_mode);
 }
 

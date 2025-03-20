@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2010-2014, 2018, 2023 Intel Corporation
+ * Copyright (C) 2010-2014, 2018, 2023, 2025 Intel Corporation
  * Copyright (C) 2013-2014 Intel Mobile Communications GmbH
  */
 #ifndef __IWL_TM_GNL_H__
@@ -27,7 +27,6 @@ struct iwl_test {
  * struct iwl_tm_gnl_dev - Devices data base
  * @list:	  Linked list to all devices
  * @tst:          Test data
- * @dnt:          tracing data
  * @trans:	  Pointer to the owning transport
  * @dev_name:	  Pointer to the device name
  * @dev_name:     device name
@@ -39,7 +38,6 @@ struct iwl_test {
 struct iwl_tm_gnl_dev {
 	struct list_head list;
 	struct iwl_test tst;
-	struct iwl_dnt *dnt;
 	struct iwl_trans *trans;
 	const char *dev_name;
 	u32 nl_events_portid;

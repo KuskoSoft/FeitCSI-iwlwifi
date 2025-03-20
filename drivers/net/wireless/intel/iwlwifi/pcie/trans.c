@@ -29,9 +29,6 @@
 #include "internal.h"
 #include "iwl-fh.h"
 #include "iwl-context-info-gen3.h"
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-dnt-cfg.h"
-#endif
 
 /* extended range in FW SRAM */
 #define IWL_FW_MEM_EXTENDED_START	0x40000
@@ -1058,10 +1055,6 @@ static int iwl_pcie_load_given_ucode(struct iwl_trans *trans,
 	if (iwl_pcie_dbg_on(trans))
 		iwl_pcie_apply_destination(trans);
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_configure(trans, image);
-#endif
-
 	iwl_enable_interrupts(trans);
 
 	/* release CPU reset */
@@ -1081,10 +1074,6 @@ static int iwl_pcie_load_given_ucode_8000(struct iwl_trans *trans,
 
 	if (iwl_pcie_dbg_on(trans))
 		iwl_pcie_apply_destination(trans);
-
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_configure(trans, image);
-#endif
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_pcie_override_secure_boot_cfg(trans);

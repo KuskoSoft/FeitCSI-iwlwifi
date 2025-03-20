@@ -28,10 +28,6 @@
 #include "fw/error-dump.h"
 #include "iwl-prph.h"
 #include "iwl-nvm-parse.h"
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-dnt-cfg.h"
-#include "iwl-dnt-dispatch.h"
-#endif
 #ifdef CPTCFG_NL80211_TESTMODE
 #include "fw/testmode.h"
 #endif

@@ -24,7 +24,6 @@
 #include "iwl-modparams.h"
 #include "iwl-nvm-parse.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-dnt-cfg.h"
 #include "fw/testmode.h"
 #endif
 #include "time-sync.h"
@@ -859,9 +858,6 @@ int iwl_run_init_mvm_ucode(struct iwl_mvm *mvm)
 		IWL_ERR(mvm, "Failed to start INIT ucode: %d\n", ret);
 		goto remove_notif;
 	}
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_start(mvm->trans);
-#endif
 
 	if (mvm->trans->trans_cfg->device_family < IWL_DEVICE_FAMILY_8000) {
 		ret = iwl_mvm_send_bt_init_conf(mvm);
@@ -1586,10 +1582,6 @@ int iwl_mvm_up(struct iwl_mvm *mvm)
 	if (ret)
 		IWL_ERR(mvm, "Failed to initialize Smart Fifo\n");
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_start(mvm->trans);
-#endif
-
 	if (!iwl_trans_dbg_ini_valid(mvm->trans)) {
 		mvm->fwrt.dump.conf = FW_DBG_INVALID;
 		/* if we have a destination, assume EARLY START */
@@ -1830,9 +1822,6 @@ int iwl_mvm_load_d3_fw(struct iwl_mvm *mvm)
 		goto error;
 	}
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	iwl_dnt_start(mvm->trans);
-#endif
 	ret = iwl_send_tx_ant_cfg(mvm, iwl_mvm_get_valid_tx_ant(mvm));
 	if (ret)
 		goto error;
