@@ -246,7 +246,6 @@ int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name)
 
 	return ret;
 }
-IWL_EXPORT_SYMBOL(iwl_drv_switch_op_mode);
 
 /*
  * iwl_drv_sysfs_show - Returns device information to user
