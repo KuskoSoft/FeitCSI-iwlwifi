@@ -2208,6 +2208,9 @@ bool iwl_mvm_rfi_ddr_esr_accept_link_pair(struct iwl_mvm *mvm, u8 channel_a,
 					  u8 band_a, u8 channel_b, u8 band_b);
 bool iwl_mvm_rfi_dlvr_esr_accept_link_pair(struct iwl_mvm *mvm, u8 channel_a,
 					   u8 band_a, u8 channel_b, u8 band_b);
+
+extern const struct iwl_hcmd_arr iwl_mvm_groups[];
+extern const unsigned int iwl_mvm_groups_size;
 #endif
 
 /* AP and IBSS */

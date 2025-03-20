@@ -839,7 +839,8 @@ static const struct iwl_hcmd_names iwl_mvm_bt_coex_names[] = {
 	HCMD_NAME(PROFILE_NOTIF),
 };
 
-static const struct iwl_hcmd_arr iwl_mvm_groups[] = {
+VISIBLE_IF_IWLWIFI_KUNIT
+const struct iwl_hcmd_arr iwl_mvm_groups[] = {
 	[LEGACY_GROUP] = HCMD_ARR(iwl_mvm_legacy_names),
 	[LONG_GROUP] = HCMD_ARR(iwl_mvm_legacy_names),
 	[SYSTEM_GROUP] = HCMD_ARR(iwl_mvm_system_names),
@@ -855,6 +856,11 @@ static const struct iwl_hcmd_arr iwl_mvm_groups[] = {
 		HCMD_ARR(iwl_mvm_regulatory_and_nvm_names),
 	[STATISTICS_GROUP] = HCMD_ARR(iwl_mvm_statistics_names),
 };
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mvm_groups);
+#if IS_ENABLED(CPTCFG_IWLWIFI_KUNIT_TESTS)
+const unsigned int iwl_mvm_groups_size = ARRAY_SIZE(iwl_mvm_groups);
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mvm_groups_size);
+#endif
 
 /* this forward declaration can avoid to export the function */
 static void iwl_mvm_async_handlers_wk(struct work_struct *wk);
