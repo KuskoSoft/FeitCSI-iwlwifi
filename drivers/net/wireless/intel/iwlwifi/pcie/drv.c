@@ -1375,7 +1375,6 @@ static int iwl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	struct iwl_trans *iwl_trans;
 	struct iwl_trans_pcie *trans_pcie;
 	int ret;
-	const struct iwl_cfg *cfg = NULL;
 
 	trans = (void *)ent->driver_data;
 
@@ -1452,7 +1451,7 @@ static int iwl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	 * all the parameters that the transport uses must, until that is
 	 * changed, be identical to the ones in the 7265D configuration.
 	 */
-	if (cfg == &iwl7265_cfg &&
+	if (iwl_trans->cfg == &iwl7265_cfg &&
 	    (iwl_trans->hw_rev & CSR_HW_REV_TYPE_MSK) == CSR_HW_REV_TYPE_7265D)
 		iwl_trans->cfg = &iwl7265d_cfg;
 #endif
