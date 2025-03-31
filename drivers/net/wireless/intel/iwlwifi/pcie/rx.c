@@ -2365,6 +2365,8 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void *dev_id)
 			inta_hw);
 		if (trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ) {
 			trans->request_top_reset = 1;
+			iwl_op_mode_nic_error(trans->op_mode,
+					      IWL_ERR_TYPE_TOP_FATAL_ERROR);
 			iwl_trans_schedule_reset(trans,
 						 IWL_ERR_TYPE_TOP_FATAL_ERROR);
 		}

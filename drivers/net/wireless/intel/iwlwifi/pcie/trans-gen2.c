@@ -594,6 +594,8 @@ again:
 					trans_pcie->fw_reset_state);
 			else
 				IWL_ERR(trans, "TOP reset timed out!\n");
+			iwl_op_mode_nic_error(trans->op_mode,
+					      IWL_ERR_TYPE_TOP_RESET_FAILED);
 			iwl_trans_schedule_reset(trans,
 						 IWL_ERR_TYPE_TOP_RESET_FAILED);
 			ret = -EIO;
