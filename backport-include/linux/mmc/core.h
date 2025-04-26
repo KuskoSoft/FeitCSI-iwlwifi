@@ -6,17 +6,21 @@
 #include <linux/version.h>
 
 #if LINUX_VERSION_IS_LESS(5,19,0)
+#if LINUX_VERSION_IS_GEQ(4,18,0)
 static inline int backport_mmc_sw_reset(struct mmc_card *card)
 {
 	return mmc_sw_reset(card->host);
 }
 #define mmc_sw_reset LINUX_BACKPORT(mmc_sw_reset)
+#endif /* >4.18 */
+#endif /* <5.19 */
 
+#if LINUX_VERSION_IS_LESS(5,18,0)
 static inline int backport_mmc_hw_reset(struct mmc_card *card)
 {
 	return mmc_hw_reset(card->host);
 }
 #define mmc_hw_reset LINUX_BACKPORT(mmc_hw_reset)
-#endif /* <5.19 */
+#endif /* <5.18 */
 
 #endif

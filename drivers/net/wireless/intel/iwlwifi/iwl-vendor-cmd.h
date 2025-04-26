@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2012-2014, 2018-2023 Intel Corporation
+ * Copyright (C) 2012-2014, 2018-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -24,14 +24,7 @@
  * @IWL_MVM_VENDOR_CMD_SET_COUNTRY: set a new mcc regulatory information
  * @IWL_MVM_VENDOR_CMD_PROXY_FRAME_FILTERING: filter GTK, gratuitous
  *	ARP & unsolicited NA
- * @IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_ADD: add a peer to the TDLS peer cache
- * @IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_DEL: delete a peer from the TDLS peer
- *	cache
- * @IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_QUERY: query traffic statistics for a
- *	peer in the TDLS cache
  * @IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT: set the NIC's (SAR) TX power limit
- * @IWL_MVM_VENDOR_CMD_OPPPS_WA: wa to pass Sigma test - applicable code is
- *	claused under CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
  * @IWL_MVM_VENDOR_CMD_GSCAN_GET_CAPABILITIES: get driver gscan capabilities as
  *	specified in %IWL_MVM_VENDOR_ATTR_GSCAN_*
  * @IWL_MVM_VENDOR_CMD_GSCAN_START: set gscan parameters and start gscan
@@ -116,6 +109,10 @@
  * @IWL_MVM_VENDOR_CMD_RFIM_GET_TABLE: Retrieve the RFIM table
  * @IWL_MVM_VENDOR_CMD_RFIM_GET_CAPA: Retrieve RFIM capabilities
  * @IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER: Set CNVI is master or not
+ * @IWL_MVM_VENDOR_CMD_GET_LINK_INFO: Get link information.
+ *	This is needed for RFIm user app
+ * @IWL_MVM_VENDOR_CMD_LINK_INFO_CHANGED_EVENT: Link information is changed
+ * @IWL_MVM_VENDOR_CMD_EXIT_EMLSR: exit EMLSR
  */
 
 enum iwl_mvm_vendor_cmd {
@@ -129,11 +126,11 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_LTE_COEX_WIFI_RPRTD_CHAN		= 0x07,
 	IWL_MVM_VENDOR_CMD_SET_COUNTRY				= 0x08,
 	IWL_MVM_VENDOR_CMD_PROXY_FRAME_FILTERING		= 0x09,
-	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_ADD			= 0x0a,
-	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_DEL			= 0x0b,
-	IWL_MVM_VENDOR_CMD_TDLS_PEER_CACHE_QUERY		= 0x0c,
+	/* 0x0a is deprecated */
+	/* 0x0b is deprecated */
+	/* 0x0c is deprecated */
 	IWL_MVM_VENDOR_CMD_SET_NIC_TXPOWER_LIMIT		= 0x0d,
-	IWL_MVM_VENDOR_CMD_OPPPS_WA				= 0x0e,
+	/* 0x0e is deprecated */
 	IWL_MVM_VENDOR_CMD_GSCAN_GET_CAPABILITIES		= 0x0f,
 	IWL_MVM_VENDOR_CMD_GSCAN_START				= 0x10,
 	IWL_MVM_VENDOR_CMD_GSCAN_STOP				= 0x11,
@@ -172,6 +169,9 @@ enum iwl_mvm_vendor_cmd {
 	IWL_MVM_VENDOR_CMD_GEO_SAR_GET_TABLE                    = 0x35,
 	IWL_MVM_VENDOR_CMD_SGOM_GET_TABLE			= 0x36,
 	IWL_MVM_VENDOR_CMD_RFIM_SET_CNVI_MASTER			= 0x37,
+	IWL_MVM_VENDOR_CMD_GET_LINK_INFO			= 0x38,
+	IWL_MVM_VENDOR_CMD_LINK_INFO_CHANGED_EVENT		= 0x39,
+	IWL_MVM_VENDOR_CMD_EXIT_EMLSR				= 0x3a,
 };
 
 /**
@@ -626,6 +626,11 @@ enum iwl_vendor_auth_akm_mode {
 	IWL_VENDOR_AUTH_MAX,
 };
 
+enum iwl_vendor_link_type {
+	IWL_VENDOR_PRIMARY_LINK,
+	IWL_VENDOR_SECONDARY_LINK,
+};
+
 /**
  * enum iwl_mvm_vendor_attr - attributes used in vendor commands
  * @__IWL_MVM_VENDOR_ATTR_INVALID: attribute 0 is invalid
@@ -643,7 +648,6 @@ enum iwl_vendor_auth_akm_mode {
  *	(s32 in units of 1/8 dBm)
  * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L: TX power limit for 5.2 GHz low (as 2.4)
  * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H: TX power limit for 5.2 GHz high (as 2.4)
- * @IWL_MVM_VENDOR_ATTR_OPPPS_WA: wa to pass Sigma test
  * @IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SCAN_CACHE_SIZE: scan cache size
  *	(in bytes)
  * @IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SCAN_BUCKETS: maximum number of channel
@@ -799,6 +803,18 @@ enum iwl_vendor_auth_akm_mode {
  * @IWL_MVM_VENDOR_ATTR_RFIM_FREQ: RFIM frequency (u16)
  * @IWL_MVM_VENDOR_ATTR_RFIM_INFO: overall RFIM info (nested)
  * @IWL_MVM_VENDOR_ATTR_RFIM_CNVI_MASTER: CNVI master configuration (u32)
+ * @IWL_MVM_VENDOR_ATTR_LINKS_INFO: Link information (nested)
+ * @IWL_MVM_VENDOR_ATTR_CHANNEL: Operating channel (u8)
+ * @IWL_MVM_VENDOR_ATTR_PHY_BAND: Operating band (u8)
+ *	&PHY_BAND_5 for 5 GHz band, &PHY_BAND_24 for 2.4 GHz band and
+ *	&PHY_BAND_6 for 6 GHz band.
+ * @IWL_MVM_VENDOR_ATTR_RSSI: average beacon rssi (u8)
+ * @IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE: chain a desense values
+ * @IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE: chain b desense values
+ * @IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD: SNR threshold for RSSI based
+ *	DDR RFIM.
+ * @IWL_MVM_VENDOR_ATTR_LINK_TYPE: link type (u8) specified as per
+ *	&enum iwl_vendor_link_type
  *
  * @NUM_IWL_MVM_VENDOR_ATTR: number of vendor attributes
  * @MAX_IWL_MVM_VENDOR_ATTR: highest vendor attribute number
@@ -820,7 +836,7 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24			= 0x0d,
 	IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L			= 0x0e,
 	IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H			= 0x0f,
-	IWL_MVM_VENDOR_ATTR_OPPPS_WA				= 0x10,
+	/* 0x10 is deprecated */
 	IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SCAN_CACHE_SIZE		= 0x11,
 	IWL_MVM_VENDOR_ATTR_GSCAN_MAX_SCAN_BUCKETS		= 0x12,
 	IWL_MVM_VENDOR_ATTR_GSCAN_MAX_AP_CACHE_PER_SCAN		= 0x13,
@@ -915,6 +931,14 @@ enum iwl_mvm_vendor_attr {
 	IWL_MVM_VENDOR_ATTR_GEO_SAR_VER                         = 0x77,
 	IWL_MVM_VENDOR_ATTR_SGOM_TABLE				= 0x78,
 	IWL_MVM_VENDOR_ATTR_RFIM_CNVI_MASTER			= 0x79,
+	IWL_MVM_VENDOR_ATTR_LINKS_INFO				= 0x7a,
+	IWL_MVM_VENDOR_ATTR_CHANNEL				= 0x7b,
+	IWL_MVM_VENDOR_ATTR_PHY_BAND				= 0x7c,
+	IWL_MVM_VENDOR_ATTR_RSSI				= 0x7d,
+	IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_A_DESENSE		= 0x7e,
+	IWL_MVM_VENDOR_ATTR_RFIM_CHAIN_B_DESENSE		= 0x7f,
+	IWL_MVM_VENDOR_ATTR_RFIM_DDR_SNR_THRESHOLD		= 0x80,
+	IWL_MVM_VENDOR_ATTR_LINK_TYPE				= 0x81,
 
 	NUM_IWL_MVM_VENDOR_ATTR,
 	MAX_IWL_MVM_VENDOR_ATTR = NUM_IWL_MVM_VENDOR_ATTR - 1,

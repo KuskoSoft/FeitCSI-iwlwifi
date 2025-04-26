@@ -2,7 +2,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2003 - 2014 Intel Corporation. All rights reserved.
- * Copyright(c) 2018 - 2021 Intel Corporation
+ * Copyright(c) 2018 - 2021, 2024 - 2025 Intel Corporation
  *
  * Portions of this file are derived from the ipw3945 project.
  *****************************************************************************/
@@ -12,28 +12,10 @@
 
 #include "iwl-modparams.h"
 
-#ifdef CPTCFG_IWLWIFI_DEBUG_SESSION_PROT_FAIL
-extern u32 iwlwifi_debug_session_prot_debug_level;
-static inline void iwl_debug_session_prot(bool val)
-{
-	/* TX_REPLY | TX | DROP */
-	if (val)
-		iwlwifi_debug_session_prot_debug_level =
-			0x40000000 | 0x00800000 | 0x00002000;
-	else
-		iwlwifi_debug_session_prot_debug_level = 0;
-}
-#endif
-
 static inline bool iwl_have_debug_level(u32 level)
 {
 #ifdef CPTCFG_IWLWIFI_DEBUG
-#ifdef CPTCFG_IWLWIFI_DEBUG_SESSION_PROT_FAIL
-	return (iwlwifi_mod_params.debug_level |
-		iwlwifi_debug_session_prot_debug_level) & level;
-#else
 	return iwlwifi_mod_params.debug_level & level;
-#endif
 #else
 	return false;
 #endif
@@ -180,6 +162,7 @@ do {                                            			\
 #define IWL_DL_FW		0x00010000
 #define IWL_DL_RF_KILL		0x00020000
 #define IWL_DL_TPT		0x00040000
+#define IWL_DL_PTP		0x00080000
 /* 0x00F00000 - 0x00100000 */
 #define IWL_DL_RATE		0x00100000
 #define IWL_DL_CALIB		0x00200000
@@ -189,7 +172,7 @@ do {                                            			\
 #define IWL_DL_RX		0x01000000
 #define IWL_DL_ISR		0x02000000
 #define IWL_DL_HT		0x04000000
-#define IWL_DL_EXTERNAL		0x08000000
+#define IWL_DL_EHT		0x08000000
 /* 0xF0000000 - 0x10000000 */
 #define IWL_DL_11H		0x10000000
 #define IWL_DL_STATS		0x20000000
@@ -199,7 +182,6 @@ do {                                            			\
 #define IWL_DEBUG_INFO(p, f, a...)	IWL_DEBUG(p, IWL_DL_INFO, f, ## a)
 #define IWL_DEBUG_TDLS(p, f, a...)	IWL_DEBUG(p, IWL_DL_TDLS, f, ## a)
 #define IWL_DEBUG_MAC80211(p, f, a...)	IWL_DEBUG(p, IWL_DL_MAC80211, f, ## a)
-#define IWL_DEBUG_EXTERNAL(p, f, a...)	IWL_DEBUG(p, IWL_DL_EXTERNAL, f, ## a)
 #define IWL_DEBUG_TEMP(p, f, a...)	IWL_DEBUG(p, IWL_DL_TEMP, f, ## a)
 #define IWL_DEBUG_SCAN(p, f, a...)	IWL_DEBUG(p, IWL_DL_SCAN, f, ## a)
 #define IWL_DEBUG_RX(p, f, a...)	IWL_DEBUG(p, IWL_DL_RX, f, ## a)
@@ -233,11 +215,13 @@ do {                                            			\
 #define IWL_DEBUG_RADIO(p, f, a...)	IWL_DEBUG(p, IWL_DL_RADIO, f, ## a)
 #define IWL_DEBUG_DEV_RADIO(p, f, a...)	IWL_DEBUG_DEV(p, IWL_DL_RADIO, f, ## a)
 #define IWL_DEBUG_POWER(p, f, a...)	IWL_DEBUG(p, IWL_DL_POWER, f, ## a)
+#define IWL_DEBUG_DEV_POWER(p, f, a...)	IWL_DEBUG_DEV(p, IWL_DL_POWER, f, ## a)
 #define IWL_DEBUG_11H(p, f, a...)	IWL_DEBUG(p, IWL_DL_11H, f, ## a)
 #define IWL_DEBUG_TPT(p, f, a...)	IWL_DEBUG(p, IWL_DL_TPT, f, ## a)
 #define IWL_DEBUG_WOWLAN(p, f, a...)	IWL_DEBUG(p, IWL_DL_WOWLAN, f, ## a)
 #define IWL_DEBUG_LAR(p, f, a...)	IWL_DEBUG(p, IWL_DL_LAR, f, ## a)
 #define IWL_DEBUG_FW_INFO(p, f, a...)		\
 		IWL_DEBUG(p, IWL_DL_INFO | IWL_DL_FW, f, ## a)
-
+#define IWL_DEBUG_PTP(p, f, a...)	IWL_DEBUG(p, IWL_DL_PTP, f, ## a)
+#define IWL_DEBUG_EHT(p, f, a...)	IWL_DEBUG(p, IWL_DL_EHT, f, ## a)
 #endif

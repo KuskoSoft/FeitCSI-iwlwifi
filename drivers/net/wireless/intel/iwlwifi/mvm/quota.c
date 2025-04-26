@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2012-2014, 2018, 2021-2022 Intel Corporation
+ * Copyright (C) 2012-2014, 2018, 2021-2022, 2025 Intel Corporation
  * Copyright (C) 2013-2014 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -85,78 +85,6 @@ static void iwl_mvm_quota_iterator(void *_data, u8 *mac,
 		data->n_low_latency_bindings++;
 		data->low_latency[id] = true;
 	}
-}
-
-#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-/*
- * Zero quota for P2P client MAC as part of a WA to pass P2P OPPPS certification
- * test. Refer to IWLMVM_P2P_OPPPS_TEST_WA description in Kconfig.noupstream for
- * details.
- */
-static void iwl_mvm_adjust_quota_for_p2p_wa(struct iwl_mvm *mvm,
-					    struct iwl_time_quota_cmd *cmd)
-{
-	struct iwl_time_quota_data *quota;
-	int i, phy_id = -1;
-
-	if (!mvm->p2p_opps_test_wa_vif ||
-	    !mvm->p2p_opps_test_wa_vif->deflink.phy_ctxt)
-		return;
-
-	phy_id = mvm->p2p_opps_test_wa_vif->deflink.phy_ctxt->id;
-	for (i = 0; i < MAX_BINDINGS; i++) {
-		u32 id;
-		u32 id_n_c;
-
-		quota = iwl_mvm_quota_cmd_get_quota(mvm, cmd, i);
-		id_n_c = le32_to_cpu(quota->id_and_color);
-		id = (id_n_c & FW_CTXT_ID_MSK) >> FW_CTXT_ID_POS;
-
-		if (id != phy_id)
-			continue;
-
-		quota->quota = 0;
-	}
-}
-#endif
-
-static void iwl_mvm_adjust_quota_for_noa(struct iwl_mvm *mvm,
-					 struct iwl_time_quota_cmd *cmd)
-{
-#ifdef CPTCFG_NL80211_TESTMODE
-	struct iwl_mvm_vif *mvmvif;
-	int i, phy_id = -1, beacon_int = 0;
-
-	if (!mvm->noa_duration || !mvm->noa_vif)
-		return;
-
-	mvmvif = iwl_mvm_vif_from_mac80211(mvm->noa_vif);
-	if (!mvmvif->ap_ibss_active)
-		return;
-
-	phy_id = mvmvif->deflink.phy_ctxt->id;
-	beacon_int = mvm->noa_vif->bss_conf.beacon_int;
-
-	for (i = 0; i < MAX_BINDINGS; i++) {
-		struct iwl_time_quota_data *data =
-					iwl_mvm_quota_cmd_get_quota(mvm, cmd,
-								    i);
-		u32 id_n_c = le32_to_cpu(data->id_and_color);
-		u32 id = (id_n_c & FW_CTXT_ID_MSK) >> FW_CTXT_ID_POS;
-		u32 quota = le32_to_cpu(data->quota);
-
-		if (id != phy_id)
-			continue;
-
-		quota *= (beacon_int - mvm->noa_duration);
-		quota /= beacon_int;
-
-		IWL_DEBUG_QUOTA(mvm, "quota: adjust for NoA from %d to %d\n",
-				le32_to_cpu(data->quota), quota);
-
-		data->quota = cpu_to_le32(quota);
-	}
-#endif
 }
 
 int iwl_mvm_update_quotas(struct iwl_mvm *mvm,
@@ -294,8 +222,6 @@ int iwl_mvm_update_quotas(struct iwl_mvm *mvm,
 		}
 	}
 
-	iwl_mvm_adjust_quota_for_noa(mvm, &cmd);
-
 	/* check that we have non-zero quota for all valid bindings */
 	for (i = 0; i < MAX_BINDINGS; i++) {
 		qdata = iwl_mvm_quota_cmd_get_quota(mvm, &cmd, i);
@@ -313,16 +239,6 @@ int iwl_mvm_update_quotas(struct iwl_mvm *mvm,
 		WARN_ONCE(qdata->quota == 0,
 			  "zero quota on binding %d\n", i);
 	}
-
-#ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
-	/*
-	 * Zero quota for P2P client MAC as part of a WA to pass P2P OPPPS
-	 * certification test. Refer to IWLMVM_P2P_OPPPS_TEST_WA description in
-	 * Kconfig.noupstream for details.
-	 */
-	if (mvm->p2p_opps_test_wa_vif)
-		iwl_mvm_adjust_quota_for_p2p_wa(mvm, &cmd);
-#endif
 
 	if (!send && !force_update) {
 		/* don't send a practically unchanged command, the firmware has

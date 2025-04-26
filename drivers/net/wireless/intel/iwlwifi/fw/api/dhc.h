@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
- * Copyright (C) 2018-2023 Intel Corporation
+ * Copyright (C) 2018-2025 Intel Corporation
  */
 #ifndef __iwl_fw_api_dhc_h__
 #define __iwl_fw_api_dhc_h__
@@ -16,6 +16,19 @@ enum iwl_dhc_table_id {
 	 * @DHC_TABLE_INTEGRATION: select the integration table
 	 */
 	DHC_TABLE_INTEGRATION	= 2 << DHC_TABLE_MASK_POS,
+	/**
+	 * @DHC_TABLE_TOOLS: select the tools table
+	 */
+	DHC_TABLE_TOOLS		= 0,
+};
+
+/**
+ * enum iwl_dhc_umac_tools_table - tools operations
+ * @DHC_TOOLS_UMAC_GET_TAS_STATUS: Get TAS status.
+ *	See @struct iwl_dhc_tas_status_resp
+ */
+enum iwl_dhc_umac_tools_table {
+	DHC_TOOLS_UMAC_GET_TAS_STATUS = 0,
 };
 
 /**
@@ -30,10 +43,12 @@ enum iwl_dhc_umac_integration_table {
 	 * @DHC_INTEGRATION_TLC_DEBUG_CONFIG: TLC debug
 	 */
 	DHC_INTEGRATION_TLC_DEBUG_CONFIG = 1,
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	/**
 	 * @DHC_INT_UMAC_TWT_CONTROL: TWT hooks (like disable internal TWT triggers)
 	 */
 	DHC_INT_UMAC_TWT_CONTROL = 10,
+#endif /* CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES */
 	/**
 	 * @DHC_INTEGRATION_MAX: Maximum UMAC integration table entries
 	 */
@@ -41,8 +56,6 @@ enum iwl_dhc_umac_integration_table {
 };
 
 #define DHC_TARGET_UMAC BIT(27)
-#define DHC_ADWELL_SCAN_CHANNEL_DWELL_INDEX 2
-#define DHC_ADWELL_SCAN_FINE_TUNE_INDEX 3
 
 /**
  * struct iwl_dhc_cmd - debug host command
@@ -64,6 +77,90 @@ struct iwl_dhc_cmd {
 	__le32 index_and_mask;
 	__le32 data[];
 } __packed; /* DHC_CMD_API_S */
+
+/**
+ * struct iwl_dhc_payload_hdr - DHC payload header
+ * @version: a version of a payload
+ * @reserved: reserved for alignment
+ */
+struct iwl_dhc_payload_hdr {
+	u8 version;
+	u8 reserved[3];
+} __packed; /* DHC_PAYLOAD_HDR_API_S_VER_1 */
+
+/**
+ * struct iwl_dhc_tas_status_per_radio - TAS status per radio
+ * @band: &PHY_BAND_5 for high band, PHY_BAND_24 for low band and
+ *	&PHY_BAND_6 for ultra high band.
+ * @static_status: TAS statically enabled or disabled
+ * @static_disable_reason: TAS static disable reason, uses
+ *	&enum iwl_tas_statically_disabled_reason
+ * @near_disconnection: is TAS currently near disconnection per radio
+ * @dynamic_status_ant_a: Antenna A current TAS status.
+ *	uses &enum iwl_tas_dyna_status
+ * @dynamic_status_ant_b: Antenna B current TAS status.
+ *	uses &enum iwl_tas_dyna_status
+ * @max_reg_pwr_limit_ant_a: Antenna A regulatory power limits in dBm
+ * @max_reg_pwr_limit_ant_b: Antenna B regulatory power limits in dBm
+ * @sar_limit_ant_a: Antenna A SAR limit per radio in dBm
+ * @sar_limit_ant_b: Antenna B SAR limit per radio in dBm
+ * @reserved: reserved for alignment
+ */
+struct iwl_dhc_tas_status_per_radio {
+	u8 band;
+	u8 static_status;
+	u8 static_disable_reason;
+	u8 near_disconnection;
+	u8 dynamic_status_ant_a;
+	u8 dynamic_status_ant_b;
+	__le16 max_reg_pwr_limit_ant_a;
+	__le16 max_reg_pwr_limit_ant_b;
+	__le16 sar_limit_ant_a;
+	__le16 sar_limit_ant_b;
+	u8 reserved[2];
+} __packed; /* DHC_TAS_STATUS_PER_RADIO_S_VER_1 */
+
+/**
+ * struct iwl_dhc_tas_status_resp - Response to DHC_TOOLS_UMAC_GET_TAS_STATUS
+ * @header: DHC payload header, uses &struct iwl_dhc_payload_hdr
+ * @tas_config_info: see @struct bios_value_u32
+ * @mcc_block_list: block listed country codes
+ * @tas_status_radio: TAS status, uses &struct iwl_dhc_tas_status_per_radio
+ * @curr_mcc: current mcc
+ * @valid_radio_mask: represent entry in tas_status_per_radio is valid.
+ * @reserved: reserved for alignment
+ */
+struct iwl_dhc_tas_status_resp {
+	struct iwl_dhc_payload_hdr header;
+	struct bios_value_u32 tas_config_info;
+	__le16 mcc_block_list[IWL_WTAS_BLACK_LIST_MAX];
+	struct iwl_dhc_tas_status_per_radio tas_status_radio[2];
+	__le16 curr_mcc;
+	u8 valid_radio_mask;
+	u8 reserved;
+} __packed; /* DHC_TAS_STATUS_RSP_API_S_VER_1 */
+
+/**
+ * struct iwl_dhc_cmd_resp_v1 - debug host command response
+ * @status: status of the command
+ * @data: the response data
+ */
+struct iwl_dhc_cmd_resp_v1 {
+	__le32 status;
+	__le32 data[];
+} __packed; /* DHC_RESP_API_S_VER_1 */
+
+/**
+ * struct iwl_dhc_cmd_resp - debug host command response
+ * @status: status of the command
+ * @descriptor: command descriptor (index_and_mask) returned
+ * @data: the response data
+ */
+struct iwl_dhc_cmd_resp {
+	__le32 status;
+	__le32 descriptor;
+	__le32 data[];
+} __packed; /* DHC_RESP_API_S_VER_2 and DHC_RESP_API_S_VER_3 */
 
 /**
  * enum iwl_dhc_twt_operation_type - describes the TWT operation type
@@ -133,6 +230,7 @@ struct iwl_dhc_twt_operation {
 	u8 reserved;
 }; /* DHC_TWT_OPERATION_API_S */
 
+#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 /**
  * struct iwl_dhc_twt_control - control TWT behavior
  *
@@ -143,5 +241,6 @@ struct iwl_dhc_twt_control {
 	u8 twt_test_mode;
 	u8 reserved[3];
 }; /* DHC_TWT_CONTROL_API_S_VER_1 */
+#endif
 
 #endif /* __iwl_fw_api_dhc_h__ */

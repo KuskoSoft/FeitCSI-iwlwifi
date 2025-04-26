@@ -86,7 +86,11 @@ static inline void trace_ ## name(proto) {}
 #endif
 
 #define DEV_ENTRY	__string(dev, dev_name(dev))
+#if LINUX_VERSION_IS_GEQ(6,10,0)
+#define DEV_ASSIGN	__assign_str(dev)
+#else
 #define DEV_ASSIGN	__assign_str(dev, dev_name(dev))
+#endif
 
 #include "iwl-devtrace-io.h"
 #include "iwl-devtrace-ucode.h"

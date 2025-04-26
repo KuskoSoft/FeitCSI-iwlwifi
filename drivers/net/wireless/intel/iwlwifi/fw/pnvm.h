@@ -12,11 +12,14 @@
 
 #define MAX_PNVM_NAME  64
 
-#define MAX_PNVM_NAME  64
-
 int iwl_pnvm_load(struct iwl_trans *trans,
 		  struct iwl_notif_wait_data *notif_wait,
 		  const struct iwl_ucode_capabilities *capa);
+#if IS_ENABLED(CPTCFG_IWLXVT)
+int iwl_xvt_pnvm_load(struct iwl_trans *trans,
+		      struct iwl_notif_wait_data *notif_wait,
+		      const struct iwl_ucode_capabilities *capa);
+#endif /* CPTCFG_IWLXVT */
 
 static inline
 void iwl_pnvm_get_fs_name(struct iwl_trans *trans,

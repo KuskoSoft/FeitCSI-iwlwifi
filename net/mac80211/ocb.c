@@ -4,7 +4,7 @@
  *
  * Copyright: (c) 2014 Czech Technical University in Prague
  *            (c) 2014 Volkswagen Group Research
- * Copyright (C) 2022 - 2023 Intel Corporation
+ * Copyright (C) 2022 - 2024 Intel Corporation
  * Author:    Rostislav Lisovy <rostislav.lisovy@fel.cvut.cz>
  * Funded by: Volkswagen Group Research
  */
@@ -16,7 +16,7 @@
 #include <linux/etherdevice.h>
 #include <linux/rtnetlink.h>
 #include <net/mac80211.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 
 #include "ieee80211_i.h"
 #include "driver-ops.h"
@@ -44,7 +44,6 @@ void ieee80211_ocb_rx_no_sta(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_chanctx_conf *chanctx_conf;
 	struct ieee80211_supported_band *sband;
-	enum nl80211_bss_scan_width scan_width;
 	struct sta_info *sta;
 	int band;
 
@@ -66,7 +65,6 @@ void ieee80211_ocb_rx_no_sta(struct ieee80211_sub_if_data *sdata,
 		return;
 	}
 	band = chanctx_conf->def.chan->band;
-	scan_width = cfg80211_chandef_to_scan_width(&chanctx_conf->def);
 	rcu_read_unlock();
 
 	sta = sta_info_alloc(sdata, addr, GFP_ATOMIC);
@@ -75,8 +73,7 @@ void ieee80211_ocb_rx_no_sta(struct ieee80211_sub_if_data *sdata,
 
 	/* Add only mandatory rates for now */
 	sband = local->hw.wiphy->bands[band];
-	sta->sta.deflink.supp_rates[band] =
-		ieee80211_mandatory_rates(sband, scan_width);
+	sta->sta.deflink.supp_rates[band] = ieee80211_mandatory_rates(sband);
 
 	spin_lock(&ifocb->incomplete_lock);
 	list_add(&sta->list, &ifocb->incomplete_stations);
@@ -99,7 +96,7 @@ static struct sta_info *ieee80211_ocb_finish_sta(struct sta_info *sta)
 	sta_info_move_state(sta, IEEE80211_STA_ASSOC);
 	sta_info_move_state(sta, IEEE80211_STA_AUTHORIZED);
 
-	rate_control_rate_init(sta);
+	rate_control_rate_init(&sta->deflink);
 
 	/* If it fails, maybe we raced another insertion? */
 	if (sta_info_insert_rcu(sta))
@@ -171,6 +168,7 @@ void ieee80211_ocb_setup_sdata(struct ieee80211_sub_if_data *sdata)
 int ieee80211_ocb_join(struct ieee80211_sub_if_data *sdata,
 		       struct ocb_setup *setup)
 {
+	struct ieee80211_chan_req chanreq = { .oper = setup->chandef };
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_if_ocb *ifocb = &sdata->u.ocb;
 	u64 changed = BSS_CHANGED_OCB | BSS_CHANGED_BSSID;
@@ -185,7 +183,7 @@ int ieee80211_ocb_join(struct ieee80211_sub_if_data *sdata,
 	sdata->deflink.smps_mode = IEEE80211_SMPS_OFF;
 	sdata->deflink.needed_rx_chains = sdata->local->rx_chains;
 
-	err = ieee80211_link_use_channel(&sdata->deflink, &setup->chandef,
+	err = ieee80211_link_use_channel(&sdata->deflink, &chanreq,
 					 IEEE80211_CHANCTX_SHARED);
 	if (err)
 		return err;
@@ -210,7 +208,7 @@ int ieee80211_ocb_leave(struct ieee80211_sub_if_data *sdata)
 	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	ifocb->joined = false;
-	sta_info_flush(sdata);
+	sta_info_flush(sdata, -1);
 
 	spin_lock_bh(&ifocb->incomplete_lock);
 	while (!list_empty(&ifocb->incomplete_stations)) {

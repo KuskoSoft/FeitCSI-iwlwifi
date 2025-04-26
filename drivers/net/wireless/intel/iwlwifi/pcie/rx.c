@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2003-2014, 2018-2023 Intel Corporation
+ * Copyright (C) 2003-2014, 2018-2025 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -13,6 +13,7 @@
 #include "internal.h"
 #include "iwl-op-mode.h"
 #include "iwl-context-info-gen3.h"
+#include "fw/dbg.h"
 
 /******************************************************************************
  *
@@ -699,7 +700,7 @@ static void iwl_pcie_free_rxq_dma(struct iwl_trans *trans,
 	rxq->used_bd = NULL;
 }
 
-static inline size_t iwl_pcie_rb_stts_size(struct iwl_trans *trans)
+static size_t iwl_pcie_rb_stts_size(struct iwl_trans *trans)
 {
 	bool use_rx_td = (trans->trans_cfg->device_family >=
 			  IWL_DEVICE_FAMILY_AX210);
@@ -1000,6 +1001,11 @@ void iwl_pcie_rx_init_rxb_lists(struct iwl_rxq *rxq)
 
 static int iwl_pcie_rx_handle(struct iwl_trans *trans, int queue, int budget);
 
+static inline struct iwl_trans_pcie *iwl_netdev_to_trans_pcie(struct net_device *dev)
+{
+	return *(struct iwl_trans_pcie **)netdev_priv(dev);
+}
+
 static int iwl_pcie_napi_poll(struct napi_struct *napi, int budget)
 {
 	struct iwl_rxq *rxq = container_of(napi, struct iwl_rxq, napi);
@@ -1007,7 +1013,7 @@ static int iwl_pcie_napi_poll(struct napi_struct *napi, int budget)
 	struct iwl_trans *trans;
 	int ret;
 
-	trans_pcie = container_of(napi->dev, struct iwl_trans_pcie, napi_dev);
+	trans_pcie = iwl_netdev_to_trans_pcie(napi->dev);
 	trans = trans_pcie->trans;
 
 	ret = iwl_pcie_rx_handle(trans, rxq->id, budget);
@@ -1034,7 +1040,7 @@ static int iwl_pcie_napi_poll_msix(struct napi_struct *napi, int budget)
 	struct iwl_trans *trans;
 	int ret;
 
-	trans_pcie = container_of(napi->dev, struct iwl_trans_pcie, napi_dev);
+	trans_pcie = iwl_netdev_to_trans_pcie(napi->dev);
 	trans = trans_pcie->trans;
 
 	ret = iwl_pcie_rx_handle(trans, rxq->id, budget);
@@ -1122,6 +1128,7 @@ static int _iwl_pcie_rx_init(struct iwl_trans *trans)
 		       sizeof(__le16) : sizeof(struct iwl_rb_status));
 
 		iwl_pcie_rx_init_rxb_lists(rxq);
+
 		spin_unlock_bh(&rxq->lock);
 
 		if (!rxq->napi.poll) {
@@ -1130,10 +1137,11 @@ static int _iwl_pcie_rx_init(struct iwl_trans *trans)
 			if (trans_pcie->msix_enabled)
 				poll = iwl_pcie_napi_poll_msix;
 
-			netif_napi_add(&trans_pcie->napi_dev, &rxq->napi,
+			netif_napi_add(trans_pcie->napi_dev, &rxq->napi,
 				       poll);
 			napi_enable(&rxq->napi);
 		}
+
 	}
 
 	/* move the pool to the default queue and allocator ownerships */
@@ -1294,7 +1302,7 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans *trans,
 				  int idx)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-	struct iwl_txq *txq = trans->txqs.txq[trans->txqs.cmd.q_id];
+	struct iwl_txq *txq = trans_pcie->txqs.txq[trans_pcie->txqs.cmd.q_id];
 	bool page_stolen = false;
 	int max_len = trans_pcie->rx_buf_bytes;
 	u32 offset = 0;
@@ -1652,14 +1660,18 @@ irqreturn_t iwl_pcie_irq_rx_msix_handler(int irq, void *dev_id)
 		return IRQ_NONE;
 	}
 
+	if (!trans_pcie->alive_isr_received) {
+		IWL_DEBUG_ISR(trans,
+			      "Ignoring Rx interrupt before ALIVE interrupt\n");
+		return IRQ_HANDLED;
+	}
+
 	rxq = &trans_pcie->rxq[entry->entry];
 	lock_map_acquire(&trans->sync_cmd_lockdep_map);
 	IWL_DEBUG_ISR(trans, "[%d] Got interrupt\n", entry->entry);
 
 	local_bh_disable();
-	if (napi_schedule_prep(&rxq->napi))
-		__napi_schedule(&rxq->napi);
-	else
+	if (!napi_schedule(&rxq->napi))
 		iwl_pcie_clear_irq(trans, entry->entry);
 	local_bh_enable();
 
@@ -1673,6 +1685,7 @@ irqreturn_t iwl_pcie_irq_rx_msix_handler(int irq, void *dev_id)
  */
 static void iwl_pcie_irq_handle_error(struct iwl_trans *trans)
 {
+	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	int i;
 
 	/* W/A for WiFi/WiMAX coex and WiMAX own the RF */
@@ -1684,22 +1697,22 @@ static void iwl_pcie_irq_handle_error(struct iwl_trans *trans)
 			    APMG_PS_CTRL_VAL_RESET_REQ))) {
 		clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
 		iwl_op_mode_wimax_active(trans->op_mode);
-		wake_up(&trans->wait_command_queue);
+		wake_up(&trans_pcie->wait_command_queue);
 		return;
 	}
 
 	for (i = 0; i < trans->trans_cfg->base_params->num_of_queues; i++) {
-		if (!trans->txqs.txq[i])
+		if (!trans_pcie->txqs.txq[i])
 			continue;
-		del_timer(&trans->txqs.txq[i]->stuck_timer);
+		del_timer(&trans_pcie->txqs.txq[i]->stuck_timer);
 	}
 
 	/* The STATUS_FW_ERROR bit is set in this function. This must happen
 	 * before we wake up the command caller, to ensure a proper cleanup. */
-	iwl_trans_fw_error(trans, false);
+	iwl_trans_fw_error(trans, IWL_ERR_TYPE_IRQ);
 
 	clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
-	wake_up(&trans->wait_command_queue);
+	wake_up(&trans_pcie->wait_command_queue);
 }
 
 static u32 iwl_pcie_int_cause_non_ict(struct iwl_trans *trans)
@@ -1782,7 +1795,7 @@ static u32 iwl_pcie_int_cause_ict(struct iwl_trans *trans)
 	return inta;
 }
 
-void iwl_pcie_handle_rfkill_irq(struct iwl_trans *trans)
+void iwl_pcie_handle_rfkill_irq(struct iwl_trans *trans, bool from_irq)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	struct isr_statistics *isr_stats = &trans_pcie->isr_stats;
@@ -1806,7 +1819,7 @@ void iwl_pcie_handle_rfkill_irq(struct iwl_trans *trans)
 	isr_stats->rfkill++;
 
 	if (prev != report)
-		iwl_trans_pcie_rf_kill(trans, report);
+		iwl_trans_pcie_rf_kill(trans, report, from_irq);
 	mutex_unlock(&trans_pcie->mutex);
 
 	if (hw_rfkill) {
@@ -1814,11 +1827,59 @@ void iwl_pcie_handle_rfkill_irq(struct iwl_trans *trans)
 				       &trans->status))
 			IWL_DEBUG_RF_KILL(trans,
 					  "Rfkill while SYNC HCMD in flight\n");
-		wake_up(&trans->wait_command_queue);
+		wake_up(&trans_pcie->wait_command_queue);
 	} else {
 		clear_bit(STATUS_RFKILL_HW, &trans->status);
 		if (trans_pcie->opmode_down)
 			clear_bit(STATUS_RFKILL_OPMODE, &trans->status);
+	}
+}
+
+static void iwl_trans_pcie_handle_reset_interrupt(struct iwl_trans *trans)
+{
+	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+	u32 state;
+
+	if (trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_SC) {
+		u32 val = iwl_read32(trans, CSR_IPC_STATE);
+
+		state = u32_get_bits(val, CSR_IPC_STATE_RESET);
+		IWL_DEBUG_ISR(trans, "IPC state = 0x%x/%d\n", val, state);
+	} else {
+		state = CSR_IPC_STATE_RESET_SW_READY;
+	}
+
+	switch (state) {
+	case CSR_IPC_STATE_RESET_SW_READY:
+		if (trans_pcie->fw_reset_state == FW_RESET_REQUESTED) {
+			IWL_DEBUG_ISR(trans, "Reset flow completed\n");
+			trans_pcie->fw_reset_state = FW_RESET_OK;
+			wake_up(&trans_pcie->fw_reset_waitq);
+			break;
+		}
+		fallthrough;
+	case CSR_IPC_STATE_RESET_TOP_READY:
+		/* FIXME: handle this case when requesting TOP reset */
+		fallthrough;
+	case CSR_IPC_STATE_RESET_NONE:
+		IWL_FW_CHECK_FAILED(trans,
+				    "Invalid reset interrupt (state=%d)!\n",
+				    state);
+		break;
+	case CSR_IPC_STATE_RESET_TOP_FOLLOWER:
+		if (trans_pcie->fw_reset_state == FW_RESET_REQUESTED) {
+			/* if we were in reset, wake that up */
+			IWL_INFO(trans,
+				 "TOP reset from BT while doing reset\n");
+			trans_pcie->fw_reset_state = FW_RESET_OK;
+			wake_up(&trans_pcie->fw_reset_waitq);
+		} else {
+			IWL_INFO(trans, "TOP reset from BT\n");
+			trans->state = IWL_TRANS_NO_FW;
+			iwl_trans_schedule_reset(trans,
+						 IWL_ERR_TYPE_TOP_RESET_BY_BT);
+		}
+		break;
 	}
 }
 
@@ -1930,6 +1991,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 	if (inta & CSR_INT_BIT_ALIVE) {
 		IWL_DEBUG_ISR(trans, "Alive interrupt\n");
 		isr_stats->alive++;
+		trans_pcie->alive_isr_received = true;
 		if (trans->trans_cfg->gen2) {
 			/*
 			 * We can restock, since firmware configured
@@ -1941,12 +2003,17 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 		handled |= CSR_INT_BIT_ALIVE;
 	}
 
+	if (inta & CSR_INT_BIT_RESET_DONE) {
+		iwl_trans_pcie_handle_reset_interrupt(trans);
+		handled |= CSR_INT_BIT_RESET_DONE;
+	}
+
 	/* Safely ignore these bits for debug checks below */
 	inta &= ~(CSR_INT_BIT_SCD | CSR_INT_BIT_ALIVE);
 
 	/* HW RF KILL switch toggled */
 	if (inta & CSR_INT_BIT_RF_KILL) {
-		iwl_pcie_handle_rfkill_irq(trans);
+		iwl_pcie_handle_rfkill_irq(trans, true);
 		handled |= CSR_INT_BIT_RF_KILL;
 	}
 
@@ -1962,7 +2029,12 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 		IWL_ERR(trans, "Microcode SW error detected. "
 			" Restarting 0x%X.\n", inta);
 		isr_stats->sw++;
-		iwl_pcie_irq_handle_error(trans);
+		if (trans_pcie->fw_reset_state == FW_RESET_REQUESTED) {
+			trans_pcie->fw_reset_state = FW_RESET_ERROR;
+			wake_up(&trans_pcie->fw_reset_waitq);
+		} else {
+			iwl_pcie_irq_handle_error(trans);
+		}
 		handled |= CSR_INT_BIT_SW_ERR;
 	}
 
@@ -2068,7 +2140,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void *dev_id)
 			iwl_enable_rfkill_int(trans);
 		/* Re-enable the ALIVE / Rx interrupt if it occurred */
 		else if (handled & (CSR_INT_BIT_ALIVE | CSR_INT_BIT_FH_RX))
-			iwl_enable_fw_load_int_ctx_info(trans);
+			iwl_enable_fw_load_int_ctx_info(trans, false);
 		spin_unlock_bh(&trans_pcie->irq_lock);
 	}
 
@@ -2291,7 +2363,13 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void *dev_id)
 	if (inta_hw & MSIX_HW_INT_CAUSES_REG_TOP_FATAL_ERR) {
 		IWL_ERR(trans, "TOP Fatal error detected, inta_hw=0x%x.\n",
 			inta_hw);
-		/* TODO: PLDR flow required here for >= Bz */
+		if (trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_BZ) {
+			trans->request_top_reset = 1;
+			iwl_op_mode_nic_error(trans->op_mode,
+					      IWL_ERR_TYPE_TOP_FATAL_ERROR);
+			iwl_trans_schedule_reset(trans,
+						 IWL_ERR_TYPE_TOP_FATAL_ERROR);
+		}
 	}
 
 	/* Error detected by uCode */
@@ -2329,6 +2407,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void *dev_id)
 	/* Alive notification via Rx interrupt will do the real work */
 	if (inta_hw & MSIX_HW_INT_CAUSES_REG_ALIVE) {
 		IWL_DEBUG_ISR(trans, "Alive interrupt\n");
+		trans_pcie->alive_isr_received = true;
 		isr_stats->alive++;
 		if (trans->trans_cfg->gen2) {
 			/* We can restock, since firmware configured the RFH */
@@ -2369,7 +2448,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void *dev_id)
 
 	/* HW RF KILL switch toggled */
 	if (inta_hw & MSIX_HW_INT_CAUSES_REG_RF_KILL)
-		iwl_pcie_handle_rfkill_irq(trans);
+		iwl_pcie_handle_rfkill_irq(trans, true);
 
 	if (inta_hw & MSIX_HW_INT_CAUSES_REG_HW_ERR) {
 		IWL_ERR(trans,
@@ -2380,11 +2459,8 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void *dev_id)
 		iwl_pcie_irq_handle_error(trans);
 	}
 
-	if (inta_hw & MSIX_HW_INT_CAUSES_REG_RESET_DONE) {
-		IWL_DEBUG_ISR(trans, "Reset flow completed\n");
-		trans_pcie->fw_reset_state = FW_RESET_OK;
-		wake_up(&trans_pcie->fw_reset_waitq);
-	}
+	if (inta_hw & MSIX_HW_INT_CAUSES_REG_RESET_DONE)
+		iwl_trans_pcie_handle_reset_interrupt(trans);
 
 	if (!polling)
 		iwl_pcie_clear_irq(trans, entry->entry);

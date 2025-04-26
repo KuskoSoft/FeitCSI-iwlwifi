@@ -9,7 +9,7 @@
  * Copyright 2007, Michael Wu <flamingice@sourmilk.net>
  * Copyright 2007-2010, Intel Corporation
  * Copyright 2017	Intel Deutschland GmbH
- * Copyright(c) 2020-2023 Intel Corporation
+ * Copyright(c) 2020-2024 Intel Corporation
  */
 
 #include <linux/ieee80211.h>
@@ -257,7 +257,7 @@ bool ieee80211_ht_cap_ie_to_sta_ht_cap(struct ieee80211_sub_if_data *sdata,
 	if (WARN_ON(!link_conf))
 		width = NL80211_CHAN_WIDTH_20_NOHT;
 	else
-		width = link_conf->chandef.width;
+		width = link_conf->chanreq.oper.width;
 
 	switch (width) {
 	default:
@@ -271,6 +271,7 @@ bool ieee80211_ht_cap_ie_to_sta_ht_cap(struct ieee80211_sub_if_data *sdata,
 	case NL80211_CHAN_WIDTH_80:
 	case NL80211_CHAN_WIDTH_80P80:
 	case NL80211_CHAN_WIDTH_160:
+	case NL80211_CHAN_WIDTH_320:
 		bw = ht_cap.cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40 ?
 				IEEE80211_STA_RX_BW_40 : IEEE80211_STA_RX_BW_20;
 		break;
@@ -318,12 +319,11 @@ void ieee80211_sta_tear_down_BA_sessions(struct sta_info *sta,
 
 	lockdep_assert_wiphy(sta->local->hw.wiphy);
 
-	for (i = 0; i <  IEEE80211_NUM_TIDS; i++) {
+	for (i = 0; i <  IEEE80211_NUM_TIDS; i++)
 		__ieee80211_stop_rx_ba_session(sta, i, WLAN_BACK_RECIPIENT,
 					       WLAN_REASON_QSTA_LEAVE_QBSS,
 					       reason != AGG_STOP_DESTROY_STA &&
 					       reason != AGG_STOP_PEER_REQUEST);
-	}
 
 	for (i = 0; i <  IEEE80211_NUM_TIDS; i++)
 		__ieee80211_stop_tx_ba_session(sta, i, reason);
@@ -364,26 +364,26 @@ void ieee80211_ba_session_work(struct wiphy *wiphy, struct wiphy_work *work)
 
 	for (tid = 0; tid < IEEE80211_NUM_TIDS; tid++) {
 		if (test_and_clear_bit(tid, sta->ampdu_mlme.tid_rx_timer_expired))
-			___ieee80211_stop_rx_ba_session(
+			__ieee80211_stop_rx_ba_session(
 				sta, tid, WLAN_BACK_RECIPIENT,
 				WLAN_REASON_QSTA_TIMEOUT, true);
 
 		if (test_and_clear_bit(tid,
 				       sta->ampdu_mlme.tid_rx_stop_requested))
-			___ieee80211_stop_rx_ba_session(
+			__ieee80211_stop_rx_ba_session(
 				sta, tid, WLAN_BACK_RECIPIENT,
 				WLAN_REASON_UNSPECIFIED, true);
 
 		if (!blocked &&
 		    test_and_clear_bit(tid,
 				       sta->ampdu_mlme.tid_rx_manage_offl))
-			___ieee80211_start_rx_ba_session(sta, 0, 0, 0, 1, tid,
-							 IEEE80211_MAX_AMPDU_BUF_HT,
-							 false, true, NULL);
+			__ieee80211_start_rx_ba_session(sta, 0, 0, 0, 1, tid,
+							IEEE80211_MAX_AMPDU_BUF_HT,
+							false, true, 0);
 
 		if (test_and_clear_bit(tid + IEEE80211_NUM_TIDS,
 				       sta->ampdu_mlme.tid_rx_manage_offl))
-			___ieee80211_stop_rx_ba_session(
+			__ieee80211_stop_rx_ba_session(
 				sta, tid, WLAN_BACK_RECIPIENT,
 				0, false);
 
@@ -467,20 +467,7 @@ void ieee80211_send_delba(struct ieee80211_sub_if_data *sdata,
 		return;
 
 	skb_reserve(skb, local->hw.extra_tx_headroom);
-	mgmt = skb_put_zero(skb, 24);
-	memcpy(mgmt->da, da, ETH_ALEN);
-	memcpy(mgmt->sa, sdata->vif.addr, ETH_ALEN);
-	if (sdata->vif.type == NL80211_IFTYPE_AP ||
-	    sdata->vif.type == NL80211_IFTYPE_AP_VLAN ||
-	    sdata->vif.type == NL80211_IFTYPE_MESH_POINT)
-		memcpy(mgmt->bssid, sdata->vif.addr, ETH_ALEN);
-	else if (sdata->vif.type == NL80211_IFTYPE_STATION)
-		memcpy(mgmt->bssid, sdata->deflink.u.mgd.bssid, ETH_ALEN);
-	else if (sdata->vif.type == NL80211_IFTYPE_ADHOC)
-		memcpy(mgmt->bssid, sdata->u.ibss.bssid, ETH_ALEN);
-
-	mgmt->frame_control = cpu_to_le16(IEEE80211_FTYPE_MGMT |
-					  IEEE80211_STYPE_ACTION);
+	mgmt = ieee80211_mgmt_ba(skb, da, sdata);
 
 	skb_put(skb, 1 + sizeof(mgmt->u.action.u.delba));
 
@@ -580,7 +567,7 @@ int ieee80211_send_smps_action(struct ieee80211_sub_if_data *sdata,
 	/* we'll do more on status of this frame */
 	info = IEEE80211_SKB_CB(skb);
 	info->flags |= IEEE80211_TX_CTL_REQ_TX_STATUS;
-	/* we have 12 bits, and need 6: link_id 4, smps 2 */
+	/* we have 13 bits, and need 6: link_id 4, smps 2 */
 	info->status_data = IEEE80211_STATUS_TYPE_SMPS |
 			    u16_encode_bits(status_link_id << 2 | smps,
 					    IEEE80211_STATUS_SUBDATA_MASK);
@@ -602,6 +589,8 @@ void ieee80211_request_smps(struct ieee80211_vif *vif, unsigned int link_id,
 	link = rcu_dereference(sdata->link[link_id]);
 	if (WARN_ON(!link))
 		goto out;
+
+	trace_api_request_smps(sdata->local, sdata, link, smps_mode);
 
 	if (link->u.mgd.driver_smps_mode == smps_mode)
 		goto out;

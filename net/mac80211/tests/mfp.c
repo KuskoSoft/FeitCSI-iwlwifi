@@ -9,13 +9,18 @@
 #include "../ieee80211_i.h"
 #include "../sta_info.h"
 
+#if LINUX_VERSION_IS_LESS(6,13,0)
 MODULE_IMPORT_NS(EXPORTED_FOR_KUNIT_TESTING);
+#else
+MODULE_IMPORT_NS("EXPORTED_FOR_KUNIT_TESTING");
+#endif
 
 static const struct mfp_test_case {
 	const char *desc;
 	bool sta, mfp, decrypted, unicast, assoc;
 	u8 category;
 	u8 stype;
+	u8 action;
 	ieee80211_rx_result result;
 } accept_mfp_cases[] = {
 	/* regular public action */
@@ -23,6 +28,7 @@ static const struct mfp_test_case {
 		.desc = "public action: accept unicast from unknown peer",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PUBLIC,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = true,
 		.result = RX_CONTINUE,
 	},
@@ -30,6 +36,7 @@ static const struct mfp_test_case {
 		.desc = "public action: accept multicast from unknown peer",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PUBLIC,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = false,
 		.result = RX_CONTINUE,
 	},
@@ -37,6 +44,7 @@ static const struct mfp_test_case {
 		.desc = "public action: accept unicast without MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PUBLIC,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = true,
 		.sta = true,
 		.result = RX_CONTINUE,
@@ -45,6 +53,7 @@ static const struct mfp_test_case {
 		.desc = "public action: accept multicast without MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PUBLIC,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = false,
 		.sta = true,
 		.result = RX_CONTINUE,
@@ -53,6 +62,7 @@ static const struct mfp_test_case {
 		.desc = "public action: drop unicast with MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PUBLIC,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = true,
 		.sta = true,
 		.mfp = true,
@@ -62,6 +72,7 @@ static const struct mfp_test_case {
 		.desc = "public action: accept multicast with MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PUBLIC,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = false,
 		.sta = true,
 		.mfp = true,
@@ -72,6 +83,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: drop unicast from unknown peer",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = true,
 		.result = RX_DROP_U_UNPROT_DUAL,
 	},
@@ -79,6 +91,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: drop multicast from unknown peer",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = false,
 		.result = RX_DROP_U_UNPROT_DUAL,
 	},
@@ -86,6 +99,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: drop unicast without MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = true,
 		.sta = true,
 		.result = RX_DROP_U_UNPROT_DUAL,
@@ -94,6 +108,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: drop multicast without MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = false,
 		.sta = true,
 		.result = RX_DROP_U_UNPROT_DUAL,
@@ -102,6 +117,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: drop undecrypted unicast with MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = true,
 		.sta = true,
 		.mfp = true,
@@ -111,6 +127,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: drop undecrypted multicast with MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.unicast = false,
 		.sta = true,
 		.mfp = true,
@@ -120,6 +137,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: accept unicast with MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.decrypted = true,
 		.unicast = true,
 		.sta = true,
@@ -130,6 +148,7 @@ static const struct mfp_test_case {
 		.desc = "protected dual: accept multicast with MFP",
 		.stype = IEEE80211_STYPE_ACTION,
 		.category = WLAN_CATEGORY_PROTECTED_DUAL_OF_ACTION,
+		.action = WLAN_PUB_ACTION_DSE_ENABLEMENT,
 		.decrypted = true,
 		.unicast = false,
 		.sta = true,
@@ -224,6 +243,7 @@ static void accept_mfp(struct kunit *test)
 		set_bit(WLAN_STA_ASSOC, &sta._flags);
 
 	rx.skb = kunit_zalloc_skb(test, 128, GFP_KERNEL);
+	KUNIT_ASSERT_NOT_NULL(test, rx.skb);
 	status = IEEE80211_SKB_RXCB(rx.skb);
 
 	if (params->decrypted) {
@@ -241,6 +261,7 @@ static void accept_mfp(struct kunit *test)
 	switch (params->stype) {
 	case IEEE80211_STYPE_ACTION:
 		skb_put_u8(rx.skb, params->category);
+		skb_put_u8(rx.skb, params->action);
 		break;
 	case IEEE80211_STYPE_DEAUTH:
 	case IEEE80211_STYPE_DISASSOC: {

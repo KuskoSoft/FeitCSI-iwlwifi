@@ -1053,7 +1053,7 @@ minstrel_ht_refill_sample_rates(struct minstrel_ht_sta *mi)
  *  - max_prob_rate must use only one stream, as a tradeoff between delivery
  *    probability and throughput during strong fluctuations
  *  - as long as the max prob rate has a probability of more than 75%, pick
- *    higher throughput rates, even if the probablity is a bit lower
+ *    higher throughput rates, even if the probability is a bit lower
  */
 static void
 minstrel_ht_update_stats(struct minstrel_priv *mp, struct minstrel_ht_sta *mi)
@@ -1725,16 +1725,15 @@ minstrel_ht_update_caps(void *priv, struct ieee80211_supported_band *sband,
 	mi->band = sband->band;
 	mi->last_stats_update = jiffies;
 
-	ack_dur = ieee80211_frame_duration(sband->band, 10, 60, 1, 1, 0);
-	mi->overhead = ieee80211_frame_duration(sband->band, 0, 60, 1, 1, 0);
+	ack_dur = ieee80211_frame_duration(sband->band, 10, 60, 1, 1);
+	mi->overhead = ieee80211_frame_duration(sband->band, 0, 60, 1, 1);
 	mi->overhead += ack_dur;
 	mi->overhead_rtscts = mi->overhead + 2 * ack_dur;
 
 	ctl_rate = &sband->bitrates[rate_lowest_index(sband, sta)];
 	erp = ctl_rate->flags & IEEE80211_RATE_ERP_G;
 	ack_dur = ieee80211_frame_duration(sband->band, 10,
-					   ctl_rate->bitrate, erp, 1,
-					   ieee80211_chandef_get_shift(chandef));
+					   ctl_rate->bitrate, erp, 1);
 	mi->overhead_legacy = ack_dur;
 	mi->overhead_legacy_rtscts = mi->overhead_legacy + 2 * ack_dur;
 

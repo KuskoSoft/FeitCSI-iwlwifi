@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) 2005-2015, 2018-2023 Intel Corporation
+ * Copyright (C) 2005-2015, 2018-2024 Intel Corporation
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  * Copyright (C) 2023 Miroslav Hutar
  */
@@ -8,7 +8,7 @@
 #define __iwl_nvm_parse_h__
 
 #include <net/cfg80211.h>
-#include "iwl-eeprom-parse.h"
+#include "iwl-nvm-utils.h"
 #include "mei/iwl-mei.h"
 
 /**
@@ -39,7 +39,7 @@ iwl_parse_nvm_data(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 		   u8 tx_chains, u8 rx_chains);
 
 /**
- * iwl_parse_mcc_info - parse MCC (mobile country code) info coming from FW
+ * iwl_parse_nvm_mcc_info - parse MCC (mobile country code) info coming from FW
  *
  * This function parses the regulatory channel data received as a
  * MCC_UPDATE_CMD command. It returns a newly allocation regulatory domain,

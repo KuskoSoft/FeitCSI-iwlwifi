@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2005-2014, 2018-2023 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016 Intel Deutschland GmbH
  */
@@ -96,7 +96,7 @@
 #define DTSC_PTAT_AVG		(0x00a10650)
 
 
-/**
+/*
  * Tx Scheduler
  *
  * The Tx Scheduler selects the next frame to be transmitted, choosing TFDs
@@ -169,7 +169,7 @@
  */
 #define SCD_MEM_LOWER_BOUND		(0x0000)
 
-/**
+/*
  * Max Tx window size is the max number of contiguous TFDs that the scheduler
  * can keep track of at one time when creating block-ack chains of frames.
  * Note that "64" matches the number of ack bits in a block-ack packet.
@@ -197,7 +197,6 @@
 #define SCD_QUEUE_CTX_REG2_VAL(_n, _v)		FIELD_PREP(SCD_QUEUE_CTX_REG2_ ## _n, _v)
 
 #define SCD_GP_CTRL_ENABLE_31_QUEUES		BIT(0)
-#define SCD_GP_CTRL_DRAM_BC_TABLE_DUP_DIS	BIT(16)
 #define SCD_GP_CTRL_AUTO_ACTIVE_MODE		BIT(18)
 
 /* Context Data */
@@ -232,7 +231,6 @@
 #define SCD_CHAINEXT_EN		(SCD_BASE + 0x244)
 #define SCD_AGGR_SEL		(SCD_BASE + 0x248)
 #define SCD_INTERRUPT_MASK	(SCD_BASE + 0x108)
-#define SCD_CB_SIZE		(SCD_BASE + 0x1a4)
 #define SCD_GP_CTRL		(SCD_BASE + 0x1a8)
 #define SCD_EN_CTRL		(SCD_BASE + 0x254)
 
@@ -370,11 +368,25 @@ enum {
 	WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK	= 0x80000000,
 };
 
-#define CNVI_AUX_MISC_CHIP				0xA200B0
+#define CNVI_AUX_MISC_CHIP			0xA200B0
+#define CNVI_AUX_MISC_CHIP_MAC_STEP(_val)	(((_val) & 0xf000000) >> 24)
+#define CNVI_AUX_MISC_CHIP_PROD_TYPE(_val)	((_val) & 0xfff)
+#define CNVI_AUX_MISC_CHIP_PROD_TYPE_GL		0x910
+#define CNVI_AUX_MISC_CHIP_PROD_TYPE_BZ_U	0x930
+#define CNVI_AUX_MISC_CHIP_PROD_TYPE_BZ_I	0x900
+#define CNVI_AUX_MISC_CHIP_PROD_TYPE_BZ_W	0x901
+
 #define CNVR_AUX_MISC_CHIP				0xA2B800
 #define CNVR_SCU_SD_REGS_SD_REG_DIG_DCDC_VTRIM		0xA29890
 #define CNVR_SCU_SD_REGS_SD_REG_ACTIVE_VDIG_MIRROR	0xA29938
 #define CNVI_SCU_SEQ_DATA_DW9				0xA27488
+
+#define CNVI_SCU_REG_FOR_ECO_1				0xA26EF8
+#define   CNVI_SCU_REG_FOR_ECO_1_WIAMT_KNOWN		BIT(4)
+#define   CNVI_SCU_REG_FOR_ECO_1_WIAMT_PRESENT		BIT(5)
+
+#define CNVI_PMU_STEP_FLOW				0xA2D588
+#define CNVI_PMU_STEP_FLOW_FORCE_URM			BIT(2)
 
 #define PREG_AUX_BUS_WPROT_0		0xA04CC0
 
@@ -431,13 +443,12 @@ enum {
 #define REG_CRF_ID_STEP(val)		(((val) & 0x0F000000) >> 24)
 #define REG_CRF_ID_FLAVOR(val)		(((val) & 0xF0000000) >> 28)
 
-
 #define UREG_CHICK		(0xA05C00)
 #define UREG_CHICK_MSI_ENABLE	BIT(24)
 #define UREG_CHICK_MSIX_ENABLE	BIT(25)
 
-#define SD_REG_VER	0xa29600
-#define SD_REG_VER_GEN2	0x00a2b800
+#define SD_REG_VER		0xa29600
+#define SD_REG_VER_GEN2		0x00a2b800
 
 #define REG_CRF_ID_TYPE_JF_1			0x201
 #define REG_CRF_ID_TYPE_JF_2			0x202
@@ -446,12 +457,9 @@ enum {
 #define REG_CRF_ID_TYPE_HR_NONE_CDB_1X1	0x501
 #define REG_CRF_ID_TYPE_HR_NONE_CDB_CCP	0x532
 #define REG_CRF_ID_TYPE_GF			0x410
-#define REG_CRF_ID_TYPE_GF_TC			0xF08
-#define REG_CRF_ID_TYPE_MR			0x810
 #define REG_CRF_ID_TYPE_FM			0x910
-#define REG_CRF_ID_TYPE_FMI			0x930
-#define REG_CRF_ID_TYPE_FMR			0x900
 #define REG_CRF_ID_TYPE_WHP			0xA10
+#define REG_CRF_ID_TYPE_PE			0xA30
 
 #define HPM_DEBUG			0xA03440
 #define PERSISTENCE_BIT			BIT(12)

@@ -17,21 +17,6 @@ config IWLXVT
 	  Say Y if you have the user space application and want
 	  to execute debug and testing flows on the HW.
 
-config IWLWIFI_NUM_CHANNELS
-	int "number of supported concurrent channels"
-	range 1 2
-	default 2
-	depends on IWLMVM
-
-config IWLWIFI_THERMAL_DEBUGFS
-	bool "enable thermal debug write and read support"
-	depends on IWLWIFI_DEBUGFS
-	default y
-	help
-	  Enable thermal settings debugfs entries that can be used to change
-	  the temperatures and other parameters for testing, This code isn't
-	  intended for upstream, hence the config option. You shouldn't turn it off.
-
 config IWLWIFI_DEVICE_TESTMODE
 	bool "enable generic netlink testmode support"
 	depends on IWLWIFI
@@ -56,21 +41,9 @@ config IWLWIFI_FORCE_OFDM_RATE
 
 	  If unsure say N, Say Y if you have this code and want to transmit OFDM low rate.
 
-config IWLMVM_P2P_OPPPS_TEST_WA
-	bool "Use WA to pass P2P OPPPS certification test"
-	depends on IWLMVM
-	---help---
-	  This option enables a WA to pass P2P OPPPS certification test.
-	  This test verifies P2P client power management behavior when
-	  connected to P2P GO that advertises OPPPS. Since P2P client power
-	  management is not supported currently by FW a special WA is required.
-	  Send zeroed quota on P2P client MAC if power save is enabled from
-	  user space to mimic power management behavior. Update quota to normal
-	  value otherwise.
-
-config IWLMVM_VENDOR_CMDS
+config IWL_VENDOR_CMDS
 	bool "enable vendor commands"
-	depends on IWLMVM
+	depends on IWLMVM || IWLMLD
 	default y
 	help
 	  This option enables support for vendor commands, including some
@@ -80,15 +53,6 @@ config IWLMVM_VENDOR_CMDS
 	  This option mostly exists for non-upstream tagging, so best
 	  leave it set to Y.
 
-config IWLMVM_TDLS_PEER_CACHE
-	bool "enable TDLS peer caching and traffic monitoring"
-	depends on IWLMVM_VENDOR_CMDS
-	default y
-	help
-	  This option enables (vendor) commands from userspace to monitor
-	  traffic to and from specific peers on the same BSS. These peers
-	  might be TDLS peers, or candidates to become such.
-
 config IWLWIFI_DISALLOW_OLDER_FW
 	bool "disallow fallback to older firmware images"
 	depends on IWLWIFI
@@ -96,12 +60,6 @@ config IWLWIFI_DISALLOW_OLDER_FW
 	  This Kconfig option allows disabling fallback to older firmware images
 	  to ensure tight coupling between driver and firmware releases. When
 	  enabled, the dbg-cfg framework can still override this setting.
-
-config IWLWIFI_NUM_STA_INTERFACES
-	int "number of supported concurrent station interfaces"
-	range 1 2
-	default 1
-	depends on IWLMVM
 
 config REJECT_NONUPSTREAM_NL80211
 	bool "reject non-upstreamed nl80211 commands"

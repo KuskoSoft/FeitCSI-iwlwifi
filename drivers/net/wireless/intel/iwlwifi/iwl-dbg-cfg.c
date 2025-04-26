@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
- * Copyright (C) 2013-2015, 2019-2020, 2022-2023 Intel Corporation
+ * Copyright (C) 2013-2015, 2019-2020, 2022-2024 Intel Corporation
  * Copyright (C) 2016 Intel Deutschland GmbH
  */
 #include <linux/types.h>
@@ -20,8 +20,11 @@
 #if IS_ENABLED(CPTCFG_IWLMVM)
 #include "mvm/constants.h"
 #endif
+#if IS_ENABLED(CPTCFG_IWLMLD)
+#include "mld/constants.h"
+#endif
 
-struct iwl_dbg_cfg current_dbg_config = {
+const struct iwl_dbg_cfg default_dbg_config = {
 #define DBG_CFG_REINCLUDE
 #define IWL_DBG_CFG(type, name) \
 	.name = IWL_ ## name,
@@ -47,6 +50,7 @@ struct iwl_dbg_cfg current_dbg_config = {
 #undef IWL_MVM_MOD_PARAM
 #undef IWL_DBG_CFG_FN
 };
+EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(default_dbg_config);
 
 static const char dbg_cfg_magic[] = "[IWL DEBUG CONFIG DATA]";
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (C) 2012-2014, 2018-2019, 2021-2023 Intel Corporation
+ * Copyright (C) 2012-2014, 2018-2019, 2021-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  * Copyright (C) 2023 Miroslav Hutar
@@ -10,8 +10,7 @@
 #include "iwl-trans.h"
 #include "iwl-csr.h"
 #include "mvm.h"
-#include "iwl-eeprom-parse.h"
-#include "iwl-eeprom-read.h"
+#include "iwl-nvm-utils.h"
 #include "iwl-nvm-parse.h"
 #include "iwl-prph.h"
 #include "fw/acpi.h"
@@ -439,7 +438,7 @@ iwl_mvm_update_mcc(struct iwl_mvm *mvm, const char *alpha2,
 
 	cmd.len[0] = sizeof(struct iwl_mcc_update_cmd);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
+#ifdef CPTCFG_IWL_VENDOR_CMDS
 	if (mvm->trans->trans_cfg->device_family >
 		IWL_DEVICE_FAMILY_9000 &&
 	    src_id == MCC_SOURCE_MCC_API)
@@ -598,7 +597,7 @@ int iwl_mvm_init_mcc(struct iwl_mvm *mvm)
 		return -EIO;
 
 	if (iwl_mvm_is_wifi_mcc_supported(mvm) &&
-	    !iwl_acpi_get_mcc(mvm->dev, mcc)) {
+	    !iwl_bios_get_mcc(&mvm->fwrt, mcc)) {
 		kfree(regd);
 		regd = iwl_mvm_get_regdomain(mvm->hw->wiphy, mcc,
 					     MCC_SOURCE_BIOS, NULL);
@@ -621,6 +620,7 @@ void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm *mvm,
 	char mcc[3];
 	struct ieee80211_regdomain *regd;
 	int wgds_tbl_idx;
+	bool changed = false;
 
 	lockdep_assert_held(&mvm->mutex);
 
@@ -640,9 +640,14 @@ void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm *mvm,
 	IWL_DEBUG_LAR(mvm,
 		      "RX: received chub update mcc cmd (mcc '%s' src %d)\n",
 		      mcc, src);
-	regd = iwl_mvm_get_regdomain(mvm->hw->wiphy, mcc, src, NULL);
+	regd = iwl_mvm_get_regdomain(mvm->hw->wiphy, mcc, src, &changed);
 	if (IS_ERR_OR_NULL(regd))
 		return;
+
+	if (!changed) {
+		IWL_DEBUG_LAR(mvm, "RX: No change in the regulatory data\n");
+		goto out;
+	}
 
 	wgds_tbl_idx = iwl_mvm_get_sar_geo_profile(mvm);
 	if (wgds_tbl_idx < 1)
@@ -654,5 +659,7 @@ void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm *mvm,
 			       wgds_tbl_idx);
 
 	regulatory_set_wiphy_regd(mvm->hw->wiphy, regd);
+
+out:
 	kfree(regd);
 }

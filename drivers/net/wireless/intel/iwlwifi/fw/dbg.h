@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2005-2014, 2018-2019, 2021-2023 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2019, 2021-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2015-2017 Intel Deutschland GmbH
  */
@@ -227,6 +227,8 @@ static inline void iwl_fw_flush_dumps(struct iwl_fw_runtime *fwrt)
 		flush_delayed_work(&fwrt->dump.wks[i].wk);
 }
 
+int iwl_fw_send_timestamp_marker_cmd(struct iwl_fw_runtime *fwrt);
+
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 static inline void iwl_fw_cancel_timestamp(struct iwl_fw_runtime *fwrt)
 {
@@ -234,7 +236,6 @@ static inline void iwl_fw_cancel_timestamp(struct iwl_fw_runtime *fwrt)
 	cancel_delayed_work_sync(&fwrt->timestamp.wk);
 }
 
-int iwl_fw_send_timestamp_marker_cmd(struct iwl_fw_runtime *fwrt);
 void iwl_fw_trigger_timestamp(struct iwl_fw_runtime *fwrt, u32 delay);
 
 static inline void iwl_fw_suspend_timestamp(struct iwl_fw_runtime *fwrt)
@@ -264,6 +265,8 @@ static inline void iwl_fw_resume_timestamp(struct iwl_fw_runtime *fwrt) {}
 
 #endif /* CPTCFG_IWLWIFI_DEBUGFS */
 
+void iwl_fw_dbg_stop_sync(struct iwl_fw_runtime *fwrt);
+
 static inline void iwl_fw_lmac1_set_alive_err_table(struct iwl_trans *trans,
 						    u32 lmac_error_event_table)
 {
@@ -284,9 +287,7 @@ static inline void iwl_fw_umac_set_alive_err_table(struct iwl_trans *trans,
 		trans->dbg.umac_error_event_table = umac_error_event_table;
 }
 
-void iwl_fw_dbg_stop_sync(struct iwl_fw_runtime *fwrt);
-
-static inline void iwl_fw_error_collect(struct iwl_fw_runtime *fwrt, bool sync)
+static inline void iwl_fw_error_collect(struct iwl_fw_runtime *fwrt)
 {
 	enum iwl_fw_ini_time_point tp_id;
 
@@ -302,7 +303,7 @@ static inline void iwl_fw_error_collect(struct iwl_fw_runtime *fwrt, bool sync)
 		tp_id = IWL_FW_INI_TIME_POINT_FW_ASSERT;
 	}
 
-	_iwl_dbg_tlv_time_point(fwrt, tp_id, NULL, sync);
+	iwl_dbg_tlv_time_point_sync(fwrt, tp_id, NULL);
 }
 
 static inline void iwl_fwrt_update_fw_versions(struct iwl_fw_runtime *fwrt,
@@ -323,23 +324,44 @@ static inline void iwl_fwrt_update_fw_versions(struct iwl_fw_runtime *fwrt,
 }
 
 void iwl_fwrt_dump_error_logs(struct iwl_fw_runtime *fwrt);
-void iwl_send_dbg_dump_complete_cmd(struct iwl_fw_runtime *fwrt,
-				    u32 timepoint,
-				    u32 timepoint_data);
-
+bool iwl_fwrt_read_err_table(struct iwl_trans *trans, u32 base, u32 *err_id);
 void iwl_fw_disable_dbg_asserts(struct iwl_fw_runtime *fwrt);
 void iwl_fw_dbg_clear_monitor_buf(struct iwl_fw_runtime *fwrt);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-#define IWL_FW_CHECK_FAILED(_obj, _fmt, ...)				\
+static inline void iwl_fw_check_failed_nmi(struct iwl_trans *trans)
+{
+	if (trans->dbg_cfg.FW_MISBEHAVE_NMI)
+		iwl_force_nmi(trans);
+}
+
+struct iwl_incorrect_object {
+	struct iwl_trans *trans;
+};
+
+struct iwl_incorrect_object *__iwl_fw_check_incorrect_object(void);
+
+#define ___GET_TRANS_HOLDER(_obj)					\
+	_Generic(_obj,							\
+		 struct iwl_mvm *: (_obj),				\
+		 struct iwl_mld *: (_obj),				\
+		 struct iwl_xvt *: (_obj),				\
+		 struct iwl_prod *: (_obj),				\
+		 default: __iwl_fw_check_incorrect_object())
+
+#define __GET_TRANS_HOLDER(_obj)					\
+	_Generic(_obj,							\
+		 struct iwl_trans *: _obj,				\
+		 default: ___GET_TRANS_HOLDER(_obj)->trans)
+
+#define IWL_FW_CHECK_FAILED(_obj, ...)					\
 	do {								\
-		IWL_ERR(_obj, _fmt, __VA_ARGS__);			\
-		if ((_obj)->trans->dbg_cfg.FW_MISBEHAVE_NMI)		\
-			iwl_force_nmi((_obj)->trans);			\
+		IWL_ERR(_obj, __VA_ARGS__);				\
+		iwl_fw_check_failed_nmi(__GET_TRANS_HOLDER(_obj));	\
 	} while (0)
 #else
-#define IWL_FW_CHECK_FAILED(_obj, _fmt, ...)				\
-	IWL_ERR_LIMIT(_obj, _fmt, __VA_ARGS__)
+#define IWL_FW_CHECK_FAILED(_obj, ...)					\
+	IWL_ERR_LIMIT(_obj, __VA_ARGS__)
 #endif
 
 #define IWL_FW_CHECK(_obj, _cond, _fmt, ...)				\
@@ -347,7 +369,7 @@ void iwl_fw_dbg_clear_monitor_buf(struct iwl_fw_runtime *fwrt);
 		bool __cond = (_cond);					\
 									\
 		if (unlikely(__cond))					\
-			IWL_FW_CHECK_FAILED(_obj, _fmt, __VA_ARGS__);	\
+			IWL_FW_CHECK_FAILED(_obj, _fmt, ##__VA_ARGS__);	\
 									\
 		unlikely(__cond);					\
 	})

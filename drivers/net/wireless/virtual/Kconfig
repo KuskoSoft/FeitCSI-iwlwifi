@@ -1,4 +1,5 @@
 config MAC80211_HWSIM
+	depends on !KERNEL_4_19
 	tristate "Simulated radio testing tool for mac80211"
 	depends on m
 	depends on MAC80211

@@ -27,6 +27,8 @@ static int ieee80211_set_ringparam(struct net_device *dev,
 	if (rp->rx_mini_pending != 0 || rp->rx_jumbo_pending != 0)
 		return -EINVAL;
 
+	guard(wiphy)(local->hw.wiphy);
+
 	return drv_set_ringparam(local, rp->tx_pending, rp->rx_pending);
 }
 
@@ -42,6 +44,8 @@ static void ieee80211_get_ringparam(struct net_device *dev,
 	struct ieee80211_local *local = wiphy_priv(dev->ieee80211_ptr->wiphy);
 
 	memset(rp, 0, sizeof(*rp));
+
+	guard(wiphy)(local->hw.wiphy);
 
 	drv_get_ringparam(local, &rp->tx_pending, &rp->tx_max_pending,
 			  &rp->rx_pending, &rp->rx_max_pending);
@@ -110,7 +114,7 @@ static void ieee80211_get_stats(struct net_device *dev,
 	 * network device.
 	 */
 
-	wiphy_lock(local->hw.wiphy);
+	guard(wiphy)(local->hw.wiphy);
 
 	if (sdata->vif.type == NL80211_IFTYPE_STATION) {
 		sta = sta_info_get_bss(sdata, sdata->deflink.u.mgd.bssid);
@@ -161,6 +165,10 @@ do_survey:
 	chanctx_conf = rcu_dereference(sdata->vif.bss_conf.chanctx_conf);
 	if (chanctx_conf)
 		channel = chanctx_conf->def.chan;
+	else if (local->open_count > 0 &&
+		 local->open_count == local->monitors &&
+		 sdata->vif.type == NL80211_IFTYPE_MONITOR)
+		channel = local->monitor_chanreq.oper.chan;
 	else
 		channel = NULL;
 	rcu_read_unlock();
@@ -206,13 +214,10 @@ do_survey:
 	else
 		data[i++] = -1LL;
 
-	if (WARN_ON(i != STA_STATS_LEN)) {
-		wiphy_unlock(local->hw.wiphy);
+	if (WARN_ON(i != STA_STATS_LEN))
 		return;
-	}
 
 	drv_get_et_stats(sdata, stats, &(data[STA_STATS_LEN]));
-	wiphy_unlock(local->hw.wiphy);
 }
 
 static void ieee80211_get_strings(struct net_device *dev, u32 sset, u8 *data)

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2005-2014, 2018-2023 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2024 Intel Corporation
  * Copyright (C) 2015-2017 Intel Deutschland GmbH
  */
 #ifndef __iwl_xvt_h__
@@ -360,16 +360,16 @@ static inline bool iwl_xvt_is_cdb_supported(struct iwl_xvt *xvt)
 }
 
 static inline struct agg_tx_status*
-iwl_xvt_get_agg_status(struct iwl_xvt *xvt, struct iwl_mvm_tx_resp *tx_resp)
+iwl_xvt_get_agg_status(struct iwl_xvt *xvt, struct iwl_tx_resp *tx_resp)
 {
 	if (iwl_xvt_is_unified_fw(xvt))
-		return &((struct iwl_mvm_tx_resp *)tx_resp)->status;
+		return &((struct iwl_tx_resp *)tx_resp)->status;
 	else
-		return ((struct iwl_mvm_tx_resp_v3 *)tx_resp)->status;
+		return ((struct iwl_tx_resp_v3 *)tx_resp)->status;
 }
 
 static inline u32 iwl_xvt_get_scd_ssn(struct iwl_xvt *xvt,
-				      struct iwl_mvm_tx_resp *tx_resp)
+				      struct iwl_tx_resp *tx_resp)
 {
 	return le32_to_cpup((__le32 *)iwl_xvt_get_agg_status(xvt, tx_resp) +
 			    tx_resp->frame_count) & 0xfff;

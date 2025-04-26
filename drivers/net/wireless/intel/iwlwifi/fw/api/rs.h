@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2012-2014, 2018-2022 Intel Corporation
+ * Copyright (C) 2012-2014, 2018-2022, 2024 Intel Corporation
  * Copyright (C) 2017 Intel Deutschland GmbH
  */
 #ifndef __iwl_fw_api_rs_h__
@@ -9,7 +9,7 @@
 #include "mac.h"
 
 /**
- * enum iwl_tlc_mng_cfg_flags_enum - options for TLC config flags
+ * enum iwl_tlc_mng_cfg_flags - options for TLC config flags
  * @IWL_TLC_MNG_CFG_FLAGS_STBC_MSK: enable STBC. For HE this enables STBC for
  *				    bandwidths <= 80MHz
  * @IWL_TLC_MNG_CFG_FLAGS_LDPC_MSK: enable LDPC
@@ -266,7 +266,7 @@ enum iwl_tlc_debug_types {
 #define MAX_DATA_IN_DHC_TLC_CMD 10
 
 /**
- * struct iwl_dhc_tlc_dbg - fixed debug config
+ * struct iwl_dhc_tlc_cmd - fixed debug config
  * @sta_id: bit 0 - enable/disable, bits 1 - 7 hold station id
  * @reserved1: reserved
  * @type: type id of %enum iwl_tlc_debug_types
@@ -286,7 +286,8 @@ struct iwl_rate_mcs_info {
 	char    mcs[IWL_MAX_MCS_DISPLAY_SIZE];
 };
 
-/* These serve as indexes into
+/*
+ * These serve as indexes into
  * struct iwl_rate_info fw_rate_idx_to_plcp[IWL_RATE_COUNT];
  * TODO: avoid overlap between legacy and HT rates
  */

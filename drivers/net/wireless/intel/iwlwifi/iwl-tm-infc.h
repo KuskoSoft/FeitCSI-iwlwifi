@@ -1,9 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2010-2014, 2018-2022 Intel Corporation
+ * Copyright (C) 2010-2014, 2018-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2015-2017 Intel Deutschland GmbH
- * Copyright (C) 2023 Intel Corporation
  */
 #ifndef __iwl_tm_infc__
 #define __iwl_tm_infc__
@@ -34,14 +33,13 @@ enum iwl_tm_gnl_cmd_t {
 #define XVT_CMD_NOTIF_BASE	0x400
 #define XVT_BUS_TESTER_BASE	0x500
 
-/**
+/*
  * signifies iwl_tm_mod_tx_request is set to infinite mode,
  * when iwl_tm_mod_tx_request.times ==  IWL_XVT_TX_MODULATED_INFINITE
  */
 #define IWL_XVT_TX_MODULATED_INFINITE (0)
 
 #define IWL_XVT_MAX_MAC_HEADER_LENGTH (36)
-#define IWL_XVT_MAX_NUM_OF_FRAMES (32)
 
 /*
  * Periphery registers absolute lower bound. This is used in order to
@@ -84,7 +82,7 @@ enum {
 	IWL_TM_USER_CMD_NOTIF_UCODE_MSGS_DATA,
 	IWL_TM_USER_CMD_NOTIF_APMG_PD,
 	IWL_TM_USER_CMD_NOTIF_RETRIEVE_MONITOR,
-	IWL_TM_USER_CMD_NOTIF_CRASH_DATA,
+	IWL_TM_USER_CMD_NOTIF_CRASH_DATA, /* no longer used */
 	IWL_TM_USER_CMD_NOTIF_BFE,
 	IWL_TM_USER_CMD_NOTIF_LOC_MCSI,
 	IWL_TM_USER_CMD_NOTIF_LOC_RANGE,
@@ -187,7 +185,7 @@ struct iwl_tm_cmd_request {
 } __packed __aligned(4);
 
 /**
- * struct iwl_svt_sdio_enable - SV Tester SDIO bus enable command
+ * struct iwl_tm_sdio_io_toggle - SV Tester SDIO bus enable command
  * @enable:	Function enable/disable 1/0
  */
 struct iwl_tm_sdio_io_toggle {
@@ -314,7 +312,7 @@ struct iwl_sil_step {
 } __packed __aligned(4);
 
 /**
- * struct iwl_sil_type - holds the silicon type
+ * struct iwl_tm_sil_type - holds the silicon type
  * @silicon_type: the device silicon type
  */
 struct iwl_tm_sil_type {
@@ -415,7 +413,7 @@ struct iwl_xvt_sw_cfg_request {
 } __packed __aligned(4);
 
 /**
- * struct iwl_xvt_sw_cfg_request - Data for set SW stack configuration request
+ * struct iwl_xvt_phy_db_request - Data for set SW stack configuration request
  * @type:	Type of DB section
  * @chg_id:	Channel Group ID, relevant only when
  *		type is CHG PAPD or CHG TXP calibrations
@@ -432,7 +430,7 @@ struct iwl_xvt_phy_db_request {
 #define IWL_TM_STATION_COUNT	16
 
 /**
- * struct iwl_tm_tx_request - Data transmission request
+ * struct iwl_tm_mod_tx_request - Data transmission request
  * @times:	  Number of times to transmit the data.
  * @delay_us:	  Delay between frames
  * @pa_detect_en: Flag. When True, enable PA detector
@@ -528,7 +526,7 @@ struct iwl_xvt_alloc_dma {
 } __packed __aligned(4);
 
 /**
- * struct iwl_xvt_alloc_dma - Data for alloc dma requests
+ * struct iwl_xvt_get_dma - Data for alloc dma requests
  * @size:	size of data
  * @data:	Data to transmit
  */
@@ -556,7 +554,7 @@ struct iwl_tm_crash_data {
 } __packed __aligned(4);
 
 /**
- * struct iwl_xvt_curr_mac_addr_info - Current mac address data
+ * struct iwl_xvt_mac_addr_info - Current mac address data
  * @mac_addr:	the current mac address
  */
 struct iwl_xvt_mac_addr_info {
@@ -717,7 +715,7 @@ struct tx_cmd_commom_data {
 } __packed __aligned(4);
 
 /**
- * struct tx_cmd_frame - frame specific transmission data
+ * struct tx_cmd_frame_data - frame specific transmission data
  * @times: Number of subsequent times to transmit tx command to queue
  * @sta_id: Station index
  * @queue: Transmission queue
@@ -759,7 +757,7 @@ struct iwl_xvt_tx_start {
 	u8 reserved1;
 	u16 reserved2;
 	struct tx_cmd_commom_data tx_data;
-	struct tx_cmd_frame_data frames_data[IWL_XVT_MAX_NUM_OF_FRAMES];
+	struct tx_cmd_frame_data frames_data[];
 } __packed __aligned(4);
 
 /**
@@ -834,7 +832,7 @@ struct iwl_xvt_config_rx_mpdu_req {
 } __packed __aligned(4);
 
 /**
- * enum for FW image type
+ * enum iwl_xvt_fw_img_type - enum for FW image type
  * @IWL_XVT_FW_IMG_TYPE_LMAC_D0: LMAC D0
  * @IWL_XVT_FW_IMG_TYPE_UMAC: UMAC
 */
