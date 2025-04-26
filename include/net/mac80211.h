@@ -8,6 +8,7 @@
  * Copyright 2013-2014  Intel Mobile Communications GmbH
  * Copyright (C) 2015 - 2017 Intel Deutschland GmbH
  * Copyright (C) 2018 - 2023 Intel Corporation
+ * Copyright (C) 2023 Miroslav Hutar
  */
 
 #ifndef MAC80211_H
@@ -1025,6 +1026,7 @@ enum mac80211_rate_control_flags {
 	IEEE80211_TX_RC_VHT_MCS			= BIT(8),
 	IEEE80211_TX_RC_80_MHZ_WIDTH		= BIT(9),
 	IEEE80211_TX_RC_160_MHZ_WIDTH		= BIT(10),
+	IEEE80211_TX_CUSTOM = BIT(11),
 };
 
 
@@ -1074,8 +1076,8 @@ enum mac80211_rate_control_flags {
  */
 struct ieee80211_tx_rate {
 	s8 idx;
-	u16 count:5,
-	    flags:11;
+	u16 count:4,
+	    flags:12;
 } __packed;
 
 #define IEEE80211_MAX_TX_RETRY		31

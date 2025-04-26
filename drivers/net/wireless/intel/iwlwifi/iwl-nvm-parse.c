@@ -1691,7 +1691,7 @@ iwl_parse_mei_nvm_data(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 	data->sku_cap_11ax_enable =
 		mei_nvm->caps & MEI_NVM_CAPS_11AX_SUPPORT;
 
-	data->lar_enabled = mei_nvm->caps & MEI_NVM_CAPS_LARI_SUPPORT;
+	data->lar_enabled = false; // mei_nvm->caps & MEI_NVM_CAPS_LARI_SUPPORT;
 
 	data->n_hw_addrs = mei_nvm->n_hw_addrs;
 	/* If no valid mac address was found - bail out */
@@ -1785,15 +1785,15 @@ iwl_parse_nvm_data(struct iwl_trans *trans, const struct iwl_cfg *cfg,
 			     &regulatory[NVM_CHANNELS_SDP] :
 			     &nvm_sw[NVM_CHANNELS];
 
-		lar_enabled = true;
+		lar_enabled = false;
 	} else {
 		u16 lar_offset = data->nvm_version < 0xE39 ?
 				 NVM_LAR_OFFSET_OLD :
 				 NVM_LAR_OFFSET;
 
 		lar_config = le16_to_cpup(regulatory + lar_offset);
-		data->lar_enabled = !!(lar_config &
-				       NVM_LAR_ENABLED);
+		data->lar_enabled = false; //!!(lar_config &
+				       // NVM_LAR_ENABLED);
 		lar_enabled = data->lar_enabled;
 		ch_section = &regulatory[NVM_CHANNELS_EXTENDED];
 	}
@@ -2386,7 +2386,7 @@ struct iwl_nvm_data *iwl_get_nvm(struct iwl_trans *trans,
 	if (le32_to_cpu(rsp->regulatory.lar_enabled) &&
 	    fw_has_capa(&fw->ucode_capa,
 			IWL_UCODE_TLV_CAPA_LAR_SUPPORT)) {
-		nvm->lar_enabled = true;
+		nvm->lar_enabled = false;
 		sbands_flags |= IWL_NVM_SBANDS_FLAGS_LAR;
 	}
 

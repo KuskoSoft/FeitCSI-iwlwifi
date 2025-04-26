@@ -1,7 +1,8 @@
-/* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
+/* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (C) 2005-2015, 2018-2023 Intel Corporation
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
+ * Copyright (C) 2023 Miroslav Hutar
  */
 #ifndef __iwl_nvm_parse_h__
 #define __iwl_nvm_parse_h__

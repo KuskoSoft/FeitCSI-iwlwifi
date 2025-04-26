@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012-2014, 2018-2023 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
+ * Copyright (C) 2023 Miroslav Hutar
  */
 #include <net/mac80211.h>
 #include <linux/netdevice.h>
@@ -1602,6 +1603,11 @@ void iwl_mvm_get_acpi_tables(struct iwl_mvm *mvm)
 	iwl_acpi_get_phy_filters(&mvm->fwrt, &mvm->phy_filters);
 }
 #else /* CONFIG_ACPI */
+
+bool iwl_mvm_is_vendor_in_approved_list(void)
+{
+	return false;
+}
 
 int iwl_mvm_sar_select_profile(struct iwl_mvm *mvm, int prof_a, int prof_b)
 {

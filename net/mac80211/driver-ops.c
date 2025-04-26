@@ -2,6 +2,7 @@
 /*
  * Copyright 2015 Intel Deutschland GmbH
  * Copyright (C) 2022-2023 Intel Corporation
+ * Copyright (C) 2023 Miroslav Hutar
  */
 #include <net/mac80211.h>
 #include "ieee80211_i.h"
@@ -460,6 +461,9 @@ void drv_link_info_changed(struct ieee80211_local *local,
 	if (sdata->vif.active_links &&
 	    !(sdata->vif.active_links & BIT(link_id)))
 		return;
+
+	if (sdata->vif.type == NL80211_IFTYPE_MONITOR)
+		info->txpower = sdata->deflink.user_power_level;
 
 	trace_drv_link_info_changed(local, sdata, info, changed);
 	if (local->ops->link_info_changed)

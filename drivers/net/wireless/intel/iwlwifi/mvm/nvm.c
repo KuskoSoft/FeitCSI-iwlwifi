@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012-2014, 2018-2019, 2021-2023 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
+ * Copyright (C) 2023 Miroslav Hutar
  */
 #include <linux/firmware.h>
 #include <linux/rtnetlink.h>
@@ -563,8 +564,8 @@ int iwl_mvm_init_mcc(struct iwl_mvm *mvm)
 	char mcc[3];
 
 	if (mvm->cfg->nvm_type == IWL_NVM_EXT) {
-		tlv_lar = fw_has_capa(&mvm->fw->ucode_capa,
-				      IWL_UCODE_TLV_CAPA_LAR_SUPPORT);
+		tlv_lar = false; //fw_has_capa(&mvm->fw->ucode_capa,
+				      //IWL_UCODE_TLV_CAPA_LAR_SUPPORT);
 		nvm_lar = mvm->nvm_data->lar_enabled;
 		if (tlv_lar != nvm_lar)
 			IWL_INFO(mvm,

@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012-2014, 2018-2023 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
+ * Copyright (C) 2023 Miroslav Hutar
  */
 #include <linux/ieee80211.h>
 #include <linux/etherdevice.h>
@@ -306,7 +307,6 @@ static u32 iwl_mvm_get_inject_tx_rate(struct iwl_mvm *mvm,
 	 * we only care about legacy/HT/VHT so far, so we can
 	 * build in v1 and use iwl_new_rate_from_v1()
 	 */
-
 	if (rate->flags & IEEE80211_TX_RC_VHT_MCS) {
 		u8 mcs = ieee80211_rate_get_vht_mcs(rate);
 		u8 nss = ieee80211_rate_get_vht_nss(rate);
@@ -338,10 +338,22 @@ static u32 iwl_mvm_get_inject_tx_rate(struct iwl_mvm *mvm,
 			result |= RATE_MCS_LDPC_MSK_V1;
 		if (u32_get_bits(info->flags, IEEE80211_TX_CTL_STBC))
 			result |= RATE_MCS_STBC_MSK;
-
+		result |= RATE_HT_MCS_MIMO2_MSK; 
 		if (iwl_fw_lookup_notif_ver(mvm->fw, LONG_GROUP, TX_CMD, 0) > 6)
 			result = iwl_new_rate_from_v1(result);
-	} else {
+	}
+	else if (rate->flags & IEEE80211_TX_CUSTOM)
+	{
+		u8 rates[4];
+		int i;
+		for (i = 0; i < 4; i++)
+		{
+			rates[i] = info->control.rates[i].idx;
+		}
+		memcpy(&result, rates, 4);
+	}
+	else
+	{
 		int rate_idx = info->control.rates[0].idx;
 
 		result = iwl_mvm_convert_rate_idx(mvm, info, rate_idx);
@@ -352,7 +364,6 @@ static u32 iwl_mvm_get_inject_tx_rate(struct iwl_mvm *mvm,
 					  RATE_MCS_ANT_AB_MSK);
 	else
 		result |= iwl_mvm_get_tx_ant(mvm, info, sta, fc);
-
 	return result;
 }
 

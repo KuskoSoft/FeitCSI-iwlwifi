@@ -3,13 +3,11 @@
  *
  * Copyright 2007		Andy Green <andy@warmcat.com>
  * Copyright 2009		Johannes Berg <johannes@sipsolutions.net>
+ * Copyright (C) 2023 Miroslav Hutar
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- *
- * Alternatively, this software may be distributed under the terms of BSD
- * license.
  *
  * See COPYING for more details.
  */
@@ -44,6 +42,8 @@ static const struct radiotap_align_size rtap_namespace_sizes[] = {
 	[IEEE80211_RADIOTAP_MCS] = { .align = 1, .size = 3, },
 	[IEEE80211_RADIOTAP_AMPDU_STATUS] = { .align = 4, .size = 8, },
 	[IEEE80211_RADIOTAP_VHT] = { .align = 2, .size = 12, },
+	[IEEE80211_RADIOTAP_TIMESTAMP] = { .align = 8, .size = 8, },
+	[IEEE80211_RADIOTAP_HE] = { .align = 2, .size = 12, },
 	/*
 	 * add more here as they are defined in radiotap.h
 	 */

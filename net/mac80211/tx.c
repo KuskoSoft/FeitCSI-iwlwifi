@@ -6,6 +6,7 @@
  * Copyright 2007	Johannes Berg <johannes@sipsolutions.net>
  * Copyright 2013-2014  Intel Mobile Communications GmbH
  * Copyright (C) 2018-2023 Intel Corporation
+ * Copyright (C) 2023 Miroslav Hutar
  *
  * Transmit and frame generation functions.
  */
@@ -36,6 +37,7 @@
 #include "wpa.h"
 #include "wme.h"
 #include "rate.h"
+#include "../wireless/radiotap.h" // overlay function to parse radiotap
 
 /* misc utils */
 
@@ -2120,9 +2122,9 @@ bool ieee80211_parse_tx_radiotap(struct sk_buff *skb,
 
 		if (ret)
 			continue;
-
-		/* see if this argument is something we can use */
-		switch (iterator.this_arg_index) {
+			/* see if this argument is something we can use */
+			switch (iterator.this_arg_index)
+		{
 		/*
 		 * You must take care when dereferencing iterator.this_arg
 		 * for multibyte types... the pointer is not aligned.  Use
@@ -2147,6 +2149,19 @@ bool ieee80211_parse_tx_radiotap(struct sk_buff *skb,
 				info->flags &= ~IEEE80211_TX_INTFL_DONT_ENCRYPT;
 			if (*iterator.this_arg & IEEE80211_RADIOTAP_F_FRAG)
 				info->flags &= ~IEEE80211_TX_CTL_DONTFRAG;
+
+			if(*iterator.this_arg & 0x80)
+			{
+				u8 rates[4];
+				info->control.flags |= IEEE80211_TX_CTRL_RATE_INJECT;
+				info->control.rates[0].flags = IEEE80211_TX_CUSTOM;
+				info->flags |= IEEE80211_TX_CTL_NO_ACK;
+				memcpy(rates, &iterator.this_arg[1], 4);
+				for (i = 0; i < 4; i++)
+				{
+					info->control.rates[i].idx = rates[i];
+				}
+			}
 			break;
 
 		case IEEE80211_RADIOTAP_TX_FLAGS:

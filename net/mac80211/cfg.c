@@ -3043,7 +3043,6 @@ static int ieee80211_set_tx_power(struct wiphy *wiphy,
 			if (txp_type != sdata->vif.bss_conf.txpower_type)
 				update_txp_type = true;
 			sdata->vif.bss_conf.txpower_type = txp_type;
-
 			ieee80211_recalc_txpower(sdata, update_txp_type);
 		}
 	}
