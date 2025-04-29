@@ -10,12 +10,12 @@
 static DEFINE_MUTEX(cancellations_mtx);
 static LIST_HEAD(cancellations_list);
 
+#if LINUX_VERSION_IS_LESS(6,7,0)
 void
 debugfs_enter_cancellation(struct file *file,
 			   struct debugfs_cancellation *cancellation)
 {
 	cancellation->dentry = file_dentry(file);
-
 	mutex_lock(&cancellations_mtx);
 	list_add_tail(&cancellation->list, &cancellations_list);
 	mutex_unlock(&cancellations_mtx);
@@ -32,6 +32,7 @@ debugfs_leave_cancellation(struct file *file,
 	mutex_unlock(&cancellations_mtx);
 }
 EXPORT_SYMBOL_GPL(debugfs_leave_cancellation);
+#endif
 
 static bool is_parent_of(struct dentry *p, struct dentry *e)
 {
@@ -44,6 +45,7 @@ static bool is_parent_of(struct dentry *p, struct dentry *e)
 	return false;
 }
 
+#if LINUX_VERSION_IS_LESS(6,7,0)
 void debugfs_remove(struct dentry *dentry)
 {
 	struct debugfs_cancellation *cancellation, *tmp;
@@ -63,6 +65,7 @@ void debugfs_remove(struct dentry *dentry)
 	debugfs_remove(dentry);
 }
 EXPORT_SYMBOL_GPL(LINUX_BACKPORT(debugfs_remove));
+#endif
 
 #if LINUX_VERSION_IS_LESS(5,6,0)
 void debugfs_remove_recursive(struct dentry *dentry)

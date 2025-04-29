@@ -3,6 +3,8 @@
 #include <linux/types.h>
 #include <linux/thermal.h>
 
+
+#if LINUX_VERSION_IS_LESS(6,9,0)
 #ifdef CONFIG_THERMAL
 struct thermal_zone_device *
 thermal_zone_device_register_with_trips(const char *type,
@@ -30,3 +32,4 @@ thermal_zone_device_register_with_trips(const char *type,
 }
 EXPORT_SYMBOL_GPL(thermal_zone_device_register_with_trips);
 #endif /* CONFIG_THERMAL */
+#endif
